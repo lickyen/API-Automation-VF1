@@ -5,7 +5,7 @@ using ProductivityApi.Models;
 namespace ProductivityApi.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class BranchController : Controller
     {
         private readonly BranchServices _branchServices;
@@ -26,6 +26,24 @@ namespace ProductivityApi.Controllers
                     return Ok(new Response(false, null, "No users found"));
 
                 return Ok(new Response(true, branches, "Success"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
+            }
+        }
+
+        [HttpGet("{BranchCode}")]
+        public IActionResult GetBranch(string BranchCode)
+        {
+            try
+            {
+                var branch = _branchServices.GetBranchByID(BranchCode);
+
+                if (branch == null)
+                    return Ok(new Response(false, null, $"Branch not found"));
+
+                return Ok(new Response(true, branch, "Success"));
             }
             catch (Exception ex)
             {

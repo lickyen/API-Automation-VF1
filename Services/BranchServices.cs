@@ -15,6 +15,12 @@ namespace ProductivityApi.Services
         {
             return _branchRepository.GetBranches();
         }
+        public BranchModel? GetBranchByID(string BranchCode)
+        {
+           
+
+            return _branchRepository.GetBranchByID(BranchCode);
+        }
 
     }
 }

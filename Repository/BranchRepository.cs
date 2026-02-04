@@ -52,6 +52,46 @@ namespace ProductivityApi.Repository
 
             return branches;
         }
+        public BranchModel GetBranchByID( string BranchCode)
+        {
+            var branch = new BranchModel();
+
+            try
+            {
+                using (var connection = new SqlConnection(_conStr))
+                using (var command = new SqlCommand("sp_getBranch", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@BranchId", BranchCode);
+                    connection.Open();
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                             branch = new BranchModel
+                            {
+
+                                BranchId = reader["BranchId"]?.ToString(),
+                                BranchName = reader["BranchName"]?.ToString(),
+                                Region = reader["Cluster"]?.ToString(),
+                                Zone = reader["State"]?.ToString(),
+                                MegaZone = reader["Region"]?.ToString(),
+
+                            };
+
+                          
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+
+            return branch;
+        }
 
 
     }
