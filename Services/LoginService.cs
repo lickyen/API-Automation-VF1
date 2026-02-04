@@ -90,38 +90,97 @@ namespace ProductivityApi.Services
             ADProfile profile = new ADProfile();
 
             using var dirEntry = new DirectoryEntry(_settings.LDAPPath, _settings.ServiceAccountUser, _settings.ServiceAccountPassword);
+            using var dirSearcher = new DirectorySearcher(dirEntry)
             {
-                using (var dirSearcher = new DirectorySearcher(dirEntry))
+                Filter = $"(sAMAccountName={userName})",
+                SearchScope = SearchScope.Subtree
+            };
+
+            dirSearcher.PropertiesToLoad.AddRange(new[]
+            {
+                "mobile", "userAccountControl", "manager", "displayName", "mail", "title", "department", "employeeID",
+                "branchCode", "branchName", "role" // replace with actual AD attribute names if different
+            });
+
+            var result = dirSearcher.FindOne();
+            if (result != null)
+            {
+                int accountControl = result.Properties["userAccountControl"].Count > 0
+                    ? (int)result.Properties["userAccountControl"][0]
+                    : 0;
+
+                if (IsAccountActive(accountControl))
                 {
-                    dirSearcher.Filter = $"(sAMAccountName={userName})";
-                    dirSearcher.PropertiesToLoad.AddRange(new[] { "mobile", "userAccountControl", "manager", "displayName", "mail", "title", "department" });
+                    profile.EmployeeID = result.Properties["employeeID"].Count > 0
+                        ? result.Properties["employeeID"][0].ToString()
+                        : result.Properties["sAMAccountName"].Count > 0
+                            ? result.Properties["sAMAccountName"][0].ToString()
+                            : userName;
 
-                    dirSearcher.SearchScope = SearchScope.Subtree;
+                    profile.Username = result.Properties["displayName"].Count > 0 ? result.Properties["displayName"][0].ToString() : "";
+                    profile.Email = result.Properties["mail"].Count > 0 ? result.Properties["mail"][0].ToString() : "";
+                    profile.Mobile = result.Properties["mobile"].Count > 0 ? result.Properties["mobile"][0].ToString() : "";
+                    profile.JobTitle = result.Properties["title"].Count > 0 ? result.Properties["title"][0].ToString() : "";
+                    profile.Department = result.Properties["department"].Count > 0 ? result.Properties["department"][0].ToString() : "";
+                    profile.BranchCode = result.Properties["branchCode"].Count > 0 ? result.Properties["branchCode"][0].ToString() : "";
+                    profile.BranchName = result.Properties["l"].Count > 0 ? result.Properties["l"][0].ToString() : "";
 
-                    var result = dirSearcher.FindOne();
-                    if (result != null)
-                    {
-                        int accountControl = result.Properties["userAccountControl"].Count > 0
-                            ? (int)result.Properties["userAccountControl"][0]
-                            : 0;
-
-                        bool isActive = IsAccountActive(accountControl);
-
-                        if (isActive)
-                        {
-                            profile.EmployeeID = userName;
-                            profile.Mobile = result.Properties["mobile"].Count > 0 ? result.Properties["mobile"][0].ToString() : "No Mobile Found";
-                            profile.Username = result.Properties["displayName"].Count > 0 ? result.Properties["displayName"][0].ToString() : "No Display Name Found";
-                            profile.Email = result.Properties["mail"].Count > 0 ? result.Properties["mail"][0].ToString() : "No Email Found";
-                            profile.JobTitle = result.Properties["title"].Count > 0 ? result.Properties["title"][0].ToString() : "No Job Title Found";
-                            profile.Department = result.Properties["department"].Count > 0 ? result.Properties["department"][0].ToString() : "No Department Found";
-                        }
-                    }
+                    // Get flattened manager chain (L1/L2/L3)
+                    var managers = GetManagerChain(result);
+                    if (managers.Count > 0) profile.L1Manager = managers[0];
+                    if (managers.Count > 1) profile.L2Manager = managers[1];
+                    if (managers.Count > 2) profile.L3Manager = managers[2];
                 }
             }
 
             return profile;
         }
+
+        private List<ManagerInfo> GetManagerChain(SearchResult userResult)
+        {
+            List<ManagerInfo> managers = new List<ManagerInfo>();
+            string managerDN = userResult.Properties["manager"].Count > 0 ? userResult.Properties["manager"][0].ToString() : null;
+
+            using var rootEntry = new DirectoryEntry(_settings.LDAPPath, _settings.ServiceAccountUser, _settings.ServiceAccountPassword);
+
+            while (!string.IsNullOrEmpty(managerDN))
+            {
+                using var searcher = new DirectorySearcher(rootEntry)
+                {
+                    Filter = $"(distinguishedName={EscapeLdapSearchFilter(managerDN)})",
+                    SearchScope = SearchScope.Subtree
+                };
+                searcher.PropertiesToLoad.AddRange(new[] { "displayName", "mail", "title", "manager", "sAMAccountName", "employeeID" });
+
+                var result = searcher.FindOne();
+                if (result == null) break;
+
+                ManagerInfo manager = new ManagerInfo
+                {
+                    Name = result.Properties["displayName"].Count > 0 ? result.Properties["displayName"][0].ToString() : "",
+                    Email = result.Properties["mail"].Count > 0 ? result.Properties["mail"][0].ToString() : "",
+                    JobTitle = result.Properties["title"].Count > 0 ? result.Properties["title"][0].ToString() : "",
+                    EmployeeID = result.Properties["employeeID"].Count > 0 ? result.Properties["employeeID"][0].ToString() :
+                                 result.Properties["sAMAccountName"].Count > 0 ? result.Properties["sAMAccountName"][0].ToString() : ""
+                };
+
+                managers.Add(manager);
+
+                managerDN = result.Properties["manager"].Count > 0 ? result.Properties["manager"][0].ToString() : null;
+            }
+
+            return managers;
+        }
+
+        private string EscapeLdapSearchFilter(string dn)
+        {
+            return dn.Replace("\\", "\\5c")
+                     .Replace("*", "\\2a")
+                     .Replace("(", "\\28")
+                     .Replace(")", "\\29")
+                     .Replace("\0", "\\00");
+        }
+
         private bool IsAccountActive(int accountControl)
         {
             const int ADS_UF_ACCOUNTDISABLE = 0x0002; // Bit flag for disabled accounts

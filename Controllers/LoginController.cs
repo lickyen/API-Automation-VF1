@@ -25,5 +25,19 @@ namespace ProductivityApi.Controllers
                 return Unauthorized(new Response(false, null, "Invalid username or password"));
         }
 
+        [HttpGet("getUserProfile/{userId}")]
+        public IActionResult GetUserProfile(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return BadRequest(new Response(false, null, "User ID is required"));
+
+            var profile = _loginService.GetUserProfile(userId);
+
+            if (profile == null)
+                return NotFound(new Response(false, null, $"User not found"));
+
+            return Ok(new Response(true, profile, "Success"));
+        }
+
     }
 }
