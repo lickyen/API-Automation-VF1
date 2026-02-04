@@ -98,8 +98,7 @@ namespace ProductivityApi.Services
 
             dirSearcher.PropertiesToLoad.AddRange(new[]
             {
-                "mobile", "userAccountControl", "manager", "displayName", "mail", "title", "department", "employeeID",
-                "branchCode", "branchName", "role" // replace with actual AD attribute names if different
+                 "userAccountControl", "displayName", "mail", "mobile", "title", "department", "l", "st", "manager"
             });
 
             var result = dirSearcher.FindOne();
@@ -122,8 +121,8 @@ namespace ProductivityApi.Services
                     profile.Mobile = result.Properties["mobile"].Count > 0 ? result.Properties["mobile"][0].ToString() : "";
                     profile.JobTitle = result.Properties["title"].Count > 0 ? result.Properties["title"][0].ToString() : "";
                     profile.Department = result.Properties["department"].Count > 0 ? result.Properties["department"][0].ToString() : "";
-                    profile.BranchCode = result.Properties["branchCode"].Count > 0 ? result.Properties["branchCode"][0].ToString() : "";
-                    profile.BranchName = result.Properties["l"].Count > 0 ? result.Properties["l"][0].ToString() : "";
+                    profile.City = result.Properties["l"].Count > 0 ? result.Properties["l"][0].ToString() : "";
+                    profile.State = result.Properties["st"].Count > 0 ? result.Properties["st"][0].ToString() : "";
 
                     // Get flattened manager chain (L1/L2/L3)
                     var managers = GetManagerChain(result);

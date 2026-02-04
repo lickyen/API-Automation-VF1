@@ -19,8 +19,8 @@ namespace ProductivityApi.Models
         public string Mobile { get; set; }
         public string JobTitle { get; set; }
         public string Department { get; set; }
-        public string BranchCode { get; set; }
-        public string BranchName { get; set; }
+        public string City { get; set; }
+        public string State { get; set; }
         public ManagerInfo L1Manager { get; set; }
         public ManagerInfo L2Manager { get; set; }
         public ManagerInfo L3Manager { get; set; }
@@ -29,10 +29,10 @@ namespace ProductivityApi.Models
 
     public class ManagerInfo
     {
-        public string Name { get; set; } = "No Name Found";
-        public string EmployeeID { get; set; } = "No EmployeeID Found";
-        public string Email { get; set; } = "No Email Found";
-        public string JobTitle { get; set; } = "No Job Title Found";
+        public string Name { get; set; }
+        public string EmployeeID { get; set; }
+        public string Email { get; set; }
+        public string JobTitle { get; set; }
     }
 
 
