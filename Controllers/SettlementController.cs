@@ -53,15 +53,15 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        // PUT: api/settlements/submit
-        [HttpPost("submit")]
+        // POST: api/settlements/resubmit
+        [HttpPost("resubmit")]
         public async Task<IActionResult> SubmitSettlement([FromBody] SubmitSettlementDto dto)
         {
             var result = await _service.SubmitSettlementAsync(dto);
 
             return result switch
             {
-                 >0 => Ok(new Response(true, null, "Success")),
+                > 0 => Ok(new Response(true, null, "Success")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
@@ -77,7 +77,7 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, new { Id = result }, "Success")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred while adding payment"))
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
 
@@ -91,7 +91,7 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, null, "Success")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred while updating payment"))
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
 
@@ -105,7 +105,7 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, null, "Success")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred while deleting payment"))
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
 
@@ -119,9 +119,25 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, null, "Success")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred while adding payment"))
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
+
+
+        // POST: api/settlements/cancel
+        [HttpPost("cancel")]
+        public async Task<IActionResult> CancelSettlement([FromBody] CancelSettlementDto dto)
+        {
+            var result = await _service.CancelSettlementAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Success")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
+            };
+        }
+
 
 
     }

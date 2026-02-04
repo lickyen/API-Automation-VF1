@@ -28,7 +28,10 @@ namespace ProductivityApi.Repositories
             parameters.Add("@Branch_Name", dto.Branch_Name);
             parameters.Add("@Disb_Date", dto.Disb_Date);
             parameters.Add("@Loan_Amount", dto.Loan_Amount);
-            parameters.Add("@Outstanding_Amount", dto.Outstanding_Amount);
+            parameters.Add("@Settlement_Amount", dto.Settlement_Amount);
+            parameters.Add("@Settlement_Purpose", dto.Settlement_Purpose);
+            parameters.Add("@Settlement_Letter_Path", dto.Settlement_Letter_Path);
+            parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@Created_By", dto.Created_By);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -174,5 +177,18 @@ namespace ProductivityApi.Repositories
             );
         }
 
+        public async Task<int> CancelSettlementAsync(CancelSettlementDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", dto.ReqId);
+            parameters.Add("@Updated_By", dto.Updated_By);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync("sp_Settlement_Cancel", parameters, commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<int>("@Output");
+        }
     }
 }

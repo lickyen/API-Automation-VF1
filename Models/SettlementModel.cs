@@ -84,7 +84,6 @@ namespace ProductivityApi.Models
         public string Category { get; set; }   // Pending / InProgress / Completed 
 
     }
-
     public class CreateSettlementDto
     {
         [Required]
@@ -96,10 +95,14 @@ namespace ProductivityApi.Models
         public string? Branch_Name { get; set; }
         public DateTime? Disb_Date { get; set; }
         public decimal? Loan_Amount { get; set; }
-        public decimal? Outstanding_Amount { get; set; }
+        public decimal? Settlement_Amount { get; set; }
+        public string? Settlement_Purpose { get; set; }
+        public string? Settlement_Letter_Path { get; set; }
+        public string? Remarks { get; set; }
         [Required]
         public string Created_By { get; set; } = null!;
     }
+
     public class SubmitSettlementDto
     {
         public int Id { get; set; }  // ReqId
@@ -141,5 +144,10 @@ namespace ProductivityApi.Models
     {
         public string UserId { get; set; }
         public string Role { get; set; }
+    }
+    public class CancelSettlementDto
+    {
+        public string ReqId { get; set; }
+        public string Updated_By { get; set; }
     }
 }
