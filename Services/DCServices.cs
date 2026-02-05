@@ -58,5 +58,11 @@ namespace ProductivityApi.Services
 
             return _dCRepository.GetCase(caseId);
         }
+
+        public async Task<int> UpdateHRResponseAsync(HRUpdateDto dto)
+        {
+            var result = await _dCRepository.UpdateHRResponseAsync(dto);
+            return result;
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
 
@@ -211,6 +212,81 @@ namespace ProductivityApi.Repository
             return cases;
         }
 
+        public async Task<int> UpdateHRResponseAsync(HRUpdateDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@CaseID", dto.CaseID);
+            parameters.Add("@SCN_Doc", dto.SCN_Doc);
+            parameters.Add("@Demand_Noctice", dto.Demand_Notice);
+            parameters.Add("@Legal_Notice", dto.Legal_Notice);
+            parameters.Add("@HR_Remarks", dto.HR_Remarks);
+            parameters.Add("@HR_UpdatedBy", dto.HR_UpdatedBy);
+
+            parameters.Add("@ResultCode", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "usp_Update_DC_Case_HR_Documents",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@ResultCode");
+        }
+        public string UpdateHRresponse(EmployeeResponseDto dto)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_conStr))
+                using (var command = new SqlCommand("usp_Update_DC_Case_EmployeeResponse", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    // 1️⃣ Build TVP DataTable
+                    var employeeEvidences = new DataTable();
+                    employeeEvidences.Columns.Add("EvidenceDoc", typeof(string));
+                    
+
+                    foreach (var docs in dto.EvidenceDocs)
+                    {
+                        employeeEvidences.Rows.Add(
+                            docs.EvidenceDocName
+                         
+                        );
+                    }
+
+                    // 2️⃣ CaseID parameter
+                    command.Parameters.AddWithValue("@CaseID", dto.CaseID);
+                    command.Parameters.AddWithValue("@Employee_Response", dto.EmployeeResponse);
+                    command.Parameters.AddWithValue("@Employee_UpdatedBy", dto.EmployeeUpdatedBy);
+
+                    // 3️⃣ TVP parameter
+                    var empParam = command.Parameters.AddWithValue("@Employee_Evidence", employeeEvidences);
+                    empParam.SqlDbType = SqlDbType.Structured;
+                    empParam.TypeName = "dbo.EmployeeEvidenceTVP";
+
+                    var outputParam = new SqlParameter("@ResultCode", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    command.Parameters.Add(outputParam);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+
+                    // return "Employees added successfully";
+                    int result = (int)outputParam.Value;
+                    return result > 0
+                            ? $"Success."
+                            : "Error occurred";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"DB Error: {ex.Message}";
+            }
+        }
 
     }
 }

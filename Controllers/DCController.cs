@@ -109,5 +109,18 @@ namespace ProductivityApi.Controllers
                 return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
             }
         }
+
+        [HttpPost("CaseUpdateByHR")]
+        public async Task<IActionResult> CaseUpdateByHR([FromBody] HRUpdateDto dto)
+        {
+            var result = await _dCServices.UpdateHRResponseAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Success")),
+                0 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
+            };
+        }
     }
 }
