@@ -4,12 +4,11 @@ namespace ProductivityApi.Models
 {
     public class AppSettings
     {
+        public string ApiKey { get; set; } = string.Empty;
         public EmailSettings EmailSettings { get; set; } = new EmailSettings();
         public SmsSettings SmsSettings { get; set; } = new SmsSettings();
         public PlfApiSettings PlfApiSettings { get; set; } = new PlfApiSettings();
         public ADSettings ADSettings { get; set; } = new ADSettings();
-        public FilePaths FilePaths { get; set; } = new FilePaths();
-        public string ApiKey { get; set; } = string.Empty;
     }
 
     public class EmailSettings
@@ -49,12 +48,5 @@ namespace ProductivityApi.Models
         public string BaseUrl { get; set; } = string.Empty;
         public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
         public string? AppDate { get; set; }
-    }
-
-    public class FilePaths
-    {
-        public string WelcomeKitPath { get; set; } = string.Empty;
-        public string KotakPath { get; set; } = string.Empty;
-        public string SoaPath { get; set; } = string.Empty;
     }
 }
