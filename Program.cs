@@ -52,12 +52,14 @@ builder.Host.UseSerilog();
 
 builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<SharedService>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<BranchServices>();
 
 
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<SharedRepository>();
 builder.Services.AddScoped<SettlementRepository>();
 builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<BranchRepository>();
