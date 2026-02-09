@@ -15,8 +15,8 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // GET: api/settlements/lanSearch/{lan}
-        [HttpGet("lanSearch/{lan}")]
+        // GET: api/settlements/getLanDetails/{lan}
+        [HttpGet("getLanDetails/{lan}")]
         public async Task<IActionResult> GetLanDetailsAsync(string lan)
         {
             var data = await _service.GetLanDetailsAsync(lan);

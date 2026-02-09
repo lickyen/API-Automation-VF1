@@ -29,8 +29,8 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
                       .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
 
 //map config to AppSettings Model
-builder.Services.Configure<AppSettings>(builder.Configuration);
-builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<AppSettings>>().Value);
+var appSettings = builder.Configuration.Get<AppSettings>() ?? throw new InvalidOperationException("Failed to load configuration");
+builder.Services.AddSingleton(appSettings);
 
 //configure logging
 Log.Logger = new LoggerConfiguration()
