@@ -27,7 +27,6 @@ namespace ProductivityApi.Repositories
             parameters.Add("@Branch_Code", dto.Branch_Code);
             parameters.Add("@Branch_Name", dto.Branch_Name);
             parameters.Add("@Disb_Date", dto.Disb_Date);
-            parameters.Add("@Loan_Amount", dto.Loan_Amount);
             parameters.Add("@Settlement_Amount", dto.Settlement_Amount);
             parameters.Add("@Settlement_Purpose", dto.Settlement_Purpose);
             parameters.Add("@Settlement_Letter_Path", dto.Settlement_Letter_Path);

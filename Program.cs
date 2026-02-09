@@ -24,13 +24,13 @@ builder.Services.AddCors(options =>
 //Dapper mapping
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-// Automatically loads the correct appsettings file based on the environment
+//select config based on env
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                       .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
 
 //map config to AppSettings Model
 builder.Services.Configure<AppSettings>(builder.Configuration);
-builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptionsSnapshot<AppSettings>>().Value);
+builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<AppSettings>>().Value);
 
 //configure logging
 Log.Logger = new LoggerConfiguration()
@@ -56,6 +56,9 @@ builder.Services.AddScoped<SharedService>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<BranchServices>();
+
+builder.Services.AddHttpClient<PLFService>();
+
 
 
 builder.Services.AddScoped<UserRepository>();

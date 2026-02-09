@@ -15,6 +15,18 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
+        // GET: api/settlements/lanSearch/{lan}
+        [HttpGet("lanSearch/{lan}")]
+        public async Task<IActionResult> GetLanDetailsAsync(string lan)
+        {
+            var data = await _service.GetLanDetailsAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         // GET: api/settlements/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSettlement(int id)
@@ -95,8 +107,8 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        // POST: api/settlements/deletePayment/{id}
-        [HttpPost("deletePayment/{id}")]
+        // DELETE: api/settlements/deletePayment/{id}
+        [HttpDelete("deletePayment/{id}")]
         public async Task<IActionResult> DeletePayment(int id)
         {
             var result = await _service.DeletePaymentAsync(id);

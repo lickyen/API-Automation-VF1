@@ -1,4 +1,5 @@
-﻿using Novell.Directory.Ldap.Rfc2251;
+﻿using Azure.Core;
+using Novell.Directory.Ldap.Rfc2251;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 
@@ -7,10 +8,14 @@ namespace ProductivityApi.Services
     public class SettlementService
     {
         private readonly SettlementRepository _repository;
+        private readonly PLFService _plfService;
+        private readonly BranchServices _branchService;
 
-        public SettlementService(SettlementRepository repository)
+        public SettlementService(SettlementRepository repository, PLFService plfService, BranchServices branchService)
         {
             _repository = repository;
+            _plfService = plfService;
+            _branchService = branchService;
         }
 
         // Create a new settlement request
@@ -70,7 +75,47 @@ namespace ProductivityApi.Services
             var result = await _repository.CancelSettlementAsync(dto);
             return result;
         }
+        public async Task<LanDetailsPlf?> GetLanDetailsAsync(string lan)
+        {
+            var loan = await _plfService.GetFinance(lan);
+            LanDetailsPlf data = new LanDetailsPlf();
 
+            if (loan == null || loan?.returnStatus?.returnCode != "0000")
+            {
+                throw new Exception("LAN not found or InActive");
+            }
+
+            var cif = loan.customer?.cif;
+
+            if (string.IsNullOrWhiteSpace(cif))
+            {
+                throw new Exception("CIF not found or InActive");
+            }
+
+            data.CustId = cif;
+            data.CustName = loan.customer?.personalInfo?.shortName;
+            data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate; 
+            data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
+            if(!string.IsNullOrEmpty(data.BranchCode))
+            {
+                var branch = _branchService.GetBranchByID(data.BranchCode);
+                data.BranchName = branch?.BranchName;
+            }
+
+            var customer = await _plfService.GetCustomerDetails(cif);
+
+            if (customer == null || customer?.ReturnStatus?.returnCode != "0000")
+            {
+                throw new Exception("Customer not found or InActive");
+            }
+
+            data.Mobile = customer.Phones?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.phoneNumber)
+                .FirstOrDefault();
+
+            return data;
+        }
 
     }
 }

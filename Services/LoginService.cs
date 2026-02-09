@@ -12,9 +12,9 @@ namespace ProductivityApi.Services
         private readonly UserRepository _userRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(IOptionsSnapshot<AppSettings> appSettings, UserRepository userRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings, UserRepository userRepository, IWebHostEnvironment env)
         {
-            _settings = appSettings.Value.ADSettings;
+            _settings = appSettings.ADSettings;
             _userRepository = userRepository;
             _env = env;
         }
