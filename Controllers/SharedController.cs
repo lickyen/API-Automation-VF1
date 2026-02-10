@@ -25,5 +25,18 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, accounts, "Success"));
         }
 
+
+        // GET: api/shared/getLanDetails/{lan}
+        [HttpGet("getLanDetails/{lan}")]
+        public async Task<IActionResult> GetLanDetailsAsync(string lan)
+        {
+            var data = await _service.GetLanDetailsAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
     }
 }

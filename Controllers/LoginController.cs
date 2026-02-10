@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
+using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Controllers
 {
@@ -37,6 +38,19 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, $"User not found"));
 
             return Ok(new Response(true, profile, "Success"));
+        }
+
+        [HttpPost("sendOTP")]
+        public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.UserId))
+            {
+                return BadRequest(new Response(false, null, "Invalid User Id"));
+            }
+
+            var otp = await _loginService.SendOtp(request.UserId);
+
+            return Ok(new Response(true, new { Otp = otp }, "OTP sent successfully"));
         }
 
     }

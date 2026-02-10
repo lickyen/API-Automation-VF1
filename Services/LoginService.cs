@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using Serilog;
 using System.DirectoryServices;
+using System.Security.Cryptography;
 
 namespace ProductivityApi.Services
 {
@@ -10,12 +12,16 @@ namespace ProductivityApi.Services
     {
         private readonly ADSettings _settings;
         private readonly UserRepository _userRepository;
+        private readonly SmsService _smsService;
+        private readonly TemplateService _templateService;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(AppSettings appSettings, UserRepository userRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings, UserRepository userRepository, SmsService smsService, TemplateService templateService, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
             _userRepository = userRepository;
+            _smsService = smsService;
+            _templateService = templateService;
             _env = env;
         }
 
@@ -185,5 +191,46 @@ namespace ProductivityApi.Services
             const int ADS_UF_ACCOUNTDISABLE = 0x0002; // Bit flag for disabled accounts
             return (accountControl & ADS_UF_ACCOUNTDISABLE) == 0;
         }
+
+        public async Task<string> SendOtp(string userId)
+        {
+            string otp = GenerateOtp();
+
+            var placeholders = new Dictionary<string, string>
+            {
+                { "OTP", otp }
+            };
+
+            var user = _userRepository.GetUser(userId)
+                ?? throw new InvalidOperationException("User not found");
+
+            if (string.IsNullOrWhiteSpace(user.Mobile))
+            {
+                throw new InvalidOperationException("Contact details not found");
+            }
+
+            string mobileNo = user.Mobile;
+
+            var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
+
+            var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+            await _smsService.SendSms(mobileNo, smsBody, smsTemplate.DltContentId);
+
+            return otp;
+        }
+
+        private string GenerateOtp()
+        {
+            using var rng = RandomNumberGenerator.Create();
+            byte[] bytes = new byte[4];
+            rng.GetBytes(bytes);
+
+            uint randomNumber = BitConverter.ToUInt32(bytes, 0);
+            int otp = (int)(randomNumber % 900000) + 100000;
+
+            return otp.ToString();
+        }
+
     }
+
 }

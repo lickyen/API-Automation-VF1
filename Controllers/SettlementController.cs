@@ -15,18 +15,6 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // GET: api/settlements/getLanDetails/{lan}
-        [HttpGet("getLanDetails/{lan}")]
-        public async Task<IActionResult> GetLanDetailsAsync(string lan)
-        {
-            var data = await _service.GetLanDetailsAsync(lan);
-
-            if (data == null)
-                return NotFound(new Response(false, null, "Record not found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
         // GET: api/settlements/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSettlement(int id)

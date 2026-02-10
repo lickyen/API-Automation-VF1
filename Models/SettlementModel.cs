@@ -146,13 +146,4 @@ namespace ProductivityApi.Models
         public string Updated_By { get; set; }
     }
 
-    public class LanDetailsPlf
-    {
-        public string? CustId { get; set; }
-        public string? CustName { get; set; }
-        public string? Mobile { get; set; }
-        public string? BranchCode { get; set; }
-        public string? BranchName { get; set; }
-        public DateTime? DisbDate { get; set; }
-    }
 }

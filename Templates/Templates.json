@@ -1,8 +1,8 @@
 {
   "Sms": {
     "OtpSms": {
-      "Content": "Hi, welcome to Vistaar Customer App. Your OTP is <<OTP>>. Please do not share it with anyone.",
-      "DltContentId": "1107161234567890123"
+      "Content": "Hi, welcome to Vistaar Productivity App. Your OTP is : <<OTP>>. Don't share with Anyone. Kindly note the OTP before deleting the Message. Thank you..!",
+      "DltContentId": ""
     }
   },
   "Email": {

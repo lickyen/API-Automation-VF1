@@ -56,6 +56,9 @@ builder.Services.AddScoped<SharedService>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<BranchServices>();
+builder.Services.AddScoped<TemplateService>();
+builder.Services.AddScoped<SmsService>();
+builder.Services.AddScoped<EmailService>();
 
 builder.Services.AddHttpClient<PLFService>();
 
