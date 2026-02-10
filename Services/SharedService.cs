@@ -43,6 +43,7 @@ namespace ProductivityApi.Services
 
             data.CustId = cif;
             data.CustName = loan.customer?.personalInfo?.shortName;
+            data.Lan = loan.finReference;
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;

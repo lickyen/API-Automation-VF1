@@ -2,6 +2,7 @@
 {
     public class LanDetailsPlf
     {
+        public string? Lan { get; set; }
         public string? CustId { get; set; }
         public string? CustName { get; set; }
         public string? Mobile { get; set; }
