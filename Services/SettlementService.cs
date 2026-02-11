@@ -19,6 +19,7 @@ namespace ProductivityApi.Services
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
+            _userService = userService;
         }
 
         // Create a new settlement request
