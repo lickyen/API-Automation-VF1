@@ -1,13 +1,23 @@
 {
   "Sms": {
     "OtpSms": {
-      "Content": "Hi, welcome to Vistaar Productivity App. Your OTP is : <<OTP>>. Don't share with Anyone. Kindly note the OTP before deleting the Message. Thank you..!",
-      "DltContentId": ""
+      "Content": "Hello Vistaarian, Your OTP is <<OTP>>. Do not share your OTP with anyone. Regards Vistaar Finance.",
+      "DltContentId": "1007418310234869921"
     }
   },
+
   "Email": {
-    "NachCancelEmail": {
-      "Body": "<p>Dear Team,</p><p>NACH mandate cancellation has been initiated.</p><p><b>Customer Name:</b> <<CustomerName>><br/><b>LAN:</b> <<LAN>><br/><b>UMRN:</b> <<UMRN>><br/><b>Mobile:</b> <<Mobile>></p><p>Regards,<br/>Vistaar Finance</p>"
+    "MovedToQEmail": {
+      "Body": "<p>Dear Team,</p><p>The LAN <b><<LAN>></b> has been moved to your queue.</p><p>Please take necessary action by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+    },
+    "ApprovedEmail": {
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>approved</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+    },
+    "RejectedEmail": {
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:red;'>rejected</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+    },
+    "ProcessedEmail": {
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>processed</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     }
   }
 }
