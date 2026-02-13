@@ -35,10 +35,4 @@ namespace ProductivityApi.Models
         public string JobTitle { get; set; }
     }
 
-    public class SendOtpRequest
-    {
-        [Required]
-        public string UserId { get; set; }
-    }
-
 }

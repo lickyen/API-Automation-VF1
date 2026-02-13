@@ -39,19 +39,5 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, profile, "Success"));
         }
-
-        [HttpPost("sendOTP")]
-        public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.UserId))
-            {
-                return BadRequest(new Response(false, null, "Invalid User Id"));
-            }
-
-            var otp = await _loginService.SendOtp(request.UserId);
-
-            return Ok(new Response(true, new { Otp = otp }, "OTP sent successfully"));
-        }
-
     }
 }
