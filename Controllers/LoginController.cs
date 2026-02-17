@@ -39,5 +39,17 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, profile, "Success"));
         }
+
+        [HttpPost("resetPassword")]
+        public IActionResult ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            bool success = _loginService.ResetPassword(request.UserId, request.NewPassword);
+
+            if (success)
+                return Ok(new Response(true, null, "Password reset successfully"));
+            else
+                return BadRequest(new Response(false, null, "Password reset failed"));
+        }
+
     }
 }

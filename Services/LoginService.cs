@@ -172,6 +172,51 @@ namespace ProductivityApi.Services
             return managers;
         }
 
+        public bool ResetPassword(string userId, string newPassword)
+        {
+            try
+            {
+                using (var entry = new DirectoryEntry(
+                    _settings.LDAPPath,
+                    _settings.ServiceAccountUser,
+                    _settings.ServiceAccountPassword))
+                {
+                    using (var searcher = new DirectorySearcher(entry))
+                    {
+                        searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
+                        searcher.SearchScope = SearchScope.Subtree;
+
+                        var result = searcher.FindOne();
+                        if (result == null)
+                            return false; // User not found
+
+                        using (var userEntry = result.GetDirectoryEntry())
+                        {
+                            // Reset password
+                            userEntry.Invoke("SetPassword", new object[] { newPassword });
+
+                            // Unlock account (if locked)
+                            userEntry.Properties["lockoutTime"].Value = 0;
+
+                            userEntry.CommitChanges();
+
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (System.Runtime.InteropServices.COMException ex)
+            {
+                // Password policy violation or permission issue
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
         private string EscapeLdapSearchFilter(string dn)
         {
             return dn.Replace("\\", "\\5c")
