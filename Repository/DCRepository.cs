@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
+using System.DirectoryServices.Protocols;
 
 namespace ProductivityApi.Repository
 {
@@ -135,7 +136,7 @@ namespace ProductivityApi.Repository
                                 CaseID = reader.GetInt32(reader.GetOrdinal("CaseID")),
                                 CaseSummary = reader["CaseSummary"]?.ToString(),
                                 OffenseType = reader["OffenseType"]?.ToString(),
-                                Evidence = reader["Evidence"]?.ToString(),
+                               // Evidence = reader["Evidence"]?.ToString(),
                                 SCNToBeSent = reader["SCNToBeSent"]?.ToString(),
 
                                 CaseStatus = reader["CaseStatus"] as string,
@@ -144,7 +145,7 @@ namespace ProductivityApi.Repository
                             };
                         }
 
-                        // 2️⃣ Read Employees
+                        // 2️nd Read Employees
                         if (caseDtl != null && reader.NextResult())
                         {
                             while (reader.Read())
@@ -160,6 +161,19 @@ namespace ProductivityApi.Repository
                                        Supervisor1EmpID = reader["Supervisor1EmpID"] as string,
                                     Supervisor2EmpID = reader["Supervisor2EmpID"] as string,
                                     Supervisor3EmpID = reader["Supervisor3EmpID"] as string
+                                });
+                            }
+                        }
+                        // 23rd Read Evidences
+                        if (caseDtl != null && reader.NextResult())
+                        {
+                            while (reader.Read())
+                            {
+                                caseDtl.Evidences.Add(new EvidencesDto
+                                {
+                                    EvidenceDocType = reader["EvidenceType"]?.ToString(),
+                                    EvidenceDocName = reader["EvidenceDoc"]?.ToString()
+                                  
                                 });
                             }
                         }
@@ -234,7 +248,7 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@ResultCode");
         }
-        public string UpdateHRresponse(EmployeeResponseDto dto)
+        public string UpdateEmployeeresponse(EmployeeResponseDto dto)
         {
             try
             {
@@ -245,13 +259,16 @@ namespace ProductivityApi.Repository
 
                     // 1️⃣ Build TVP DataTable
                     var employeeEvidences = new DataTable();
+                    employeeEvidences.Columns.Add("EvidenceType", typeof(string));
                     employeeEvidences.Columns.Add("EvidenceDoc", typeof(string));
                     
 
                     foreach (var docs in dto.EvidenceDocs)
                     {
                         employeeEvidences.Rows.Add(
+                              docs.EvidenceDocType,
                             docs.EvidenceDocName
+                          
                          
                         );
                     }
@@ -287,6 +304,60 @@ namespace ProductivityApi.Repository
                 return $"DB Error: {ex.Message}";
             }
         }
+        //[sp_Update_DC_Case]
+        public string UpdateCase(UpdateCaseDto dto)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_conStr))
+                // using (var command = new SqlCommand("sp_Insert_DC_Case_Details", connection))
+                using (var command = new SqlCommand("sp_Update_DC_Case", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+
+
+
+                    // 3️⃣ Case-level parameters
+                    command.Parameters.AddWithValue("@CaseID", dto.CaseId);
+                    command.Parameters.AddWithValue("@CaseSummary", dto.CaseSummary);
+                    command.Parameters.AddWithValue("@OffenseType", dto.OffenseType);
+                    command.Parameters.AddWithValue("@Evidence", dto.Evidence);
+                    command.Parameters.AddWithValue("@SCNToBeSent", dto.SCNToBeSent);
+                    command.Parameters.AddWithValue("@ModifiedBy", dto.CreatedBy);
+
+                    var outputParam = new SqlParameter("@ResultCode", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    command.Parameters.Add(outputParam);
+
+                    var resultMessageParam = new SqlParameter("@ResultMessage", SqlDbType.NVarChar, 200)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    command.Parameters.Add(resultMessageParam);
+                  
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+
+                    int result = (int)outputParam.Value;
+                    string resultMessage = resultMessageParam.Value?.ToString();
+                    //return result > 0
+                    //        ? $"Success. CaseID: {result}"
+                    //        : "Error occurred";
+                    return result == 1
+                                        ? $"Success: {resultMessage}"
+                                        : $"Failed: {resultMessage}";
+
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"DB Error: {ex.Message}";
+            }
+        }
+
 
     }
 }

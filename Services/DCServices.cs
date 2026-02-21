@@ -64,5 +64,21 @@ namespace ProductivityApi.Services
             var result = await _dCRepository.UpdateHRResponseAsync(dto);
             return result;
         }
+
+        public string UpdateCase(UpdateCaseDto dto)
+        {
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            return _dCRepository.UpdateCase(dto);
+        }
+        public  string UpdateEmployeeResponse(EmployeeResponseDto dto)
+        {
+            var result =  _dCRepository.UpdateEmployeeresponse(dto);
+            return result;
+        }
+
     }
 }
