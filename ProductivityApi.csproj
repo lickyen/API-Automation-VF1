@@ -26,8 +26,4 @@
     <PackageReference Include="System.DirectoryServices.Protocols" Version="10.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\PLF\" />
-  </ItemGroup>
-
 </Project>

@@ -48,12 +48,12 @@ namespace ProductivityApi.Services
             return SendRequest<PaymentResponse>(HttpMethod.Post,endPoint,request, serviceName: "manualPayment", "45");
         }
 
-        public Task<StatementResponse> GetStatement(StatementRequest request)
-        {
-            var endPoint = "pff-api/services/statementRest/statementService/getStatement";
+        //public Task<StatementResponse> GetStatement(StatementRequest request)
+        //{
+        //    var endPoint = "pff-api/services/statementRest/statementService/getStatement";
 
-            return SendRequest<StatementResponse>(HttpMethod.Get,endPoint,request, serviceName: "getStatement", "3");
-        }
+        //    return SendRequest<StatementResponse>(HttpMethod.Get,endPoint,request, serviceName: "getStatement", "3");
+        //}
 
         public Task<GenerateStatementResponse> GenerateStatement(GenerateStatementRequest request)
         {
@@ -69,6 +69,26 @@ namespace ProductivityApi.Services
             return SendRequest<TransferLetterResponse>(HttpMethod.Post, endPoint, request, serviceName: "transferLetter", "3");
         }
 
+        public Task<ForeclosureReportModel> GetForeclosureReport(ForeclosureReportRequest request)
+        {
+            var endPoint = "pff-api/services/statementRest/statementService/getForeclosureStmtV1";
+
+            return SendRequest<ForeclosureReportModel>(HttpMethod.Post, endPoint, request, serviceName: "getForeclosureStmtV1", "3");
+        }
+
+        public Task<ReturnStatus> UpdateCustomerEmail(CustomerEmailRequest request)
+        {
+            var endPoint = "pff-api/services/customerRest/customerService/updateCustomerEmail";
+
+            return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "updateCustomerEmail", "3");
+        }
+
+        public Task<ReturnStatus> AddCustomerEmail(CustomerEmailRequest request)
+        {
+            var endPoint = "pff-api/services/customerRest/customerService/addCustomerEmail";
+
+            return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "addCustomerEmail", "3");
+        }
 
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")
         {
