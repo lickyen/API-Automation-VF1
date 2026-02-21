@@ -122,5 +122,45 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
+
+        [HttpPost("UpdateCase")]
+        public IActionResult UpdateCase([FromBody] UpdateCaseDto dto)
+        {
+            try
+            {
+                var result = _dCServices.UpdateCase(dto);
+
+                if (result.Contains("Success"))
+                    return Ok(new Response(true, null, result));
+                return Ok(new Response(false, null, result));
+
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
+            }
+        }
+
+        [HttpPost("CaseUpdateEmployee")]
+        public IActionResult CaseUpdateEmployee([FromBody] EmployeeResponseDto dto)
+        {
+            try
+            {
+                var result = _dCServices.UpdateEmployeeResponse(dto);
+
+                if (result.Contains("Success"))
+                    return Ok(new Response(true, null, result));
+                return Ok(new Response(false, null, result));
+
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
+            }
+        }
+
+
     }
 }

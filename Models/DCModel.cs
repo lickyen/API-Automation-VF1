@@ -24,6 +24,17 @@
 
         public string CreatedBy { get; set; }
     }
+    public class UpdateCaseDto
+    {
+        //  public List<EmployeeDto> Employees { get; set; }
+        public int CaseId { get; set; }
+        public string CaseSummary { get; set; }
+        public string OffenseType { get; set; }
+        public string Evidence { get; set; }
+        // Y / N
+        public string SCNToBeSent { get; set; }
+      public string CreatedBy { get; set; }
+    }
 
     public class EmployeeDto
     {
@@ -58,6 +69,8 @@
         public DateTime? CreatedDate { get; set; }
 
         public List<CaseEmployeeDto> Employees { get; set; } = new();
+        public List<EvidencesDto> Evidences { get; set; } = new();
+
     }
     public class CaseEmployeeDto
     {
@@ -113,10 +126,15 @@
         public string EmployeeUpdatedBy { get; set; } = string.Empty;
 
         // List of evidence documents
-        public List<EvidenceDocDto> EvidenceDocs { get; set; } = new List<EvidenceDocDto>();
+        public List<EvidencesDto> EvidenceDocs { get; set; } = new List<EvidencesDto>();
     }
     public class EvidenceDocDto
     {
+        public string EvidenceDocName { get; set; } = string.Empty;
+    }
+    public class EvidencesDto
+    {
+        public string EvidenceDocType { get; set; } = string.Empty;
         public string EvidenceDocName { get; set; } = string.Empty;
     }
 
