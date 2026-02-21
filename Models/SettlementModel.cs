@@ -21,8 +21,6 @@ namespace ProductivityApi.Models
         public string? Branch_Code { get; set; }
         public string? Branch_Name { get; set; }
         public DateTime? Disb_Date { get; set; }
-        public decimal? Loan_Amount { get; set; }
-        public decimal? Outstanding_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public string? Settlement_Purpose { get; set; }
         public string? Settlement_Letter_Path { get; set; }
@@ -73,8 +71,6 @@ namespace ProductivityApi.Models
         public string? Cust_Name { get; set; }
         public string? Branch_Code { get; set; }
         public string? Branch_Name { get; set; }
-        public decimal? Loan_Amount { get; set; }
-        public decimal? Outstanding_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public string Status { get; set; }
         public string Created_By { get; set; }
@@ -94,7 +90,6 @@ namespace ProductivityApi.Models
         public string? Branch_Code { get; set; }
         public string? Branch_Name { get; set; }
         public DateTime? Disb_Date { get; set; }
-        public decimal? Loan_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public string? Settlement_Purpose { get; set; }
         public string? Settlement_Letter_Path { get; set; }
@@ -150,4 +145,5 @@ namespace ProductivityApi.Models
         public string ReqId { get; set; }
         public string Updated_By { get; set; }
     }
+
 }

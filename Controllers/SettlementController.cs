@@ -95,8 +95,8 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        // POST: api/settlements/deletePayment/{id}
-        [HttpPost("deletePayment/{id}")]
+        // DELETE: api/settlements/deletePayment/{id}
+        [HttpDelete("deletePayment/{id}")]
         public async Task<IActionResult> DeletePayment(int id)
         {
             var result = await _service.DeletePaymentAsync(id);

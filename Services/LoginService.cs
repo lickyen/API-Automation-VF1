@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Options;
-using ProductivityApi.Models;
+﻿using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using Serilog;
 using System.DirectoryServices;
+
 
 namespace ProductivityApi.Services
 {
@@ -12,9 +12,9 @@ namespace ProductivityApi.Services
         private readonly UserRepository _userRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(IOptionsSnapshot<AppSettings> appSettings, UserRepository userRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings, UserRepository userRepository, IWebHostEnvironment env)
         {
-            _settings = appSettings.Value.ADSettings;
+            _settings = appSettings.ADSettings;
             _userRepository = userRepository;
             _env = env;
         }
@@ -85,6 +85,7 @@ namespace ProductivityApi.Services
             // Simple password check (plain-text for example, should hash in real apps)
             return user.Password == login.Password;
         }
+
         public ADProfile GetUserProfile(string userName)
         {
             ADProfile profile = new ADProfile();
@@ -171,6 +172,51 @@ namespace ProductivityApi.Services
             return managers;
         }
 
+        public bool ResetPassword(string userId, string newPassword)
+        {
+            try
+            {
+                using (var entry = new DirectoryEntry(
+                    _settings.LDAPPath,
+                    _settings.ServiceAccountUser,
+                    _settings.ServiceAccountPassword))
+                {
+                    using (var searcher = new DirectorySearcher(entry))
+                    {
+                        searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
+                        searcher.SearchScope = SearchScope.Subtree;
+
+                        var result = searcher.FindOne();
+                        if (result == null)
+                            return false; // User not found
+
+                        using (var userEntry = result.GetDirectoryEntry())
+                        {
+                            // Reset password
+                            userEntry.Invoke("SetPassword", new object[] { newPassword });
+
+                            // Unlock account (if locked)
+                            userEntry.Properties["lockoutTime"].Value = 0;
+
+                            userEntry.CommitChanges();
+
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (System.Runtime.InteropServices.COMException ex)
+            {
+                // Password policy violation or permission issue
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
         private string EscapeLdapSearchFilter(string dn)
         {
             return dn.Replace("\\", "\\5c")
@@ -185,5 +231,7 @@ namespace ProductivityApi.Services
             const int ADS_UF_ACCOUNTDISABLE = 0x0002; // Bit flag for disabled accounts
             return (accountControl & ADS_UF_ACCOUNTDISABLE) == 0;
         }
+
     }
-}
+
+}   

@@ -1,16 +1,25 @@
-﻿using Novell.Directory.Ldap.Rfc2251;
+﻿using Azure.Core;
+using Novell.Directory.Ldap.Rfc2251;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
+using static System.Net.WebRequestMethods;
 
 namespace ProductivityApi.Services
 {
     public class SettlementService
     {
         private readonly SettlementRepository _repository;
+        private readonly EmailService _emailService;
+        private readonly TemplateService _templateService;
+        private readonly UserService _userService;
 
-        public SettlementService(SettlementRepository repository)
+        public SettlementService(SettlementRepository repository, EmailService emailService, TemplateService templateService, UserService userService)
         {
             _repository = repository;
+            _emailService = emailService;
+            _templateService = templateService;
+            _userService = userService;
         }
 
         // Create a new settlement request
@@ -45,6 +54,41 @@ namespace ProductivityApi.Services
         public async Task<int> ApproveSettlementAsync(ApproveSettlementDto dto)
         {
             var result = await _repository.ApproveSettlementAsync(dto);
+            if (result >= 1)
+            {
+                var settlement = await GetSettlementByIdAsync(dto.Id);
+                if (settlement != null) 
+                {
+                    var user =  _userService.GetUser(settlement.Created_By);
+                    if (user != null && !string.IsNullOrEmpty(user.Email))
+                    {
+                        var placeholders = new Dictionary<string, string>
+                        {
+                            { "Module", "Settlement" }, { "LAN", settlement.Lan}
+                        };
+
+                        var toList = new List<string> { user.Email };
+                        var ccList = new List<string>();
+
+                        string templateType = dto.Action switch
+                        {
+                            "Processed" => "ProcessedEmail",
+                            "SentBack" => "MovedToQEmail",
+                            "Rejected" => "RejectedEmail",
+                            _ => ""
+                        };
+
+                        if (! string.IsNullOrEmpty(templateType))
+                        {
+                            var emailTemplate = _templateService.GetEmailTemplate(templateType);
+
+                            var emailBody = _templateService.ReplacePlaceholders(emailTemplate.Body, placeholders);
+                            await _emailService.SendEmail("Action Required - Settlement", emailBody, toList, ccList);
+                        }
+                    }
+                }
+
+            }
             return result;
         }
 
@@ -70,7 +114,6 @@ namespace ProductivityApi.Services
             var result = await _repository.CancelSettlementAsync(dto);
             return result;
         }
-
 
     }
 }

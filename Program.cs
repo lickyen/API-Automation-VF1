@@ -24,13 +24,13 @@ builder.Services.AddCors(options =>
 //Dapper mapping
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-// Automatically loads the correct appsettings file based on the environment
+//select config based on env
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                       .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
 
 //map config to AppSettings Model
-builder.Services.Configure<AppSettings>(builder.Configuration);
-builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptionsSnapshot<AppSettings>>().Value);
+var appSettings = builder.Configuration.Get<AppSettings>() ?? throw new InvalidOperationException("Failed to load configuration");
+builder.Services.AddSingleton(appSettings);
 
 //configure logging
 Log.Logger = new LoggerConfiguration()
@@ -52,16 +52,23 @@ builder.Host.UseSerilog();
 
 builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<SharedService>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<BranchServices>();
+builder.Services.AddScoped<TemplateService>();
+builder.Services.AddScoped<SmsService>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<OtpService>();
 
+builder.Services.AddHttpClient<PLFService>();
 
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<SharedRepository>();
 builder.Services.AddScoped<SettlementRepository>();
 builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<BranchRepository>();
-
+builder.Services.AddScoped<OtpRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();

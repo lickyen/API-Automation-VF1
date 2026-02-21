@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
+using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Controllers
 {
@@ -37,6 +38,17 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, $"User not found"));
 
             return Ok(new Response(true, profile, "Success"));
+        }
+
+        [HttpPost("resetPassword")]
+        public IActionResult ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            bool success = _loginService.ResetPassword(request.UserId, request.NewPassword);
+
+            if (success)
+                return Ok(new Response(true, null, "Password reset successfully"));
+            else
+                return BadRequest(new Response(false, null, "Password reset failed"));
         }
 
     }

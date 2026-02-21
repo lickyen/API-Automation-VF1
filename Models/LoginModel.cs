@@ -35,6 +35,13 @@ namespace ProductivityApi.Models
         public string JobTitle { get; set; }
     }
 
+    public class ResetPasswordRequest
+    {
+        [Required(ErrorMessage = "User ID is required.")]
+        public string UserId { get; set; }
 
+        [Required(ErrorMessage = "New Password is required.")]
+        public string NewPassword { get; set; }
+    }
 
 }
