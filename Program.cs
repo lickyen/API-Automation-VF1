@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:3000") // your frontend URL
+                .WithOrigins("http://localhost:3000", "https://productivity.vistaarfinance.com")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
