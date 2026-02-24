@@ -43,14 +43,14 @@ namespace ProductivityApi.Services
             return _userRepository.ActivateUser(activateUserDTO);
         }
 
-        public List<string> GetModulesByRole(string role)
-        {
-            return _userRepository.GetModulesByRole(role);
-        }
-
         public List<string> GetModulesByUser(string user)
         {
             return _userRepository.GetModulesByUser(user);
+        }
+
+        public List<string> GetRoles()
+        {
+            return _userRepository.GetRoles();
         }
     }
 }

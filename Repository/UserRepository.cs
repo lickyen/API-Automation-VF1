@@ -214,38 +214,6 @@ namespace ProductivityApi.Repository
                 return result;
             }
         }
-        public List<string> GetModulesByRole(string role)
-        {
-            List<string> modules = new List<string>();
-
-            using (var connection = new SqlConnection(_conStr))
-            {
-                using (var command = new SqlCommand("sp_GetModulesByRole", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@Role", role);
-                    connection.Open();
-                    using (var reader = command.ExecuteReader())
-                    {
-                        if (reader.HasRows)
-                        {
-                            while (reader.Read())
-                            {
-                                string? module = reader.IsDBNull(reader.GetOrdinal("Module")) ? null : reader.GetString(reader.GetOrdinal("Module"));
-                                if (module != null)
-                                {
-                                    modules.Add(module);
-                                }
-
-                            }
-                        }
-
-                    }
-                }
-            }
-
-            return modules;
-        }
         public List<string> GetModulesByUser(string UserId)
         {
             List<string> modules = new List<string>();
@@ -277,6 +245,37 @@ namespace ProductivityApi.Repository
             }
 
             return modules;
+        }
+        public List<string> GetRoles()
+        {
+            List<string> roles = new List<string>();
+
+            using (var connection = new SqlConnection(_conStr))
+            {
+                using (var command = new SqlCommand("sp_getRoles", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    connection.Open();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                string? role = reader.IsDBNull(reader.GetOrdinal("Role")) ? null : reader.GetString(reader.GetOrdinal("Role"));
+                                if (role != null)
+                                {
+                                    roles.Add(role);
+                                }
+
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            return roles;
         }
 
     }

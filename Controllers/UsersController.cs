@@ -100,5 +100,13 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, modules, "Success"));
         }
+
+        [HttpGet("getRoles")]
+        public IActionResult GetRoles()
+        {
+            var modules = _userService.GetRoles() ?? new List<String>();
+
+            return Ok(new Response(true, modules, "Success"));
+        }
     }
 }
