@@ -36,7 +36,6 @@ namespace ProductivityApi.Models
 
         [Required]
         public string Role { get; set; }
-        public string Status { get; set; } = "Active";
 
         [EmailAddress]
         public string? Email { get; set; }
@@ -58,7 +57,6 @@ namespace ProductivityApi.Models
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
         public string? Role { get; set; }
-        public string? Status { get; set; }
 
         [EmailAddress]
         public string? Email { get; set; }
