@@ -13,21 +13,21 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public async Task<CersaiModel?> GetPendingCCAsync()
+        public async Task<IEnumerable<CersaiModel>> GetPendingCCAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            return await conn.QueryFirstOrDefaultAsync<CersaiModel>(
+            return await conn.QueryAsync<CersaiModel>(
                 "Cersai_GetCCPendingLans",
                 commandType: CommandType.StoredProcedure
             );
         }
 
-        public async Task<CersaiModel?> GetPendingCSAsync()
+        public async Task<IEnumerable<CersaiModel>> GetPendingCSAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            return await conn.QueryFirstOrDefaultAsync<CersaiModel>(
+            return await conn.QueryAsync<CersaiModel>(
                 "Cersai_GetCSPendingLans",
                 commandType: CommandType.StoredProcedure
             );

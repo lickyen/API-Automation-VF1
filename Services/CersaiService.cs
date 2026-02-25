@@ -19,7 +19,7 @@ namespace ProductivityApi.Services
             _userService = userService;
         }
 
-        public async Task<CersaiModel?> GetPendingAsync(string type)
+        public async Task<IEnumerable<CersaiModel>?> GetPendingAsync(string type)
         {
             return type.ToUpper() switch
             {
