@@ -43,6 +43,27 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        public async Task<int> ChargeCreationBulkAsync(List<ChargeCreationDto> dtos)
+        {
+            int processed = 0;
+            foreach (var dto in dtos)
+            {
+                var result = await _repository.ChargeCreationAsync(dto);
+                if (result > 0) processed++;
+            }
+            return processed;
+        }
+
+        public async Task<int> ChargeSatisfactionBulkAsync(List<ChargeSatisfactionDto> dtos)
+        {
+            int processed = 0;
+            foreach (var dto in dtos)
+            {
+                var result = await _repository.ChargeSatisfactionAsync(dto);
+                if (result > 0) processed++;
+            }
+            return processed;
+        }
         public async Task<MemoryStream?> GenerateReportExcelAsync()
         {
             var data = await _repository.GetReportDataAsync();

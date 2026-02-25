@@ -57,6 +57,34 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        // POST: api/cersai/charge-creation/bulk
+        [HttpPost("charge-creation/bulk")]
+        public async Task<IActionResult> ChargeCreationBulk([FromBody] List<ChargeCreationDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.ChargeCreationBulkAsync(dtos);
+
+            return result > 0
+                ? Ok(new Response(true, null, $"{result} records processed successfully"))
+                : StatusCode(500, new Response(false, null, "An error occurred while processing the request"));
+        }
+
+        // POST: api/cersai/charge-satisfaction/bulk
+        [HttpPost("charge-satisfaction/bulk")]
+        public async Task<IActionResult> ChargeSatisfactionBulk([FromBody] List<ChargeSatisfactionDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.ChargeSatisfactionBulkAsync(dtos);
+
+            return result > 0
+                ? Ok(new Response(true, null, $"{result} records processed successfully"))
+                : StatusCode(500, new Response(false, null, "An error occurred while processing the request"));
+        }
+
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport()
         {
