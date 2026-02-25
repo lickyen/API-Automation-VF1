@@ -53,22 +53,24 @@ builder.Host.UseSerilog();
 builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SharedService>();
-builder.Services.AddScoped<SettlementService>();
-builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<BranchServices>();
 builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<OtpService>();
+builder.Services.AddScoped<SettlementService>();
+builder.Services.AddScoped<DCServices>();
+builder.Services.AddScoped<CersaiService>();
 
 builder.Services.AddHttpClient<PLFService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
-builder.Services.AddScoped<SettlementRepository>();
-builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<BranchRepository>();
 builder.Services.AddScoped<OtpRepository>();
+builder.Services.AddScoped<SettlementRepository>();
+builder.Services.AddScoped<DCRepository>();
+builder.Services.AddScoped<CersaiRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();
