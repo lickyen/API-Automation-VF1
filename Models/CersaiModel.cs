@@ -6,7 +6,7 @@
 
         public string Lan { get; set; }
 
-        public DateOnly DisbDate { get; set; }
+        public DateTime DisbDate { get; set; }
 
         public string SiId { get; set; }
 
@@ -16,7 +16,7 @@
 
         public string ClosureDesc{ get; set; }
 
-        public DateOnly? ClosureDate { get; set; }
+        public DateTime? ClosureDate { get; set; }
 
         public string SatisfactionStatus { get; set; }
 
