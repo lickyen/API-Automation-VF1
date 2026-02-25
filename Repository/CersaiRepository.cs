@@ -74,5 +74,16 @@ namespace ProductivityApi.Repository
             return parameters.Get<int>("@Output");
         }
 
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "Cersai_GetReport",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
 }

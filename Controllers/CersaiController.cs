@@ -57,5 +57,21 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        [HttpGet("report")]
+        public async Task<IActionResult> DownloadReport()
+        {
+            var stream = await _service.GenerateReportExcelAsync();
+            if (stream == null)
+                return NotFound(new Response(false, null, "No data found for report"));
+
+            string excelName = $"Cersai_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                stream,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                excelName
+            );
+        }
+
     }
 }
