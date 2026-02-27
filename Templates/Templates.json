@@ -8,16 +8,16 @@
 
   "Email": {
     "MovedToQEmail": {
-      "Body": "<p>Dear Team,</p><p>The LAN <b><<LAN>></b> has been moved to your queue.</p><p>Please take necessary action by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+      "Body": "<p>Dear Team,</p><p>The LAN <b><<LAN>></b> has been moved to your queue.</p><p>Please take necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     },
     "ApprovedEmail": {
-      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Approved</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Approved</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     },
     "RejectedEmail": {
-      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:red;'>Rejected</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:red;'>Rejected</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     },
     "ProcessedEmail": {
-      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Processed</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.net.in:446/Login.aspx\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+      "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Processed</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     }
   }
 }
