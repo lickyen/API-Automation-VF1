@@ -8,17 +8,10 @@ namespace ProductivityApi.Services
     public class CersaiService
     {
         private readonly CersaiRepository _repository;
-        private readonly EmailService _emailService;
-        private readonly SmsService _smsService;
-        private readonly TemplateService _templateService;
-        private readonly UserService _userService;
 
-        public CersaiService(CersaiRepository repository, EmailService emailService, SmsService smsService, TemplateService templateService, UserService userService)
+        public CersaiService(CersaiRepository repository)
         {
             _repository = repository;
-            _emailService = emailService;
-            _templateService = templateService;
-            _userService = userService;
         }
 
         public async Task<IEnumerable<CersaiModel>?> GetPendingAsync(string type)
