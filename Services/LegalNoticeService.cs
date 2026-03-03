@@ -23,7 +23,7 @@ namespace ProductivityApi.Services
             return await _repository.GetLegalNoticesAsync();
         }
 
-        public async Task<LegalNoticeUploads?> GetLegalNoticeByLanAsync(string lan)
+        public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             return await _repository.GetLegalNoticeByLanAsync(lan);
         }
