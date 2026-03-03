@@ -46,7 +46,7 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
-        public async Task<LegalNoticeUploads?> GetLegalNoticeByLanAsync(string lan)
+        public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -57,7 +57,7 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
 
-            return data.FirstOrDefault();
+            return data.ToList();
         }
         public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto)
         {
