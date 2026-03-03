@@ -61,6 +61,8 @@ builder.Services.AddScoped<OtpService>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<CersaiService>();
+builder.Services.AddScoped<BranchVisitService>();
+builder.Services.AddScoped<LegalNoticeService>();
 
 builder.Services.AddHttpClient<PLFService>();
 
@@ -71,6 +73,8 @@ builder.Services.AddScoped<OtpRepository>();
 builder.Services.AddScoped<SettlementRepository>();
 builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<CersaiRepository>();
+builder.Services.AddScoped<BranchVisitRepository>();
+builder.Services.AddScoped<LegalNoticeRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();

@@ -23,7 +23,7 @@ namespace ProductivityApi.Controllers
                 var branches = _branchServices.GetBranches();
 
                 if (branches == null || !branches.Any())
-                    return Ok(new Response(false, null, "No users found"));
+                    return Ok(new Response(false, null, "No records found"));
 
                 return Ok(new Response(true, branches, "Success"));
             }
