@@ -75,6 +75,8 @@ namespace ProductivityApi.Repository
         public async Task<int> UpdateBranchVisitAsync(BranchVisitSubmitDto dto)
         {
             using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
             using var transaction = connection.BeginTransaction();
 
             try
