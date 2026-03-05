@@ -76,6 +76,9 @@ builder.Services.AddScoped<CersaiRepository>();
 builder.Services.AddScoped<BranchVisitRepository>();
 builder.Services.AddScoped<LegalNoticeRepository>();
 
+// Register the BranchVisitJob as a hosted service (it will run in the background)
+builder.Services.AddHostedService<ProductivityApi.Jobs.BranchVisitJob>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
