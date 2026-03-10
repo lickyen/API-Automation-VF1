@@ -68,14 +68,23 @@ namespace ProductivityApi.Services
             if (uploads == null || !uploads.Any())
                 throw new FileNotFoundException($"No legal notice files found for LAN {request.Lan}");
 
-            // Get the latest matching file
-            var file = uploads
-                .Where(x => x.NoticeType == request.NoticeType &&
-                           (string.IsNullOrWhiteSpace(request.SubType) || x.SubType == request.SubType))
-                .OrderByDescending(x => x.UploadedAt)
-                .FirstOrDefault();
+            var file = new LegalNoticeUploads();
 
-            if (file == null)
+            if (string.IsNullOrWhiteSpace(request.FileName))
+            {
+                // Get the latest file matching NoticeType and SubType
+                file = uploads
+                    .Where(x => x.NoticeType == request.NoticeType && x.SubType == request.SubType)
+                    .OrderByDescending(x => x.UploadedAt)
+                    .FirstOrDefault();
+            }
+            else
+            {
+                // Get file by exact FileName
+                file = uploads.FirstOrDefault(x => x.FilePath == request.FileName);
+            }
+
+            if (string.IsNullOrWhiteSpace(file?.FilePath))
                 throw new FileNotFoundException("No matching legal notice file found");
 
             var fullFilePath = Path.Combine(_filePath, file.FilePath);

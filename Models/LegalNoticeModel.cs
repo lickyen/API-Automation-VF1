@@ -1,4 +1,6 @@
-﻿namespace ProductivityApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProductivityApi.Models
 {
     public class LegalNoticeModel
     {
@@ -59,9 +61,11 @@
 
     public class LegalNoticeDownloadRequestDto
     {
+        [Required]
         public string Lan { get; set; }
-        public string NoticeType { get; set; }
-        public string SubType { get; set; }
+        public string? NoticeType { get; set; }
+        public string? SubType { get; set; }
+        public string? FileName { get; set; }
     }
     public class LegalNoticeDownloadResponseDto
     {
