@@ -88,7 +88,6 @@ namespace ProductivityApi.Repository
             var statusMessage = parameters.Get<string>("@StatusMessage");
             return statusMessage;
         }
-
     }
 }
 

@@ -36,6 +36,7 @@ namespace ProductivityApi.Services
         //    return await _repository.UploadLegalNoticeDocumentAsync(dto);
         //}
 
+
         public async Task<string> UploadDocumentAsync(LegalNoticeUploadDto dto)
         {
             if (!string.IsNullOrEmpty(dto.Base64))
