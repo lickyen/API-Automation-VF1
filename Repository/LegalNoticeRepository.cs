@@ -77,6 +77,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@SubType", dto.SubType);
             parameters.Add("@FilePath", fileName);
             parameters.Add("@UploadedBy", dto.UploadedBy);
+            parameters.Add("@Source", dto.Source);
             parameters.Add("@StatusMessage", dbType: DbType.String, size: 500, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(

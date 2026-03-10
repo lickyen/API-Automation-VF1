@@ -23,6 +23,8 @@
         public string FilePath { get; set; }
         public string UploadedBy { get; set; }
         public DateTime UploadedAt { get; set; }
+        public string Source { get; set; }
+
     }
 
     public class LegalNoticeTypes
@@ -52,12 +54,8 @@
         public string FileType { get; set; }
         public string Base64 { get; set; }
         public string UploadedBy { get; set; }
+        public string Source { get; set; }
     }
-
-
-
-
-
 
     public class LegalNoticeDownloadRequestDto
     {
