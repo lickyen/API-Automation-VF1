@@ -49,15 +49,37 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result, "Success"));
         }
 
+        //[HttpPost("upload")]
+        //public async Task<IActionResult> Upload([FromBody] LegalNoticeUploadDto dto)
+        //{
+        //    var status = await _legalNoticeService.UploadLegalNoticeDocumentAsync(dto);
+
+        //    if (status.StartsWith("ERROR"))
+        //        return BadRequest(new Response(false, null, status));
+
+        //    return Ok(new Response(true, null, status));
+        //}
+
         [HttpPost("upload")]
         public async Task<IActionResult> Upload([FromBody] LegalNoticeUploadDto dto)
         {
-            var status = await _legalNoticeService.UploadLegalNoticeDocumentAsync(dto);
+            var status = await _legalNoticeService.UploadDocumentAsync(dto);
 
             if (status.StartsWith("ERROR"))
                 return BadRequest(new Response(false, null, status));
 
             return Ok(new Response(true, null, status));
+        }
+
+        [HttpPost("download")]
+        public async Task<IActionResult> Download([FromBody] LegalNoticeDownloadRequestDto request)
+        {
+            var result = await _legalNoticeService.DownloadDocumentAsync(request);
+
+            if (result.File == null || string.IsNullOrEmpty(result.File.Base64))
+                return NotFound(new Response(false, null, "File not found"));
+
+            return Ok(new Response(true, result, "File retrieved successfully"));
         }
     }
 

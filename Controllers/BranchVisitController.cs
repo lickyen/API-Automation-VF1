@@ -18,40 +18,12 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getVisitsByUser")]
-        public async Task<IActionResult> GetVisitsByUser([FromQuery] string userId, [FromQuery] string month)
+        public async Task<IActionResult> GetVisitsByUser([FromQuery] string userId, [FromQuery] string month, [FromQuery] string? status = null)   // null = all, "P" = pending, "C" = completed
         {
             if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(month))
                 return BadRequest(new Response(false, null, "Invalid request"));
 
-            var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, null);
-
-            if (visits == null || !visits.Any())
-                return NotFound(new Response(false, null, "No records found"));
-
-            return Ok(new Response(true, visits, "Success"));
-        }
-
-        [HttpGet("getVisitsByUser/pending")]
-        public async Task<IActionResult> GetPendingVisitsByUser([FromQuery] string userId, [FromQuery] string month)
-        {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(month))
-                return BadRequest(new Response(false, null, "Invalid request"));
-
-            var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, "P");
-
-            if (visits == null || !visits.Any())
-                return NotFound(new Response(false, null, "No records found"));
-
-            return Ok(new Response(true, visits, "Success"));
-        }
-
-        [HttpGet("getVisitsByUser/completed")]
-        public async Task<IActionResult> GetCompletedVisitsByUser([FromQuery] string userId, [FromQuery] string month)
-        {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(month))
-                return BadRequest(new Response(false, null, "Invalid request"));
-
-            var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, "C");
+            var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, status);
 
             if (visits == null || !visits.Any())
                 return NotFound(new Response(false, null, "No records found"));
