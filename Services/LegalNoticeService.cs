@@ -1,6 +1,7 @@
 ﻿using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
+using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Services
 {
@@ -35,6 +36,7 @@ namespace ProductivityApi.Services
         //    return await _repository.UploadLegalNoticeDocumentAsync(dto);
         //}
 
+
         public async Task<string> UploadDocumentAsync(LegalNoticeUploadDto dto)
         {
             if (!string.IsNullOrEmpty(dto.Base64))
@@ -44,15 +46,17 @@ namespace ProductivityApi.Services
                 if (!Directory.Exists(folderPath))
                     Directory.CreateDirectory(folderPath);
 
-                var fileName = $"{dto.Lan}_{dto.NoticeType}_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+                string noticeType = Regex.Replace(dto.NoticeType ?? "", @"[^a-zA-Z0-9]", "");
+                string subType = Regex.Replace(dto.SubType ?? "", @"[^a-zA-Z0-9]", "");
+
+                var fileName = $"{dto.Lan}_{noticeType}_{subType}_{DateTime.Now:yyyyMMddHHmmss}.{dto.FileType}";
+
                 var fullPath = Path.Combine(folderPath, fileName);
 
                 byte[] fileBytes = Convert.FromBase64String(dto.Base64);
                 await File.WriteAllBytesAsync(fullPath, fileBytes);
 
-                dto.FilePath = fileName;
-
-                return await _repository.UploadLegalNoticeDocumentAsync(dto);
+                return await _repository.UploadLegalNoticeDocumentAsync(dto, fileName);
             }
 
             return "Base64 content is empty";
