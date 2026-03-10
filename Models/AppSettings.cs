@@ -9,6 +9,7 @@ namespace ProductivityApi.Models
         public SmsSettings SmsSettings { get; set; } = new SmsSettings();
         public PlfApiSettings PlfApiSettings { get; set; } = new PlfApiSettings();
         public ADSettings ADSettings { get; set; } = new ADSettings();
+        public FilePaths FilePaths { get; set; } = new FilePaths();
     }
 
     public class EmailSettings
@@ -48,5 +49,10 @@ namespace ProductivityApi.Models
         public string BaseUrl { get; set; } = string.Empty;
         public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
         public string? AppDate { get; set; }
+    }
+
+    public class FilePaths
+    {
+        public string LegalNoticeFilePath { get; set; } = string.Empty;
     }
 }

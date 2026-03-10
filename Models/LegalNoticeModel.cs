@@ -48,8 +48,30 @@
         public string MegaZone { get; set; }
         public string POS { get; set; }
         public string NoticeType { get; set; }
-        public string SubType { get; set; }
+        public string SubType { get; set; }  
         public string FilePath { get; set; }
+        public string Base64 { get; set; }
         public string UploadedBy { get; set; }
     }
+
+    public class LegalNoticeDownloadRequestDto
+    {
+        public string Lan { get; set; }
+        public string NoticeType { get; set; }
+        public string SubType { get; set; }
+    }
+    public class LegalNoticeDownloadResponseDto
+    {
+        public string Lan { get; set; }
+        public string NoticeType { get; set; }
+        public string SubType { get; set; }
+        public LegalNoticeDownloadFileDto File { get; set; } = new LegalNoticeDownloadFileDto();
+    }
+    public class LegalNoticeDownloadFileDto
+    {
+        public string FileName { get; set; }     
+        public string Base64 { get; set; }       
+        public DateTime UploadedAt { get; set; } 
+    }
+
 }
