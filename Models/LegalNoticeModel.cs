@@ -49,7 +49,7 @@
         public string POS { get; set; }
         public string NoticeType { get; set; }
         public string SubType { get; set; }  
-        public string FilePath { get; set; }
+        public string FileType { get; set; }
         public string Base64 { get; set; }
         public string UploadedBy { get; set; }
     }

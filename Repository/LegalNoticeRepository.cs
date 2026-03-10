@@ -59,7 +59,7 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
-        public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto)
+        public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto, string fileName)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -75,7 +75,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@POS", dto.POS);
             parameters.Add("@NoticeType", dto.NoticeType);
             parameters.Add("@SubType", dto.SubType);
-            parameters.Add("@FilePath", dto.FilePath);
+            parameters.Add("@FilePath", fileName);
             parameters.Add("@UploadedBy", dto.UploadedBy);
             parameters.Add("@StatusMessage", dbType: DbType.String, size: 500, direction: ParameterDirection.Output);
 
