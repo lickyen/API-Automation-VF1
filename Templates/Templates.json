@@ -18,13 +18,6 @@
     },
     "ProcessedEmail": {
       "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Processed</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
-    },
-
-    "BranchVisitEscalation": {
-      "Body": "<p>Dear Team,</p><p>Branch <b><<Branch>></b> has a pending branch visit for month <b><<VisitMonth>></b>.</p><p>Current Status: <b><<Status>></b><br/>Visit Id: <b><<VisitId>></b></p><p>This is an automated notification for: <b><<EscalationName>></b>. Please take necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
-    },
-    "BranchVisitCautionLetter": {
-      "Body": "<p>Dear Team,</p><p>Branch <b><<Branch>></b> has a pending branch visit for month <b><<VisitMonth>></b> and requires a caution letter.</p><p>Current Status: <b><<Status>></b><br/>Visit Id: <b><<VisitId>></b></p><p>This is an automated caution letter notification. Further action may follow. Please view details in <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
     }
   }
 }

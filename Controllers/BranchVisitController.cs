@@ -26,7 +26,7 @@ namespace ProductivityApi.Controllers
             var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, status);
 
             if (visits == null || !visits.Any())
-                return NotFound(new Response(false, null, "No records found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, visits, "Success"));
         }
@@ -48,7 +48,7 @@ namespace ProductivityApi.Controllers
             var checklist = await _branchVisitService.GetChecklistAsync(section.ToUpper());
 
             if (checklist == null || !checklist.Any())
-                return NotFound(new Response(false, null, "Record not found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, checklist, "Success"));
         }
