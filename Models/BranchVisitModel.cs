@@ -58,6 +58,8 @@ namespace ProductivityApi.Models
 
         public string Question { get; set; }
 
+        public string? Options { get; set; }
+
         public int? ParentId { get; set; }
 
         public string? TriggerValue { get; set; }
