@@ -128,6 +128,19 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
+
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "sp_BranchVisit_GetReport",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
+
 }
 

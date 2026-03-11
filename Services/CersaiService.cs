@@ -79,7 +79,7 @@ namespace ProductivityApi.Services
 
             // Generate Excel
             var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("Cersai Report");
+            var worksheet = workbook.Worksheets.Add("Report");
             worksheet.Cell(1, 1).InsertTable(dt);
 
             var stream = new MemoryStream();
