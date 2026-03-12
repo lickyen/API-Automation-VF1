@@ -140,6 +140,46 @@ namespace ProductivityApi.Repository
             );
         }
 
+        //Job methods
+
+        public async Task<List<BranchVisit>> GetPendingVisitsForMonthAsync(string month)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var visits = await connection.QueryAsync<BranchVisit>(
+                "sp_BranchVisit_GetPendingForMonth",
+                new { Month = month },
+                commandType: CommandType.StoredProcedure);
+
+            return visits.ToList();
+        }
+
+        public async Task<int> UpdateEscalationStatusAsync(int visitId, string escalationType)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.ExecuteAsync(
+                "sp_BranchVisit_UpdateEscalationStatus",
+                new { Id = visitId, EscalationType = escalationType },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+
+        public async Task<int> InsertMonthlyVisitsAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.ExecuteAsync(
+                "sp_BranchVisit_MonthlyInsert",
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+
     }
 
 }

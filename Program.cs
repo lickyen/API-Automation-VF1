@@ -4,7 +4,10 @@ using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
+using ProductivityApi.Jobs;
 using Serilog;
+using Hangfire;
+using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,21 +53,27 @@ Log.Logger = new LoggerConfiguration()
 // Tell the Host to use Serilog
 builder.Host.UseSerilog();
 
-builder.Services.AddScoped<LoginService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<SharedService>();
-builder.Services.AddScoped<BranchServices>();
+// Hangfire configuration
+builder.Services.AddHangfire(config =>
+    config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DBConn")));
+
+builder.Services.AddHangfireServer();
+
+builder.Services.AddHttpClient<PLFService>();
 builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<OtpService>();
+builder.Services.AddScoped<SharedService>();
+
+builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<BranchServices>();
 builder.Services.AddScoped<SettlementService>();
 builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<CersaiService>();
 builder.Services.AddScoped<BranchVisitService>();
 builder.Services.AddScoped<LegalNoticeService>();
-
-builder.Services.AddHttpClient<PLFService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -75,6 +84,8 @@ builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<CersaiRepository>();
 builder.Services.AddScoped<BranchVisitRepository>();
 builder.Services.AddScoped<LegalNoticeRepository>();
+
+builder.Services.AddScoped<BranchVisitJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -116,5 +127,13 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Hangfire dashboard
+app.UseHangfireDashboard("/hangfire");
+
+RecurringJob.AddOrUpdate<BranchVisitJob>(
+    "branch-visit-job",
+    job => job.ExecuteAsync(CancellationToken.None),
+    Cron.Daily(1));
 
 app.Run();
