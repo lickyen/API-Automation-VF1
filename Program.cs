@@ -74,6 +74,7 @@ builder.Services.AddScoped<DCServices>();
 builder.Services.AddScoped<CersaiService>();
 builder.Services.AddScoped<BranchVisitService>();
 builder.Services.AddScoped<LegalNoticeService>();
+builder.Services.AddScoped<NOCService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -84,6 +85,7 @@ builder.Services.AddScoped<DCRepository>();
 builder.Services.AddScoped<CersaiRepository>();
 builder.Services.AddScoped<BranchVisitRepository>();
 builder.Services.AddScoped<LegalNoticeRepository>();
+builder.Services.AddScoped<NOCRepository>();
 
 builder.Services.AddScoped<BranchVisitJob>();
 
