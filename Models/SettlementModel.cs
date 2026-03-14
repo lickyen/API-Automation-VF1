@@ -50,6 +50,7 @@ namespace ProductivityApi.Models
         public string? Bank_Acnt { get; set; }
         public string? Deposit_Proof { get; set; }
         public string? Payment_Details { get; set; }
+        public string? Transaction_Details { get; set; }
         public string Created_By { get; set; }
         public DateTime Created_Dt { get; set; }
         public string Updated_By { get; set; }
@@ -129,6 +130,7 @@ namespace ProductivityApi.Models
         public DateTime? Deposit_Date { get; set; }
         public string? Deposit_Proof { get; set; }
         public string? Payment_Details { get; set; }
+        public string? Transaction_Details { get; set; }
         public string? Updated_By { get; set; } 
     }
     public class ApproveSettlementDto
