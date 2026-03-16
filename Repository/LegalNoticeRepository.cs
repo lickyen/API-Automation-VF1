@@ -35,7 +35,7 @@ namespace ProductivityApi.Repository
 
             return result;
         }
-        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync()
+        public async Task<List<LegalNoticeModel>> GetLegalNoticeMasterAsync()
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -47,28 +47,18 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
-
-        public async Task<List<LegalNoticeUploads>> GetLegalNoticeUploadsAsync(LegalNoticeFilterDto dto)
+        public async Task<List<LegalNoticeUploads>> GetLegalNoticeUploadsAsync()
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var data = await connection.QueryAsync<LegalNoticeUploads>(
-                "sp_getLegalNoticeUploads", 
-                new
-                {
-                    NoticeType = dto.NoticeType,
-                    SubType = dto.SubType,
-                    FromDate = dto.FromDate,
-                    ToDate = dto.ToDate
-                },
+            var uploads = await connection.QueryAsync<LegalNoticeUploads>(
+                "sp_GetAllLegalNoticeUploads",
                 commandType: CommandType.StoredProcedure
             );
 
-            return data.ToList();
+            return uploads.ToList();
         }
-
-
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
@@ -82,7 +72,6 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
-
         public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto, string fileName)
         {
             using var connection = new SqlConnection(_conStr);
