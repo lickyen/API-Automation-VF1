@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using DocumentFormat.OpenXml.Drawing;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
@@ -46,6 +47,28 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
+
+        public async Task<List<LegalNoticeUploads>> GetLegalNoticeUploadsAsync(LegalNoticeFilterDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var data = await connection.QueryAsync<LegalNoticeUploads>(
+                "sp_getLegalNoticeUploads", 
+                new
+                {
+                    NoticeType = dto.NoticeType,
+                    SubType = dto.SubType,
+                    FromDate = dto.FromDate,
+                    ToDate = dto.ToDate
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return data.ToList();
+        }
+
+
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
@@ -59,6 +82,7 @@ namespace ProductivityApi.Repository
 
             return data.ToList();
         }
+
         public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto, string fileName)
         {
             using var connection = new SqlConnection(_conStr);

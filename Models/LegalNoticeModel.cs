@@ -82,4 +82,12 @@ namespace ProductivityApi.Models
         public DateTime UploadedAt { get; set; } 
     }
 
+    public class LegalNoticeFilterDto
+    {
+        public string? NoticeType { get; set; }
+        public string? SubType { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+    }
+
 }

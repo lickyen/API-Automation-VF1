@@ -39,9 +39,9 @@ namespace ProductivityApi.Controllers
         //}
 
         [HttpGet("getLegalNotices")]
-        public async Task<IActionResult> GetLegalNotices(string? NoticeType = null, string? SubType = null, DateTime? FromDate = null, DateTime? ToDate = null)
+        public async Task<IActionResult> GetLegalNotices([FromQuery] LegalNoticeFilterDto dto)
         {
-            var result = await _legalNoticeService.GetLegalNoticesAsync(NoticeType, SubType, FromDate, ToDate);
+            var result = await _legalNoticeService.GetLegalNoticesAsync(dto);
 
             if (result == null || !result.Any())
                 return NotFound(new Response(false, null, "Record not found"));

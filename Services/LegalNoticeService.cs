@@ -26,36 +26,21 @@ namespace ProductivityApi.Services
         //    return await _repository.GetLegalNoticesAsync();
         //}
 
-        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync(string? noticeType, string? subType, DateTime? fromDate, DateTime? toDate)
+        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync(LegalNoticeFilterDto dto)
         {
             var notices = await _repository.GetLegalNoticesAsync();
+            var uploads = await _repository.GetLegalNoticeUploadsAsync(dto);
+
+            var uploadsByLan = uploads.GroupBy(x => x.Lan).ToDictionary(g => g.Key, g => g.ToList());
 
             foreach (var notice in notices)
             {
-                var uploads = await _repository.GetLegalNoticeByLanAsync(notice.Lan);
-
-                // Apply filters on uploads
-                if (!string.IsNullOrEmpty(noticeType))
-                    uploads = uploads.Where(x => x.NoticeType == noticeType).ToList();
-
-                if (!string.IsNullOrEmpty(subType))
-                    uploads = uploads.Where(x => x.SubType == subType).ToList();
-
-                if (fromDate.HasValue)
-                    uploads = uploads.Where(x => x.UploadedAt.Date >= fromDate.Value.Date).ToList();
-
-                if (toDate.HasValue)
-                    uploads = uploads.Where(x => x.UploadedAt.Date <= toDate.Value.Date).ToList();
-
-                notice.Uploads = uploads;
+                uploadsByLan.TryGetValue(notice.Lan, out var filteredUploads);
+                notice.Uploads = filteredUploads ?? new List<LegalNoticeUploads>();
             }
 
-            // remove notices that have no uploads after filtering
-            notices = notices.Where(x => x.Uploads != null && x.Uploads.Any()).ToList();
-
-            return notices;
+            return notices.Where(x => x.Uploads.Any()).ToList();
         }
-
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             return await _repository.GetLegalNoticeByLanAsync(lan);
