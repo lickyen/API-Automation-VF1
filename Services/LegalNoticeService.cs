@@ -33,8 +33,8 @@ namespace ProductivityApi.Services
                     .Where(u => u.Lan == notice.Lan
                              && (string.IsNullOrEmpty(dto.NoticeType) || u.NoticeType == dto.NoticeType)
                              && (string.IsNullOrEmpty(dto.SubType) || u.SubType == dto.SubType)
-                             && (!dto.FromDate.HasValue || u.UploadedAt >= dto.FromDate.Value)
-                             && (!dto.ToDate.HasValue || u.UploadedAt <= dto.ToDate.Value))
+                             && (!dto.FromDate.HasValue || u.UploadedAt.Date >= dto.FromDate.Value.Date)
+                             && (!dto.ToDate.HasValue || u.UploadedAt.Date <= dto.ToDate.Value.Date))
                     .ToList();
             }
 
