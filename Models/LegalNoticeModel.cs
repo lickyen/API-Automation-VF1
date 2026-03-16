@@ -15,6 +15,7 @@ namespace ProductivityApi.Models
         public string POS { get; set; }
         public string CreatedBy { get; set; }
         public DateTime CreatedDt { get; set; }
+        public List<LegalNoticeUploads> Uploads { get; set; } = new List<LegalNoticeUploads>();
     }
 
     public class LegalNoticeUploads

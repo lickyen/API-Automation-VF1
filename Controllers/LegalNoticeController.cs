@@ -27,10 +27,21 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result, "Success"));
         }
 
+        //[HttpGet("getLegalNotices")]
+        //public async Task<IActionResult> GetLegalNotices()
+        //{
+        //    var result = await _legalNoticeService.GetLegalNoticesAsync();
+
+        //    if (result == null || !result.Any())
+        //        return NotFound(new Response(false, null, "Record not found"));
+
+        //    return Ok(new Response(true, result, "Success"));
+        //}
+
         [HttpGet("getLegalNotices")]
-        public async Task<IActionResult> GetLegalNotices()
+        public async Task<IActionResult> GetLegalNotices(string? NoticeType = null, string? SubType = null, DateTime? FromDate = null, DateTime? ToDate = null)
         {
-            var result = await _legalNoticeService.GetLegalNoticesAsync();
+            var result = await _legalNoticeService.GetLegalNoticesAsync(NoticeType, SubType, FromDate, ToDate);
 
             if (result == null || !result.Any())
                 return NotFound(new Response(false, null, "Record not found"));

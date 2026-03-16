@@ -21,9 +21,39 @@ namespace ProductivityApi.Services
             return await _repository.GetLegalNoticeTypesAsync();
         }
 
-        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync()
+        //public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync()
+        //{
+        //    return await _repository.GetLegalNoticesAsync();
+        //}
+
+        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync(string? noticeType, string? subType, DateTime? fromDate, DateTime? toDate)
         {
-            return await _repository.GetLegalNoticesAsync();
+            var notices = await _repository.GetLegalNoticesAsync();
+
+            foreach (var notice in notices)
+            {
+                var uploads = await _repository.GetLegalNoticeByLanAsync(notice.Lan);
+
+                // Apply filters on uploads
+                if (!string.IsNullOrEmpty(noticeType))
+                    uploads = uploads.Where(x => x.NoticeType == noticeType).ToList();
+
+                if (!string.IsNullOrEmpty(subType))
+                    uploads = uploads.Where(x => x.SubType == subType).ToList();
+
+                if (fromDate.HasValue)
+                    uploads = uploads.Where(x => x.UploadedAt.Date >= fromDate.Value.Date).ToList();
+
+                if (toDate.HasValue)
+                    uploads = uploads.Where(x => x.UploadedAt.Date <= toDate.Value.Date).ToList();
+
+                notice.Uploads = uploads;
+            }
+
+            // remove notices that have no uploads after filtering
+            notices = notices.Where(x => x.Uploads != null && x.Uploads.Any()).ToList();
+
+            return notices;
         }
 
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
