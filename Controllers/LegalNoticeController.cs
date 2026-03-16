@@ -22,7 +22,7 @@ namespace ProductivityApi.Controllers
             var result = await _legalNoticeService.GetLegalNoticeTypesAsync();
 
             if (result == null || !result.Any())
-                return NotFound(new Response(false, null, "Record not found"));
+                return NotFound(new Response(false, null, "No records found"));
 
             return Ok(new Response(true, result, "Success"));
         }
@@ -33,7 +33,7 @@ namespace ProductivityApi.Controllers
             var result = await _legalNoticeService.GetLegalNoticesAsync(dto);
 
             if (result == null || !result.Any())
-                return NotFound(new Response(false, null, "Record not found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, result, "Success"));
         }
@@ -44,7 +44,7 @@ namespace ProductivityApi.Controllers
             var result = await _legalNoticeService.GetLegalNoticeByLanAsync(lan);
 
             if (result == null)
-                return NotFound(new Response(false, null, "Record not found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, result, "Success"));
         }
