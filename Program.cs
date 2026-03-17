@@ -18,7 +18,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:3000", "http://localhost:3001", "https://uatproductivity.vistaarfinance.com", "https://productivity.vistaarfinance.com")
+                .WithOrigins("http://localhost:3000", "https://uatproductivity.vistaarfinance.com", "https://productivity.vistaarfinance.com")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
