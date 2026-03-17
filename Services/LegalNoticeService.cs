@@ -20,23 +20,35 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetLegalNoticeTypesAsync();
         }
-
-        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync()
+        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync(LegalNoticeFilterDto dto)
         {
-            return await _repository.GetLegalNoticesAsync();
-        }
+            // Get all notices and uploads
+            var notices = await _repository.GetLegalNoticeMasterAsync();
+            var uploads = await _repository.GetLegalNoticeUploadsAsync();
 
+            // Map uploads to notices
+            foreach (var notice in notices)
+            {
+                notice.Uploads = uploads
+                    .Where(u => u.Lan == notice.Lan
+                             && (string.IsNullOrEmpty(dto.NoticeType) || u.NoticeType == dto.NoticeType)
+                             && (string.IsNullOrEmpty(dto.SubType) || u.SubType == dto.SubType)
+                             && (!dto.FromDate.HasValue || u.UploadedAt.Date >= dto.FromDate.Value.Date)
+                             && (!dto.ToDate.HasValue || u.UploadedAt.Date <= dto.ToDate.Value.Date))
+                    .ToList();
+            }
+
+            // Remove notices that have no uploads after filtering
+            notices = notices
+                .Where(n => n.Uploads.Any())
+                .ToList();
+
+            return notices;
+        }
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
             return await _repository.GetLegalNoticeByLanAsync(lan);
         }
-
-        //public async Task<string> UploadLegalNoticeDocumentAsync(LegalNoticeUploadDto dto)
-        //{
-        //    return await _repository.UploadLegalNoticeDocumentAsync(dto);
-        //}
-
-
         public async Task<string> UploadDocumentAsync(LegalNoticeUploadDto dto)
         {
             if (!string.IsNullOrEmpty(dto.Base64))
@@ -68,14 +80,23 @@ namespace ProductivityApi.Services
             if (uploads == null || !uploads.Any())
                 throw new FileNotFoundException($"No legal notice files found for LAN {request.Lan}");
 
-            // Get the latest matching file
-            var file = uploads
-                .Where(x => x.NoticeType == request.NoticeType &&
-                           (string.IsNullOrWhiteSpace(request.SubType) || x.SubType == request.SubType))
-                .OrderByDescending(x => x.UploadedAt)
-                .FirstOrDefault();
+            var file = new LegalNoticeUploads();
 
-            if (file == null)
+            if (string.IsNullOrWhiteSpace(request.FileName))
+            {
+                // Get the latest file matching NoticeType and SubType
+                file = uploads
+                    .Where(x => x.NoticeType == request.NoticeType && x.SubType == request.SubType)
+                    .OrderByDescending(x => x.UploadedAt)
+                    .FirstOrDefault();
+            }
+            else
+            {
+                // Get file by exact FileName
+                file = uploads.FirstOrDefault(x => x.FilePath == request.FileName);
+            }
+
+            if (string.IsNullOrWhiteSpace(file?.FilePath))
                 throw new FileNotFoundException("No matching legal notice file found");
 
             var fullFilePath = Path.Combine(_filePath, file.FilePath);

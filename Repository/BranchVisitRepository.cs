@@ -129,21 +129,19 @@ namespace ProductivityApi.Repository
             }
         }
 
-        // Inserts / seeds branch visit rows for the specified month.
-        public async Task<int> InsertMonthlyVisitsAsync(string month, string createdBy)
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync()
         {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            var result = await connection.ExecuteAsync(
-                "sp_BranchVisit_InsertMonthlyVisits",
-                new { Month = month, CreatedBy = createdBy },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
+            return await conn.QueryAsync(
+                "sp_BranchVisit_GetReport",
+                commandType: CommandType.StoredProcedure
+            );
         }
 
-        // Fetch visits for the given month whose status is not 'CMP' (pending/escalation candidates)
+        //Job methods
+
         public async Task<List<BranchVisit>> GetPendingVisitsForMonthAsync(string month)
         {
             using var connection = new SqlConnection(_conStr);
@@ -157,33 +155,32 @@ namespace ProductivityApi.Repository
             return visits.ToList();
         }
 
-        // Update escalation status (e.g. 10 = EL1, 15 = EL2)
-        public async Task<int> UpdateEscalationStatusAsync(int visitId, int escalationCode, string updatedBy)
+        public async Task<int> UpdateEscalationStatusAsync(int visitId, string escalationType)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
             var result = await connection.ExecuteAsync(
                 "sp_BranchVisit_UpdateEscalationStatus",
-                new { Id = visitId, EscalationCode = escalationCode, UpdatedBy = updatedBy },
+                new { Id = visitId, EscalationType = escalationType },
                 commandType: CommandType.StoredProcedure);
 
             return result;
         }
 
-        // Update caution letter status and optionally store path to generated caution letter
-        public async Task<int> UpdateCautionLetterAsync(int visitId, int cautionCode, string cautionPath, string updatedBy)
+        public async Task<int> InsertMonthlyVisitsAsync()
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
             var result = await connection.ExecuteAsync(
-                "sp_BranchVisit_UpdateCautionLetter",
-                new { Id = visitId, CautionCode = cautionCode, CautionPath = cautionPath, UpdatedBy = updatedBy },
+                "sp_BranchVisit_MonthlyInsert",
                 commandType: CommandType.StoredProcedure);
 
             return result;
         }
+
     }
+
 }
 

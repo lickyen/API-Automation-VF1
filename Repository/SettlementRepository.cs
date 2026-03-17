@@ -142,6 +142,7 @@ namespace ProductivityApi.Repositories
             parameters.Add("@Deposit_Date", dto.Deposit_Date);
             parameters.Add("@Deposit_Proof", dto.Deposit_Proof);
             parameters.Add("@Payment_Details", dto.Payment_Details);
+            parameters.Add("@Transaction_Details", dto.Transaction_Details);
             parameters.Add("@Updated_By", dto.Updated_By);
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 

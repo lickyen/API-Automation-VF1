@@ -26,7 +26,7 @@ namespace ProductivityApi.Controllers
             var visits = await _branchVisitService.GetVisitsByUserAsync(userId, month, status);
 
             if (visits == null || !visits.Any())
-                return NotFound(new Response(false, null, "No records found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, visits, "Success"));
         }
@@ -48,7 +48,7 @@ namespace ProductivityApi.Controllers
             var checklist = await _branchVisitService.GetChecklistAsync(section.ToUpper());
 
             if (checklist == null || !checklist.Any())
-                return NotFound(new Response(false, null, "Record not found"));
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, checklist, "Success"));
         }
@@ -67,6 +67,23 @@ namespace ProductivityApi.Controllers
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
+        }
+
+
+        [HttpGet("report")]
+        public async Task<IActionResult> DownloadReport()
+        {
+            var stream = await _branchVisitService.GenerateReportExcelAsync();
+            if (stream == null)
+                return NotFound(new Response(false, null, "No data found for report"));
+
+            string excelName = $"BranchVisit_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                stream,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                excelName
+            );
         }
     }
 }

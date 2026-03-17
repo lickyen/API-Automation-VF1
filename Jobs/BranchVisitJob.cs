@@ -1,101 +1,71 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using ProductivityApi.Repository;
+﻿using Hangfire;
 using ProductivityApi.Models;
+using ProductivityApi.Repository;
 using ProductivityApi.Services;
-using Quartz;
+using Serilog;
 
 namespace ProductivityApi.Jobs
 {
-    // Runs daily. Performs:
-    // - Monthly insert on day 1
-    // - Escalation emails and status update on day 10 (EL1) and day 15 (EL2)
-    // - Caution letter mail and status update on day 17 (Caution code 17)
-    public class BranchVisitJob : BackgroundService
+    public class BranchVisitJob 
     {
-        private readonly ILogger<BranchVisitJob> _logger;
-        private readonly IServiceProvider _provider;
-        private readonly string _systemUser = "SYSTEM";
+        private readonly Serilog.ILogger _logger;
+        private readonly BranchVisitRepository _repository;
+        private readonly EmailService _emailService;
+        private readonly TemplateService _templateService;
 
         public BranchVisitJob(
-            ILogger<BranchVisitJob> logger,
-            IServiceProvider provider)
+            BranchVisitRepository repository,
+            EmailService emailService,
+            TemplateService templateService)
         {
-            _logger = logger;
-            _provider = provider;
+            _repository = repository;
+            _emailService = emailService;
+            _templateService = templateService;
+
+            _logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .WriteTo.Console()
+                .WriteTo.File(
+                    //Path.Combine(jobLogPath, "log-.txt"),
+                    path: "logs/BranchVisitJob/log-.txt",
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 30)
+                .CreateLogger();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task ExecuteAsync(CancellationToken ct)
         {
-            _logger.LogInformation("BranchVisitJob started.");
-            // Run immediately on start, then once per day.
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await DoWorkAsync(stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error in BranchVisitJob.DoWorkAsync");
-                }
-
-                // Wait until next day (poll interval 24h)
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
-            }
-        }
-
-        private async Task DoWorkAsync(CancellationToken token)
-        {
-            // Create a scope for scoped services each run
-            using var scope = _provider.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<BranchVisitRepository>();
-            var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
-            var templateService = scope.ServiceProvider.GetRequiredService<TemplateService>();
+            _logger.Information("BranchVisitJob started at {Time}", DateTimeOffset.Now);
 
             var now = DateTime.Now;
             var day = now.Day;
-            var monthKey = now.ToString("yyyyMM"); // VisitMonth format used across repo
+            var monthKey = now.ToString("MMM-yy");
 
-            // 1st of month: insert / seed data
-            if (day == 1)
+            try
             {
-                _logger.LogInformation("BranchVisitJob: running monthly insert for {Month}", monthKey);
-                await repo.InsertMonthlyVisitsAsync(monthKey, _systemUser);
+                if (day == 1) await InsertMonthlyVisitsAsync(monthKey, ct);
+                if (day == 10) await ProcessEscalationAsync(monthKey, "EL1", ct);
+                if (day == 15) await ProcessEscalationAsync(monthKey, "EL2", ct);
+                if (day == 17) await ProcessCautionLettersAsync(monthKey, ct);
+
+                _logger.Information("BranchVisitJob completed at {Time}", DateTimeOffset.Now);
             }
-
-            // Escalation - Level 1 on day 10
-            if (day == 10)
+            catch (Exception ex)
             {
-                await ProcessEscalationAsync(monthKey, escalationCode: 10, "Escalation Level 1", token, repo, emailService, templateService);
-            }
-
-            // Escalation - Level 2 on day 15
-            if (day == 15)
-            {
-                await ProcessEscalationAsync(monthKey, escalationCode: 15, "Escalation Level 2", token, repo, emailService, templateService);
-            }
-
-            // Caution letter on day 17
-            if (day == 17)
-            {
-                await ProcessCautionLettersAsync(monthKey, token, repo, emailService, templateService);
+                _logger.Error(ex, "Error in BranchVisitJob.ExecuteAsync");
             }
         }
 
-        private async Task ProcessEscalationAsync(string monthKey, int escalationCode, string escalationName, CancellationToken token, BranchVisitRepository repo, EmailService emailService, TemplateService templateService)
+        private async Task ProcessEscalationAsync(string monthKey, string escalationType, CancellationToken ct)
         {
-            _logger.LogInformation("BranchVisitJob: processing {Escalation} for month {Month}", escalationName, monthKey);
-            var pending = await repo.GetPendingVisitsForMonthAsync(monthKey);
+            var pendingVisits = await _repository.GetPendingVisitsForMonthAsync(monthKey);
 
-            foreach (var visit in pending)
+            foreach (var visit in pendingVisits)
             {
-                if (token.IsCancellationRequested) break;
+                if (ct.IsCancellationRequested) break;
 
                 try
                 {
-                    // Build recipients - best-effort: RH_Id, ZH_Id, VisitedBy (assumed to be email addresses)
                     var to = new List<string>();
                     var cc = new List<string>();
 
@@ -105,59 +75,41 @@ namespace ProductivityApi.Jobs
 
                     if (!to.Any() && !cc.Any())
                     {
-                        _logger.LogWarning("BranchVisit {VisitId} has no recipients for escalation", visit.Id);
+                        _logger.Warning("Visit {VisitId} has no recipients for {Escalation}", visit.Id, escalationType);
                         continue;
                     }
 
-                    // Prepare subject and body from templates (fallback to simple body if template missing)
-                    var subject = $"[{escalationName}] Branch Visit pending - {visit.BranchId} - {visit.VisitMonth}";
-                    string body;
+                    // Template for escalation
 
-                    try
+                    var template = _templateService.GetEmailTemplate("BranchVisitEscalationEmail");
+                    var placeholders = new Dictionary<string, string>
                     {
-                        var tpl = templateService.GetEmailTemplate("BranchVisitEscalation").Body;
-                        var values = new Dictionary<string, string>
-                        {
-                            { "Branch", visit.BranchId ?? "" },
-                            { "VisitMonth", visit.VisitMonth ?? "" },
-                            { "Status", visit.Status ?? "" },
-                            { "VisitId", visit.Id.ToString() },
-                            { "EscalationName", escalationName }
-                        };
-                        body = templateService.ReplacePlaceholders(tpl, values);
-                    }
-                    catch (KeyNotFoundException)
-                    {
-                        body = $@"Branch: {visit.BranchId}
-                            Visit Month: {visit.VisitMonth}
-                            Current Status: {visit.Status}
-                            Visit Id: {visit.Id}
+                        { "LAN", visit.BranchId },
+                        { "EscalationLevel", escalationType } // EL1 or EL2
+                    };
+                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
-                            This is an automated {escalationName} notification. Please take necessary action.";
-                    }
+                    var subject = $"[{escalationType}] Branch Visit pending - {visit.BranchId} - {visit.VisitMonth}";
 
-                    // Send email via existing EmailService
-                    await emailService.SendEmail(subject, body, to, cc);
+                    await _emailService.SendEmail(subject, body, to, cc);
+                    await _repository.UpdateEscalationStatusAsync(visit.Id, escalationType);
 
-                    // update escalation status in DB
-                    await repo.UpdateEscalationStatusAsync(visit.Id, escalationCode, _systemUser);
-                    _logger.LogInformation("BranchVisit {VisitId} escalated with code {Code}", visit.Id, escalationCode);
+                    _logger.Information("Visit {VisitId} escalated ({Escalation})", visit.Id, escalationType);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process escalation for visit {VisitId}", visit.Id);
+                    _logger.Error(ex, "Failed to process escalation for visit {VisitId}", visit.Id);
                 }
             }
         }
 
-        private async Task ProcessCautionLettersAsync(string monthKey, CancellationToken token, BranchVisitRepository repo, EmailService emailService, TemplateService templateService)
+        private async Task ProcessCautionLettersAsync(string monthKey, CancellationToken ct)
         {
-            _logger.LogInformation("BranchVisitJob: processing caution letters for month {Month}", monthKey);
-            var pending = await repo.GetPendingVisitsForMonthAsync(monthKey);
+            var pendingVisits = await _repository.GetPendingVisitsForMonthAsync(monthKey);
 
-            foreach (var visit in pending)
+            foreach (var visit in pendingVisits)
             {
-                if (token.IsCancellationRequested) break;
+                if (ct.IsCancellationRequested) break;
 
                 try
                 {
@@ -170,48 +122,37 @@ namespace ProductivityApi.Jobs
 
                     if (!to.Any() && !cc.Any())
                     {
-                        _logger.LogWarning("BranchVisit {VisitId} has no recipients for caution letter", visit.Id);
+                        _logger.Warning("Visit {VisitId} has no recipients for caution letter", visit.Id);
                         continue;
                     }
+
+                    // Template for caution letter
+                    var template = _templateService.GetEmailTemplate("BranchVisitCautionLetterEmail");
+                    var placeholders = new Dictionary<string, string>
+                    {
+                        { "LAN", visit.BranchId }
+                    };
+                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
                     var subject = $"[Caution Letter] Branch Visit pending - {visit.BranchId} - {visit.VisitMonth}";
-                    string body;
 
-                    try
-                    {
-                        var tpl = templateService.GetEmailTemplate("BranchVisitCautionLetter").Body;
-                        var values = new Dictionary<string, string>
-                        {
-                            { "Branch", visit.BranchId ?? "" },
-                            { "VisitMonth", visit.VisitMonth ?? "" },
-                            { "Status", visit.Status ?? "" },
-                            { "VisitId", visit.Id.ToString() }
-                        };
-                        body = templateService.ReplacePlaceholders(tpl, values);
-                    }
-                    catch (KeyNotFoundException)
-                    {
-                        body = $@"Branch: {visit.BranchId}
-                            Visit Month: {visit.VisitMonth}
-                            Current Status: {visit.Status}
-                            Visit Id: {visit.Id}
+                    await _emailService.SendEmail(subject, body, to, cc);
+                    await _repository.UpdateEscalationStatusAsync(visit.Id, "CLI");
 
-                            This is an automated caution letter notification. Further action may follow.";
-                    }
-
-                    var result = await emailService.SendEmail(subject, body, to, cc);
-
-                    // optionally generate or store a path for the caution letter - here we store a placeholder path
-                    var cautionPath = $"/cautionletters/{visit.Id}_{DateTime.Now:yyyyMMdd}.pdf";
-
-                    await repo.UpdateCautionLetterAsync(visit.Id, 17, cautionPath, _systemUser);
-                    _logger.LogInformation("BranchVisit {VisitId} caution letter sent and status updated (email result: {Result})", visit.Id, result);
+                    _logger.Information("Visit {VisitId} caution letter sent", visit.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process caution letter for visit {VisitId}", visit.Id);
+                    _logger.Error(ex, "Failed to process caution letter for visit {VisitId}", visit.Id);
                 }
             }
+        }
+
+        private async Task InsertMonthlyVisitsAsync(string monthKey, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _repository.InsertMonthlyVisitsAsync();
+            _logger.Information("Monthly visits inserted for {Month}", monthKey);
         }
     }
 }

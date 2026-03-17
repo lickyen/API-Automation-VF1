@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using DocumentFormat.OpenXml.Drawing;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
@@ -34,7 +35,7 @@ namespace ProductivityApi.Repository
 
             return result;
         }
-        public async Task<List<LegalNoticeModel>> GetLegalNoticesAsync()
+        public async Task<List<LegalNoticeModel>> GetLegalNoticeMasterAsync()
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -45,6 +46,18 @@ namespace ProductivityApi.Repository
             );
 
             return data.ToList();
+        }
+        public async Task<List<LegalNoticeUploads>> GetLegalNoticeUploadsAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var uploads = await connection.QueryAsync<LegalNoticeUploads>(
+                "sp_GetAllLegalNoticeUploads",
+                commandType: CommandType.StoredProcedure
+            );
+
+            return uploads.ToList();
         }
         public async Task<List<LegalNoticeUploads>> GetLegalNoticeByLanAsync(string lan)
         {
@@ -77,6 +90,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@SubType", dto.SubType);
             parameters.Add("@FilePath", fileName);
             parameters.Add("@UploadedBy", dto.UploadedBy);
+            parameters.Add("@Source", dto.Source);
             parameters.Add("@StatusMessage", dbType: DbType.String, size: 500, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(

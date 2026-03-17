@@ -7,33 +7,23 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
 
         public string BranchId { get; set; }
-
+        public string BranchName { get; set; }
+        public string Region { get; set; }
+        public string Zone { get; set; }
+        public string MegaZone { get; set; }
         public string VisitMonth { get; set; }
-
         public string VisitType { get; set; }
-
         public string Status { get; set; }
-
         public string? RH_Id { get; set; }
-
         public string? ZH_Id { get; set; }
-
         public string? VisitedBy { get; set; }
-
         public DateTime? VisitedDt { get; set; }
-
         public string? Remarks { get; set; }
-
         public string? GeoTag { get; set; }
-
         public string? PhotoPath { get; set; }
-
         public string? RevisitRequired { get; set; }
-
         public string CreatedBy { get; set; }
-
         public DateTime CreatedDt { get; set; }
-
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDt { get; set; }
@@ -67,6 +57,8 @@ namespace ProductivityApi.Models
         public string Section { get; set; }
 
         public string Question { get; set; }
+
+        public string? Options { get; set; }
 
         public int? ParentId { get; set; }
 

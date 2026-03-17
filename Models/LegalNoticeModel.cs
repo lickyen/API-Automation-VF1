@@ -1,4 +1,6 @@
-﻿namespace ProductivityApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProductivityApi.Models
 {
     public class LegalNoticeModel
     {
@@ -13,6 +15,7 @@
         public string POS { get; set; }
         public string CreatedBy { get; set; }
         public DateTime CreatedDt { get; set; }
+        public List<LegalNoticeUploads> Uploads { get; set; } = new List<LegalNoticeUploads>();
     }
 
     public class LegalNoticeUploads
@@ -23,6 +26,8 @@
         public string FilePath { get; set; }
         public string UploadedBy { get; set; }
         public DateTime UploadedAt { get; set; }
+        public string Source { get; set; }
+
     }
 
     public class LegalNoticeTypes
@@ -52,18 +57,16 @@
         public string FileType { get; set; }
         public string Base64 { get; set; }
         public string UploadedBy { get; set; }
+        public string Source { get; set; }
     }
-
-
-
-
-
 
     public class LegalNoticeDownloadRequestDto
     {
+        [Required]
         public string Lan { get; set; }
-        public string NoticeType { get; set; }
-        public string SubType { get; set; }
+        public string? NoticeType { get; set; }
+        public string? SubType { get; set; }
+        public string? FileName { get; set; }
     }
     public class LegalNoticeDownloadResponseDto
     {
@@ -77,6 +80,14 @@
         public string FileName { get; set; }     
         public string Base64 { get; set; }       
         public DateTime UploadedAt { get; set; } 
+    }
+
+    public class LegalNoticeFilterDto
+    {
+        public string? NoticeType { get; set; }
+        public string? SubType { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 
 }
