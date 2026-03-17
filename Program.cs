@@ -11,17 +11,26 @@ using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//CORS
+// Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
-        policy =>
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        var env = builder.Environment;
+
+        if (env.IsProduction())
         {
-            policy
-                .WithOrigins("http://localhost:3000", "https://uatproductivity.vistaarfinance.com", "https://productivity.vistaarfinance.com")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+            policy.WithOrigins("https://productivity.vistaarfinance.com")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+        else // UAT/DEV
+        {
+            policy.WithOrigins("http://localhost:3000", "https://uatproductivity.vistaarfinance.com")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+    });
 });
 
 //Dapper mapping
@@ -130,12 +139,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Hangfire dashboard
-app.UseHangfireDashboard("/hangfire");
+// Hangfire Jobs
+//app.UseHangfireDashboard("/hangfire");
 
-RecurringJob.AddOrUpdate<BranchVisitJob>(
-    "branch-visit-job",
-    job => job.ExecuteAsync(CancellationToken.None),
-    Cron.Daily(1));
+//RecurringJob.AddOrUpdate<BranchVisitJob>(
+//    "branch-visit-job",
+//    job => job.ExecuteAsync(CancellationToken.None),
+//    Cron.Daily(1));
 
 app.Run();
