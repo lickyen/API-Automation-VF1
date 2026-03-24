@@ -20,13 +20,13 @@ builder.Services.AddCors(options =>
 
         if (env.IsProduction())
         {
-            policy.WithOrigins("http://localhost:3000","https://productivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://productivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
         else // UAT/DEV
         {
-            policy.WithOrigins("http://localhost:3000", "https://uatproductivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://uatproductivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
