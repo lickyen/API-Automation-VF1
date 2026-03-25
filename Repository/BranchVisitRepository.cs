@@ -131,13 +131,17 @@ namespace ProductivityApi.Repository
             }
         }
 
-        public async Task<IEnumerable<dynamic>> GetReportDataAsync()
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync(string month)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
+            var parameters = new DynamicParameters();
+            parameters.Add("@Month", month);
+
             return await conn.QueryAsync(
                 "sp_BranchVisit_GetReport",
+                parameters,
                 commandType: CommandType.StoredProcedure
             );
         }

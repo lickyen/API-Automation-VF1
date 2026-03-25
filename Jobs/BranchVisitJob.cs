@@ -48,7 +48,7 @@ namespace ProductivityApi.Jobs
 
             try
             {
-                if (day == now.Day)
+                if (true)
                 {
                     await AutoReminderAsync(monthKey, ct);
                     await EscalationAsync(monthKey, "EL1", ct);
