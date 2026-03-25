@@ -5,7 +5,6 @@ namespace ProductivityApi.Models
     public class BranchVisit
     {
         public int Id { get; set; }
-
         public string BranchId { get; set; }
         public string BranchName { get; set; }
         public string Region { get; set; }
@@ -13,13 +12,15 @@ namespace ProductivityApi.Models
         public string MegaZone { get; set; }
         public string VisitMonth { get; set; }
         public string VisitType { get; set; }
-        public string Status { get; set; }
+       // public string Status { get; set; }
+        public string StatusCode { get; set; }
+        public string StatusName { get; set; }
         public string? RH_Id { get; set; }
         public string? ZH_Id { get; set; }
         public string? VisitedBy { get; set; }
         public DateTime? VisitedDt { get; set; }
         public string? Remarks { get; set; }
-        public string Location { get; set; }
+        public string? Location { get; set; }
         public string? GeoTag { get; set; }
         public string? PhotoPath { get; set; }
         public string? FinalObservation { get; set; }

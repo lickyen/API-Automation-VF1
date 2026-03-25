@@ -48,24 +48,37 @@ namespace ProductivityApi.Jobs
 
             try
             {
-                if (day == 1)
+                if (day == now.Day)
+                {
+                    await AutoReminderAsync(monthKey, ct);
+                    await EscalationAsync(monthKey, "EL1", ct);
+                    await EscalationAsync(monthKey, "EL2", ct);
+                    await CautionLettersAsync(monthKey, ct);
+                }
+
+                if (new[] { 1 }.Contains(day))
                 {
                     await InsertMonthlyVisitsAsync(monthKey, ct);
                 }
 
+                if (new[] { 1 , 10 }.Contains(day))
+                {
+                    await AutoReminderAsync(monthKey, ct);
+                }
+
                 if (new[] { 12, 13, 14 }.Contains(day))
                 {
-                    await ProcessEscalationAsync(monthKey, "EL1", ct);
+                    await EscalationAsync(monthKey, "EL1", ct);
                 }
 
                 if (day == 15)
                 {
-                    await ProcessEscalationAsync(monthKey, "EL2", ct);
+                    await EscalationAsync(monthKey, "EL2", ct);
                 }
 
                 if (day == 17)
                 {
-                    await ProcessCautionLettersAsync(monthKey, ct);
+                    await CautionLettersAsync(monthKey, ct);
                 }
 
                 _logger.Information("BranchVisitJob completed at {Time}", DateTimeOffset.Now);
@@ -76,7 +89,7 @@ namespace ProductivityApi.Jobs
             }
         }
 
-        private async Task ProcessEscalationAsync(string monthKey, string escalationType, CancellationToken ct)
+        private async Task AutoReminderAsync(string monthKey, CancellationToken ct)
         {
             var pendingVisits = await _repository.GetPendingVisitsForMonthAsync(monthKey);
 
@@ -86,65 +99,39 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
+                    // Determine primary recipient (To)
                     var to = new List<string>();
-                    var cc = new List<string>();
-                    string userName = "Recipient";
-
-                    // Determine primary recipient
                     if (!string.IsNullOrWhiteSpace(visit.RH_Id))
                     {
                         var rhUser = _userService.GetUser(visit.RH_Id);
                         if (!string.IsNullOrWhiteSpace(rhUser?.Email))
-                        {
                             to.Add(rhUser.Email);
-                            userName = rhUser.Name ?? "Recipient";
-                        }
                     }
                     else if (!string.IsNullOrWhiteSpace(visit.ZH_Id))
                     {
                         var zhUser = _userService.GetUser(visit.ZH_Id);
                         if (!string.IsNullOrWhiteSpace(zhUser?.Email))
-                        {
                             to.Add(zhUser.Email);
-                            userName = zhUser.Name ?? "Recipient";
-                        }
                     }
 
-                    // Add CC based on escalation type
-                    if (escalationType == "EL1" && !string.IsNullOrWhiteSpace(visit.Escalation1_Id.ToString()))
-                    {
-                        var el1User = _userService.GetUser(visit.Escalation1_Id);
-                        if (!string.IsNullOrWhiteSpace(el1User?.Email))
-                            cc.Add(el1User.Email);
-                    }
-                    else if (escalationType == "EL2")
-                    {
-                        if (!string.IsNullOrWhiteSpace(visit.Escalation1_Id))
-                        {
-                            var el1User = _userService.GetUser(visit.Escalation1_Id);
-                            if (!string.IsNullOrWhiteSpace(el1User?.Email))
-                                cc.Add(el1User.Email);
-                        }
-                        if (!string.IsNullOrWhiteSpace(visit.Escalation2_Id))
-                        {
-                            var el2User = _userService.GetUser(visit.Escalation2_Id);
-                            if (!string.IsNullOrWhiteSpace(el2User?.Email))
-                                cc.Add(el2User.Email);
-                        }
-                    }
+                    var cc = new List<string>();
 
-                    if (!to.Any() && !cc.Any())
+                    if (!to.Any())
                     {
-                        _logger.Warning("Visit {VisitId} has no recipients for escalation {Escalation}", visit.Id, escalationType);
+                        _logger.Warning("Visit {VisitId} has no recipients for auto-reminder", visit.Id);
                         continue;
                     }
 
-                    var template = _templateService.GetEmailTemplate("BranchVisitEscalationEmail");
+                    // Fetch template
+                    var template = _templateService.GetEmailTemplate("BranchVisitReminderEmail");
                     var dueDate = GetDueDate(visit.CreatedDt);
+
+                    var primaryUserId = !string.IsNullOrWhiteSpace(visit.RH_Id) ? visit.RH_Id : visit.ZH_Id;
+                    var primaryUser = !string.IsNullOrWhiteSpace(primaryUserId) ? _userService.GetUser(primaryUserId) : null;
 
                     var placeholders = new Dictionary<string, string>
                     {
-                        { "UserName", userName },
+                        { "UserName", primaryUser?.Name ?? "Recipient" },
                         { "BranchName", visit.BranchName ?? visit.BranchId },
                         { "PlannedDate", visit.CreatedDt.ToString("dd-MMM-yyyy") },
                         { "DueDate", dueDate.ToString("dd-MMM-yyyy") },
@@ -154,9 +141,83 @@ namespace ProductivityApi.Jobs
                     };
 
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var subject = $"[{escalationType}] Branch Visit pending - {visit.BranchName ?? visit.BranchId} - {visit.VisitMonth:MMM-yyyy}";
+                    var subject = $"[Reminder] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
 
+                    // Send email
                     await _emailService.SendEmail(subject, body, to, cc);
+
+                    _logger.Information("Auto-reminder sent for Visit {VisitId}", visit.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to send auto-reminder for visit {VisitId}", visit.Id);
+                }
+            }
+        }
+
+        private async Task EscalationAsync(string monthKey, string escalationType, CancellationToken ct)
+        {
+            var pendingVisits = await _repository.GetPendingVisitsForMonthAsync(monthKey);
+
+            foreach (var visit in pendingVisits)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                try
+                {
+                    // Determine primary recipient (To)
+                    var to = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(visit.RH_Id))
+                    {
+                        var rhUser = _userService.GetUser(visit.RH_Id);
+                        if (!string.IsNullOrWhiteSpace(rhUser?.Email))
+                            to.Add(rhUser.Email);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(visit.ZH_Id))
+                    {
+                        var zhUser = _userService.GetUser(visit.ZH_Id);
+                        if (!string.IsNullOrWhiteSpace(zhUser?.Email))
+                            to.Add(zhUser.Email);
+                    }
+
+                    // Get CC list from stored procedure
+                    var ccUsers = await _repository.GetEscalationUsersAsync(visit.Id, escalationType);
+                    var cc = ccUsers
+                        .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+                        .Select(u => u.Email)
+                        .ToList();
+
+                    if (!to.Any() && !cc.Any())
+                    {
+                        _logger.Warning("Visit {VisitId} has no recipients for escalation {Escalation}", visit.Id, escalationType);
+                        continue;
+                    }
+
+                    // Prepare email template
+                    var template = _templateService.GetEmailTemplate("BranchVisitEscalationEmail");
+                    var dueDate = GetDueDate(visit.CreatedDt);
+
+                    var primaryUserId = !string.IsNullOrWhiteSpace(visit.RH_Id) ? visit.RH_Id : visit.ZH_Id;
+                    var primaryUser = !string.IsNullOrWhiteSpace(primaryUserId) ? _userService.GetUser(primaryUserId) : null;
+
+                    var placeholders = new Dictionary<string, string>
+                    {
+                        { "UserName", primaryUser?.Name ?? "Recipient" },
+                        { "BranchName", visit.BranchName ?? visit.BranchId },
+                        { "PlannedDate", visit.CreatedDt.ToString("dd-MMM-yyyy") },
+                        { "DueDate", dueDate.ToString("dd-MMM-yyyy") },
+                        { "TaskId", visit.Id.ToString() },
+                        { "AssignedDate", visit.CreatedDt.ToString("dd-MMM-yyyy") },
+                        { "DaysOverdue", CalculateDaysOverdue(visit.CreatedDt) }
+                    };
+
+                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+                    var subject = $"[{escalationType}] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
+
+                    // Send email
+                    await _emailService.SendEmail(subject, body, to, cc);
+
+                    // Update escalation status
                     await _repository.UpdateEscalationStatusAsync(visit.Id, escalationType);
 
                     _logger.Information("Visit {VisitId} escalated ({Escalation})", visit.Id, escalationType);
@@ -167,9 +228,8 @@ namespace ProductivityApi.Jobs
                 }
             }
         }
-        private async Task ProcessCautionLettersAsync(string monthKey, CancellationToken ct)
+        private async Task CautionLettersAsync(string monthKey, CancellationToken ct)
         {
-            // Get all pending visits for the month
             var pendingVisits = await _repository.GetPendingVisitsForMonthAsync(monthKey);
 
             foreach (var visit in pendingVisits)
@@ -178,29 +238,44 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
-                    // Build recipients lists
+                    // Determine primary recipient (To)
                     var to = new List<string>();
-                    var cc = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(visit.RH_Id))
+                    {
+                        var rhUser = _userService.GetUser(visit.RH_Id);
+                        if (!string.IsNullOrWhiteSpace(rhUser?.Email))
+                            to.Add(rhUser.Email);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(visit.ZH_Id))
+                    {
+                        var zhUser = _userService.GetUser(visit.ZH_Id);
+                        if (!string.IsNullOrWhiteSpace(zhUser?.Email))
+                            to.Add(zhUser.Email);
+                    }
 
-                    if (!string.IsNullOrWhiteSpace(visit.RH_Id)) to.Add(visit.RH_Id);
-                    if (!string.IsNullOrWhiteSpace(visit.ZH_Id)) to.Add(visit.ZH_Id);
+                    // Get CC list from stored procedure for CLI
+                    var ccUsers = await _repository.GetEscalationUsersAsync(visit.Id, "CLI");
+                    var cc = ccUsers
+                        .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+                        .Select(u => u.Email)
+                        .ToList();
 
                     if (!to.Any() && !cc.Any())
                     {
-                        _logger.Warning("Visit {VisitId} has no recipients for escalation {Escalation}", visit.Id, "CLI");
+                        _logger.Warning("Visit {VisitId} has no recipients for caution letter", visit.Id);
                         continue;
                     }
 
                     // Fetch template
                     var template = _templateService.GetEmailTemplate("BranchVisitCautionLetterEmail");
-
                     var dueDate = GetDueDate(visit.CreatedDt);
-                    var userId = !string.IsNullOrWhiteSpace(visit.RH_Id) ? visit.RH_Id : visit.ZH_Id;
-                    var user = !string.IsNullOrWhiteSpace(userId) ? _userService.GetUser(userId) : null;
+
+                    var primaryUserId = !string.IsNullOrWhiteSpace(visit.RH_Id) ? visit.RH_Id : visit.ZH_Id;
+                    var primaryUser = !string.IsNullOrWhiteSpace(primaryUserId) ? _userService.GetUser(primaryUserId) : null;
 
                     var placeholders = new Dictionary<string, string>
                     {
-                        { "UserName", user?.Name ?? "Recipient" },
+                        { "UserName", primaryUser?.Name ?? "Recipient" },
                         { "BranchName", visit.BranchName ?? visit.BranchId },
                         { "PlannedDate", visit.CreatedDt.ToString("dd-MMM-yyyy") },
                         { "DueDate", dueDate.ToString("dd-MMM-yyyy") },
@@ -209,26 +284,23 @@ namespace ProductivityApi.Jobs
                         { "DaysOverdue", CalculateDaysOverdue(visit.CreatedDt) }
                     };
 
-                    // Replace placeholders
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+                    var subject = $"[Caution Letter] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
 
-                    // Construct subject
-                    var subject = $"[Caution Letter] Branch Visit pending - {visit.BranchName ?? visit.BranchId} - {visit.VisitMonth:MMM-yyyy}";
                     // Send email
                     await _emailService.SendEmail(subject, body, to, cc);
 
                     // Update escalation status
                     await _repository.UpdateEscalationStatusAsync(visit.Id, "CLI");
 
-                    _logger.Information("Visit {VisitId} escalated ({Escalation})", visit.Id, "CLI");
+                    _logger.Information("Visit {VisitId} caution letter sent", visit.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, "Failed to process escalation for visit {VisitId}", visit.Id);
+                    _logger.Error(ex, "Failed to process caution letter for visit {VisitId}", visit.Id);
                 }
             }
         }
-
 
         private async Task InsertMonthlyVisitsAsync(string monthKey, CancellationToken ct)
         {

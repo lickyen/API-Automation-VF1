@@ -182,6 +182,20 @@ namespace ProductivityApi.Repository
             return result;
         }
 
+        public async Task<List<UserModel>> GetEscalationUsersAsync(int visitId, string escLevel)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var users = await connection.QueryAsync<UserModel>(
+                "sp_BranchVisit_GetEscalationUser",
+                new { VisitId = visitId, EscLevel = escLevel },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return users.ToList();
+        }
+
     }
 
 }
