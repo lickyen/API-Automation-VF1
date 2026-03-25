@@ -19,9 +19,10 @@ namespace ProductivityApi.Models
         public string? VisitedBy { get; set; }
         public DateTime? VisitedDt { get; set; }
         public string? Remarks { get; set; }
+        public string Location { get; set; }
         public string? GeoTag { get; set; }
         public string? PhotoPath { get; set; }
-        public string? RevisitRequired { get; set; }
+        public string? FinalObservation { get; set; }
         public string CreatedBy { get; set; }
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -31,14 +32,14 @@ namespace ProductivityApi.Models
         // Escalation Level 1
         public bool? Escalation1 { get; set; }
 
-        public int? Escalation1_Id { get; set; }
+        public string? Escalation1_Id { get; set; }
 
         public DateTime? Escalation1_Date { get; set; }
 
         // Escalation Level 2
         public bool? Escalation2 { get; set; }
 
-        public int? Escalation2_Id { get; set; }
+        public string? Escalation2_Id { get; set; }
 
         public DateTime? Escalation2_Date { get; set; }
 
@@ -134,11 +135,13 @@ namespace ProductivityApi.Models
         [Required]
         public string Remarks { get; set; }
         [Required]
+        public string Location { get; set; }
+        [Required]
         public string GeoTag { get; set; }
         [Required]
         public string PhotoPath { get; set; }
         [Required]
-        public string RevisitRequired { get; set; }
+        public string FinalObservation { get; set; }
         [Required]
         public string UpdatedBy { get; set; }
         [Required]

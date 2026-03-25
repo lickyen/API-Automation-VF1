@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using Dapper;
 using ProductivityApi.Models;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace ProductivityApi.Repository
 {
@@ -87,8 +88,9 @@ namespace ProductivityApi.Repository
                     Id = dto.Id,
                     Remarks = dto.Remarks,
                     GeoTag = dto.GeoTag,
+                    Location = dto.Location,
                     PhotoPath = dto.PhotoPath,
-                    RevisitRequired = dto.RevisitRequired,
+                    FinalObservation = dto.FinalObservation,
                     UpdatedBy = dto.UpdatedBy
                 };
 
