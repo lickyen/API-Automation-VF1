@@ -12,7 +12,6 @@ namespace ProductivityApi.Models
         public string MegaZone { get; set; }
         public string VisitMonth { get; set; }
         public string VisitType { get; set; }
-       // public string Status { get; set; }
         public string StatusCode { get; set; }
         public string StatusName { get; set; }
         public string? RH_Id { get; set; }
@@ -27,28 +26,21 @@ namespace ProductivityApi.Models
         public string CreatedBy { get; set; }
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
-
         public DateTime? UpdatedDt { get; set; }
 
         // Escalation Level 1
         public bool? Escalation1 { get; set; }
-
         public string? Escalation1_Id { get; set; }
-
         public DateTime? Escalation1_Date { get; set; }
 
         // Escalation Level 2
         public bool? Escalation2 { get; set; }
-
         public string? Escalation2_Id { get; set; }
-
         public DateTime? Escalation2_Date { get; set; }
 
         // Caution Letter
         public bool? CautionLetter { get; set; }
-
         public DateTime? CautionLetter_Date { get; set; }
-
         public string CautionLetter_Path { get; set; }
     }
 

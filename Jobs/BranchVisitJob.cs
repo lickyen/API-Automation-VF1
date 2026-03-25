@@ -212,7 +212,15 @@ namespace ProductivityApi.Jobs
                     };
 
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var subject = $"[{escalationType}] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
+
+                    var escalationText = escalationType switch
+                    {
+                        "EL1" => "Escalation Level 1",
+                        "EL2" => "Escalation Level 2",
+                        _ => escalationType
+                    };
+
+                    var subject = $"[{escalationText}] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
 
                     // Send email
                     await _emailService.SendEmail(subject, body, to, cc);
@@ -285,7 +293,7 @@ namespace ProductivityApi.Jobs
                     };
 
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var subject = $"[Caution Letter] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
+                    var subject = $"[Caution Letter Issued] Branch Visit pending - {visit.BranchName ?? visit.BranchId}";
 
                     // Send email
                     await _emailService.SendEmail(subject, body, to, cc);
