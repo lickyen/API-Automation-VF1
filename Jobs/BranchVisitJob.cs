@@ -2,13 +2,15 @@
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
+using ProductivityApi.Jobs;
 using Serilog;
-using System.Diagnostics.Metrics;
 
 namespace ProductivityApi.Jobs
 {
-    public class BranchVisitJob 
+    public class BranchVisitJob  : IJob
     {
+        public string JobId => "branch-visit-job";
+
         private readonly Serilog.ILogger _logger;
         private readonly BranchVisitRepository _repository;
         private readonly EmailService _emailService;
@@ -48,13 +50,13 @@ namespace ProductivityApi.Jobs
 
             try
             {
-                if (true)
-                {
-                    await AutoReminderAsync(monthKey, ct);
-                    await EscalationAsync(monthKey, "EL1", ct);
-                    await EscalationAsync(monthKey, "EL2", ct);
-                    await CautionLettersAsync(monthKey, ct);
-                }
+                //if (true)
+                //{
+                //    await AutoReminderAsync(monthKey, ct);
+                //    await EscalationAsync(monthKey, "EL1", ct);
+                //    await EscalationAsync(monthKey, "EL2", ct);
+                //    await CautionLettersAsync(monthKey, ct);
+                //}
 
                 if (new[] { 1 }.Contains(day))
                 {

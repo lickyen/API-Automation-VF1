@@ -98,7 +98,7 @@ builder.Services.AddScoped<LegalNoticeRepository>();
 builder.Services.AddScoped<NOCRepository>();
 builder.Services.AddScoped<ModRepository>();
 
-builder.Services.AddScoped<BranchVisitJob>();
+builder.Services.AddScoped<IJob, BranchVisitJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -142,11 +142,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Hangfire Jobs
-//app.UseHangfireDashboard("/hangfire");
-
-//RecurringJob.AddOrUpdate<BranchVisitJob>(
-//    "branch-visit-job",
-//    job => job.ExecuteAsync(CancellationToken.None),
-//    Cron.Daily(1));
+app.UseHangfireDashboard("/hangfire");
+await app.MapJobsAsync();
 
 app.Run();
