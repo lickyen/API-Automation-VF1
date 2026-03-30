@@ -19,5 +19,8 @@
   },
   "BranchVisitCautionLetterEmail": {
     "Body": "<p>Dear <<UserName>>,</p><p>This is a reminder regarding the pending visit task assigned to you for <b><<BranchName>></b>, scheduled on <b><<PlannedDate>></b>.</p><p>Despite prior reminders and follow-ups, the task has not yet been completed, and the due date (<b><<DueDate>></b>) has already passed.</p><p><b>Task Details:</b></p><ul><li>Task ID: <<TaskId>></li><li>Branch: <<BranchName>></li><li>Assigned Date: <<AssignedDate>></li><li>Due Date: <<DueDate>></li><li>Current Status: Pending</li><li>Days Overdue: <<DaysOverdue>></li></ul><p>Your tasks must be completed by the 10th of the month. Further delays may lead to cautionary action.</p><p>You are requested to:</p><ul><li>Complete the visit immediately</li><li>Update all required checklist fields (Geo Tag, Date of Visit, Observations, Remarks)</li></ul><p>Failure to act within the next [24–48 hours] will result in further escalation and may lead to issuance of a caution letter.</p><p><b>Please treat this as urgent!</b></p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "FcRefundMailTriggerEmail": {
+    "Body": "<p>Hi Team,</p><p>Loan foreclosure for the below cases. Kindly refund the premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
   }
 }

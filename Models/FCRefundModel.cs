@@ -1,0 +1,77 @@
+﻿namespace ProductivityApi.Models
+{
+    using System;
+    public class FcRefundModel
+    {
+        public int Id { get; set; }
+        public string BranchCode { get; set; } = String.Empty;
+        public string LAN { get; set; }
+        public string FullName { get; set; }
+        public DateTime DisbDate { get; set; }
+        public DateTime ForeclosedDate { get; set; }
+        public string AccountStatus { get; set; }
+        public string AdditionalStatus { get; set; }
+        public string Status { get; set; }
+        public bool KotakMailTrigger { get; set; }
+        public DateTime? KotakMailTriggerDate { get; set; }
+        public string? FullNameAsPerBankProof { get; set; }
+        public string? AccountNo { get; set; }
+        public string? Ifsc { get; set; }
+        public string? PolicyNo { get; set; }
+        public string? MemberName { get; set; }
+        public string? SgNo { get; set; }
+        public DateTime? CoverExpiredDate { get; set; }
+        public string? BankProofFilePath { get; set; }
+        public string? RequestLetterFilePath { get; set; }
+        public string? ClientName { get; set; } = "Vistaar Financial Services Pvt. Ltd.";
+        public string? PayoutLevel { get; set; } = "Member";
+        public string? AdditionalRequest { get; set; }
+        public DateTime? AdditionalRequestDate { get; set; }
+        public decimal? RefundAmount { get; set; }
+        public DateTime? RefundDate { get; set; }
+        public string? UTR { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime? BranchRequestedDate { get; set; }
+        public string? BranchRequestedBy { get; set; }
+        public DateTime? UpdatedDate { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+    public class FcRefundBranchSubmitDto
+    {
+        public int Id { get; set; }
+        public string? FullNameAsPerBankProof { get; set; }
+        public string? AccountNo { get; set; }
+        public string? Ifsc { get; set; }
+        public string? PolicyNo { get; set; }
+        public string? MemberName { get; set; }
+        public string? SgNo { get; set; }
+        public string? ClientName { get; set; }
+        public string?  PayoutLevel { get; set; }
+        public string? BankProofFilePath { get; set; }
+        public string? RequestLetterFilePath { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+    public class FcRefundTriggerMailDto
+    {
+        public List<int> Ids { get; set; } = new();
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+    public class FcRefundUpdateRefundDto
+    {
+        public int Id { get; set; }
+        public decimal? RefundAmount { get; set; }
+        public DateTime? RefundDate { get; set; }
+        public string? UTR { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class FcRefundBankEmails
+    {
+        public string EmailId { get; set; } = string.Empty;
+        public string EmailType { get; set; } = string.Empty;
+    }
+}
+
+
+
