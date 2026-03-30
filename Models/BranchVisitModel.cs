@@ -74,9 +74,10 @@ namespace ProductivityApi.Models
     public class BranchVisitChecklist
     {
         public int Id { get; set; }
-        public string CheckListSection { get; set; } 
+        public string ChecklistSection { get; set; } 
         public string PointsToReview { get; set; }   
         public string ApplicableTo { get; set; }     
+        public string Options { get; set; }     
         public bool IsActive { get; set; }
         public int DisplayOrder { get; set; }
         public string CreatedBy { get; set; }
@@ -87,17 +88,11 @@ namespace ProductivityApi.Models
     public class BranchVisitResponse
     {
         public int Id { get; set; }
-
         public int VisitId { get; set; }
-
         public int ChecklistId { get; set; }
-
-        public string Response { get; set; }
-
+        public string ChecklistResponse { get; set; }
         public string CreatedBy { get; set; }
-
         public DateTime CreatedDt { get; set; }
-
         public BranchVisitChecklist Checklist { get; set; }
 
     }
@@ -113,22 +108,23 @@ namespace ProductivityApi.Models
     public class BranchVisitDto
     {
         public BranchVisit VisitDetails { get; set; }
-        public List<BranchVisitCheckListResponseDto> ChecklistResponse { get; set; }
+        public List<BranchVisitChecklistResponseDto> ChecklistResponse { get; set; }
     }
 
-    public class BranchVisitCheckListResponseDto
+    public class BranchVisitChecklistResponseDto
     {
         // Response Info
         public int ResponseId { get; set; }
         public int VisitId { get; set; }
         public int ChecklistId { get; set; }
         public string Response { get; set; }
+        public string ChecklistRemarks { get; set; }
         public string ResponseCreatedBy { get; set; }
         public DateTime ResponseCreatedDt { get; set; }
 
         // Checklist Info
-        public string Section { get; set; }
-        public string Question { get; set; }
+        public string ChecklistSection { get; set; }
+        public string PointsToReview { get; set; }
         public int? ParentId { get; set; }
         public string? TriggerValue { get; set; }
         public int DisplayOrder { get; set; }
@@ -151,7 +147,7 @@ namespace ProductivityApi.Models
         [Required]
         public string UpdatedBy { get; set; }
         [Required]
-        public List<BranchVisitChecklistSubmitDto> CheckListReponse { get; set; }
+        public List<BranchVisitChecklistSubmitDto> ChecklistResponse { get; set; }
 
     }
 
@@ -161,6 +157,8 @@ namespace ProductivityApi.Models
         public int ChecklistId { get; set; }
         [Required]
         public string Response { get; set; }
+        [Required]
+        public string ChecklistRemarks { get; set; }
     }
 
 }
