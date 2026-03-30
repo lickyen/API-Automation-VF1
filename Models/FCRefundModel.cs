@@ -71,6 +71,32 @@
         public string EmailId { get; set; } = string.Empty;
         public string EmailType { get; set; } = string.Empty;
     }
+
+    public class FcRefundAddLanDto
+    {
+        public string BranchCode { get; set; } = string.Empty;
+        public string LAN { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public DateTime DisbDate { get; set; }
+        public DateTime ForeclosedDate { get; set; }
+        public string AccountStatus { get; set; } = string.Empty;
+        public string AdditionalStatus { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+    }
+
+    public class FcRefundBulkUploadResult
+    {
+        public int Added { get; set; }
+        public int Skipped { get; set; }
+        public List<string> AddedLans { get; set; } = new();
+        public List<string> SkippedLans { get; set; } = new();
+        public bool Success => Added > 0 || Skipped > 0;
+    }
+    public class FcRefundLanResult
+    {
+        public string LAN { get; set; } = string.Empty;
+        public int Status { get; set; }
+    }
 }
 
 

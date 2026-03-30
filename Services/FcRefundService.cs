@@ -158,6 +158,9 @@ namespace ProductivityApi.Services
         }
         public async Task<int> UpdateRefundAsync(FcRefundUpdateRefundDto dto)
             => await _repository.UpdateRefundAsync(dto);
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
+            => await _repository.AddLanAsync(dtos);
     }
 
     }

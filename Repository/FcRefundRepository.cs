@@ -78,7 +78,7 @@ namespace ProductivityApi.Repository
                     dto.BankProofFilePath,
                     dto.RequestLetterFilePath,
                     dto.UpdatedBy,
-                    FcRefundStatus.PendingForAction
+                    status = FcRefundStatus.PendingForAction
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -131,7 +131,7 @@ namespace ProductivityApi.Repository
                     dto.RefundAmount,
                     dto.RefundDate,
                     dto.UTR,
-                    FcRefundStatus.Completed,
+                   status = FcRefundStatus.Completed,
                     dto.UpdatedBy
                 },
                 commandType: CommandType.StoredProcedure
@@ -149,6 +149,48 @@ namespace ProductivityApi.Repository
             );
             return result.ToList();
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var added = new List<string>();
+            var skipped = new List<string>();
+
+            foreach (var dto in dtos)
+            {
+                var status = await connection.ExecuteScalarAsync<int>(
+                    "sp_FcRefund_AddLan",
+                    new
+                    {
+                        dto.BranchCode,
+                        dto.LAN,
+                        dto.FullName,
+                        dto.DisbDate,
+                        dto.ForeclosedDate,
+                        dto.AccountStatus,
+                        dto.AdditionalStatus,
+                        dto.CreatedBy
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (status == 1)
+                    added.Add(dto.LAN);
+                else
+                    skipped.Add(dto.LAN);
+            }
+
+            return new FcRefundBulkUploadResult
+            {
+                Added = added.Count,
+                Skipped = skipped.Count,
+                AddedLans = added,
+                SkippedLans = skipped
+            };
+        }
+
 
     }
 }

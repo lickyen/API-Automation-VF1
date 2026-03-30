@@ -115,5 +115,19 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
+        [HttpPost("addLans")]
+        public async Task<IActionResult> AddLan([FromBody] List<FcRefundAddLanDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.AddLanAsync(dtos);
+            return Ok(new Response(
+                result.Added > 0,
+                new { added = result.AddedLans, skipped = result.SkippedLans },
+                $"{result.Added} out of {result.Added + result.Skipped} LAN(s) added"
+            ));
+        }
     }
 }
