@@ -44,33 +44,46 @@ namespace ProductivityApi.Models
         public string CautionLetter_Path { get; set; }
     }
 
+    //public class BranchVisitChecklist
+    //{
+    //    public int Id { get; set; }
+
+    //    public string Section { get; set; }
+
+    //    public string Question { get; set; }
+
+    //    public string? Options { get; set; }
+
+    //    public int? ParentId { get; set; }
+
+    //    public string? TriggerValue { get; set; }
+
+    //    public bool IsActive { get; set; }
+
+    //    public int DisplayOrder { get; set; }
+
+    //    public string CreatedBy { get; set; }
+
+    //    public DateTime CreatedDt { get; set; }
+
+    //    public string? UpdatedBy { get; set; }
+
+    //    public DateTime? UpdatedDt { get; set; }
+    //}
+
     public class BranchVisitChecklist
     {
         public int Id { get; set; }
-
-        public string Section { get; set; }
-
-        public string Question { get; set; }
-
-        public string? Options { get; set; }
-
-        public int? ParentId { get; set; }
-
-        public string? TriggerValue { get; set; }
-
+        public string CheckListSection { get; set; } 
+        public string PointsToReview { get; set; }   
+        public string ApplicableTo { get; set; }     
         public bool IsActive { get; set; }
-
         public int DisplayOrder { get; set; }
-
         public string CreatedBy { get; set; }
-
         public DateTime CreatedDt { get; set; }
-
         public string? UpdatedBy { get; set; }
-
         public DateTime? UpdatedDt { get; set; }
     }
-
     public class BranchVisitResponse
     {
         public int Id { get; set; }

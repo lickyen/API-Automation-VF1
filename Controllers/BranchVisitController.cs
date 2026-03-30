@@ -42,7 +42,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, visit, "Success"));
         }
 
-        [HttpGet("checklist/{section}")]
+        [HttpGet("checklist/{section}")] // section = "Business" or "Credit"
         public async Task<IActionResult> GetChecklist(string section)
         {
             var checklist = await _branchVisitService.GetChecklistAsync(section.ToUpper());
