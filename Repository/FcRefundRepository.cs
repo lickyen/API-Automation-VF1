@@ -192,5 +192,34 @@ namespace ProductivityApi.Repository
         }
 
 
+        public async Task<int> UpdateAdditionalRequestAsync(FcRefundAdditionalRequestDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_FcRefund_UpdateAdditionalRequest",
+                new
+                {
+                    dto.Id,
+                    dto.AdditionalRequest,
+                    dto.UpdatedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<IEnumerable<FcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.QueryAsync<FcRefundModel>(
+                "sp_FcRefund_GetReport",
+                new { FromDate = fromDate, ToDate = toDate },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
 }

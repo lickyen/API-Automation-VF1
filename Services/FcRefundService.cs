@@ -1,5 +1,7 @@
 ﻿// Services/FcRefundService.cs
+using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
+using ProductivityApi.Constants;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
@@ -161,6 +163,115 @@ namespace ProductivityApi.Services
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
             => await _repository.AddLanAsync(dtos);
+
+        public async Task<int> UpdateAdditionalRequestAsync(FcRefundAdditionalRequestDto dto)
+            => await _repository.UpdateAdditionalRequestAsync(dto);
+
+        public async Task<byte[]> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            var data = (await _repository.GetReportAsync(fromDate, toDate)).ToList();
+
+            var completed = data.Where(x => x.Status == FcRefundStatus.Completed).ToList();
+            var mailed = data.Where(x => x.Status == FcRefundStatus.MailSentToInsurer).ToList();
+            //var pending = data.Where(x => x.Status == FcRefundStatus.PendingForAction).ToList();
+
+            using var wb = new XLWorkbook();
+
+            AddCompletedSheet(wb, completed);
+            AddMailSentSheet(wb, mailed);
+            //AddPendingSheet(wb, pending);
+
+            using var stream = new MemoryStream();
+            wb.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+        private void AddCompletedSheet(XLWorkbook wb, List<FcRefundModel> data)
+        {
+            var dt = new DataTable("Completed");
+
+            dt.Columns.AddRange(new[]
+            {
+                new DataColumn("Policy Number"),
+                new DataColumn("Loan Account No"),
+                new DataColumn("Customer Name"),
+                new DataColumn("Branch Name"),
+                new DataColumn("Foreclosure Date"),
+                new DataColumn("UTR"),
+                new DataColumn("Refund received amount"),
+                new DataColumn("Refund received Date"),
+                new DataColumn("Branch Requested Date"),
+                new DataColumn("Additional Requirement"),
+                new DataColumn("Requirement Raised Date"),
+                new DataColumn("Status")
+            });
+
+            foreach (var x in data)
+            {
+                dt.Rows.Add(
+                    x.PolicyNo ?? "",
+                    x.LAN ?? "",
+                    x.FullName ?? "",
+                    x.BranchCode ?? "",
+                    x.ForeclosedDate.ToString("dd-MM-yyyy"),
+                    x.UTR ?? "",
+                    x.RefundAmount?.ToString("0.00"),
+                    x.RefundDate?.ToString("dd-MM-yyyy"),
+                    x.BranchRequestedDate?.ToString("dd-MM-yyyy"),
+                    x.AdditionalRequest ?? "",
+                    x.AdditionalRequestDate?.ToString("dd-MM-yyyy"),
+                    x.Status ?? ""
+                );
+            }
+
+            var ws = wb.Worksheets.Add(dt);
+            ws.Row(1).Style.Font.Bold = true;
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+        }
+        private void AddMailSentSheet(XLWorkbook wb, List<FcRefundModel> data)
+        {
+            var dt = new DataTable("Mail Sent To Insurer");
+
+            dt.Columns.AddRange(new[]
+            {
+                new DataColumn("Policy Number"),
+                new DataColumn("Loan Account No"),
+                new DataColumn("Customer Name"),
+                new DataColumn("Branch Name"),
+                new DataColumn("Foreclosure Date"),
+                new DataColumn("System Generated No"),
+                new DataColumn("Account No"),
+                new DataColumn("IFSC code"),
+                new DataColumn("Branch Requested Date"),
+                new DataColumn("Additional Requirement"),
+                new DataColumn("Requirement Raised Date"),
+                new DataColumn("Status")
+            });
+
+            foreach (var x in data)
+            {
+                dt.Rows.Add(
+                    x.PolicyNo ?? "",
+                    x.LAN ?? "",
+                    x.FullName ?? "",
+                    x.BranchCode ?? "",
+                    x.ForeclosedDate.ToString("dd-MM-yyyy"),
+                    x.SgNo ?? "",
+                    x.AccountNo ?? "",
+                    x.Ifsc ?? "",
+                    x.BranchRequestedDate?.ToString("dd-MM-yyyy"),
+                    x.AdditionalRequest ?? "",
+                    x.AdditionalRequestDate?.ToString("dd-MM-yyyy"),
+                    x.Status ?? ""
+                );
+            }
+
+            var ws = wb.Worksheets.Add(dt);
+            ws.Row(1).Style.Font.Bold = true;
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(1);
+        }
     }
 
-    }
+}

@@ -97,6 +97,13 @@
         public string LAN { get; set; } = string.Empty;
         public int Status { get; set; }
     }
+
+    public class FcRefundAdditionalRequestDto
+    {
+        public int Id { get; set; }
+        public string? AdditionalRequest { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
 }
 
 
