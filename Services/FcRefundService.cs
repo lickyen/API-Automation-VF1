@@ -1,6 +1,7 @@
 ﻿// Services/FcRefundService.cs
 using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
+using Microsoft.VisualBasic;
 using ProductivityApi.Constants;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
@@ -15,13 +16,15 @@ namespace ProductivityApi.Services
         private readonly FcRefundRepository _repository;
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
-        private const long MaxAttachmentSizeBytes = 5 * 1024 * 1024; // 5MB
+        private readonly AppSettings _appSettings;
+        private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService)
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings)
         {
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
+            _appSettings = appSettings;
         }
         public async Task<FcRefundModel?> GetByIdAsync(int id)
             => await _repository.GetByIdAsync(id);
@@ -33,9 +36,42 @@ namespace ProductivityApi.Services
         public async Task<List<FcRefundModel>> GetByBranchAsync(string branchCode, string? status)
             => await _repository.GetByBranchAsync(branchCode, status);
 
-        public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
-            => await _repository.BranchSubmitAsync(dto);
+        //public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
+        //    => await _repository.BranchSubmitAsync(dto);
 
+        public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
+        {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            var record = await _repository.GetByIdAsync(dto.Id);
+            if (record == null) return -1;
+
+            string? bankProofFilePath = record.BankProofFilePath;
+            string? requestLetterFilePath = record.RequestLetterFilePath;
+
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+
+                var bankProofExt = Path.GetExtension(dto.BankProofFileName);
+                var bankProofName = $"{record.LAN}_BankProof{bankProofExt}";
+                await File.WriteAllBytesAsync(
+                    Path.Combine(basePath, bankProofName),
+                    Convert.FromBase64String(dto.BankProofBase64)
+                );
+                bankProofFilePath = bankProofName;
+
+                var requestLetterExt = Path.GetExtension(dto.RequestLetterFileName);
+                var requestLetterName = $"{record.LAN}_ReqLetter{requestLetterExt}";
+                await File.WriteAllBytesAsync(
+                    Path.Combine(basePath, requestLetterName),
+                    Convert.FromBase64String(dto.RequestLetterBase64)
+                );
+                requestLetterFilePath = requestLetterName;
+            }
+
+            return await _repository.BranchSubmitAsync(dto, bankProofFilePath, requestLetterFilePath);
+        }
         // COPS
         public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
             => await _repository.GetByStatusAsync(status);
@@ -70,22 +106,31 @@ namespace ProductivityApi.Services
 
         public async Task<(bool Success, string Message)> SendRefundMailAsync(List<FcRefundModel> records)
         {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
             // Size check
             long totalSize = 0;
             foreach (var record in records)
             {
                 if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
-                    totalSize += new FileInfo(record.BankProofFilePath).Length;
+                {
+                    var path = Path.Combine(basePath, record.BankProofFilePath);
+                    if (File.Exists(path))
+                        totalSize += new FileInfo(path).Length;
+                }
                 if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
-                    totalSize += new FileInfo(record.RequestLetterFilePath).Length;
+                {
+                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
+                    if (File.Exists(path))
+                        totalSize += new FileInfo(path).Length;
+                }
             }
 
             if (totalSize > MaxAttachmentSizeBytes)
-                return (false, "Mail size exceeds 5MB. Please select fewer cases.");
+                return (false, "Mail size exceeds 10MB. Please select fewer cases.");
 
             // Fetch To/Cc from DB
             var emailDetails = await _repository.GetBankEmailDetailsAsync("Kotak");
-
             if (!emailDetails.Any())
                 return (false, "No recipient email IDs configured for Kotak");
 
@@ -93,33 +138,40 @@ namespace ProductivityApi.Services
             var cc = emailDetails.Where(e => e.EmailType == "2").Select(e => e.EmailId).ToList();
 
             if (!to.Any())
-                return (false, "No To recipients configured for Kotak");
+                return (false, "No recipients");
 
             // Load template
             var template = _templateService.GetEmailTemplate("FcRefundMailTriggerEmail");
-
             var placeholders = new Dictionary<string, string>
             {
                 { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
                 { "Table",    BuildTableHtml(records) }
             };
 
-            var subject = _templateService.ReplacePlaceholders(template.Subject, placeholders);
+            var subject = "Loan Foreclosure Premium refund | " + DateTime.Now;
+
             var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
+            // Build attachments using basePath + filename
             var attachments = new List<Attachment>();
-
             foreach (var record in records)
             {
-                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath) && File.Exists(record.BankProofFilePath))
-                    attachments.Add(new Attachment(record.BankProofFilePath));
-
-                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath) && File.Exists(record.RequestLetterFilePath))
-                    attachments.Add(new Attachment(record.RequestLetterFilePath));
+                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
+                {
+                    var path = Path.Combine(basePath, record.BankProofFilePath);
+                    if (File.Exists(path))
+                        attachments.Add(new Attachment(path));
+                }
+                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
+                {
+                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
+                    if (File.Exists(path))
+                        attachments.Add(new Attachment(path));
+                }
             }
 
             var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
-            return result == "Success" ? (true, "Mail sent successfully"): (false, result);
+            return result == "Success" ? (true, "Mail sent successfully") : (false, result);
         }
         private string BuildTableHtml(List<FcRefundModel> records)
         {
@@ -167,6 +219,24 @@ namespace ProductivityApi.Services
         public async Task<int> UpdateAdditionalRequestAsync(FcRefundAdditionalRequestDto dto)
             => await _repository.UpdateAdditionalRequestAsync(dto);
 
+        public (bool Success, string Message, FcRefundDownloadFileResponseDto? Data) GetFileAsBase64(FcRefundDownloadFileRequestDto dto)
+        {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            if (string.IsNullOrWhiteSpace(basePath))
+                return (false, "FcRefundFilePath not configured", null);
+
+            var fullPath = Path.Combine(basePath, dto.FileName);
+
+            if (!File.Exists(fullPath))
+                return (false, "File not found on server", null);
+
+            return (true, "Success", new FcRefundDownloadFileResponseDto
+            {
+                Base64 = Convert.ToBase64String(File.ReadAllBytes(fullPath)),
+                FileName = dto.FileName
+            });
+        }
         public async Task<byte[]> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
             var data = (await _repository.GetReportAsync(fromDate, toDate)).ToList();

@@ -58,7 +58,8 @@ namespace ProductivityApi.Repository
         }
 
         // Branch: fill and submit form → status = Pending For Action
-        public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
+
+        public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto, string? bankProofFilePath, string? requestLetterFilePath)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -75,14 +76,40 @@ namespace ProductivityApi.Repository
                     dto.SgNo,
                     dto.ClientName,
                     dto.PayoutLevel,
-                    dto.BankProofFilePath,
-                    dto.RequestLetterFilePath,
                     dto.UpdatedBy,
-                    status = FcRefundStatus.PendingForAction
+                    BankProofFilePath = bankProofFilePath,
+                    RequestLetterFilePath = requestLetterFilePath,
+                    Status = FcRefundStatus.PendingForAction
                 },
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        //public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
+        //{
+        //    using var connection = new SqlConnection(_conStr);
+        //    await connection.OpenAsync();
+        //    return await connection.ExecuteScalarAsync<int>(
+        //        "sp_FcRefund_BranchSubmit",
+        //        new
+        //        {
+        //            dto.Id,
+        //            dto.FullNameAsPerBankProof,
+        //            dto.AccountNo,
+        //            dto.Ifsc,
+        //            dto.PolicyNo,
+        //            dto.MemberName,
+        //            dto.SgNo,
+        //            dto.ClientName,
+        //            dto.PayoutLevel,
+        //            dto.BankProofFilePath,
+        //            dto.RequestLetterFilePath,
+        //            dto.UpdatedBy,
+        //            status = FcRefundStatus.PendingForAction
+        //        },
+        //        commandType: CommandType.StoredProcedure
+        //    );
+        //}
         public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
         {
             using var connection = new SqlConnection(_conStr);

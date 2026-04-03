@@ -62,9 +62,6 @@ namespace ProductivityApi.Controllers
         [HttpPost("branchSubmit")]
         public async Task<IActionResult> BranchSubmit([FromBody] FcRefundBranchSubmitDto dto)
         {
-            if (dto == null || dto.Id <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
-
             var result = await _service.BranchSubmitAsync(dto);
             return result switch
             {
@@ -96,8 +93,7 @@ namespace ProductivityApi.Controllers
             var updatedCount = await _service.TriggerMailAsync(dto);
             return updatedCount switch
             {
-                > 0 => Ok(new Response(true, null, $"Mail sent and {updatedCount} LAN(s) updated")),
-                0 => Ok(new Response(false, null, "Mail sent but no LANs were updated")),
+                >= 0 => Ok(new Response(true, null, "Mail sent successfully")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -156,6 +152,19 @@ namespace ProductivityApi.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"FC_Refund_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
+        }
+
+        [HttpGet("downloadFile")]
+        public IActionResult DownloadFile([FromQuery] FcRefundDownloadFileRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.FileName))
+                return BadRequest(new Response(false, null, "FileName is required"));
+
+            var result = _service.GetFileAsBase64(dto);
+
+            return result.Success
+                ? Ok(new Response(true, result.Data, "Success"))
+                : NotFound(new Response(false, null, result.Message));
         }
     }
 }

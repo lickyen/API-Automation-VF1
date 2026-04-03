@@ -1,6 +1,8 @@
 ﻿namespace ProductivityApi.Models
 {
     using System;
+    using System.ComponentModel.DataAnnotations;
+
     public class FcRefundModel
     {
         public int Id { get; set; }
@@ -39,17 +41,33 @@
     }
     public class FcRefundBranchSubmitDto
     {
+        [Required]
         public int Id { get; set; }
-        public string? FullNameAsPerBankProof { get; set; }
-        public string? AccountNo { get; set; }
-        public string? Ifsc { get; set; }
-        public string? PolicyNo { get; set; }
-        public string? MemberName { get; set; }
-        public string? SgNo { get; set; }
-        public string? ClientName { get; set; }
-        public string?  PayoutLevel { get; set; }
-        public string? BankProofFilePath { get; set; }
-        public string? RequestLetterFilePath { get; set; }
+        [Required]
+        public string FullNameAsPerBankProof { get; set; } = string.Empty;
+        [Required]
+        public string AccountNo { get; set; } = string.Empty;
+        [Required]
+        public string Ifsc { get; set; } = string.Empty;
+        [Required]
+        public string PolicyNo { get; set; } = string.Empty;
+        [Required]
+        public string MemberName { get; set; } = string.Empty;
+        [Required]
+        public string SgNo { get; set; } = string.Empty;
+        [Required]
+        public string ClientName { get; set; } = string.Empty;
+        [Required]
+        public string PayoutLevel { get; set; } = string.Empty;
+        [Required]
+        public string BankProofBase64 { get; set; } = string.Empty;
+        [Required]
+        public string BankProofFileName { get; set; } = string.Empty;
+        [Required]
+        public string RequestLetterBase64 { get; set; } = string.Empty;
+        [Required]
+        public string RequestLetterFileName { get; set; } = string.Empty;
+        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
     public class FcRefundTriggerMailDto
@@ -103,6 +121,16 @@
         public int Id { get; set; }
         public string? AdditionalRequest { get; set; }
         public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class FcRefundDownloadFileRequestDto
+    {
+        public string FileName { get; set; } = string.Empty;
+    }
+    public class FcRefundDownloadFileResponseDto
+    {
+        public string Base64 { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
     }
 }
 
