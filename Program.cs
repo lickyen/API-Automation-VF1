@@ -101,6 +101,7 @@ builder.Services.AddScoped<ModRepository>();
 builder.Services.AddScoped<FcRefundRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
+builder.Services.AddScoped<IJob, FcRefundJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
