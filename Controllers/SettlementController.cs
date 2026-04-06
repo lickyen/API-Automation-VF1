@@ -139,6 +139,22 @@ namespace ProductivityApi.Controllers
         }
 
 
+        [HttpGet("report")]
+        public async Task<IActionResult> DownloadReport(DateTime? fromDate, DateTime? toDate)
+        {
+            var fileBytes = await _service.GetReportExcelAsync(fromDate, toDate);
+
+            if (fileBytes == null)
+                return NotFound("No data available for the selected range.");
+
+            return File(
+                fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Settlement_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+            );
+        }
+
+
 
     }
 }
