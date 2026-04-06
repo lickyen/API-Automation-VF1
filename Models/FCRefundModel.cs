@@ -75,10 +75,17 @@
     }
     public class FcRefundUpdateRefundDto
     {
-        public int Id { get; set; }
+        public string Lan { get; set; }
         public decimal? RefundAmount { get; set; }
         public DateTime? RefundDate { get; set; }
         public string? UTR { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class FcRefundAdditionalRequestDto
+    {
+        public string Lan { get; set; }
+        public string AdditionalRequest { get; set; }
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
@@ -111,14 +118,6 @@
         public string LAN { get; set; } = string.Empty;
         public int Status { get; set; }
     }
-
-    public class FcRefundAdditionalRequestDto
-    {
-        public int Id { get; set; }
-        public string? AdditionalRequest { get; set; }
-        public string UpdatedBy { get; set; } = string.Empty;
-    }
-
     public class FcRefundDownloadFileRequestDto
     {
         public string FileName { get; set; } = string.Empty;

@@ -159,7 +159,7 @@ namespace ProductivityApi.Repository
                     "sp_FcRefund_UpdateRefund",
                     new
                     {
-                        dto.Id,
+                        dto.Lan,
                         dto.RefundAmount,
                         dto.RefundDate,
                         dto.UTR,
@@ -189,7 +189,7 @@ namespace ProductivityApi.Repository
                     "sp_FcRefund_UpdateAdditionalRequest",
                     new
                     {
-                        dto.Id,
+                        dto.Lan,
                         dto.AdditionalRequest,
                         dto.UpdatedBy
                     },
