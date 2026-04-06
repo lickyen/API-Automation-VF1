@@ -146,25 +146,62 @@ namespace ProductivityApi.Repository
         }
 
         // COPS Tab 2: update refund details → status = Completed
-        public async Task<int> UpdateRefundAsync(FcRefundUpdateRefundDto dto)
+        public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
-            return await connection.ExecuteScalarAsync<int>(
-                "sp_FcRefund_UpdateRefund",
-                new
-                {
-                    dto.Id,
-                    dto.RefundAmount,
-                    dto.RefundDate,
-                    dto.UTR,
-                   status = FcRefundStatus.Completed,
-                    dto.UpdatedBy
-                },
-                commandType: CommandType.StoredProcedure
-            );
+
+            int successCount = 0;
+
+            foreach (var dto in dtos)
+            {
+                var result = await connection.ExecuteScalarAsync<int>(
+                    "sp_FcRefund_UpdateRefund",
+                    new
+                    {
+                        dto.Id,
+                        dto.RefundAmount,
+                        dto.RefundDate,
+                        dto.UTR,
+                        status = FcRefundStatus.Completed,
+                        dto.UpdatedBy
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (result > 0)
+                    successCount++;
+            }
+
+            return successCount;
         }
 
+        public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            int successCount = 0;
+
+            foreach (var dto in dtos)
+            {
+                var result = await connection.ExecuteScalarAsync<int>(
+                    "sp_FcRefund_UpdateAdditionalRequest",
+                    new
+                    {
+                        dto.Id,
+                        dto.AdditionalRequest,
+                        dto.UpdatedBy
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (result > 0)
+                    successCount++;
+            }
+
+            return successCount;
+        }
         public async Task<List<FcRefundBankEmails>> GetBankEmailDetailsAsync(string insurer)
         {
             using var connection = new SqlConnection(_conStr);
@@ -216,24 +253,6 @@ namespace ProductivityApi.Repository
                 AddedLans = added,
                 SkippedLans = skipped
             };
-        }
-
-
-        public async Task<int> UpdateAdditionalRequestAsync(FcRefundAdditionalRequestDto dto)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            return await connection.ExecuteScalarAsync<int>(
-                "sp_FcRefund_UpdateAdditionalRequest",
-                new
-                {
-                    dto.Id,
-                    dto.AdditionalRequest,
-                    dto.UpdatedBy
-                },
-                commandType: CommandType.StoredProcedure
-            );
         }
 
         public async Task<IEnumerable<FcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)

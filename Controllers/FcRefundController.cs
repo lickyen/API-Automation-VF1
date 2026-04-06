@@ -97,18 +97,36 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
         [HttpPost("updateRefund")]
-        public async Task<IActionResult> UpdateRefund([FromBody] FcRefundUpdateRefundDto dto)
+        public async Task<IActionResult> UpdateRefund([FromBody] List<FcRefundUpdateRefundDto> dtos)
         {
-            if (dto == null || dto.Id <= 0)
+            if (dtos == null || !dtos.Any())
                 return BadRequest(new Response(false, null, "Invalid request"));
 
-            var result = await _service.UpdateRefundAsync(dto);
+            var result = await _service.UpdateRefundAsync(dtos);
+
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Refund details updated")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
+                > 0 => Ok(new Response(true, null, $"{result} refund(s) updated")),
+                -1 => NotFound(new Response(false, null, "Records not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("additionalRequest")]
+        public async Task<IActionResult> UpdateAdditionalRequest([FromBody] List<FcRefundAdditionalRequestDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "Invalid request"));
+
+            var result = await _service.UpdateAdditionalRequestAsync(dtos);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, $"{result} record(s) updated")),
+                -1 => NotFound(new Response(false, null, "Records not found")),
+                _ => StatusCode(500, new Response(false, null, "Error occurred"))
             };
         }
 
@@ -126,22 +144,6 @@ namespace ProductivityApi.Controllers
             ));
         }
 
-        [HttpPost("additionalRequest")]
-        public async Task<IActionResult> UpdateAdditionalRequest([FromBody] FcRefundAdditionalRequestDto dto)
-        {
-            if (dto == null || dto.Id <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
-
-            var result = await _service.UpdateAdditionalRequestAsync(dto);
-
-            return result switch
-            {
-                1 => Ok(new Response(true, null, "Additional request updated successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "Error occurred"))
-            };
-        }
-
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport(DateTime? fromDate, DateTime? toDate)
         {
@@ -150,7 +152,7 @@ namespace ProductivityApi.Controllers
             return File(
                 fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"FC_Refund_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+                $"FCRefund_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
         }
 

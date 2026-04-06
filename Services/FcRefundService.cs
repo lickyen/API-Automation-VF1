@@ -210,14 +210,14 @@ namespace ProductivityApi.Services
             table.Append("</table>");
             return table.ToString();
         }
-        public async Task<int> UpdateRefundAsync(FcRefundUpdateRefundDto dto)
-            => await _repository.UpdateRefundAsync(dto);
+        public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
+            => await _repository.UpdateRefundAsync(dtos);
+
+        public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
+            => await _repository.UpdateAdditionalRequestAsync(dtos);
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
             => await _repository.AddLanAsync(dtos);
-
-        public async Task<int> UpdateAdditionalRequestAsync(FcRefundAdditionalRequestDto dto)
-            => await _repository.UpdateAdditionalRequestAsync(dto);
 
         public (bool Success, string Message, FcRefundDownloadFileResponseDto? Data) GetFileAsBase64(FcRefundDownloadFileRequestDto dto)
         {

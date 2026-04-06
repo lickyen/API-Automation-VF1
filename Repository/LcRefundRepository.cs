@@ -18,33 +18,6 @@ namespace ProductivityApi.Repository
 
         // ── Queries ──────────────────────────────────────────────────────────────
 
-        /// <summary>All fresh / active cases (mirrors SP_LC_Freshcases logic).</summary>
-        public async Task<List<LcRefundModel>> GetFreshCasesAsync()
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            var result = await conn.QueryAsync<LcRefundModel>(
-                "sp_LcRefund_GetFreshCases",
-                commandType: CommandType.StoredProcedure
-            );
-            return result.ToList();
-        }
-
-        /// <summary>Filter by status (New / In Progress / Completed / Not Covered).</summary>
-        public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            var result = await conn.QueryAsync<LcRefundModel>(
-                "sp_LcRefund_GetByStatus",
-                new { Status = status },
-                commandType: CommandType.StoredProcedure
-            );
-            return result.ToList();
-        }
-
         /// <summary>Single record by internal Id.</summary>
         public async Task<LcRefundModel?> GetByIdAsync(int id)
         {
@@ -69,6 +42,20 @@ namespace ProductivityApi.Repository
                 new { Lan = lan },
                 commandType: CommandType.StoredProcedure
             );
+        }
+
+        /// <summary>Filter by status (New / In Progress / Completed / Not Covered).</summary>
+        public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var result = await conn.QueryAsync<LcRefundModel>(
+                "sp_LcRefund_GetByStatus",
+                new { Status = status },
+                commandType: CommandType.StoredProcedure
+            );
+            return result.ToList();
         }
 
         /// <summary>All UTR entries for a given LAN (can be multiple per insurer).</summary>
@@ -154,9 +141,9 @@ namespace ProductivityApi.Repository
                     new
                     {
                         Lan = lan,
-                        entry.Type,
+                        entry.Insurer,
                         entry.UTR,
-                        entry.PaymentReceivedDate,
+                        entry.PaymentDate,
                         entry.Amount,
                         UpdatedBy = updatedBy
                     },

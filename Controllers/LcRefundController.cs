@@ -21,39 +21,6 @@ namespace ProductivityApi.Controllers
         // ────────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// GET api/LcRefund/freshCases
-        /// Returns all active (non-NotCovered, non-Completed) cancelled-loan cases.
-        /// Mirrors SP_LC_Freshcases.
-        /// </summary>
-        [HttpGet("freshCases")]
-        public async Task<IActionResult> GetFreshCases()
-        {
-            var data = await _service.GetFreshCasesAsync();
-
-            if (!data.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        /// <summary>
-        /// GET api/LcRefund/getByStatus?status=In Progress
-        /// </summary>
-        [HttpGet("getByStatus")]
-        public async Task<IActionResult> GetByStatus([FromQuery] string status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-                return BadRequest(new Response(false, null, "Status is required"));
-
-            var data = await _service.GetByStatusAsync(status);
-
-            if (!data.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        /// <summary>
         /// GET api/LcRefund/getById/5
         /// </summary>
         [HttpGet("getById/{id}")]
@@ -83,6 +50,23 @@ namespace ProductivityApi.Controllers
 
             if (data == null)
                 return NotFound(new Response(true, null, "No record found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        /// <summary>
+        /// GET api/LcRefund/getByStatus?status=In Progress
+        /// </summary>
+        [HttpGet("getByStatus")]
+        public async Task<IActionResult> GetByStatus([FromQuery] string status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return BadRequest(new Response(false, null, "Status is required"));
+
+            var data = await _service.GetByStatusAsync(status);
+
+            if (!data.Any())
+                return Ok(new Response(true, new List<object>(), "No records found"));
 
             return Ok(new Response(true, data, "Success"));
         }
@@ -241,7 +225,7 @@ namespace ProductivityApi.Controllers
             return File(
                 fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"LC_Refund_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+                $"LCRefund_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
         }
     }

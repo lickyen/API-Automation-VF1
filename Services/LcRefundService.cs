@@ -28,17 +28,14 @@ namespace ProductivityApi.Services
 
         // ── Queries ──────────────────────────────────────────────────────────────
 
-        public async Task<List<LcRefundModel>> GetFreshCasesAsync()
-            => await _repository.GetFreshCasesAsync();
-
-        public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
-            => await _repository.GetByStatusAsync(status);
-
         public async Task<LcRefundModel?> GetByIdAsync(int id)
             => await _repository.GetByIdAsync(id);
 
         public async Task<LcRefundModel?> GetByLanAsync(string lan)
             => await _repository.GetByLanAsync(lan);
+
+        public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
+            => await _repository.GetByStatusAsync(status);
 
         public async Task<List<LcUtrModel>> GetUtrByLanAsync(string lan)
             => await _repository.GetUtrByLanAsync(lan);
@@ -141,7 +138,7 @@ namespace ProductivityApi.Services
                 sb.Append($"<td>{r.LAN}</td>");
                 sb.Append($"<td>{r.FullName}</td>");
                 sb.Append($"<td>{r.PolicyNumber}</td>");
-                sb.Append($"<td>{r.SystemGeneratedNo}</td>");
+                sb.Append($"<td>{r.SgNo}</td>");
                 sb.Append($"<td>{r.DisbDate:dd-MMM-yyyy}</td>");
                 sb.Append($"<td>{r.CancelledDate:dd-MMM-yyyy}</td>");
 
@@ -177,8 +174,8 @@ namespace ProductivityApi.Services
                 throw new ArgumentException("No UTR entries provided");
 
             foreach (var entry in dto.Entries)
-                if (!IsValidInsurer(entry.Type))
-                    throw new ArgumentException($"Unknown insurer type: {entry.Type}");
+                if (!IsValidInsurer(entry.Insurer))
+                    throw new ArgumentException($"Unknown insurer type: {entry.Insurer}");
 
             return await _repository.UpsertUtrAsync(dto.LAN, dto.Entries, dto.UpdatedBy);
         }
@@ -232,18 +229,17 @@ namespace ProductivityApi.Services
                     x.LAN,
                     x.FullName,
                     x.PolicyNumber,
-                    x.SystemGeneratedNo,
+                    x.SgNo,
                     x.DisbDate.ToString("dd-MM-yyyy"),
                     x.CancelledDate.ToString("dd-MM-yyyy"),
-                    x.Source,
-                    x.Icici,
+                    x.ICICI,
                     x.NivaBupa,
                     x.HDC ?? "",
                     x.PA ?? "",
                     x.OPD ?? "",
-                    x.KotakMailTriggerDt?.ToString("dd-MM-yyyy HH:mm") ?? "",
-                    x.IciciMailTriggerDt?.ToString("dd-MM-yyyy HH:mm") ?? "",
-                    x.NivaBupaMailTriggerDt?.ToString("dd-MM-yyyy HH:mm") ?? "",
+                    x.KotakMailTriggerDate?.ToString("dd-MM-yyyy HH:mm") ?? "",
+                    x.ICICIMailTriggerDate?.ToString("dd-MM-yyyy HH:mm") ?? "",
+                    x.NivaBupaMailTriggerDate?.ToString("dd-MM-yyyy HH:mm") ?? "",
                     x.Status
                 );
             }
