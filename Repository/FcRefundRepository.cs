@@ -233,8 +233,6 @@ namespace ProductivityApi.Repository
                         dto.FullName,
                         dto.DisbDate,
                         dto.ForeclosedDate,
-                        dto.AccountStatus,
-                        dto.AdditionalStatus,
                         dto.CreatedBy
                     },
                     commandType: CommandType.StoredProcedure

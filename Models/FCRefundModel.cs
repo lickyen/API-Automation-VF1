@@ -11,8 +11,6 @@
         public string FullName { get; set; }
         public DateTime DisbDate { get; set; }
         public DateTime ForeclosedDate { get; set; }
-        public string AccountStatus { get; set; }
-        public string AdditionalStatus { get; set; }
         public string Status { get; set; }
         public bool KotakMailTrigger { get; set; }
         public DateTime? KotakMailTriggerDate { get; set; }
@@ -97,8 +95,6 @@
         public string FullName { get; set; } = string.Empty;
         public DateTime DisbDate { get; set; }
         public DateTime ForeclosedDate { get; set; }
-        public string AccountStatus { get; set; } = string.Empty;
-        public string AdditionalStatus { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
     }
 

@@ -128,8 +128,6 @@ namespace ProductivityApi.Jobs
                 {
                     LAN = reader.GetString(0),
                     FullName = reader.GetString(1),
-                    AccountStatus = "C",
-                    AdditionalStatus = reader.GetString(2),
                     ForeclosedDate = reader.GetDateTime(3),
                     DisbDate = reader.GetDateTime(4),
                     BranchCode = reader.GetString(5),
