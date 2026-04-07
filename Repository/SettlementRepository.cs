@@ -192,5 +192,30 @@ namespace ProductivityApi.Repositories
 
             return parameters.Get<int>("@Output");
         }
+
+        public async Task<(IEnumerable<dynamic> transactions,
+                           IEnumerable<dynamic> payments,
+                           IEnumerable<dynamic> logs)>
+            GetReportDataAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@FromDate", fromDate);
+            parameters.Add("@ToDate", toDate);
+
+            using var multi = await conn.QueryMultipleAsync(
+                "sp_Settlement_GetReport",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            var transactions = await multi.ReadAsync();
+            var payments = await multi.ReadAsync();
+            var logs = await multi.ReadAsync();
+
+            return (transactions, payments, logs);
+        }
     }
 }

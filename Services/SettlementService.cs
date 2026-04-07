@@ -1,9 +1,7 @@
-﻿using Azure.Core;
-using Novell.Directory.Ldap.Rfc2251;
+﻿using ClosedXML.Excel;
 using ProductivityApi.Models;
-using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
-using static System.Net.WebRequestMethods;
+using System.Data;
 
 namespace ProductivityApi.Services
 {
@@ -115,5 +113,49 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            var (transactions, payments, logs) =
+                await _repository.GetReportDataAsync(fromDate, toDate);
+
+            using var workbook = new XLWorkbook();
+
+            AddSheet(workbook, transactions, "Data");
+            AddSheet(workbook, payments, "Payments");
+            AddSheet(workbook, logs, "Logs");
+
+            if (!workbook.Worksheets.Any())
+                return null;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+
+        private void AddSheet(XLWorkbook workbook, IEnumerable<dynamic> data, string sheetName)
+        {
+            if (data == null || !data.Any())
+                return;
+
+            var dt = new DataTable();
+            var firstRow = (IDictionary<string, object>)data.First();
+
+            foreach (var col in firstRow.Keys)
+                dt.Columns.Add(col);
+
+            foreach (var row in data)
+            {
+                var dict = (IDictionary<string, object>)row;
+                dt.Rows.Add(dict.Values.ToArray());
+            }
+
+            var ws = workbook.Worksheets.Add(sheetName);
+            ws.Cell(1, 1).InsertTable(dt);
+
+            ws.Row(1).Style.Font.Bold = true;
+            ws.SheetView.FreezeRows(1);
+            ws.Columns().AdjustToContents();
+        }
     }
 }

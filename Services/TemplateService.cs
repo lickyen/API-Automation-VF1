@@ -10,38 +10,21 @@ namespace ProductivityApi.Services
 
         public TemplateService()
         {
-            string templateFilePath = Path.Combine(
-                AppContext.BaseDirectory, "Templates", "Templates.json");
+            var smsPath = Path.Combine(AppContext.BaseDirectory, "Templates", "SmsTemplates.json");
+            var emailPath = Path.Combine(AppContext.BaseDirectory, "Templates", "EmailTemplates.json");
 
-            if (!File.Exists(templateFilePath))
-                throw new FileNotFoundException($"Template file not found: {templateFilePath}");
+            if (!File.Exists(smsPath))
+                throw new FileNotFoundException($"SMS template file not found: {smsPath}");
 
-            var json = File.ReadAllText(templateFilePath);
-            using var doc = JsonDocument.Parse(json);
+            if (!File.Exists(emailPath))
+                throw new FileNotFoundException($"Email template file not found: {emailPath}");
 
-            _smsTemplates = new Dictionary<string, SmsTemplate>();
-            _emailTemplates = new Dictionary<string, EmailTemplate>();
+            var smsJson = File.ReadAllText(smsPath);
+            var emailJson = File.ReadAllText(emailPath);
 
-            var root = doc.RootElement;
-
-            // Load SMS templates
-            foreach (var sms in root.GetProperty("Sms").EnumerateObject())
-            {
-                _smsTemplates[sms.Name] = new SmsTemplate
-                {
-                    Content = sms.Value.GetProperty("Content").GetString() ?? "",
-                    DltContentId = sms.Value.GetProperty("DltContentId").GetString() ?? ""
-                };
-            }
-
-            // Load Email templates
-            foreach (var email in root.GetProperty("Email").EnumerateObject())
-            {
-                _emailTemplates[email.Name] = new EmailTemplate
-                {
-                    Body = email.Value.GetProperty("Body").GetString() ?? ""
-                };
-            }
+            // Deserialize directly (recommended)
+            _smsTemplates = JsonSerializer.Deserialize<Dictionary<string, SmsTemplate>>(smsJson) ?? new();
+            _emailTemplates = JsonSerializer.Deserialize<Dictionary<string, EmailTemplate>>(emailJson) ?? new();
         }
 
         public SmsTemplate GetSmsTemplate(string key)

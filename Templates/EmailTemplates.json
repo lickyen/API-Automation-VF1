@@ -1,0 +1,26 @@
+{
+  "MovedToQEmail": {
+    "Body": "<p>Dear Team,</p><p>The LAN <b><<LAN>></b> has been moved to your queue.</p><p>Please take necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "ApprovedEmail": {
+    "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Approved</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "RejectedEmail": {
+    "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:red;'>Rejected</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "ProcessedEmail": {
+    "Body": "<p>Dear Team,</p><p><<Module>> request for the LAN <b><<LAN>></b> has been <span style='color:green;'>Processed</span>.</p><p>You can view the details by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "BranchVisitReminderEmail": {
+    "Body": "<p>Dear Recipient,</p><p>This is a gentle reminder regarding the visit task assigned to you for <b><<BranchName>></b> in the Productivity App, which is scheduled to be completed on or before the <b><<DueDate>></b>.</p><p>You are required to complete the visit and update the checklist in Productivity App with the following details:</p><ul><li>Geo Tag (with photo)</li><li>Date of Visit</li><li>Final Observation (No Observation / Critical Observation / Re-Visit Required)</li><li>Checklist Updating</li><li>Remarks, if any</li></ul><p>Please ensure timely completion to avoid escalation.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "BranchVisitEscalationEmail": {
+    "Body": "<p>Dear <<UserName>>,</p><p>This is a reminder regarding the pending visit task assigned to you for <b><<BranchName>></b>, scheduled on <b><<PlannedDate>></b>.</p><p>Despite prior reminders and follow-ups, the task has not yet been completed, and the due date (<b><<DueDate>></b>) has already passed.</p><p><b>Task Details:</b></p><ul><li>Task ID: <<TaskId>></li><li>Branch: <<BranchName>></li><li>Assigned Date: <<AssignedDate>></li><li>Due Date: <<DueDate>></li><li>Current Status: Pending</li><li>Days Overdue: <<DaysOverdue>></li></ul><p>Your tasks must be completed by the 10th of the month. Further delays may lead to cautionary action.</p><p>You are requested to:</p><ul><li>Complete the visit immediately</li><li>Update all required checklist fields (Geo Tag, Date of Visit, Observations, Remarks)</li></ul><p>Failure to act within the next [24–48 hours] will result in further escalation and may lead to issuance of a caution letter.</p><p><b>Please treat this as urgent!</b></p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "BranchVisitCautionLetterEmail": {
+    "Body": "<p>Dear <<UserName>>,</p><p>This is a reminder regarding the pending visit task assigned to you for <b><<BranchName>></b>, scheduled on <b><<PlannedDate>></b>.</p><p>Despite prior reminders and follow-ups, the task has not yet been completed, and the due date (<b><<DueDate>></b>) has already passed.</p><p><b>Task Details:</b></p><ul><li>Task ID: <<TaskId>></li><li>Branch: <<BranchName>></li><li>Assigned Date: <<AssignedDate>></li><li>Due Date: <<DueDate>></li><li>Current Status: Pending</li><li>Days Overdue: <<DaysOverdue>></li></ul><p>Your tasks must be completed by the 10th of the month. Further delays may lead to cautionary action.</p><p>You are requested to:</p><ul><li>Complete the visit immediately</li><li>Update all required checklist fields (Geo Tag, Date of Visit, Observations, Remarks)</li></ul><p>Failure to act within the next [24–48 hours] will result in further escalation and may lead to issuance of a caution letter.</p><p><b>Please treat this as urgent!</b></p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "FcRefundMailTriggerEmail": {
+    "Body": "<p>Hi Team,</p><p>Loan foreclosure for the below cases. Kindly refund the premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
+  }
+}
