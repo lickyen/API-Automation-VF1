@@ -10,8 +10,8 @@
         public static class LcRefundStatus
         {
             public const string New = "New";
-            public const string InProgress = "In Progress";   // after any mail is triggered
-            public const string Completed = "Completed";       // after UTR is updated
+            public const string InProgress = "In Progress";  
+            public const string Completed = "Completed";   
             public const string NotCovered = "Not Covered";
         }
 
@@ -22,5 +22,23 @@
             public const string NivaBupa = "NivaBupa";
         }
 
+    public static class LegalBillingStatus
+    {
+        public const string Initiated = "Initiated";
 
+        public const string ZDSHApproved = "ZDSH-Approved";
+        public const string ZDSHRejected = "ZDSH-Rejected";
+
+        public const string MZDSHApproved = "MZDSH-Approved";
+        public const string MZDSHRejected = "MZDSH-Rejected";
+
+        public const string CDSOApproved = "CDSO-Approved";
+        public const string CDSORejected = "CDSO-Rejected";
+
+        public const string Completed = "Completed";
     }
+
+
+
+
+}
