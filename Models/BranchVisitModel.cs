@@ -5,7 +5,6 @@ namespace ProductivityApi.Models
     public class BranchVisit
     {
         public int Id { get; set; }
-
         public string BranchId { get; set; }
         public string BranchName { get; set; }
         public string Region { get; set; }
@@ -13,84 +12,87 @@ namespace ProductivityApi.Models
         public string MegaZone { get; set; }
         public string VisitMonth { get; set; }
         public string VisitType { get; set; }
-        public string Status { get; set; }
+        public string StatusCode { get; set; }
+        public string StatusName { get; set; }
         public string? RH_Id { get; set; }
         public string? ZH_Id { get; set; }
         public string? VisitedBy { get; set; }
         public DateTime? VisitedDt { get; set; }
         public string? Remarks { get; set; }
+        public string? Location { get; set; }
         public string? GeoTag { get; set; }
         public string? PhotoPath { get; set; }
-        public string? RevisitRequired { get; set; }
+        public string? FinalObservation { get; set; }
         public string CreatedBy { get; set; }
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
-
         public DateTime? UpdatedDt { get; set; }
 
         // Escalation Level 1
         public bool? Escalation1 { get; set; }
-
-        public int? Escalation1_Id { get; set; }
-
+        public string? Escalation1_Id { get; set; }
         public DateTime? Escalation1_Date { get; set; }
 
         // Escalation Level 2
         public bool? Escalation2 { get; set; }
-
-        public int? Escalation2_Id { get; set; }
-
+        public string? Escalation2_Id { get; set; }
         public DateTime? Escalation2_Date { get; set; }
 
         // Caution Letter
         public bool? CautionLetter { get; set; }
-
         public DateTime? CautionLetter_Date { get; set; }
-
         public string CautionLetter_Path { get; set; }
     }
+
+    //public class BranchVisitChecklist
+    //{
+    //    public int Id { get; set; }
+
+    //    public string Section { get; set; }
+
+    //    public string Question { get; set; }
+
+    //    public string? Options { get; set; }
+
+    //    public int? ParentId { get; set; }
+
+    //    public string? TriggerValue { get; set; }
+
+    //    public bool IsActive { get; set; }
+
+    //    public int DisplayOrder { get; set; }
+
+    //    public string CreatedBy { get; set; }
+
+    //    public DateTime CreatedDt { get; set; }
+
+    //    public string? UpdatedBy { get; set; }
+
+    //    public DateTime? UpdatedDt { get; set; }
+    //}
 
     public class BranchVisitChecklist
     {
         public int Id { get; set; }
-
-        public string Section { get; set; }
-
-        public string Question { get; set; }
-
-        public string? Options { get; set; }
-
-        public int? ParentId { get; set; }
-
-        public string? TriggerValue { get; set; }
-
+        public string ChecklistSection { get; set; } 
+        public string PointsToReview { get; set; }   
+        public string ApplicableTo { get; set; }     
+        public string Options { get; set; }     
         public bool IsActive { get; set; }
-
         public int DisplayOrder { get; set; }
-
         public string CreatedBy { get; set; }
-
         public DateTime CreatedDt { get; set; }
-
         public string? UpdatedBy { get; set; }
-
         public DateTime? UpdatedDt { get; set; }
     }
-
     public class BranchVisitResponse
     {
         public int Id { get; set; }
-
         public int VisitId { get; set; }
-
         public int ChecklistId { get; set; }
-
-        public string Response { get; set; }
-
+        public string ChecklistResponse { get; set; }
         public string CreatedBy { get; set; }
-
         public DateTime CreatedDt { get; set; }
-
         public BranchVisitChecklist Checklist { get; set; }
 
     }
@@ -106,22 +108,23 @@ namespace ProductivityApi.Models
     public class BranchVisitDto
     {
         public BranchVisit VisitDetails { get; set; }
-        public List<BranchVisitCheckListResponseDto> ChecklistResponse { get; set; }
+        public List<BranchVisitChecklistResponseDto> ChecklistResponse { get; set; }
     }
 
-    public class BranchVisitCheckListResponseDto
+    public class BranchVisitChecklistResponseDto
     {
         // Response Info
         public int ResponseId { get; set; }
         public int VisitId { get; set; }
         public int ChecklistId { get; set; }
         public string Response { get; set; }
+        public string ChecklistRemarks { get; set; }
         public string ResponseCreatedBy { get; set; }
         public DateTime ResponseCreatedDt { get; set; }
 
         // Checklist Info
-        public string Section { get; set; }
-        public string Question { get; set; }
+        public string ChecklistSection { get; set; }
+        public string PointsToReview { get; set; }
         public int? ParentId { get; set; }
         public string? TriggerValue { get; set; }
         public int DisplayOrder { get; set; }
@@ -134,15 +137,17 @@ namespace ProductivityApi.Models
         [Required]
         public string Remarks { get; set; }
         [Required]
+        public string Location { get; set; }
+        [Required]
         public string GeoTag { get; set; }
         [Required]
         public string PhotoPath { get; set; }
         [Required]
-        public string RevisitRequired { get; set; }
+        public string FinalObservation { get; set; }
         [Required]
         public string UpdatedBy { get; set; }
         [Required]
-        public List<BranchVisitChecklistSubmitDto> CheckListReponse { get; set; }
+        public List<BranchVisitChecklistSubmitDto> ChecklistResponse { get; set; }
 
     }
 
@@ -152,6 +157,8 @@ namespace ProductivityApi.Models
         public int ChecklistId { get; set; }
         [Required]
         public string Response { get; set; }
+        [Required]
+        public string ChecklistRemarks { get; set; }
     }
 
 }

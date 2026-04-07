@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2013.Excel;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
@@ -43,9 +44,9 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<MemoryStream?> GenerateReportExcelAsync()
+        public async Task<string?> GenerateReportExcelBase64Async(string month)
         {
-            var data = await _repository.GetReportDataAsync();
+            var data = await _repository.GetReportDataAsync(month);
 
             if (data == null || !data.Any())
                 return null;
@@ -64,16 +65,17 @@ namespace ProductivityApi.Services
             }
 
             // Generate Excel
-            var workbook = new XLWorkbook();
+            using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Report");
             worksheet.Cell(1, 1).InsertTable(dt);
 
-            var stream = new MemoryStream();
+            using var stream = new MemoryStream();
             workbook.SaveAs(stream);
-            stream.Position = 0;
 
-            return stream;
+            var bytes = stream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+
+            return base64;
         }
-
     }
 }

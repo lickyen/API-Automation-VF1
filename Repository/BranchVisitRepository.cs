@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using Dapper;
 using ProductivityApi.Models;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace ProductivityApi.Repository
 {
@@ -48,13 +49,13 @@ namespace ProductivityApi.Repository
             if (visit == null)
                 return null;
 
-            var checklistResponses = (await multi.ReadAsync<BranchVisitCheckListResponseDto>())
+            var ChecklistResponses = (await multi.ReadAsync<BranchVisitChecklistResponseDto>())
                                         .ToList();
 
             return new BranchVisitDto
             {
                 VisitDetails = visit,
-                ChecklistResponse = checklistResponses
+                ChecklistResponse = ChecklistResponses
             };
         }
 
@@ -63,13 +64,13 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var checklist = await connection.QueryAsync<BranchVisitChecklist>(
+            var Checklist = await connection.QueryAsync<BranchVisitChecklist>(
                 "sp_BranchVisit_GetChecklist",
                 new { Section = section },
                 commandType: CommandType.StoredProcedure
             );
 
-            return checklist.ToList();
+            return Checklist.ToList();
         }
 
         public async Task<int> UpdateBranchVisitAsync(BranchVisitSubmitDto dto)
@@ -79,63 +80,74 @@ namespace ProductivityApi.Repository
 
             using var transaction = connection.BeginTransaction();
 
-            try
+            var visitParams = new
             {
-                // Update BranchVisit basic info
-                var visitParams = new
-                {
-                    Id = dto.Id,
-                    Remarks = dto.Remarks,
-                    GeoTag = dto.GeoTag,
-                    PhotoPath = dto.PhotoPath,
-                    RevisitRequired = dto.RevisitRequired,
-                    UpdatedBy = dto.UpdatedBy
-                };
+                Id = dto.Id,
+                Remarks = dto.Remarks,
+                GeoTag = dto.GeoTag,
+                Location = dto.Location,
+                PhotoPath = dto.PhotoPath,
+                FinalObservation = dto.FinalObservation,
+                UpdatedBy = dto.UpdatedBy
+            };
 
-                await connection.ExecuteAsync(
-                    "sp_BranchVisit_UpdateVisit",
-                    visitParams,
-                    transaction,
-                    commandType: CommandType.StoredProcedure);
+            var affectedRows = await connection.ExecuteScalarAsync<int>(
+                "sp_BranchVisit_UpdateVisit",
+                visitParams,
+                transaction,
+                commandType: CommandType.StoredProcedure);
 
-                // Save Checklist Responses
-                if (dto.CheckListReponse != null && dto.CheckListReponse.Any())
-                {
-                    foreach (var item in dto.CheckListReponse)
-                    {
-                        var checklistParams = new
-                        {
-                            VisitId = dto.Id,
-                            ChecklistId = item.ChecklistId,
-                            Response = item.Response,
-                            CreatedBy = dto.UpdatedBy
-                        };
-
-                        await connection.ExecuteAsync(
-                            "sp_BranchVisit_InsertCheckList",
-                            checklistParams,
-                            transaction,
-                            commandType: CommandType.StoredProcedure);
-                    }
-                }
-
-                transaction.Commit();
-                return 1;
-            }
-            catch
+            // ✅ Handle "record not found"
+            if (affectedRows == -1)
             {
                 transaction.Rollback();
-                throw;
+                return -1;
             }
-        }
 
-        public async Task<IEnumerable<dynamic>> GetReportDataAsync()
+            // (Optional) Handle unexpected case
+            if (affectedRows == 0)
+            {
+                transaction.Rollback();
+                return 0;
+            }
+
+            // ✅ Insert checklist only if update succeeded
+            if (dto.ChecklistResponse?.Any() == true)
+            {
+                foreach (var item in dto.ChecklistResponse)
+                {
+                    var checklistParams = new
+                    {
+                        VisitId = dto.Id,
+                        ChecklistId = item.ChecklistId,
+                        Response = item.Response,
+                        Remarks = item.ChecklistRemarks,
+                        CreatedBy = dto.UpdatedBy
+                    };
+
+                    await connection.ExecuteAsync(
+                        "sp_BranchVisit_InsertChecklist",
+                        checklistParams,
+                        transaction,
+                        commandType: CommandType.StoredProcedure);
+                }
+            }
+
+            transaction.Commit();
+            return 1;
+
+        }
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync(string month)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
+            var parameters = new DynamicParameters();
+            parameters.Add("@Month", month);
+
             return await conn.QueryAsync(
                 "sp_BranchVisit_GetReport",
+                parameters,
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -178,6 +190,20 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
 
             return result;
+        }
+
+        public async Task<List<UserModel>> GetEscalationUsersAsync(int visitId, string escLevel)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var users = await connection.QueryAsync<UserModel>(
+                "sp_BranchVisit_GetEscalationUser",
+                new { VisitId = visitId, EscLevel = escLevel },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return users.ToList();
         }
 
     }

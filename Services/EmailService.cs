@@ -18,7 +18,7 @@ namespace ProductivityApi.Services
             _conStr = configuration.GetConnectionString("DBConn");
 
         }
-        public async Task<string> SendEmail(string subject, string body, List<string> to, List<string> cc)
+        public async Task<string> SendEmail(string subject, string body, List<string> to, List<string> cc, List<Attachment>? attachments = null)
         {
             string result = string.Empty;
 
@@ -43,6 +43,14 @@ namespace ProductivityApi.Services
 
             to.ForEach(email => msg.To.Add(email));
             cc.ForEach(email => msg.CC.Add(email));
+
+            if (attachments != null && attachments.Any())
+            {
+                foreach (var attachment in attachments)
+                {
+                    msg.Attachments.Add(attachment);
+                }
+            }
 
             try
             {

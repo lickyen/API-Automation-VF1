@@ -84,6 +84,8 @@ builder.Services.AddScoped<CersaiService>();
 builder.Services.AddScoped<BranchVisitService>();
 builder.Services.AddScoped<LegalNoticeService>();
 builder.Services.AddScoped<NOCService>();
+builder.Services.AddScoped<ModService>();
+builder.Services.AddScoped<FcRefundService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -95,8 +97,11 @@ builder.Services.AddScoped<CersaiRepository>();
 builder.Services.AddScoped<BranchVisitRepository>();
 builder.Services.AddScoped<LegalNoticeRepository>();
 builder.Services.AddScoped<NOCRepository>();
+builder.Services.AddScoped<ModRepository>();
+builder.Services.AddScoped<FcRefundRepository>();
 
-builder.Services.AddScoped<BranchVisitJob>();
+builder.Services.AddScoped<IJob, BranchVisitJob>();
+builder.Services.AddScoped<IJob, FcRefundJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -140,11 +145,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Hangfire Jobs
-//app.UseHangfireDashboard("/hangfire");
-
-//RecurringJob.AddOrUpdate<BranchVisitJob>(
-//    "branch-visit-job",
-//    job => job.ExecuteAsync(CancellationToken.None),
-//    Cron.Daily(1));
+app.UseHangfireDashboard("/hangfire");
+await app.MapJobsAsync();
 
 app.Run();

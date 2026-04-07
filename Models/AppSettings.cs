@@ -54,5 +54,7 @@ namespace ProductivityApi.Models
     public class FilePaths
     {
         public string LegalNoticeFilePath { get; set; } = string.Empty;
+        public string ModLettersFilePath { get; set; } = string.Empty;
+        public string FcRefundFilePath { get; set; } = string.Empty;
     }
 }
