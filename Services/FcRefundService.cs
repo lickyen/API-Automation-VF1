@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualBasic;
 using ProductivityApi.Constants;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
@@ -237,25 +238,18 @@ namespace ProductivityApi.Services
                 FileName = dto.FileName
             });
         }
-        public async Task<byte[]> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
+
+
+        public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
-            var data = (await _repository.GetReportAsync(fromDate, toDate)).ToList();
+            var completed = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.Completed);
+            var mailsent = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.MailSentToInsurer);
 
-            var completed = data.Where(x => x.Status == FcRefundStatus.Completed).ToList();
-            var mailed = data.Where(x => x.Status == FcRefundStatus.MailSentToInsurer).ToList();
-            //var pending = data.Where(x => x.Status == FcRefundStatus.PendingForAction).ToList();
-
-            using var wb = new XLWorkbook();
-
-            AddCompletedSheet(wb, completed);
-            AddMailSentSheet(wb, mailed);
-            //AddPendingSheet(wb, pending);
-
-            using var stream = new MemoryStream();
-            wb.SaveAs(stream);
-            return stream.ToArray();
+            return ExcelHelper.GenerateExcel(
+                (completed, "Completed"),
+                (mailsent, "Mail Sent To Insurer")
+            );
         }
-
         private void AddCompletedSheet(XLWorkbook wb, List<FcRefundModel> data)
         {
             var dt = new DataTable("Completed");

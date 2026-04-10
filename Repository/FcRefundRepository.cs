@@ -253,14 +253,14 @@ namespace ProductivityApi.Repository
             };
         }
 
-        public async Task<IEnumerable<FcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
+        public async Task<IEnumerable<dynamic>> GetReportAsync(DateTime? fromDate, DateTime? toDate, string status = null)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            return await connection.QueryAsync<FcRefundModel>(
+            return await connection.QueryAsync<dynamic>(
                 "sp_FcRefund_GetReport",
-                new { FromDate = fromDate, ToDate = toDate },
+                new { FromDate = fromDate, ToDate = toDate, Status = status },
                 commandType: CommandType.StoredProcedure
             );
         }

@@ -149,6 +149,9 @@ namespace ProductivityApi.Controllers
         {
             var fileBytes = await _service.GetReportExcelAsync(fromDate, toDate);
 
+            if (fileBytes == null)
+                return NotFound(new Response(false, null, "No data available for the selected range."));
+
             return File(
                 fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

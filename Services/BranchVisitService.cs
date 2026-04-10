@@ -1,5 +1,6 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Office2013.Excel;
+using ProductivityApi.Helpers.ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
@@ -44,38 +45,10 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<string?> GenerateReportExcelBase64Async(string month)
+        public async Task<byte[]?> GetReportDataAsync(string month)
         {
             var data = await _repository.GetReportDataAsync(month);
-
-            if (data == null || !data.Any())
-                return null;
-
-            // Convert to DataTable
-            var dt = new DataTable();
-            foreach (var col in ((IDictionary<string, object>)data.First()).Keys)
-            {
-                dt.Columns.Add(col);
-            }
-
-            foreach (var row in data)
-            {
-                var dict = (IDictionary<string, object>)row;
-                dt.Rows.Add(dict.Values.ToArray());
-            }
-
-            // Generate Excel
-            using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("Report");
-            worksheet.Cell(1, 1).InsertTable(dt);
-
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-
-            var bytes = stream.ToArray();
-            var base64 = Convert.ToBase64String(bytes);
-
-            return base64;
+            return ExcelHelper.GenerateExcel(data, "Data");
         }
     }
 }
