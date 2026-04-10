@@ -84,7 +84,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> DeleteAdvocateAsync(int advocateId, string? deletedBy)
+        public async Task<int> DeleteAdvocateAsync(int advocateId, string? modifiedBy)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -94,7 +94,7 @@ namespace ProductivityApi.Repository
                 new
                 {
                     AdvocateID = advocateId,
-                    ModifiedBy = deletedBy
+                    ModifiedBy = modifiedBy
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -144,7 +144,6 @@ namespace ProductivityApi.Repository
                 {
                     Id = dto.Id,
                     Category = dto.Category,
-                    IsActive = dto.IsActive,
                     ModifiedBy = dto.ModifiedBy
                 },
                 commandType: CommandType.StoredProcedure
@@ -176,94 +175,166 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var parameters = new
-            {
-                dto.Lan,
-                dto.BranchId,
-                dto.CustomerName,
-                dto.CustId,
-                dto.Pos,
-                dto.TotalOutstanding,
-                dto.Dpd,
-                dto.AdvocateId,
-                dto.NatureOfLegalId,
-                dto.PaymentAmount,
-                dto.Remarks,
-                Status = LegalBillingStatus.Initiated,  // Set initial status
-                CreatedBy = dto.CreatedBy
-            };
+            var parameters = new DynamicParameters();
 
-            var newId = await connection.ExecuteScalarAsync<int>(
+            parameters.Add("@Lan", dto.Lan);
+            parameters.Add("@BranchId", dto.BranchId);
+            parameters.Add("@CustomerName", dto.CustomerName);
+            parameters.Add("@CustId", dto.CustId);
+            parameters.Add("@Pos", dto.Pos);
+            parameters.Add("@TotalOutstanding", dto.TotalOutstanding);
+            parameters.Add("@Dpd", dto.Dpd);
+            parameters.Add("@AdvocateId", dto.AdvocateId);
+            parameters.Add("@LegalCategoryId", dto.LegalCategoryId);
+            parameters.Add("@PaymentAmount", dto.PaymentAmount);
+            parameters.Add("@Remarks", dto.Remarks);
+            parameters.Add("@Status", LegalBillingStatus.Initiated);
+            parameters.Add("@CreatedBy", dto.CreatedBy);
+            parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
                 "sp_LegalBilling_Create",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
 
+            var newId = parameters.Get<int>("@NewId");
+
             return newId;
         }
 
-        public async Task<int> UpdateLegalBillingStatusAsync(int id, string role, string action, string modifiedBy, string? remarks = null)
+        public async Task<int> ResubmitLegalBillingAsync(LegalBillingResubmitDto dto)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            // Determine next status
-            var nextStatus = GetNextStatusByRole(role, action);
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_LegalBilling_Resubmit",
+                new
+                {
+                    dto.Id,
+                    dto.BranchId,
+                    dto.CustomerName,
+                    dto.CustId,
+                    dto.Pos,
+                    dto.TotalOutstanding,
+                    dto.Dpd,
+                    dto.AdvocateId,
+                    dto.LegalCategoryId,
+                    dto.PaymentAmount,
+                    dto.Remarks,
+                    Status = LegalBillingStatus.Initiated,
+                    UpdatedBy = dto.ModifiedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<int> UpdateLegalBillingStatusAsync(LegalBillingActionDto dto, string nextStatus)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
 
-            // Call SP to update transaction, pending user, and log
             return await connection.ExecuteScalarAsync<int>(
                 "sp_LegalBilling_UpdateStatus",
                 new
                 {
-                    Id = id,
+                    Id = dto.Id,
                     Status = nextStatus,
-                    Remarks = remarks,
-                    ModifiedBy = modifiedBy
+                    Remarks = dto.Remarks,
+                    UpdatedBy = dto.ModifiedBy
                 },
                 commandType: CommandType.StoredProcedure
             );
         }
 
-        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto)
+        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto, string nextStatus)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var parameters = new
-            {
-                dto.Id,
-                dto.PaymentAmount,
-                PaymentStatus = dto.PaymentStatus,
-                PaymentRemarks = dto.PaymentRemarks,
-                dto.Utr,
-                Status = LegalBillingStatus.Completed,  // Set initial status
-                dto.ModifiedBy
-            };
-
-            var result = await connection.ExecuteScalarAsync<int>(
+            return await connection.ExecuteScalarAsync<int>(
                 "sp_LegalBilling_UpdatePayment",
-                parameters,
+                new
+                {
+                    dto.Id,
+                    dto.PaymentAmount,
+                    dto.PaymentStatus,
+                    dto.PaymentRemarks,
+                    dto.Utr,
+                    Status = nextStatus,
+                    ModifiedBy = dto.ModifiedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        // ─────────────────────────────────────────────
+        //  Legal Billing - Read
+        // ─────────────────────────────────────────────
+
+        public async Task<LegalBillingDetailsDto?> GetLegalBillingByIdAsync(int id)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            using var multi = await connection.QueryMultipleAsync(
+                "sp_LegalBilling_GetById",
+                new { Id = id },
                 commandType: CommandType.StoredProcedure
             );
 
-            return result;
-        }
-        public static string GetNextStatusByRole(string role, string action)
-        {
+            var transaction = await multi.ReadFirstOrDefaultAsync<LegalBillingTransaction>();
 
-            return (role.ToUpper(), action.ToLower()) switch
+            if (transaction is null)
+                return null;
+
+            var advocate = await multi.ReadFirstOrDefaultAsync<AdvocateMaster>();
+            var legalCategory = await multi.ReadFirstOrDefaultAsync<AdvocateCategory>();
+            var logs = (await multi.ReadAsync<LegalBillingLog>()).ToList();
+
+            return new LegalBillingDetailsDto
             {
-                ("ZDSH", "approve") => LegalBillingStatus.ZDSHApproved,
-                ("ZDSH", "reject") => LegalBillingStatus.ZDSHRejected,
-
-                ("MZDSH", "approve") => LegalBillingStatus.MZDSHApproved,
-                ("MZDSH", "reject") => LegalBillingStatus.MZDSHRejected,
-
-                ("CDSO", "approve") => LegalBillingStatus.CDSOApproved,
-                ("CDSO", "reject") => LegalBillingStatus.CDSORejected,
-
-                _ => "" // fallback
+                Transaction = transaction,
+                Advocate = advocate ?? new AdvocateMaster(),
+                LegalCategory = legalCategory ?? new AdvocateCategory(),
+                Logs = logs
             };
         }
+
+        public async Task<List<LegalBillingListDto>> GetLegalBillingByUserAsync(LegalBillingGetByUserDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<LegalBillingListDto>(
+                "sp_LegalBilling_GetByUser",
+                new { UserId = dto.UserId, Role = dto.Role, Status = dto.Status },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result.ToList();
+        }
+
+        public async Task<IEnumerable<dynamic>> GetLegalBillingReportAsync(LegalBillingReportFilterDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "sp_LegalBilling_GetReport",
+                new
+                {
+                    dto.FromDate,
+                    dto.ToDate,
+                    dto.AdvocateId,
+                    dto.LegalCategoryId,
+                    dto.Status,
+                    dto.Zone,
+                    dto.MegaZone
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
 }

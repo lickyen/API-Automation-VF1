@@ -1,5 +1,10 @@
-﻿using ProductivityApi.Models;
+﻿using ClosedXML.Excel;
+using ProductivityApi.Constants;
+using ProductivityApi.Helpers;
+using ProductivityApi.Helpers.ProductivityApi.Helpers;
+using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.Data;
 
 namespace ProductivityApi.Services
 {
@@ -28,8 +33,8 @@ namespace ProductivityApi.Services
         public async Task<int> UpdateAdvocateAsync(AdvocateMasterUpdateDto dto)
             => await _repository.UpdateAdvocateAsync(dto);
 
-        public async Task<int> DeleteAdvocateAsync(int advocateId, string? deletedBy)
-            => await _repository.DeleteAdvocateAsync(advocateId, deletedBy);
+        public async Task<int> DeleteAdvocateAsync(int advocateId, string? modifiedBy)
+            => await _repository.DeleteAdvocateAsync(advocateId, modifiedBy);
 
         // ─────────────────────────────────────────────
         //  Advocate Category
@@ -47,24 +52,94 @@ namespace ProductivityApi.Services
             => await _repository.DeleteAdvocateCategoryAsync(id, modifiedBy);
 
         // ─────────────────────────────────────────────
-        //  Legal Billing - Create
+        //  Legal Billing 
         // ─────────────────────────────────────────────
+        public async Task<LegalBillingDetailsDto?> GetLegalBillingByIdAsync(int id)
+             => await _repository.GetLegalBillingByIdAsync(id);
+
+        public async Task<List<LegalBillingListDto>> GetLegalBillingByUserAsync(LegalBillingGetByUserDto dto)
+            => await _repository.GetLegalBillingByUserAsync(dto);
 
         public async Task<int> CreateLegalBillingAsync(LegalBillingCreateDto dto)
         {
             return await _repository.CreateLegalBillingAsync(dto);
         }
 
-        public async Task<int> UpdateLegalBillingStatusAsync(int id, string role, string action, string modifiedBy, string? remarks = null)
+        public async Task<int> ResubmitLegalBillingAsync(LegalBillingResubmitDto dto)
         {
-            return await _repository.UpdateLegalBillingStatusAsync(id, role, action, modifiedBy, remarks);
+            var current = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (current is null)
+                return -1;
+
+            if (!current.Transaction.Status.EndsWith("SentBack", StringComparison.OrdinalIgnoreCase))
+                return -2;
+
+            return await _repository.ResubmitLegalBillingAsync(dto);
+        }
+
+        public async Task<int> UpdateLegalBillingStatusAsync(LegalBillingActionDto dto)
+
+        {
+            var billingDetails = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (billingDetails is null)
+                return -1;
+
+            var nextStatus = ResolveNextStatus(dto.Role, dto.Action, billingDetails.Transaction.Status);
+            if (nextStatus is null)
+                return -2;
+
+            return await _repository.UpdateLegalBillingStatusAsync(dto, nextStatus);
         }
 
         public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto)
         {
-            return await _repository.UpdateLegalBillingPaymentAsync(dto);
+            var billingDetails = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (billingDetails is null)
+                return -1;
+
+            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, billingDetails.Transaction.Status);
+            if (nextStatus is null)
+                return -2;
+
+            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus);
+        }
+        private static string? ResolveNextStatus(string role, string action, string? currentStatus)
+        {
+            role = role.Trim().ToUpperInvariant();
+            action = action.Trim().ToLowerInvariant();
+            currentStatus ??= string.Empty;
+
+            return (role, action) switch
+            {
+                // ZDSH
+                ("ZDSH", "approved") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHApproved,
+                ("ZDSH", "rejected") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHRejected,
+                ("ZDSH", "sentback") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHSentBack,
+
+                // MZDSH can act only after ZDSH approved
+                ("MZDSH", "approved") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHApproved,
+                ("MZDSH", "rejected") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHRejected,
+                ("MZDSH", "sentback") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHSentBack,
+
+                // CDSO can act only after MZDSH approved
+                ("CDSO", "approved") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSOApproved,
+                ("CDSO", "rejected") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSORejected,
+                ("CDSO", "sentback") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSOSentBack,
+
+                // Legal can complete only after CDSO approved
+                ("LEGAL", _) when currentStatus == LegalBillingStatus.CDSOApproved => LegalBillingStatus.Completed,
+
+                _ => null
+            };
         }
 
+
+        public async Task<byte[]?> GetLegalBillingReportExcelAsync(LegalBillingReportFilterDto dto)
+        {
+            var data = await _repository.GetLegalBillingReportAsync(dto);
+
+            return ExcelHelper.GenerateExcel(data, "Data");
+        }
     }
 
 }

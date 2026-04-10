@@ -47,14 +47,12 @@ namespace ProductivityApi.Controllers
         [HttpPost("advocates/create")]
         public async Task<IActionResult> CreateAdvocate([FromBody] AdvocateMasterCreateDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.AdvocateName))
-                return BadRequest(new Response(false, null, "Advocate name is required"));
-
             var result = await _service.CreateAdvocateAsync(dto);
 
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Advocate created successfully")),
+                > 0 => Ok(new Response(true, result, "Advocate created successfully")),
+                -1 => BadRequest(new Response(false, null, "A record with same Mobile/Email already exists")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -62,9 +60,6 @@ namespace ProductivityApi.Controllers
         [HttpPost("advocates/update")]
         public async Task<IActionResult> UpdateAdvocate([FromBody] AdvocateMasterUpdateDto dto)
         {
-            if (dto == null || dto.AdvocateId <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
-
             var result = await _service.UpdateAdvocateAsync(dto);
 
             return result switch
@@ -76,12 +71,12 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpDelete("advocates/delete/{id}")]
-        public async Task<IActionResult> DeleteAdvocate(int id, [FromQuery] string? deletedBy)
+        public async Task<IActionResult> DeleteAdvocate(int id, [FromQuery] string? modifiedBy)
         {
             if (id <= 0)
                 return BadRequest(new Response(false, null, "Invalid ID"));
 
-            var result = await _service.DeleteAdvocateAsync(id, deletedBy);
+            var result = await _service.DeleteAdvocateAsync(id, modifiedBy);
 
             return result switch
             {
@@ -109,14 +104,12 @@ namespace ProductivityApi.Controllers
         [HttpPost("category/create")]
         public async Task<IActionResult> CreateAdvocateCategory([FromBody] AdvocateCategoryCreateDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Category))
-                return BadRequest(new Response(false, null, "Category is required"));
-
             var result = await _service.CreateAdvocateCategoryAsync(dto);
 
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Category created successfully")),
+                > 0 => Ok(new Response(true, result, "Category created successfully")),
+                -1 => BadRequest(new Response(false, null, "Category already exists")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -124,9 +117,6 @@ namespace ProductivityApi.Controllers
         [HttpPost("category/update")]
         public async Task<IActionResult> UpdateAdvocateCategory([FromBody] AdvocateCategoryUpdateDto dto)
         {
-            if (dto == null || dto.Id <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
-
             var result = await _service.UpdateAdvocateCategoryAsync(dto);
 
             return result switch
@@ -157,43 +147,102 @@ namespace ProductivityApi.Controllers
         //  Legal Billing
         // ─────────────────────────────────────────────
 
+        [HttpGet("getById/{id}")]
+        public async Task<IActionResult> GetLegalBillingById(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new Response(false, null, "Invalid ID"));
+
+            var data = await _service.GetLegalBillingByIdAsync(id);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getByUser")]
+        public async Task<IActionResult> GetLegalBillingByUser([FromQuery] LegalBillingGetByUserDto dto)
+        {
+
+            var data = await _service.GetLegalBillingByUserAsync(dto);
+
+            if (!data.Any())
+                return Ok(new Response(true, new List<object>(), "No records found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("create")]
         public async Task<IActionResult> CreateLegalBilling([FromBody] LegalBillingCreateDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.CustomerName))
-                return BadRequest(new Response(false, null, "Invalid request"));
-
             var newId = await _service.CreateLegalBillingAsync(dto);
 
             return newId > 0
-                ? Ok(new Response(true, newId, "Legal billing created successfully"))
+                ? Ok(new Response(true, new { newId = newId }, "Legal billing created successfully"))
                 : StatusCode(500, new Response(false, null, "Failed to create legal billing"));
         }
 
-        [HttpPost("updateStatus/{id}")]
-        public async Task<IActionResult> UpdateLegalBillingStatus(int id, [FromQuery] string role, [FromQuery] string action, [FromQuery] string modifiedBy, [FromQuery] string? remarks = null)
+        [HttpPost("resubmit")]
+        public async Task<IActionResult> ResubmitLegalBilling([FromBody] LegalBillingResubmitDto dto)
         {
-            if (id <= 0 || string.IsNullOrWhiteSpace(role) || string.IsNullOrWhiteSpace(action))
+            if (dto is null || dto.Id <= 0)
                 return BadRequest(new Response(false, null, "Invalid request"));
 
-            var result = await _service.UpdateLegalBillingStatusAsync(id, role, action, modifiedBy, remarks);
+            var result = await _service.ResubmitLegalBillingAsync(dto);
 
-            return result > 0
-                ? Ok(new Response(true, null, "Status updated successfully"))
-                : StatusCode(500, new Response(false, null, "Failed to update status"));
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Resubmitted successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Action not allowed")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("updateStatus")]
+        public async Task<IActionResult> UpdateLegalBillingStatus([FromBody] LegalBillingActionDto dto)
+        {
+            var result = await _service.UpdateLegalBillingStatusAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Status updated successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Action not allowed")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
 
         [HttpPost("updatePayment")]
         public async Task<IActionResult> UpdateLegalBillingPayment([FromBody] LegalBillingUpdatePaymentDto dto)
         {
-            if (dto == null || dto.Id <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
-
             var result = await _service.UpdateLegalBillingPaymentAsync(dto);
 
-            return result > 0
-                ? Ok(new Response(true, null, "Payment updated successfully"))
-                : StatusCode(500, new Response(false, null, "Failed to update payment"));
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Payment updated successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Action not allowed")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
+
+        [HttpPost("report")]
+        public async Task<IActionResult> GetLegalBillingReportExcel([FromBody] LegalBillingReportFilterDto dto)
+        {
+            var bytes = await _service.GetLegalBillingReportExcelAsync(dto);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No data found for report"));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"LegalBilling_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+
+
     }
 }
