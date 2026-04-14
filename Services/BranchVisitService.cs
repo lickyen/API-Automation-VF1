@@ -1,6 +1,6 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Office2013.Excel;
-using ProductivityApi.Helpers.ProductivityApi.Helpers;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
