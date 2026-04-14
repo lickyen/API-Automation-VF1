@@ -44,7 +44,7 @@ namespace ProductivityApi.Services
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
 
-            var record = await _repository.GetByIdAsync(dto.Id);
+            var record = await _repository.GetByLanAsync(dto.Lan);
             if (record == null) return -1;
 
             string? bankProofFilePath = record.BankProofFilePath;
@@ -55,7 +55,7 @@ namespace ProductivityApi.Services
                 Directory.CreateDirectory(basePath);
 
                 var bankProofExt = Path.GetExtension(dto.BankProofFileName);
-                var bankProofName = $"{record.LAN}_BankProof{bankProofExt}";
+                var bankProofName = $"{record.Lan}_BankProof{bankProofExt}";
                 await File.WriteAllBytesAsync(
                     Path.Combine(basePath, bankProofName),
                     Convert.FromBase64String(dto.BankProofBase64)
@@ -63,7 +63,7 @@ namespace ProductivityApi.Services
                 bankProofFilePath = bankProofName;
 
                 var requestLetterExt = Path.GetExtension(dto.RequestLetterFileName);
-                var requestLetterName = $"{record.LAN}_ReqLetter{requestLetterExt}";
+                var requestLetterName = $"{record.Lan}_ReqLetter{requestLetterExt}";
                 await File.WriteAllBytesAsync(
                     Path.Combine(basePath, requestLetterName),
                     Convert.FromBase64String(dto.RequestLetterBase64)
@@ -79,16 +79,16 @@ namespace ProductivityApi.Services
 
         public async Task<int> TriggerMailAsync(FcRefundTriggerMailDto dto)
         {
-            if (dto.Ids == null || dto.Ids.Count == 0)
+            if (dto.Lans == null || dto.Lans.Count == 0)
                 throw new ArgumentException("No LANs selected");
 
-            var distinctIds = dto.Ids.Distinct().ToList();
+            var distinctLans = dto.Lans.Distinct().ToList();
 
-            // Step 1: Fetch each record individually
+            // Step 1: Fetch records
             var records = new List<FcRefundModel>();
-            foreach (var id in distinctIds)
+            foreach (var lan in distinctLans)
             {
-                var record = await _repository.GetByIdAsync(id);
+                var record = await _repository.GetByLanAsync(lan);
                 if (record != null)
                     records.Add(record);
             }
@@ -96,15 +96,14 @@ namespace ProductivityApi.Services
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            // Step 2: Send single mail for all selected LANs
+            // Step 2: Send mail
             var (mailSent, mailMessage) = await SendRefundMailAsync(records);
             if (!mailSent)
                 throw new Exception(mailMessage);
 
-            // Step 3: Bulk update all LANs
-            return await _repository.UpdateMailTriggerAsync(distinctIds, dto.UpdatedBy);
+            // Step 3: Bulk update
+            return await _repository.UpdateMailTriggerAsync(distinctLans, dto.UpdatedBy);
         }
-
         public async Task<(bool Success, string Message)> SendRefundMailAsync(List<FcRefundModel> records)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
@@ -198,7 +197,7 @@ namespace ProductivityApi.Services
                 table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
                 table.Append($"<td style='text-align:center;'>Vistaar Financial Services Pvt. Ltd.</td>");
                 table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
-                table.Append($"<td style='text-align:center;'>{r.LAN}</td>");
+                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
                 table.Append($"<td style='text-align:center;'>{r.SgNo}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
@@ -249,92 +248,6 @@ namespace ProductivityApi.Services
                 (completed, "Completed"),
                 (mailsent, "Mail Sent To Insurer")
             );
-        }
-        private void AddCompletedSheet(XLWorkbook wb, List<FcRefundModel> data)
-        {
-            var dt = new DataTable("Completed");
-
-            dt.Columns.AddRange(new[]
-            {
-                new DataColumn("Policy Number"),
-                new DataColumn("Loan Account No"),
-                new DataColumn("Customer Name"),
-                new DataColumn("Branch Name"),
-                new DataColumn("Foreclosure Date"),
-                new DataColumn("UTR"),
-                new DataColumn("Refund received amount"),
-                new DataColumn("Refund received Date"),
-                new DataColumn("Branch Requested Date"),
-                new DataColumn("Additional Requirement"),
-                new DataColumn("Requirement Raised Date"),
-                new DataColumn("Status")
-            });
-
-            foreach (var x in data)
-            {
-                dt.Rows.Add(
-                    x.PolicyNo ?? "",
-                    x.LAN ?? "",
-                    x.FullName ?? "",
-                    x.BranchCode ?? "",
-                    x.ForeclosedDate.ToString("dd-MM-yyyy"),
-                    x.UTR ?? "",
-                    x.RefundAmount?.ToString("0.00"),
-                    x.RefundDate?.ToString("dd-MM-yyyy"),
-                    x.BranchRequestedDate?.ToString("dd-MM-yyyy"),
-                    x.AdditionalRequest ?? "",
-                    x.AdditionalRequestDate?.ToString("dd-MM-yyyy"),
-                    x.Status ?? ""
-                );
-            }
-
-            var ws = wb.Worksheets.Add(dt);
-            ws.Row(1).Style.Font.Bold = true;
-            ws.Columns().AdjustToContents();
-            ws.SheetView.FreezeRows(1);
-        }
-        private void AddMailSentSheet(XLWorkbook wb, List<FcRefundModel> data)
-        {
-            var dt = new DataTable("Mail Sent To Insurer");
-
-            dt.Columns.AddRange(new[]
-            {
-                new DataColumn("Policy Number"),
-                new DataColumn("Loan Account No"),
-                new DataColumn("Customer Name"),
-                new DataColumn("Branch Name"),
-                new DataColumn("Foreclosure Date"),
-                new DataColumn("System Generated No"),
-                new DataColumn("Account No"),
-                new DataColumn("IFSC code"),
-                new DataColumn("Branch Requested Date"),
-                new DataColumn("Additional Requirement"),
-                new DataColumn("Requirement Raised Date"),
-                new DataColumn("Status")
-            });
-
-            foreach (var x in data)
-            {
-                dt.Rows.Add(
-                    x.PolicyNo ?? "",
-                    x.LAN ?? "",
-                    x.FullName ?? "",
-                    x.BranchCode ?? "",
-                    x.ForeclosedDate.ToString("dd-MM-yyyy"),
-                    x.SgNo ?? "",
-                    x.AccountNo ?? "",
-                    x.Ifsc ?? "",
-                    x.BranchRequestedDate?.ToString("dd-MM-yyyy"),
-                    x.AdditionalRequest ?? "",
-                    x.AdditionalRequestDate?.ToString("dd-MM-yyyy"),
-                    x.Status ?? ""
-                );
-            }
-
-            var ws = wb.Worksheets.Add(dt);
-            ws.Row(1).Style.Font.Bold = true;
-            ws.Columns().AdjustToContents();
-            ws.SheetView.FreezeRows(1);
         }
     }
 

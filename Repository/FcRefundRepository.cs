@@ -67,7 +67,7 @@ namespace ProductivityApi.Repository
                 "sp_FcRefund_BranchSubmit",
                 new
                 {
-                    dto.Id,
+                    dto.Lan,
                     dto.FullNameAsPerBankProof,
                     dto.AccountNo,
                     dto.Ifsc,
@@ -123,18 +123,19 @@ namespace ProductivityApi.Repository
         }
 
         // COPS Tab 1: trigger email for multiple IDs → status = Mail Sent to Insurer
-        public async Task<int> UpdateMailTriggerAsync(List<int> ids, string updatedBy)
+        public async Task<int> UpdateMailTriggerAsync(List<string> lans, string updatedBy)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var idTable = new DataTable();
-            idTable.Columns.Add("Id", typeof(int));
-            foreach (var id in ids)
-                idTable.Rows.Add(id);
+            var lanTable = new DataTable();
+            lanTable.Columns.Add("Lan", typeof(string));
+
+            foreach (var lan in lans)
+                lanTable.Rows.Add(lan);
 
             var parameters = new DynamicParameters();
-            parameters.Add("@Ids", idTable.AsTableValuedParameter("dbo.IdList"));
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList")); // TVP name changed
             parameters.Add("@Status", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@UpdatedBy", updatedBy);
 
@@ -144,7 +145,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-
         // COPS Tab 2: update refund details → status = Completed
         public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
         {
@@ -162,7 +162,7 @@ namespace ProductivityApi.Repository
                         dto.Lan,
                         dto.RefundAmount,
                         dto.RefundDate,
-                        dto.UTR,
+                        dto.Utr,
                         status = FcRefundStatus.Completed,
                         dto.UpdatedBy
                     },
@@ -229,7 +229,7 @@ namespace ProductivityApi.Repository
                     new
                     {
                         dto.BranchCode,
-                        dto.LAN,
+                        dto.Lan,
                         dto.FullName,
                         dto.DisbDate,
                         dto.ForeclosedDate,
@@ -239,9 +239,9 @@ namespace ProductivityApi.Repository
                 );
 
                 if (status == 1)
-                    added.Add(dto.LAN);
+                    added.Add(dto.Lan);
                 else
-                    skipped.Add(dto.LAN);
+                    skipped.Add(dto.Lan);
             }
 
             return new FcRefundBulkUploadResult

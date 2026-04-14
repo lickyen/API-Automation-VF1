@@ -87,17 +87,17 @@ namespace ProductivityApi.Controllers
         [HttpPost("triggerMail")]
         public async Task<IActionResult> TriggerMail([FromBody] FcRefundTriggerMailDto dto)
         {
-            if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
+            if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
             var updatedCount = await _service.TriggerMailAsync(dto);
+
             return updatedCount switch
             {
                 >= 0 => Ok(new Response(true, null, "Mail sent successfully")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
-
         [HttpPost("updateRefund")]
         public async Task<IActionResult> UpdateRefund([FromBody] List<FcRefundUpdateRefundDto> dtos)
         {

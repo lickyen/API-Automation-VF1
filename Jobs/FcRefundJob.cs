@@ -126,7 +126,7 @@ namespace ProductivityApi.Jobs
             {
                 dtos.Add(new FcRefundAddLanDto
                 {
-                    LAN = reader.GetString(0),
+                    Lan = reader.GetString(0),
                     FullName = reader.GetString(1),
                     ForeclosedDate = reader.GetDateTime(3),
                     DisbDate = reader.GetDateTime(4),
