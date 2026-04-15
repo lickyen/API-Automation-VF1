@@ -81,7 +81,7 @@ namespace ProductivityApi.Jobs
         private async Task<List<LcRefundAddLanDto>> FetchLansFromPlfAsync(CancellationToken ct)
         {
             const string query = @"
-                SELECT
+                                SELECT
                     F.finreference,
                     c.custfname || ' ' || c.custmname || ' ' || c.custlname AS full_name,
                     D.disbdate,
@@ -112,6 +112,7 @@ namespace ProductivityApi.Jobs
                     FullName = reader.GetString(1),
                     DisbDate = reader.GetDateTime(2),
                     CancelledDate = reader.GetDateTime(3),
+                    BranchCode = reader.GetString(4),
                     CreatedBy = "SYSTEM"
                 });
             }

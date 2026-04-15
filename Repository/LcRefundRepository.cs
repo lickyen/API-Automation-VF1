@@ -178,7 +178,7 @@ namespace ProductivityApi.Repository
             foreach (var dto in dtos)
             {
                 var status = await connection.ExecuteScalarAsync<int>(
-                    "sp_FcRefund_AddLan",
+                    "sp_LcRefund_AddLan",
                     new
                     {
                         dto.BranchCode,
@@ -186,7 +186,7 @@ namespace ProductivityApi.Repository
                         dto.FullName,
                         dto.DisbDate,
                         dto.CancelledDate,
-                        dto.CreatedBy
+                        dto.CreatedBy   
                     },
                     commandType: CommandType.StoredProcedure
                 );
