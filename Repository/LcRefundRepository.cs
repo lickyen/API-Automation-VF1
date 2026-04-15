@@ -16,22 +16,6 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
 
-        // ── Queries ──────────────────────────────────────────────────────────────
-
-        /// <summary>Single record by internal Id.</summary>
-        public async Task<LcRefundModel?> GetByIdAsync(int id)
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            return await conn.QueryFirstOrDefaultAsync<LcRefundModel>(
-                "sp_LcRefund_GetById",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure
-            );
-        }
-
-        /// <summary>Single record by LAN.</summary>
         public async Task<LcRefundModel?> GetByLanAsync(string lan)
         {
             using var conn = new SqlConnection(_conStr);
@@ -44,7 +28,6 @@ namespace ProductivityApi.Repository
             );
         }
 
-        /// <summary>Filter by status (New / In Progress / Completed / Not Covered).</summary>
         public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
         {
             using var conn = new SqlConnection(_conStr);
@@ -58,7 +41,6 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        /// <summary>All UTR entries for a given LAN (can be multiple per insurer).</summary>
         public async Task<List<LcUtrModel>> GetUtrByLanAsync(string lan)
         {
             using var conn = new SqlConnection(_conStr);
@@ -72,24 +54,19 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        // ── Commands ─────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Stamp mail-trigger date for the given insurer on each selected Id.
-        /// Returns number of rows updated.
-        /// </summary>
-        public async Task<int> UpdateMailTriggerAsync(List<int> ids, string insurer, string updatedBy)
+        public async Task<int> UpdateMailTriggerAsync(List<string> lans, string insurer, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            var idTable = new DataTable();
-            idTable.Columns.Add("Id", typeof(int));
-            foreach (var id in ids)
-                idTable.Rows.Add(id);
+            var lanTable = new DataTable();
+            lanTable.Columns.Add("Lan", typeof(string));
+
+            foreach (var lan in lans)
+                lanTable.Rows.Add(lan);
 
             var parameters = new DynamicParameters();
-            parameters.Add("@Ids", idTable.AsTableValuedParameter("dbo.IdList"));
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
             parameters.Add("@Insurer", insurer);
             parameters.Add("@Status", LcRefundStatus.InProgress);
             parameters.Add("@UpdatedBy", updatedBy);
@@ -100,20 +77,19 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-
-        /// <summary>Mark records as Not Covered. Returns rows updated.</summary>
-        public async Task<int> MarkNotCoveredAsync(List<int> ids, string updatedBy)
+        public async Task<int> MarkNotCoveredAsync(List<string> lans, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            var idTable = new DataTable();
-            idTable.Columns.Add("Id", typeof(int));
-            foreach (var id in ids)
-                idTable.Rows.Add(id);
+            var lanTable = new DataTable();
+            lanTable.Columns.Add("Lan", typeof(string));
+
+            foreach (var lan in lans)
+                lanTable.Rows.Add(lan);
 
             var parameters = new DynamicParameters();
-            parameters.Add("@Ids", idTable.AsTableValuedParameter("dbo.IdList"));
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
             parameters.Add("@Status", LcRefundStatus.NotCovered);
             parameters.Add("@UpdatedBy", updatedBy);
 
@@ -123,11 +99,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-
-        /// <summary>
-        /// Upsert UTR entries for a LAN.  Each entry is one row in LC_UTRDtls.
-        /// Returns rows affected.
-        /// </summary>
         public async Task<int> UpsertUtrAsync(string lan, List<LcUtrEntryDto> entries, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
@@ -142,7 +113,7 @@ namespace ProductivityApi.Repository
                     {
                         Lan = lan,
                         entry.Insurer,
-                        entry.UTR,
+                        entry.Utr,
                         entry.PaymentDate,
                         entry.Amount,
                         UpdatedBy = updatedBy
@@ -153,7 +124,6 @@ namespace ProductivityApi.Repository
             return affected;
         }
 
-        /// <summary>Mark a single record as Completed. Returns 1, 0, or -1 (not found).</summary>
         public async Task<int> MarkCompletedAsync(int id, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
@@ -171,7 +141,6 @@ namespace ProductivityApi.Repository
             );
         }
 
-        /// <summary>Fetch insurer e-mail addresses from DB (same pattern as FcRefund).</summary>
         public async Task<List<FcRefundBankEmails>> GetInsurerEmailsAsync(string insurer)
         {
             using var conn = new SqlConnection(_conStr);
@@ -185,7 +154,6 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        /// <summary>Report data filtered by date range.</summary>
         public async Task<List<LcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
         {
             using var conn = new SqlConnection(_conStr);
@@ -198,5 +166,45 @@ namespace ProductivityApi.Repository
             );
             return result.ToList();
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<LcRefundAddLanDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var added = new List<string>();
+            var skipped = new List<string>();
+
+            foreach (var dto in dtos)
+            {
+                var status = await connection.ExecuteScalarAsync<int>(
+                    "sp_FcRefund_AddLan",
+                    new
+                    {
+                        dto.BranchCode,
+                        dto.Lan,
+                        dto.FullName,
+                        dto.DisbDate,
+                        dto.CancelledDate,
+                        dto.CreatedBy
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (status == 1)
+                    added.Add(dto.Lan);
+                else
+                    skipped.Add(dto.Lan);
+            }
+
+            return new FcRefundBulkUploadResult
+            {
+                Added = added.Count,
+                Skipped = skipped.Count,
+                AddedLans = added,
+                SkippedLans = skipped
+            };
+        }
+
     }
 }

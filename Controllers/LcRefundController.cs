@@ -16,30 +16,6 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // ────────────────────────────────────────────────────────────────────────
-        // QUERIES
-        // ────────────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// GET api/LcRefund/getById/5
-        /// </summary>
-        [HttpGet("getById/{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            if (id <= 0)
-                return BadRequest(new Response(false, null, "Invalid ID"));
-
-            var data = await _service.GetByIdAsync(id);
-
-            if (data == null)
-                return NotFound(new Response(true, null, "No record found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        /// <summary>
-        /// GET api/LcRefund/getByLan/LAN123
-        /// </summary>
         [HttpGet("getByLan/{lan}")]
         public async Task<IActionResult> GetByLan(string lan)
         {
@@ -54,9 +30,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        /// <summary>
-        /// GET api/LcRefund/getByStatus?status=In Progress
-        /// </summary>
+
         [HttpGet("getByStatus")]
         public async Task<IActionResult> GetByStatus([FromQuery] string status)
         {
@@ -71,10 +45,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        /// <summary>
-        /// GET api/LcRefund/getUtr/LAN123
-        /// Returns all UTR entries (possibly multiple per insurer) for a given LAN.
-        /// </summary>
+
         [HttpGet("getUtr/{lan}")]
         public async Task<IActionResult> GetUtrByLan(string lan)
         {
@@ -89,20 +60,10 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        // ────────────────────────────────────────────────────────────────────────
-        // ACTIONS
-        // ────────────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// POST api/LcRefund/triggerMail
-        /// Send mail to one insurer for the selected LANs → status moves to "In Progress".
-        ///
-        /// Body: { ids: [1,2,3], insurer: "Kotak" | "ICICI" | "NivaBupa", updatedBy: "user" }
-        /// </summary>
         [HttpPost("triggerMail")]
         public async Task<IActionResult> TriggerMail([FromBody] LcRefundTriggerMailDto dto)
         {
-            if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
+            if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
             if (string.IsNullOrWhiteSpace(dto.Insurer))
@@ -123,16 +84,10 @@ namespace ProductivityApi.Controllers
             }
         }
 
-        /// <summary>
-        /// POST api/LcRefund/markNotCovered
-        /// Mark one or more LANs as Not Covered (removes them from the active queue).
-        ///
-        /// Body: { ids: [1,2], updatedBy: "user" }
-        /// </summary>
         [HttpPost("markNotCovered")]
         public async Task<IActionResult> MarkNotCovered([FromBody] LcRefundNotCoveredDto dto)
         {
-            if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
+            if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
             try
@@ -146,26 +101,10 @@ namespace ProductivityApi.Controllers
             }
         }
 
-        /// <summary>
-        /// POST api/LcRefund/upsertUtr
-        /// Add or update UTR entries for a LAN.
-        /// Multiple entries are allowed (one per insurer, or multiple per insurer).
-        ///
-        /// Body:
-        /// {
-        ///   lan: "LAN123",
-        ///   entries: [
-        ///     { type: "Kotak",    utr: "UTR001", paymentReceivedDate: "2024-01-15", amount: 5600 },
-        ///     { type: "ICICI",    utr: "UTR002", paymentReceivedDate: "2024-01-16", amount: 5600 },
-        ///     { type: "NivaBupa", utr: "UTR003", paymentReceivedDate: "2024-01-17", amount: 5560 }
-        ///   ],
-        ///   updatedBy: "user"
-        /// }
-        /// </summary>
         [HttpPost("upsertUtr")]
         public async Task<IActionResult> UpsertUtr([FromBody] LcRefundAddUtrDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.LAN))
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Lan))
                 return BadRequest(new Response(false, null, "LAN is required"));
 
             if (dto.Entries == null || !dto.Entries.Any())
@@ -186,12 +125,6 @@ namespace ProductivityApi.Controllers
             }
         }
 
-        /// <summary>
-        /// POST api/LcRefund/markCompleted
-        /// Mark a case as Completed once UTR is verified.
-        ///
-        /// Body: { id: 5, updatedBy: "user" }
-        /// </summary>
         [HttpPost("markCompleted")]
         public async Task<IActionResult> MarkCompleted([FromBody] LcRefundCompleteDto dto)
         {
@@ -207,14 +140,6 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        // ────────────────────────────────────────────────────────────────────────
-        // REPORT
-        // ────────────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// GET api/LcRefund/report?fromDate=2024-01-01&amp;toDate=2024-01-31
-        /// Downloads an Excel report with Summary + Not Covered sheets.
-        /// </summary>
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport(
             [FromQuery] DateTime? fromDate,

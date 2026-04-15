@@ -85,31 +85,6 @@ namespace ProductivityApi.Repository
             );
         }
 
-        //public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
-        //{
-        //    using var connection = new SqlConnection(_conStr);
-        //    await connection.OpenAsync();
-        //    return await connection.ExecuteScalarAsync<int>(
-        //        "sp_FcRefund_BranchSubmit",
-        //        new
-        //        {
-        //            dto.Id,
-        //            dto.FullNameAsPerBankProof,
-        //            dto.AccountNo,
-        //            dto.Ifsc,
-        //            dto.PolicyNo,
-        //            dto.MemberName,
-        //            dto.SgNo,
-        //            dto.ClientName,
-        //            dto.PayoutLevel,
-        //            dto.BankProofFilePath,
-        //            dto.RequestLetterFilePath,
-        //            dto.UpdatedBy,
-        //            status = FcRefundStatus.PendingForAction
-        //        },
-        //        commandType: CommandType.StoredProcedure
-        //    );
-        //}
         public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
         {
             using var connection = new SqlConnection(_conStr);
@@ -135,7 +110,7 @@ namespace ProductivityApi.Repository
                 lanTable.Rows.Add(lan);
 
             var parameters = new DynamicParameters();
-            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList")); // TVP name changed
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
             parameters.Add("@Status", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@UpdatedBy", updatedBy);
 
