@@ -96,7 +96,7 @@ namespace ProductivityApi.Controllers
             if (string.IsNullOrWhiteSpace(userId))
                 return BadRequest(new Response(false, null, "User ID is required"));
 
-            var modules = _userService.GetModulesByUser(userId) ?? new List<String>();
+            var modules = _userService.GetModulesByUser(userId) ?? new List<ModuleDto>();
 
             return Ok(new Response(true, modules, "Success"));
         }

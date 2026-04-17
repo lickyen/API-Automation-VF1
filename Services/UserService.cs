@@ -43,7 +43,7 @@ namespace ProductivityApi.Services
             return _userRepository.ActivateUser(activateUserDTO);
         }
 
-        public List<string> GetModulesByUser(string user)
+        public List<ModuleDto> GetModulesByUser(string user)
         {
             return _userRepository.GetModulesByUser(user);
         }
