@@ -9,6 +9,7 @@ namespace ProductivityApi.Repository
     public class OtpRepository
     {
         private readonly string _conStr;
+        private readonly string AppName = "ProductivityApi";
 
         public OtpRepository(IConfiguration configuration)
         {
@@ -19,7 +20,7 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             return await connection.QueryFirstOrDefaultAsync<OtpModel>(
                 "sp_GetOtpByUserId",
-                new { UserId = userId },
+                new { UserId = userId, Source = AppName },
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -33,7 +34,8 @@ namespace ProductivityApi.Repository
                 {
                     UserId = otpEntity.UserId,
                     OtpHash = otpEntity.OtpHash,
-                    Attempts = otpEntity.Attempts
+                    Attempts = otpEntity.Attempts,
+                    Source = AppName
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -47,7 +49,8 @@ namespace ProductivityApi.Repository
                 new
                 {
                     UserId = otpEntity.UserId,
-                    Attempts = otpEntity.Attempts
+                    Attempts = otpEntity.Attempts,
+                    Source = AppName
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -58,7 +61,7 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             await connection.ExecuteAsync(
                 "sp_DeleteOtp",
-                new { UserId = userId },
+                new { UserId = userId, Source = AppName },
                 commandType: CommandType.StoredProcedure
             );
         }

@@ -15,6 +15,8 @@
         public DateTime? DisbDate { get; set; }
         public Decimal? LoanAmount { get; set; }
         public Decimal? DisbAmount { get; set; }
+        public Decimal? TotalOutstanding { get; set; }
+        public Decimal? PrincipalOutstanding { get; set; }
         public double? Dpd { get; set; }
         public string? FinActiveStatus { get; set; }
     }

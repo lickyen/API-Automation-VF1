@@ -1,4 +1,5 @@
 ﻿using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 
@@ -47,8 +48,10 @@ namespace ProductivityApi.Services
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;
-            data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue);
-            data.DisbAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAmount);
+            data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);
+            data.DisbAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finCurrAssetValue / 100);
+            data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
+            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
 
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
