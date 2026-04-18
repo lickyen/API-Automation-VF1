@@ -88,6 +88,7 @@ builder.Services.AddScoped<ModService>();
 builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<LegalBillingService>();
+builder.Services.AddScoped<CustEmailUpdateService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -102,6 +103,7 @@ builder.Services.AddScoped<NOCRepository>();
 builder.Services.AddScoped<ModRepository>();
 builder.Services.AddScoped<FcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
+builder.Services.AddScoped<CustEmailUpdateRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
