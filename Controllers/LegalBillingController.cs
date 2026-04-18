@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
+using ProductivityApi.Repository;
 using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
@@ -229,9 +230,9 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("report")]
-        public async Task<IActionResult> GetLegalBillingReportExcel([FromBody] LegalBillingReportFilterDto dto)
+        public async Task<IActionResult> GetReportExcel([FromBody] LegalBillingReportFilterDto dto)
         {
-            var bytes = await _service.GetLegalBillingReportExcelAsync(dto);
+            var bytes = await _service.GetReportExcelAsync(dto);
 
             if (bytes is null)
                 return NotFound(new Response(false, null, "No data found for report"));
@@ -241,6 +242,17 @@ namespace ProductivityApi.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"LegalBilling_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
             );
+        }
+
+        [HttpPost("report/data")]
+        public async Task<IActionResult> GetReportData([FromBody] LegalBillingReportFilterDto dto)
+        {
+            var data = await _service.GetReportDataAsync(dto);
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "No data found"));
+
+            return Ok(data);
         }
 
 

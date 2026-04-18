@@ -132,8 +132,12 @@ namespace ProductivityApi.Services
             };
         }
 
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync(LegalBillingReportFilterDto dto)
+        {
+            return await _repository.GetLegalBillingReportAsync(dto);
+        }
 
-        public async Task<byte[]?> GetLegalBillingReportExcelAsync(LegalBillingReportFilterDto dto)
+        public async Task<byte[]?> GetReportExcelAsync(LegalBillingReportFilterDto dto)
         {
             var data = await _repository.GetLegalBillingReportAsync(dto);
 

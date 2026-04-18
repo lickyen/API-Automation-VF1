@@ -14,6 +14,8 @@
         public string Status { get; set; } = String.Empty;
         public bool KotakMailTrigger { get; set; }
         public DateTime? KotakMailTriggerDate { get; set; }
+        public bool GoDigitMailTrigger { get; set; }
+        public DateTime? GoDigitMailTriggerDate { get; set; }
         public string? FullNameAsPerBankProof { get; set; }
         public string? AccountNo { get; set; }
         public string? Ifsc { get; set; }
@@ -21,6 +23,7 @@
         public string? MemberName { get; set; }
         public string? SgNo { get; set; }
         public DateTime? CoverExpiredDate { get; set; }
+        public string? GoDigitPolicyNo { get; set; }
         public string? BankProofFilePath { get; set; }
         public string? RequestLetterFilePath { get; set; }
         public string? ClientName { get; set; } = "Vistaar Financial Services Pvt. Ltd.";

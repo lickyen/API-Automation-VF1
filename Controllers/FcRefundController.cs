@@ -16,20 +16,6 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        [HttpGet("GetById/{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            if (id <= 0)
-                return BadRequest(new Response(false, null, "Invalid ID"));
-
-            var data = await _service.GetByIdAsync(id);
-
-            if (data == null)
-                return NotFound(new Response(true, null, "No record found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
         [HttpGet("GetByLan/{lan}")]
         public async Task<IActionResult> GetByLan(string lan)
         {

@@ -27,9 +27,6 @@ namespace ProductivityApi.Services
             _templateService = templateService;
             _appSettings = appSettings;
         }
-        public async Task<FcRefundModel?> GetByIdAsync(int id)
-            => await _repository.GetByIdAsync(id);
-
         public async Task<FcRefundModel?> GetByLanAsync(string lan)
             => await _repository.GetByLanAsync(lan);
 

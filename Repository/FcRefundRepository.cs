@@ -15,21 +15,6 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
-
-        public async Task<FcRefundModel?> GetByIdAsync(int id)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            var result = await connection.QueryFirstOrDefaultAsync<FcRefundModel>(
-                "sp_FcRefund_GetById",  
-                new { Id = id },
-                commandType: CommandType.StoredProcedure
-            );
-
-            return result;
-        }
-
         public async Task<FcRefundModel?> GetByLanAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
