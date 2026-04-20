@@ -10,16 +10,18 @@ namespace ProductivityApi.Services
     {
         private readonly ADSettings _settings;
         private readonly UserRepository _userRepository;
+        private readonly UserLogRepository _userLogRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(AppSettings appSettings, UserRepository userRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
             _userRepository = userRepository;
+            _userLogRepository = userLogRepository;
             _env = env;
         }
 
-        public bool ValidateLogin(LoginRequest login)
+        public async Task<bool> ValidateLoginAsync(LoginRequest login)
         {
             bool success;
 
@@ -31,6 +33,14 @@ namespace ProductivityApi.Services
             {
                 success = ValidateDbLogin(login);
             }
+
+             await _userLogRepository.AddAsync(new UserLog
+            {
+                UserId = login.UserId,
+                Action = "LOGIN",
+                Response = success ? "SUCCESS" : "FAILURE",
+                Message = success ? null : "Invalid credentials"
+            });
 
             Log.Information(
                 "Login attempt UserId={UserId} Success={Success}",

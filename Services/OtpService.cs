@@ -14,13 +14,15 @@ public class OtpService
     private readonly OtpRepository _otpRepository;
     private readonly SmsService _smsService;
     private readonly TemplateService _templateService;
+    private readonly UserLogRepository _userLogRepository;
 
-    public OtpService( UserRepository userRepository, OtpRepository otpRepository, SmsService smsService, TemplateService templateService)
+    public OtpService( UserRepository userRepository, OtpRepository otpRepository, SmsService smsService, TemplateService templateService, UserLogRepository userLogRepository)
     {
         _userRepository = userRepository;
         _otpRepository = otpRepository;
         _smsService = smsService;
         _templateService = templateService;
+        _userLogRepository = userLogRepository;
     }
 
     public async Task<bool> SendOtp(string userId)
@@ -59,7 +61,23 @@ public class OtpService
         var storedOtp = await _otpRepository.GetOtpByUserIdAsync(userId);
 
         if (storedOtp == null || storedOtp.ExpiryTime < DateTime.UtcNow || storedOtp.Attempts >= 5)
+        {
+            string reason = storedOtp == null ? "OTP not found" :
+                storedOtp.Attempts >= 5 ? "Max attempts exceeded" :
+                                          "OTP expired";
+
+            await _userLogRepository.AddAsync(new UserLog
+            {
+                UserId = userId,
+                Action = "OTP_VERIFICATION",
+                Response = "FAILURE",
+                Message = reason
+            });
+
             return false;
+
+        }
+
 
         storedOtp.Attempts++;
 
@@ -69,6 +87,15 @@ public class OtpService
             await _otpRepository.DeleteOtpAsync(userId);
         else
             await _otpRepository.UpdateAttemptAsync(storedOtp);
+
+        await _userLogRepository.AddAsync(new UserLog
+        {
+            UserId = userId,
+            Action = "OTP_VERIFICATION",
+            Response = isValid ? "SUCCESS" : "FAILURE",
+            Message = isValid ? null : $"Invalid OTP (attempt {storedOtp.Attempts})"
+        });
+
 
         return isValid;
     }

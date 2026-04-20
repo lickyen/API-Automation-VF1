@@ -8,6 +8,7 @@ using ProductivityApi.Jobs;
 using Serilog;
 using Hangfire;
 using Hangfire.SqlServer;
+using ProductivityApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,6 +106,8 @@ builder.Services.AddScoped<FcRefundRepository>();
 builder.Services.AddScoped<LcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
 builder.Services.AddScoped<CustEmailUpdateRepository>();
+builder.Services.AddScoped<UserLogRepository>();
+
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();

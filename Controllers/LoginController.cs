@@ -16,9 +16,9 @@ namespace ProductivityApi.Controllers
             _loginService = loginService;
         }
         [HttpPost]
-        public IActionResult Login([FromBody] LoginRequest loginRequest)
+        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
-            bool success = _loginService.ValidateLogin(loginRequest);
+            bool success = await _loginService.ValidateLoginAsync(loginRequest);
 
             if (success)
                 return Ok(new Response(true, null, "Success"));
