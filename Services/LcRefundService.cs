@@ -210,7 +210,7 @@ namespace ProductivityApi.Services
             return await _repository.MarkCompletedAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
 
         }
-        public async Task<int> AddUtrAsync(LcRefundAddUtrDto dto)
+        public async Task<(int success, int duplicates)> AddUtrAsync(LcRefundAddUtrDto dto)
         {
             return await _repository.AddUtrAsync(dto.Lan, dto.UtrList, dto.UpdatedBy);
         }

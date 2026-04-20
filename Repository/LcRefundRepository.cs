@@ -122,16 +122,17 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<int> AddUtrAsync(string lan, List<LcUtrEntryDto> entries, string updatedBy)
+        public async Task<(int success, int duplicates)> AddUtrAsync( string lan, List<LcUtrEntryDto> entries, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            int affected = 0;
+            int success = 0;
+            int duplicates = 0;
 
             foreach (var entry in entries)
             {
-                affected += await conn.ExecuteAsync(
+                var result = await conn.ExecuteScalarAsync<int>(
                     "sp_LcRefund_AddUtr",
                     new
                     {
@@ -144,9 +145,14 @@ namespace ProductivityApi.Repository
                     },
                     commandType: CommandType.StoredProcedure
                 );
+
+                if (result == -1)
+                    duplicates++;
+                else
+                    success++;
             }
 
-            return affected;
+            return (success, duplicates);
         }
         public async Task<List<FcRefundBankEmails>> GetInsurerEmailsAsync(string insurer)
         {

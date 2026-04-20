@@ -109,14 +109,21 @@ namespace ProductivityApi.Controllers
         [HttpPost("addUtr")]
         public async Task<IActionResult> AddUtr([FromBody] LcRefundAddUtrDto dto)
         {
-            var result = await _service.AddUtrAsync(dto);
+            var (success, duplicates) = await _service.AddUtrAsync(dto);
 
-            return result switch
+            if (success == 0 && duplicates > 0)
             {
-                -1 => Conflict(new Response(false, null, "UTR already exists")),
-                > 0 => Ok(new Response(true, new { Id = result }, "UTR added successfully")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                return Conflict(new Response( false, new { success, duplicates }, "All UTRs already exist" ));
+            }
+
+            if (success > 0)
+            {
+                var message = $"{success}/{dto.UtrList.Count} UTRs added";
+
+                return Ok(new Response(true, new { success, duplicates }, message ));
+            }
+
+            return StatusCode(500, new Response(false, null, "An error occurred"));
         }
 
         [HttpGet("report")]
