@@ -8,4 +8,12 @@
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
     }
+    public class BranchAddressModel
+    {
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? BranchAddress { get; set; }
+        public string? Mobile { get; set; }
+        
+    }
 }
