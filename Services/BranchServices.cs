@@ -20,5 +20,10 @@ namespace ProductivityApi.Services
             return _branchRepository.GetBranchByID(BranchCode);
         }
 
+        public List<BranchAddressModel> GetBranchesAddress()
+        {
+            return _branchRepository.GetBranchesAddress();
+        }
+
     }
 }
