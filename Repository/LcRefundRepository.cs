@@ -99,16 +99,40 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<int> UpsertUtrAsync(string lan, List<LcUtrEntryDto> entries, string updatedBy)
+
+        public async Task<int> MarkCompletedAsync(List<string> lans, string updatedBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var lanTable = new DataTable();
+            lanTable.Columns.Add("Lan", typeof(string));
+
+            foreach (var lan in lans)
+                lanTable.Rows.Add(lan);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
+            parameters.Add("@Status", LcRefundStatus.Completed);
+            parameters.Add("@UpdatedBy", updatedBy);
+
+            return await conn.ExecuteScalarAsync<int>(
+                "sp_LcRefund_MarkCompleted",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<int> AddUtrAsync(string lan, List<LcUtrEntryDto> entries, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
             int affected = 0;
+
             foreach (var entry in entries)
             {
                 affected += await conn.ExecuteAsync(
-                    "sp_LcRefund_UpsertUtr",
+                    "sp_LcRefund_AddUtr",
                     new
                     {
                         Lan = lan,
@@ -116,38 +140,21 @@ namespace ProductivityApi.Repository
                         entry.Utr,
                         entry.PaymentDate,
                         entry.Amount,
-                        UpdatedBy = updatedBy
+                        CreatedBy = updatedBy
                     },
                     commandType: CommandType.StoredProcedure
                 );
             }
+
             return affected;
         }
-
-        public async Task<int> MarkCompletedAsync(int id, string updatedBy)
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            return await conn.ExecuteScalarAsync<int>(
-                "sp_LcRefund_MarkCompleted",
-                new
-                {
-                    Id = id,
-                    Status = LcRefundStatus.Completed,
-                    UpdatedBy = updatedBy
-                },
-                commandType: CommandType.StoredProcedure
-            );
-        }
-
         public async Task<List<FcRefundBankEmails>> GetInsurerEmailsAsync(string insurer)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
             var result = await conn.QueryAsync<FcRefundBankEmails>(
-                "FCRefund_GetInsurerEmails",       // reuse existing SP; extend if needed
+                "sp_GetInsurerEmails",      
                 new { Insurer = insurer },
                 commandType: CommandType.StoredProcedure
             );

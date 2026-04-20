@@ -25,19 +25,29 @@
         public bool NivaBupaMailTrigger { get; set; }
         public DateTime? NivaBupaMailTriggerDate { get; set; }
 
+        public bool GoDigitMailTrigger { get; set; }
+        public DateTime? GoDigitMailTriggerDate { get; set; }
+
         public DateTime CreatedDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime? UpdatedDate { get; set; }
         public string? UpdatedBy { get; set; }
 
+        public string? Kotak { get; set; }
+        public string? Icici { get; set; }
+        public string? NivaBupa { get; set; }
+        public string? GoDigit { get; set; }
+
+        //Kotak
         public string? PolicyNumber { get; set; }
-        public string? SgNo { get; set; }               // System Generated No
-        public string? Kotak { get; set; }             
-        public string? Icici { get; set; }          
-        public string? NivaBupa { get; set; } 
+        public string? SgNo { get; set; }
+
+        //NivaBupa
         public string? Hdc { get; set; }
         public string? Pa { get; set; }
         public string? Opd { get; set; }
+        // GoDigit
+        public string? GoDigitPolicyNumber { get; set; }
     }
     public class LcUtrModel
     {
@@ -60,13 +70,18 @@
         public List<string> Lans { get; set; } = new();
 
         [Required]
-        public string Insurer { get; set; } = string.Empty;
-
-        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
     public class LcRefundNotCoveredDto
+    {
+        [Required]
+        public List<string> Lans { get; set; } = new();
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class LcRefundCompleteDto
     {
         [Required]
         public List<string> Lans { get; set; } = new();
@@ -92,14 +107,6 @@
         public string Utr { get; set; } = string.Empty;
         public DateTime? PaymentDate { get; set; }
         public decimal? Amount { get; set; }
-    }
-
-    public class LcRefundCompleteDto
-    {
-        [Required]
-        public int Id { get; set; }
-        [Required]
-        public string UpdatedBy { get; set; } = string.Empty;
     }
 
     public class LcRefundAddLanDto

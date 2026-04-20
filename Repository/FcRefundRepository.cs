@@ -15,6 +15,46 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var added = new List<string>();
+            var skipped = new List<string>();
+
+            foreach (var dto in dtos)
+            {
+                var status = await connection.ExecuteScalarAsync<int>(
+                    "sp_FcRefund_AddLan",
+                    new
+                    {
+                        dto.BranchCode,
+                        dto.Lan,
+                        dto.FullName,
+                        dto.DisbDate,
+                        dto.ForeclosedDate,
+                        dto.CreatedBy
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (status == 1)
+                    added.Add(dto.Lan);
+                else
+                    skipped.Add(dto.Lan);
+            }
+
+            return new FcRefundBulkUploadResult
+            {
+                Added = added.Count,
+                Skipped = skipped.Count,
+                AddedLans = added,
+                SkippedLans = skipped
+            };
+        }
+
         public async Task<FcRefundModel?> GetByLanAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
@@ -27,6 +67,18 @@ namespace ProductivityApi.Repository
             );
 
             return result;
+        }
+
+        public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            var result = await connection.QueryAsync<FcRefundModel>(
+                "sp_FcRefund_GetByStatus",
+                new { Status = status },
+                commandType: CommandType.StoredProcedure
+            );
+            return result.ToList();
         }
 
         // Branch: get foreclosed LANs for their branch
@@ -70,20 +122,8 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var result = await connection.QueryAsync<FcRefundModel>(
-                "sp_FcRefund_GetByStatus",
-                new { Status = status },
-                commandType: CommandType.StoredProcedure
-            );
-            return result.ToList();
-        }
-
         // COPS Tab 1: trigger email for multiple IDs → status = Mail Sent to Insurer
-        public async Task<int> UpdateMailTriggerAsync(List<string> lans, string updatedBy)
+        public async Task<int> UpdateMailTriggerAsync(List<string> lans, string updatedBy, string insurer)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -96,6 +136,7 @@ namespace ProductivityApi.Repository
 
             var parameters = new DynamicParameters();
             parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
+            parameters.Add("@Insurer", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@Status", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@UpdatedBy", updatedBy);
 
@@ -167,52 +208,12 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
             var result = await connection.QueryAsync<FcRefundBankEmails>(
-                "FCRefund_GetInsurerEmails",
+                "sp_GetInsurerEmails",
                 new { Insurer = insurer },
                 commandType: CommandType.StoredProcedure
             );
             return result.ToList();
         }
-
-        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            var added = new List<string>();
-            var skipped = new List<string>();
-
-            foreach (var dto in dtos)
-            {
-                var status = await connection.ExecuteScalarAsync<int>(
-                    "sp_FcRefund_AddLan",
-                    new
-                    {
-                        dto.BranchCode,
-                        dto.Lan,
-                        dto.FullName,
-                        dto.DisbDate,
-                        dto.ForeclosedDate,
-                        dto.CreatedBy
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
-
-                if (status == 1)
-                    added.Add(dto.Lan);
-                else
-                    skipped.Add(dto.Lan);
-            }
-
-            return new FcRefundBulkUploadResult
-            {
-                Added = added.Count,
-                Skipped = skipped.Count,
-                AddedLans = added,
-                SkippedLans = skipped
-            };
-        }
-
         public async Task<IEnumerable<dynamic>> GetReportAsync(DateTime? fromDate, DateTime? toDate, string status = null)
         {
             using var connection = new SqlConnection(_conStr);

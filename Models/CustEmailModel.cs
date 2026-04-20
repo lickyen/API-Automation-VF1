@@ -23,12 +23,12 @@
        
         
         public string Pennant_Response { get; set; } = String.Empty;
-        public DateTime? Pennan_UpdatedDt { get; set; } 
+        public DateTime? Pennan_UpdatedDt { get; set; }
 
         // public string IsActive { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public DateTime? UpdatedDate { get; set; }
-       
+        public DateTime? CreatedDt { get; set; }
+        public DateTime? UpdatedDt { get; set; }
+
     }
     public class UpdateDto
     {

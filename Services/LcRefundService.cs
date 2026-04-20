@@ -26,6 +26,8 @@ namespace ProductivityApi.Services
             _templateService = templateService;
         }
 
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<LcRefundAddLanDto> dtos)
+            => await _repository.AddLanAsync(dtos);
 
         public async Task<LcRefundModel?> GetByLanAsync(string lan)
             => await _repository.GetByLanAsync(lan);
@@ -43,99 +45,156 @@ namespace ProductivityApi.Services
 
             var distinctLans = dto.Lans.Distinct().ToList();
 
-            // Fetch records
-            var records = new List<LcRefundModel>();
-            foreach (var lan in distinctLans)
-            {
-                var record = await _repository.GetByLanAsync(lan); 
-                if (record != null)
-                    records.Add(record);
-            }
+            // 🔥 Parallel fetch (faster)
+            var tasks = distinctLans.Select(lan => _repository.GetByLanAsync(lan));
+            var results = await Task.WhenAll(tasks);
+            var records = results.Where(r => r != null).ToList();
 
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            // Send mail
-            var (sent, message) = await SendInsurerMailAsync(records, dto.Insurer);
-            if (!sent)
-                throw new Exception(message);
+            int totalUpdated = 0;
 
-            // Update trigger
-            return await _repository.UpdateMailTriggerAsync(distinctLans, dto.Insurer, dto.UpdatedBy);
+            // 🔹 Split per insurer
+            var insurerMap = new Dictionary<string, List<LcRefundModel>>
+            {
+                { "Kotak",   records.Where(r => r.Kotak?.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true).ToList() },
+                { "ICICI",   records.Where(r => r.Icici?.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true).ToList() },
+                { "NivaBupa",records.Where(r => r.NivaBupa?.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true).ToList() },
+                { "GoDigit", records.Where(r => r.GoDigit?.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true).ToList() }
+            };
+
+            // 🔥 Loop instead of repeated if blocks
+            foreach (var kvp in insurerMap)
+            {
+                var insurer = kvp.Key;
+                var insurerRecords = kvp.Value;
+
+                if (!insurerRecords.Any())
+                    continue;
+
+                var (sent, msg) = await SendInsurerMailAsync(insurerRecords, insurer);
+                if (!sent)
+                    throw new Exception($"{insurer}: {msg}");
+
+                var lans = insurerRecords.Select(x => x.Lan).Distinct().ToList();
+
+                totalUpdated += await _repository.UpdateMailTriggerAsync(
+                    lans,
+                    insurer,
+                    dto.UpdatedBy
+                );
+            }
+
+            return totalUpdated;
         }
-        private async Task<(bool Success, string Message)> SendInsurerMailAsync(
-            List<LcRefundModel> records, string insurer)
+        private async Task<(bool Success, string Message)> SendInsurerMailAsync(List<LcRefundModel> records, string insurer)
         {
             var emailDetails = await _repository.GetInsurerEmailsAsync(insurer);
+
             if (!emailDetails.Any())
                 return (false, $"No recipient email IDs configured for {insurer}");
 
-            var to = emailDetails.Where(e => e.EmailType == "1").Select(e => e.EmailId).ToList();
-            var cc = emailDetails.Where(e => e.EmailType == "2").Select(e => e.EmailId).ToList();
+            var to = emailDetails
+                .Where(e => e.EmailType == "1")
+                .Select(e => e.EmailId)
+                .ToList();
+
+            var cc = emailDetails
+                .Where(e => e.EmailType == "2")
+                .Select(e => e.EmailId)
+                .ToList();
 
             if (!to.Any())
-                return (false, "No recipients configured");
-
-            // Build table based on which insurer columns are relevant
-            var tableHtml = BuildTableHtml(records, insurer);
+                return (false, $"No To recipients configured for {insurer}");
 
             var template = _templateService.GetEmailTemplate("LcRefundMailTriggerEmail");
+
             var placeholders = new Dictionary<string, string>
             {
-                { "Insurer",   insurer },
-                { "DateTime",  DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
-                { "Table",     tableHtml }
+                { "Insurer", insurer },
+                { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
+                { "Table", BuildTableHtml(records, insurer) }
             };
 
-            var subject = $"LC Premium Refund – {insurer} | {DateTime.Now:dd-MMM-yyyy}";
+            var subject = $"Loan cancellation Premium refund | {DateTime.Now:dd-MMM-yyyy HH:mm}";
+
             var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
-            var result = await _emailService.SendEmail(subject, body, to, cc, new List<Attachment>());
+            var result = await _emailService.SendEmail(
+                subject,
+                body,
+                to,
+                cc,
+                new List<Attachment>()
+            );
+
             return result == "Success"
                 ? (true, "Mail sent successfully")
                 : (false, result);
         }
-
         private string BuildTableHtml(List<LcRefundModel> records, string insurer)
         {
             var sb = new StringBuilder();
             sb.Append("<table border='1' cellpadding='3' style='border-collapse:collapse;'>");
-            sb.Append("<tr style='background-color:#f2f2f2;'>");
-            sb.Append("<th>LAN</th>");
-            sb.Append("<th>Customer Name</th>");
-            sb.Append("<th>Policy Number</th>");
-            sb.Append("<th>System Generated No</th>");
-            sb.Append("<th>Disbursement Date</th>");
-            sb.Append("<th>Cancellation Date</th>");
 
-            // Insurer-specific extra columns
-            if (insurer == LcRefundInsurer.NivaBupa)
+            if (insurer == "Kotak")
             {
-                sb.Append("<th>HDC</th>");
-                sb.Append("<th>PA</th>");
-                sb.Append("<th>OPD</th>");
-            }
+                sb.Append("<tr><th>Policy Number</th><th>Client Name</th><th>Member Name</th><th>Loan A/C ID</th><th>System Generated No.</th><th>DOC</th><th>Member Name as per NEFT COPY</th><th>Account No</th><th>IFSC code</th><th>Payout</th></tr>");
 
-            sb.Append("</tr>");
-
-            foreach (var r in records)
-            {
-                sb.Append("<tr>");
-                sb.Append($"<td>{r.Lan}</td>");
-                sb.Append($"<td>{r.FullName}</td>");
-                sb.Append($"<td>{r.PolicyNumber}</td>");
-                sb.Append($"<td>{r.SgNo}</td>");
-                sb.Append($"<td>{r.DisbDate:dd-MMM-yyyy}</td>");
-                sb.Append($"<td>{r.CancelledDate:dd-MMM-yyyy}</td>");
-
-                if (insurer == LcRefundInsurer.NivaBupa)
+                foreach (var r in records)
                 {
+                    sb.Append("<tr>");
+                    sb.Append($"<td>{r.PolicyNumber}</td>");
+                    sb.Append($"<td>Vistaar Financial Services Pvt. Ltd.</td>");
+                    sb.Append($"<td>{r.FullName}</td>");
+                    sb.Append($"<td>{r.Lan}</td>");
+                    sb.Append($"<td>{r.SgNo}</td>");
+                    sb.Append($"<td>{r.DisbDate:dd-MMM-yyyy}</td>");
+                    sb.Append($"<td>NA</td><td>NA</td><td>NA</td>");
+                    sb.Append($"<td>MPH</td>");
+                    sb.Append("</tr>");
+                }
+            }
+            else if (insurer == "ICICI")
+            {
+                sb.Append("<tr><th>Loan Account No</th><th>Customer Name</th><th>DOC</th></tr>");
+
+                foreach (var r in records)
+                {
+                    sb.Append("<tr>");
+                    sb.Append($"<td>{r.Lan}</td>");
+                    sb.Append($"<td>{r.FullName}</td>");
+                    sb.Append($"<td>{r.DisbDate:dd-MMM-yyyy}</td>");
+                    sb.Append("</tr>");
+                }
+            }
+            else if (insurer == "NivaBupa")
+            {
+                sb.Append("<tr><th>Loan Account No</th><th>Premium</th><th>HDC</th><th>PA</th><th>OPD</th></tr>");
+
+                foreach (var r in records)
+                {
+                    sb.Append("<tr>");
+                    sb.Append($"<td>{r.Lan}</td>");
+                    sb.Append($"<td>5560</td>");
                     sb.Append($"<td>{r.Hdc}</td>");
                     sb.Append($"<td>{r.Pa}</td>");
                     sb.Append($"<td>{r.Opd}</td>");
+                    sb.Append("</tr>");
                 }
+            }
+            else if (insurer == "GoDigit")
+            {
+                sb.Append("<tr><th>LAN</th><th>Policy Number</th></tr>");
 
-                sb.Append("</tr>");
+                foreach (var r in records)
+                {
+                    sb.Append("<tr>");
+                    sb.Append($"<td>{r.Lan}</td>");
+                    sb.Append($"<td>{r.GoDigitPolicyNumber}</td>");
+                    sb.Append("</tr>");
+                }
             }
 
             sb.Append("</table>");
@@ -149,20 +208,18 @@ namespace ProductivityApi.Services
 
             return await _repository.MarkNotCoveredAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
         }
-
-
-        public async Task<int> UpsertUtrAsync(LcRefundAddUtrDto dto)
-        {
-            if (dto.Entries == null || !dto.Entries.Any())
-                throw new ArgumentException("No UTR entries provided");
-
-            return await _repository.UpsertUtrAsync(dto.Lan, dto.Entries, dto.UpdatedBy);
-        }
-
         public async Task<int> MarkCompletedAsync(LcRefundCompleteDto dto)
-            => await _repository.MarkCompletedAsync(dto.Id, dto.UpdatedBy);
+        {
+            if (dto.Lans == null || !dto.Lans.Any())
+                throw new ArgumentException("No Lans provided");
 
+            return await _repository.MarkCompletedAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
 
+        }
+        public async Task<int> AddUtrAsync(LcRefundAddUtrDto dto)
+        {
+            return await _repository.AddUtrAsync(dto.Lan, dto.Entries, dto.UpdatedBy);
+        }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
             var data = await _repository.GetReportAsync(fromDate, toDate);
@@ -171,8 +228,5 @@ namespace ProductivityApi.Services
                 data
             );
         }
-
-        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<LcRefundAddLanDto> dtos)
-            => await _repository.AddLanAsync(dtos);
     }
 }

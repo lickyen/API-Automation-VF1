@@ -109,6 +109,7 @@ builder.Services.AddScoped<CustEmailUpdateRepository>();
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
+builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
