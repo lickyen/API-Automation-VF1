@@ -161,17 +161,21 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        public async Task<List<LcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
+        public async Task<(IEnumerable<dynamic> Refunds, IEnumerable<dynamic> Utrs)> GetReportAsync(DateTime? fromDate, DateTime? toDate)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            var result = await conn.QueryAsync<LcRefundModel>(
+            using var multi = await conn.QueryMultipleAsync(
                 "sp_LcRefund_GetReport",
                 new { FromDate = fromDate, ToDate = toDate },
                 commandType: CommandType.StoredProcedure
             );
-            return result.ToList();
+
+            var refunds = await multi.ReadAsync<dynamic>();
+            var utrs = await multi.ReadAsync<dynamic>();
+
+            return (refunds, utrs);
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<LcRefundAddLanDto> dtos)

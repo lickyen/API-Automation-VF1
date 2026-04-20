@@ -216,10 +216,11 @@ namespace ProductivityApi.Services
         }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
-            var data = await _repository.GetReportAsync(fromDate, toDate);
+            var (refunds, utrs) = await _repository.GetReportAsync(fromDate, toDate);
 
             return ExcelHelper.GenerateExcel(
-                data
+                (refunds, "Data"),
+                (utrs, "UTR")
             );
         }
     }
