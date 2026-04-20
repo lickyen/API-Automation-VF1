@@ -203,22 +203,16 @@ namespace ProductivityApi.Services
 
         public async Task<int> MarkNotCoveredAsync(LcRefundNotCoveredDto dto)
         {
-            if (dto.Lans == null || !dto.Lans.Any())
-                throw new ArgumentException("No Lans provided");
-
             return await _repository.MarkNotCoveredAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
         }
         public async Task<int> MarkCompletedAsync(LcRefundCompleteDto dto)
         {
-            if (dto.Lans == null || !dto.Lans.Any())
-                throw new ArgumentException("No Lans provided");
-
             return await _repository.MarkCompletedAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
 
         }
         public async Task<int> AddUtrAsync(LcRefundAddUtrDto dto)
         {
-            return await _repository.AddUtrAsync(dto.Lan, dto.Entries, dto.UpdatedBy);
+            return await _repository.AddUtrAsync(dto.Lan, dto.UtrList, dto.UpdatedBy);
         }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {

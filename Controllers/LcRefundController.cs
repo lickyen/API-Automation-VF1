@@ -103,7 +103,7 @@ namespace ProductivityApi.Controllers
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
             var updatedCount = await _service.MarkCompletedAsync(dto);
-            return Ok(new Response(true, new { updatedCount }, "Marked as Not Covered"));
+            return Ok(new Response(true, new { updatedCount }, "Marked as Completed"));
         }
 
         [HttpPost("addUtr")]

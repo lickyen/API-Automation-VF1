@@ -94,7 +94,7 @@
         [Required]
         public string Lan { get; set; } = string.Empty;
         [Required]
-        public List<LcUtrEntryDto> Entries { get; set; } = new();
+        public List<LcUtrEntryDto> UtrList { get; set; } = new();
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
