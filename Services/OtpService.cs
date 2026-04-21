@@ -89,7 +89,7 @@ public class OtpService
             }
 
             isValid = VerifyHash(otp, storedOtp.OtpHash);
-            message = isValid ? null : $"Invalid OTP (attempt {storedOtp.Attempts})";
+            message = isValid ? null : $"Invalid OTP ({storedOtp.Attempts})";
 
             if (isValid)
                 await _otpRepository.DeleteOtpAsync(userId);

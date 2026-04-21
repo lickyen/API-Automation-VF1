@@ -293,7 +293,6 @@ namespace ProductivityApi.Services
             return success;
         }
 
-
         private string EscapeLdapSearchFilter(string dn)
         {
             return dn.Replace("\\", "\\5c")
