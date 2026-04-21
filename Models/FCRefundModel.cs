@@ -117,9 +117,9 @@
         [Required]
         public string FullName { get; set; } = string.Empty;
         [Required]
-        public DateTime DisbDate { get; set; }
+        public DateTime? DisbDate { get; set; }
         [Required]
-        public DateTime ForeclosedDate { get; set; }
+        public DateTime? ForeclosedDate { get; set; }
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
     }
