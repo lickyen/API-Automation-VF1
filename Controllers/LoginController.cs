@@ -41,9 +41,9 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("resetPassword")]
-        public IActionResult ResetPassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            bool success = _loginService.ResetPassword(request.UserId, request.NewPassword);
+            bool success = await _loginService.ResetPasswordAsync(request.UserId, request.NewPassword);
 
             if (success)
                 return Ok(new Response(true, null, "Password reset successfully"));
