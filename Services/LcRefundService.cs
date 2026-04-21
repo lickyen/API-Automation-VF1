@@ -117,7 +117,7 @@ namespace ProductivityApi.Services
                 { "Table", BuildTableHtml(records, insurer) }
             };
 
-            var subject = $"Loan cancellation Premium refund | {DateTime.Now:dd-MMM-yyyy HH:mm}";
+            var subject = $"Loan Cancellation Premium Refund | {DateTime.Now:dd-MMM-yyyy HH:mm}";
 
             var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
@@ -140,7 +140,7 @@ namespace ProductivityApi.Services
 
             if (insurer == "Kotak")
             {
-                sb.Append("<tr><th>Policy Number</th><th>Client Name</th><th>Member Name</th><th>Loan A/C ID</th><th>System Generated No.</th><th>DOC</th><th>Member Name as per NEFT COPY</th><th>Account No</th><th>IFSC code</th><th>Payout</th></tr>");
+                sb.Append("<tr style='background-color: #f2f2f2;'><th>Policy Number</th><th>Client Name</th><th>Member Name</th><th>Loan A/C ID</th><th>System Generated No.</th><th>DOC</th><th>Member Name as per NEFT COPY</th><th>Account No</th><th>IFSC code</th><th>Payout</th></tr>");
 
                 foreach (var r in records)
                 {
@@ -158,7 +158,7 @@ namespace ProductivityApi.Services
             }
             else if (insurer == "ICICI")
             {
-                sb.Append("<tr><th>Loan Account No</th><th>Customer Name</th><th>DOC</th></tr>");
+                sb.Append("<tr style='background-color: #f2f2f2;'><th>Loan Account No</th><th>Customer Name</th><th>DOC</th></tr>");
 
                 foreach (var r in records)
                 {
@@ -171,7 +171,7 @@ namespace ProductivityApi.Services
             }
             else if (insurer == "NivaBupa")
             {
-                sb.Append("<tr><th>Loan Account No</th><th>Premium</th><th>HDC</th><th>PA</th><th>OPD</th></tr>");
+                sb.Append("<tr style='background-color: #f2f2f2;'><th>Loan Account No</th><th>Premium</th><th>HDC</th><th>PA</th><th>OPD</th></tr>");
 
                 foreach (var r in records)
                 {
@@ -186,7 +186,7 @@ namespace ProductivityApi.Services
             }
             else if (insurer == "GoDigit")
             {
-                sb.Append("<tr><th>LAN</th><th>Policy Number</th></tr>");
+                sb.Append("<tr style='background-color: #f2f2f2;'><th>LAN</th><th>Policy Number</th></tr>");
 
                 foreach (var r in records)
                 {
