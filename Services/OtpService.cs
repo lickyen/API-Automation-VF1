@@ -1,6 +1,7 @@
 ﻿using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -58,48 +59,66 @@ public class OtpService
 
     public async Task<bool> VerifyOtp(string userId, string otp)
     {
-        var storedOtp = await _otpRepository.GetOtpByUserIdAsync(userId);
+        bool isValid = false;
+        string? message = null;
 
-        if (storedOtp == null || storedOtp.ExpiryTime < DateTime.UtcNow || storedOtp.Attempts >= 5)
+        try
         {
-            string reason = storedOtp == null ? "OTP not found" :
-                storedOtp.Attempts >= 5 ? "Max attempts exceeded" :
-                                          "OTP expired";
+            var storedOtp = await _otpRepository.GetOtpByUserIdAsync(userId);
 
+            if (storedOtp == null)
+            {
+                message = "OTP not found";
+                return false;
+            }
+
+            if (storedOtp.ExpiryTime < DateTime.UtcNow)
+            {
+                message = "OTP expired";
+                return false;
+            }
+
+            // Increment first, persist it, then check the limit
+            storedOtp.Attempts++;
+            await _otpRepository.UpdateAttemptAsync(storedOtp);
+
+            if (storedOtp.Attempts > 5)
+            {
+                message = "Max attempts exceeded";
+                return false;
+            }
+
+            isValid = VerifyHash(otp, storedOtp.OtpHash);
+            message = isValid ? null : $"Invalid OTP (attempt {storedOtp.Attempts})";
+
+            if (isValid)
+                await _otpRepository.DeleteOtpAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+            Log.Error(ex, "OTP verification error for UserId={UserId}", userId);
+            throw;
+        }
+        finally
+        {
             await _userLogRepository.AddAsync(new UserLog
             {
                 UserId = userId,
                 Action = "OTP_VERIFICATION",
-                Response = "FAILURE",
-                Message = reason
+                Response = isValid ? "SUCCESS" : "FAILURE",
+                Message = message
             });
 
-            return false;
-
+            Log.Information(
+                "OTP verification UserId={UserId} Success={Success}",
+                userId,
+                isValid
+            );
         }
-
-
-        storedOtp.Attempts++;
-
-        bool isValid = VerifyHash(otp, storedOtp.OtpHash);
-
-        if (isValid)
-            await _otpRepository.DeleteOtpAsync(userId);
-        else
-            await _otpRepository.UpdateAttemptAsync(storedOtp);
-
-        await _userLogRepository.AddAsync(new UserLog
-        {
-            UserId = userId,
-            Action = "OTP_VERIFICATION",
-            Response = isValid ? "SUCCESS" : "FAILURE",
-            Message = isValid ? null : $"Invalid OTP (attempt {storedOtp.Attempts})"
-        });
-
 
         return isValid;
     }
-
     #region Helpers
     private string GenerateOtp()
     {

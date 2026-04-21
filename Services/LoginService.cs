@@ -23,35 +23,41 @@ namespace ProductivityApi.Services
 
         public async Task<bool> ValidateLoginAsync(LoginRequest login)
         {
-            bool success;
+            bool success = false;
+            string? message = null;
 
-            if (_env.IsProduction())
+            try
             {
-                success = ValidateLdapLogin(login);
+                success = _env.IsProduction() ? ValidateLdapLogin(login) : ValidateDbLogin(login);
+
+                message = success ? null : "Invalid credentials";
             }
-            else
+            catch (Exception ex)
             {
-                success = ValidateDbLogin(login);
+                message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+                Log.Error(ex, "Login validation error for UserId={UserId}", login.UserId);
+                throw;
             }
-
-             await _userLogRepository.AddAsync(new UserLog
+            finally
             {
-                UserId = login.UserId,
-                Action = "LOGIN",
-                Response = success ? "SUCCESS" : "FAILURE",
-                Message = success ? null : "Invalid credentials"
-            });
+                await _userLogRepository.AddAsync(new UserLog
+                {
+                    UserId = login.UserId,
+                    Action = "LOGIN",
+                    Response = success ? "SUCCESS" : "FAILURE",
+                    Message = message
+                });
 
-            Log.Information(
-                "Login attempt UserId={UserId} Success={Success}",
-                login.UserId,
-                _env.EnvironmentName,
-                success
-            );
+                Log.Information(
+                    "Login attempt UserId={UserId} Env={Env} Success={Success}",
+                    login.UserId,
+                    _env.EnvironmentName,
+                    success
+                );
+            }
 
             return success;
         }
-
         public bool ValidateLdapLogin(LoginRequest login)
 
         {
