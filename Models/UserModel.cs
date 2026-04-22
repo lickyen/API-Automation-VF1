@@ -81,6 +81,16 @@ namespace ProductivityApi.Models
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
+
+    public class ModuleDto
+    {
+        [Required]
+        public string ModuleCode { get; set; } = string.Empty;
+        [Required]
+        public string ModuleName { get; set; } = string.Empty;
+    }
+
+
 }
 
 

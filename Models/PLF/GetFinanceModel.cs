@@ -101,6 +101,7 @@
         public string finBranch { get; set; }
         public double finAmount { get; set; }
         public double finAssetValue { get; set; }
+        public double finCurrAssetValue { get; set; }
         public DateTime firstDisbDate { get; set; }
         public DateTime lastDisbDate { get; set; }
         public DateTime finStartDate { get; set; }

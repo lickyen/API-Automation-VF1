@@ -73,19 +73,17 @@ namespace ProductivityApi.Controllers
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport([FromQuery] string month)
         {
-            var base64 = await _branchVisitService.GenerateReportExcelBase64Async(month);
+            var bytes = await _branchVisitService.GetReportDataAsync(month);
 
-            if (string.IsNullOrEmpty(base64))
+            if (bytes is null)
                 return NotFound(new Response(false, null, "No data found for report"));
 
-            var fileName = $"BranchVisit_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-
-            return Ok(new Response(true, new
-            {
-                FileName = fileName,
-                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                Base64 = base64
-            }, "Report generated successfully"));
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"BranchVisit_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
         }
+
     }
 }

@@ -22,5 +22,8 @@
   },
   "FcRefundMailTriggerEmail": {
     "Body": "<p>Hi Team,</p><p>Loan foreclosure for the below cases. Kindly refund the premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "LcRefundMailTriggerEmail": {
+    "Body": "<p>Hi Team,</p><p>Disbursement cancelled for the below cases. Kindly refund premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
   }
 }

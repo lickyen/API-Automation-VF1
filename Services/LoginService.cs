@@ -2,6 +2,7 @@
 using ProductivityApi.Repository;
 using Serilog;
 using System.DirectoryServices;
+using System.Runtime.InteropServices;
 
 
 namespace ProductivityApi.Services
@@ -10,38 +11,54 @@ namespace ProductivityApi.Services
     {
         private readonly ADSettings _settings;
         private readonly UserRepository _userRepository;
+        private readonly UserLogRepository _userLogRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(AppSettings appSettings, UserRepository userRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
             _userRepository = userRepository;
+            _userLogRepository = userLogRepository;
             _env = env;
         }
 
-        public bool ValidateLogin(LoginRequest login)
+        public async Task<bool> ValidateLoginAsync(LoginRequest login)
         {
-            bool success;
+            bool success = false;
+            string? message = null;
 
-            if (_env.IsProduction())
+            try
             {
-                success = ValidateLdapLogin(login);
-            }
-            else
-            {
-                success = ValidateDbLogin(login);
-            }
+                success = _env.IsProduction() ? ValidateLdapLogin(login) : ValidateDbLogin(login);
 
-            Log.Information(
-                "Login attempt UserId={UserId} Success={Success}",
-                login.UserId,
-                _env.EnvironmentName,
-                success
-            );
+                message = success ? null : "Invalid credentials";
+            }
+            catch (Exception ex)
+            {
+                message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+                Log.Error(ex, "Login validation error for UserId={UserId}", login.UserId);
+                throw;
+            }
+            finally
+            {
+                await _userLogRepository.AddAsync(new UserLog
+                {
+                    UserId = login.UserId,
+                    Action = "LOGIN",
+                    Response = success ? "SUCCESS" : "FAILURE",
+                    Message = message
+                });
+
+                Log.Information(
+                    "Login attempt UserId={UserId} Env={Env} Success={Success}",
+                    login.UserId,
+                    _env.EnvironmentName,
+                    success
+                );
+            }
 
             return success;
         }
-
         public bool ValidateLdapLogin(LoginRequest login)
 
         {
@@ -172,50 +189,109 @@ namespace ProductivityApi.Services
             return managers;
         }
 
-        public bool ResetPassword(string userId, string newPassword)
+        //public bool ResetPassword(string userId, string newPassword)
+        //{
+        //    try
+        //    {
+        //        using (var entry = new DirectoryEntry(
+        //            _settings.LDAPPath,
+        //            _settings.ServiceAccountUser,
+        //            _settings.ServiceAccountPassword))
+        //        {
+        //            using (var searcher = new DirectorySearcher(entry))
+        //            {
+        //                searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
+        //                searcher.SearchScope = SearchScope.Subtree;
+
+        //                var result = searcher.FindOne();
+        //                if (result == null)
+        //                    return false; // User not found
+
+        //                using (var userEntry = result.GetDirectoryEntry())
+        //                {
+        //                    // Reset password
+        //                    userEntry.Invoke("SetPassword", new object[] { newPassword });
+
+        //                    // Unlock account (if locked)
+        //                    userEntry.Properties["lockoutTime"].Value = 0;
+
+        //                    userEntry.CommitChanges();
+
+        //                    return true;
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (System.Runtime.InteropServices.COMException ex)
+        //    {
+        //        // Password policy violation or permission issue
+        //        return false;
+        //    }
+        //    catch
+        //    {
+        //        return false;
+        //    }
+        //}
+
+        public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
         {
+            bool success = false;
+            string? message = null;
+
             try
             {
-                using (var entry = new DirectoryEntry(
+                using var entry = new DirectoryEntry(
                     _settings.LDAPPath,
                     _settings.ServiceAccountUser,
-                    _settings.ServiceAccountPassword))
+                    _settings.ServiceAccountPassword);
+
+                using var searcher = new DirectorySearcher(entry);
+                searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
+                searcher.SearchScope = SearchScope.Subtree;
+
+                var result = searcher.FindOne();
+                if (result == null)
                 {
-                    using (var searcher = new DirectorySearcher(entry))
-                    {
-                        searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
-                        searcher.SearchScope = SearchScope.Subtree;
-
-                        var result = searcher.FindOne();
-                        if (result == null)
-                            return false; // User not found
-
-                        using (var userEntry = result.GetDirectoryEntry())
-                        {
-                            // Reset password
-                            userEntry.Invoke("SetPassword", new object[] { newPassword });
-
-                            // Unlock account (if locked)
-                            userEntry.Properties["lockoutTime"].Value = 0;
-
-                            userEntry.CommitChanges();
-
-                            return true;
-                        }
-                    }
+                    message = "User not found in directory";
+                    return false;
                 }
-            }
-            catch (System.Runtime.InteropServices.COMException ex)
-            {
-                // Password policy violation or permission issue
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
+                using var userEntry = result.GetDirectoryEntry();
+                userEntry.Invoke("SetPassword", new object[] { newPassword });
+                userEntry.Properties["lockoutTime"].Value = 0;
+                userEntry.CommitChanges();
+
+                success = true;
+            }
+            catch (COMException ex)
+            {
+                message = $"COMException: {ex.GetType().Name} — {ex.Message} (HRESULT: {ex.ErrorCode:X})";
+                Log.Error(ex, "LDAP password reset COMException for UserId={UserId}", userId);
+            }
+            catch (Exception ex)
+            {
+                message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+                Log.Error(ex, "Password reset error for UserId={UserId}", userId);
+            }
+            finally
+            {
+                await _userLogRepository.AddAsync(new UserLog
+                {
+                    UserId = userId,
+                    Action = "PASSWORD_RESET",
+                    Response = success ? "SUCCESS" : "FAILURE",
+                    Message = message
+                });
+
+                Log.Information(
+                    "Password reset UserId={UserId} Success={Success}",
+                    userId,
+                    success
+                );
+            }
+
+            return success;
+        }
 
         private string EscapeLdapSearchFilter(string dn)
         {

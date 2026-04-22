@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using System.Data;
@@ -57,38 +58,12 @@ namespace ProductivityApi.Services
             }
             return processed;
         }
-        public async Task<MemoryStream?> GenerateReportExcelAsync()
+
+        public async Task<byte[]?> GenerateReportExcelAsync()
         {
             var data = await _repository.GetReportDataAsync();
-
-            if (data == null || !data.Any())
-                return null;
-
-            // Convert to DataTable
-            var dt = new DataTable();
-            foreach (var col in ((IDictionary<string, object>)data.First()).Keys)
-            {
-                dt.Columns.Add(col);
-            }
-
-            foreach (var row in data)
-            {
-                var dict = (IDictionary<string, object>)row;
-                dt.Rows.Add(dict.Values.ToArray());
-            }
-
-            // Generate Excel
-            var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("Report");
-            worksheet.Cell(1, 1).InsertTable(dt);
-
-            var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-            stream.Position = 0;
-
-            return stream;
+            return ExcelHelper.GenerateExcel(data, "Data");
         }
-
 
     }
 }

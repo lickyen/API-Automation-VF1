@@ -51,5 +51,23 @@ namespace ProductivityApi.Controllers
             }
         }
 
+        [HttpGet("getBranchAddress")]
+        public IActionResult GetAllBranchAddress()
+        {
+            try
+            {
+                var branches = _branchServices.GetBranchesAddress();
+
+                if (branches == null || !branches.Any())
+                    return Ok(new Response(false, null, "No records found"));
+
+                return Ok(new Response(true, branches, "Success"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
+            }
+        }
+
     }
 }

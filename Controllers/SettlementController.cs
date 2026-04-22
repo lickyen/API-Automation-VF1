@@ -145,7 +145,7 @@ namespace ProductivityApi.Controllers
             var fileBytes = await _service.GetReportExcelAsync(fromDate, toDate);
 
             if (fileBytes == null)
-                return NotFound("No data available for the selected range.");
+                return NotFound(new Response(false, null, "No data available for the selected range."));
 
             return File(
                 fileBytes,
