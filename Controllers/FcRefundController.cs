@@ -16,21 +16,21 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        [HttpGet("GetById/{id}")]
-        public async Task<IActionResult> GetById(int id)
+        [HttpPost("addLans")]
+        public async Task<IActionResult> AddLan([FromBody] List<FcRefundAddLanDto> dtos)
         {
-            if (id <= 0)
-                return BadRequest(new Response(false, null, "Invalid ID"));
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
 
-            var data = await _service.GetByIdAsync(id);
-
-            if (data == null)
-                return NotFound(new Response(true, null, "No record found"));
-
-            return Ok(new Response(true, data, "Success"));
+            var result = await _service.AddLanAsync(dtos);
+            return Ok(new Response(
+                result.Added > 0,
+                new { added = result.AddedLans, skipped = result.SkippedLans },
+                $"{result.Added} out of {result.Added + result.Skipped} LAN(s) added"
+            ));
         }
 
-        [HttpGet("GetByLan/{lan}")]
+        [HttpGet("getByLan/{lan}")]
         public async Task<IActionResult> GetByLan(string lan)
         {
             if (string.IsNullOrWhiteSpace (lan))
@@ -87,17 +87,17 @@ namespace ProductivityApi.Controllers
         [HttpPost("triggerMail")]
         public async Task<IActionResult> TriggerMail([FromBody] FcRefundTriggerMailDto dto)
         {
-            if (dto == null || dto.Ids == null || dto.Ids.Count == 0)
+            if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
             var updatedCount = await _service.TriggerMailAsync(dto);
+
             return updatedCount switch
             {
                 >= 0 => Ok(new Response(true, null, "Mail sent successfully")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
-
         [HttpPost("updateRefund")]
         public async Task<IActionResult> UpdateRefund([FromBody] List<FcRefundUpdateRefundDto> dtos)
         {
@@ -130,24 +130,13 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPost("addLans")]
-        public async Task<IActionResult> AddLan([FromBody] List<FcRefundAddLanDto> dtos)
-        {
-            if (dtos == null || !dtos.Any())
-                return BadRequest(new Response(false, null, "No records provided"));
-
-            var result = await _service.AddLanAsync(dtos);
-            return Ok(new Response(
-                result.Added > 0,
-                new { added = result.AddedLans, skipped = result.SkippedLans },
-                $"{result.Added} out of {result.Added + result.Skipped} LAN(s) added"
-            ));
-        }
-
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport(DateTime? fromDate, DateTime? toDate)
         {
             var fileBytes = await _service.GetReportExcelAsync(fromDate, toDate);
+
+            if (fileBytes == null)
+                return NotFound(new Response(false, null, "No data available for the selected range."));
 
             return File(
                 fileBytes,

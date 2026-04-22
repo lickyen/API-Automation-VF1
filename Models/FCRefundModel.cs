@@ -7,13 +7,15 @@
     {
         public int Id { get; set; }
         public string BranchCode { get; set; } = String.Empty;
-        public string LAN { get; set; }
-        public string FullName { get; set; }
+        public string Lan { get; set; } = String.Empty;
+        public string FullName { get; set; } = String.Empty;
         public DateTime DisbDate { get; set; }
         public DateTime ForeclosedDate { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = String.Empty;
         public bool KotakMailTrigger { get; set; }
         public DateTime? KotakMailTriggerDate { get; set; }
+        public bool GoDigitMailTrigger { get; set; }
+        public DateTime? GoDigitMailTriggerDate { get; set; }
         public string? FullNameAsPerBankProof { get; set; }
         public string? AccountNo { get; set; }
         public string? Ifsc { get; set; }
@@ -21,6 +23,7 @@
         public string? MemberName { get; set; }
         public string? SgNo { get; set; }
         public DateTime? CoverExpiredDate { get; set; }
+        public string? GoDigitPolicyNo { get; set; }
         public string? BankProofFilePath { get; set; }
         public string? RequestLetterFilePath { get; set; }
         public string? ClientName { get; set; } = "Vistaar Financial Services Pvt. Ltd.";
@@ -29,9 +32,9 @@
         public DateTime? AdditionalRequestDate { get; set; }
         public decimal? RefundAmount { get; set; }
         public DateTime? RefundDate { get; set; }
-        public string? UTR { get; set; }
+        public string? Utr { get; set; }
         public DateTime CreatedDate { get; set; }
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = String.Empty;
         public DateTime? BranchRequestedDate { get; set; }
         public string? BranchRequestedBy { get; set; }
         public DateTime? UpdatedDate { get; set; }
@@ -40,7 +43,7 @@
     public class FcRefundBranchSubmitDto
     {
         [Required]
-        public int Id { get; set; }
+        public string Lan { get; set; } = string.Empty;
         [Required]
         public string FullNameAsPerBankProof { get; set; } = string.Empty;
         [Required]
@@ -70,22 +73,32 @@
     }
     public class FcRefundTriggerMailDto
     {
-        public List<int> Ids { get; set; } = new();
+        [Required]
+        public List<string> Lans { get; set; } = new();
+        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
     public class FcRefundUpdateRefundDto
     {
-        public string Lan { get; set; }
-        public decimal? RefundAmount { get; set; }
-        public DateTime? RefundDate { get; set; }
-        public string? UTR { get; set; }
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+        [Required]
+        public decimal RefundAmount { get; set; }
+        [Required]
+        public DateTime RefundDate { get; set; }
+        [Required]
+        public string Utr { get; set; } = string.Empty;
+        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
     public class FcRefundAdditionalRequestDto
     {
-        public string Lan { get; set; }
-        public string AdditionalRequest { get; set; }
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+        [Required]
+        public string AdditionalRequest { get; set; } = string.Empty;
+        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
@@ -97,11 +110,17 @@
 
     public class FcRefundAddLanDto
     {
+        [Required]
         public string BranchCode { get; set; } = string.Empty;
-        public string LAN { get; set; } = string.Empty;
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+        [Required]
         public string FullName { get; set; } = string.Empty;
-        public DateTime DisbDate { get; set; }
-        public DateTime ForeclosedDate { get; set; }
+        [Required]
+        public DateTime? DisbDate { get; set; }
+        [Required]
+        public DateTime? ForeclosedDate { get; set; }
+        [Required]
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -115,7 +134,7 @@
     }
     public class FcRefundLanResult
     {
-        public string LAN { get; set; } = string.Empty;
+        public string Lan { get; set; } = string.Empty;
         public int Status { get; set; }
     }
     public class FcRefundDownloadFileRequestDto

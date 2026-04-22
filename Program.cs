@@ -8,6 +8,7 @@ using ProductivityApi.Jobs;
 using Serilog;
 using Hangfire;
 using Hangfire.SqlServer;
+using ProductivityApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,13 +21,13 @@ builder.Services.AddCors(options =>
 
         if (env.IsProduction())
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://productivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3001", "https://productivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
         else // UAT/DEV
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://uatproductivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:3002", "https://uatproductivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
@@ -86,6 +87,9 @@ builder.Services.AddScoped<LegalNoticeService>();
 builder.Services.AddScoped<NOCService>();
 builder.Services.AddScoped<ModService>();
 builder.Services.AddScoped<FcRefundService>();
+builder.Services.AddScoped<LcRefundService>();
+builder.Services.AddScoped<LegalBillingService>();
+builder.Services.AddScoped<CustEmailUpdateService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -99,9 +103,16 @@ builder.Services.AddScoped<LegalNoticeRepository>();
 builder.Services.AddScoped<NOCRepository>();
 builder.Services.AddScoped<ModRepository>();
 builder.Services.AddScoped<FcRefundRepository>();
+builder.Services.AddScoped<LcRefundRepository>();
+builder.Services.AddScoped<LegalBillingRepository>();
+builder.Services.AddScoped<CustEmailUpdateRepository>();
+builder.Services.AddScoped<UserLogRepository>();
+
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
+builder.Services.AddScoped<IJob, LcRefundJob>();
+builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();

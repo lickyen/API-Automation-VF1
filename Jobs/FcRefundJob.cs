@@ -53,7 +53,7 @@ namespace ProductivityApi.Jobs
 
                 if (!dtos.Any())
                 {
-                    _logger.Information("No foreclosed LANs found for yesterday");
+                    _logger.Information("No foreclosed LANs found");
                     return;
                 }
 
@@ -80,39 +80,24 @@ namespace ProductivityApi.Jobs
 
         private async Task<List<FcRefundAddLanDto>> FetchLansFromPlfAsync(CancellationToken ct)
         {
-            //const string query = @"
-            //    SELECT 
-            //        F.finreference,
-            //        c.custfname || ' ' || c.custmname || ' ' || c.custlname AS full_name,
-            //        F.CLOSINGSTATUS,
-            //        CLOSEDDATE,
-            //        D.disbdate,
-            //        F.finbranch        
-            //    FROM PLF.FINANCEMAIN F, plf.customers c, plf.findisbursementdetails d
-            //    WHERE
-            //        f.custid = c.custid AND
-            //        d.finreference = f.finreference AND
-            //        CLOSINGSTATUS = 'E' AND
-            //        d.disbseq = 1 AND
-            //        finisactive = 0 AND
-            //        CLOSEDDATE = CURRENT_DATE - 1";
-
             const string query = @"
-                SELECT
+                SELECT 
                     F.finreference,
-                    c.custfname || ' ' || c.custmname || ' ' || c.custlname AS full_name,
+                    COALESCE(c.custfname, '') || ' ' ||
+                    COALESCE(c.custmname, '') || ' ' ||
+                    COALESCE(c.custlname, '') AS full_name,
                     F.CLOSINGSTATUS,
                     CLOSEDDATE,
                     D.disbdate,
-                    F.finbranch
+                    F.finbranch        
                 FROM PLF.FINANCEMAIN F, plf.customers c, plf.findisbursementdetails d
                 WHERE
                     f.custid = c.custid AND
                     d.finreference = f.finreference AND
                     CLOSINGSTATUS = 'E' AND
                     d.disbseq = 1 AND
-                    finisactive = 0
-                LIMIT 10";
+                    finisactive = 0 AND
+                    CLOSEDDATE = CURRENT_DATE - 1";
 
             var dtos = new List<FcRefundAddLanDto>();
 
@@ -126,7 +111,7 @@ namespace ProductivityApi.Jobs
             {
                 dtos.Add(new FcRefundAddLanDto
                 {
-                    LAN = reader.GetString(0),
+                    Lan = reader.GetString(0),
                     FullName = reader.GetString(1),
                     ForeclosedDate = reader.GetDateTime(3),
                     DisbDate = reader.GetDateTime(4),

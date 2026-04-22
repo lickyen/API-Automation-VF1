@@ -93,6 +93,47 @@ namespace ProductivityApi.Repository
             return branch;
         }
 
+        public List<BranchAddressModel> GetBranchesAddress()
+        {
+            var branches = new List<BranchAddressModel>();
+
+            try
+            {
+                using (var connection = new SqlConnection(_conStr))
+                using (var command = new SqlCommand("SP_GetBranchAddress", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    connection.Open();
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var branch = new BranchAddressModel
+                            {
+
+                                BranchCode = reader["BranchCode"]?.ToString(),
+                                BranchName = reader["BranchName"]?.ToString(),
+                                BranchAddress = reader["BranchAddress"]?.ToString(),
+                                Mobile = reader["Mobile"]?.ToString(),
+                               
+
+                            };
+
+                            branches.Add(branch);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+
+            return branches;
+        }
+
+
 
     }
 }
