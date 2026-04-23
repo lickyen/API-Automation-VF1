@@ -89,6 +89,7 @@ builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<LcRefundService>();
 builder.Services.AddScoped<LegalBillingService>();
 builder.Services.AddScoped<CustEmailUpdateService>();
+builder.Services.AddScoped<WabaService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -105,10 +106,12 @@ builder.Services.AddScoped<FcRefundRepository>();
 builder.Services.AddScoped<LcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
 builder.Services.AddScoped<CustEmailUpdateRepository>();
+builder.Services.AddScoped<WabaRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
+builder.Services.AddScoped<IJob, NOCJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
