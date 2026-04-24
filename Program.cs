@@ -52,7 +52,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.File(
-        path: "logs/log-.txt",
+        path: "logs/appLogs/log-.txt",
         rollingInterval: RollingInterval.Day,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
         retainedFileCountLimit: 30
@@ -90,6 +90,7 @@ builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<LcRefundService>();
 builder.Services.AddScoped<LegalBillingService>();
 builder.Services.AddScoped<CustEmailUpdateService>();
+builder.Services.AddScoped<LoanCancellationService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -107,6 +108,7 @@ builder.Services.AddScoped<LcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
 builder.Services.AddScoped<CustEmailUpdateRepository>();
 builder.Services.AddScoped<UserLogRepository>();
+builder.Services.AddScoped<LoanCancellationRepository>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
