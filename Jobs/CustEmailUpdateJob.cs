@@ -27,6 +27,7 @@ namespace ProductivityApi.Jobs
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File(
+                    path: "logs/jobLogs/CustEmailUpdateJob/log-.txt",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30)
                 .CreateLogger();
