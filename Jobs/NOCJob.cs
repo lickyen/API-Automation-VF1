@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using Hangfire;
+using Npgsql;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 using Serilog;
@@ -7,8 +8,9 @@ namespace ProductivityApi.Jobs
 {
     public class NOCJob : IJob
     {
-
         public string JobId => "noc-job";
+        public void Register(string cron) =>
+        RecurringJob.AddOrUpdate<LcRefundJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
         private readonly Serilog.ILogger _logger;
         private readonly NOCService _service;
