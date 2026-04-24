@@ -16,6 +16,19 @@ namespace ProductivityApi.Jobs
             var configs = (await conn.QueryAsync<JobConfig>("SELECT * FROM JobConfigs"))
                 .ToDictionary(c => c.JobId);
 
+            //foreach (var job in jobs)
+            //{
+            //    var config = configs.GetValueOrDefault(job.JobId);
+
+            //    if (config is { Enabled: false })
+            //        RecurringJob.RemoveIfExists(job.JobId);
+            //    else
+            //        RecurringJob.AddOrUpdate(
+            //            job.JobId,
+            //            () => job.ExecuteAsync(CancellationToken.None),
+            //            config?.Cron ?? "0 1 * * *");
+            //}
+
             foreach (var job in jobs)
             {
                 var config = configs.GetValueOrDefault(job.JobId);
@@ -23,10 +36,7 @@ namespace ProductivityApi.Jobs
                 if (config is { Enabled: false })
                     RecurringJob.RemoveIfExists(job.JobId);
                 else
-                    RecurringJob.AddOrUpdate(
-                        job.JobId,
-                        () => job.ExecuteAsync(CancellationToken.None),
-                        config?.Cron ?? "0 1 * * *");
+                    job.Register(config?.Cron ?? "0 1 * * *"); // ✅ type-safe, Hangfire-safe
             }
         }
     }

@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Hangfire;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
@@ -10,6 +11,10 @@ namespace ProductivityApi.Jobs
     public class CustEmailUpdateJob : IJob
     {
         public string JobId => "cust-email-update-job";
+
+        public void Register(string cron) =>
+        RecurringJob.AddOrUpdate<CustEmailUpdateJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
+
         private readonly Serilog.ILogger _logger;
         private readonly PLFService _plfService;
         private readonly string _conStr;
@@ -22,7 +27,6 @@ namespace ProductivityApi.Jobs
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File(
-                    path: "logs/CustEmailUpdateJob/log-.txt",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30)
                 .CreateLogger();

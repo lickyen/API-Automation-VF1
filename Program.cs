@@ -8,6 +8,7 @@ using ProductivityApi.Jobs;
 using Serilog;
 using Hangfire;
 using Hangfire.SqlServer;
+using ProductivityApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,13 +21,13 @@ builder.Services.AddCors(options =>
 
         if (env.IsProduction())
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://productivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3001", "https://productivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
         else // UAT/DEV
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "https://uatproductivity.vistaarfinance.com")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:3002", "https://uatproductivity.vistaarfinance.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
@@ -51,7 +52,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.File(
-        path: "logs/log-.txt",
+        path: "logs/appLogs/log-.txt",
         rollingInterval: RollingInterval.Day,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
         retainedFileCountLimit: 30
@@ -89,7 +90,6 @@ builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<LcRefundService>();
 builder.Services.AddScoped<LegalBillingService>();
 builder.Services.AddScoped<CustEmailUpdateService>();
-builder.Services.AddScoped<WabaService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -106,12 +106,10 @@ builder.Services.AddScoped<FcRefundRepository>();
 builder.Services.AddScoped<LcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
 builder.Services.AddScoped<CustEmailUpdateRepository>();
-builder.Services.AddScoped<WabaRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
-builder.Services.AddScoped<IJob, NOCJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
