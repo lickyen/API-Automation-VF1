@@ -27,16 +27,16 @@ namespace ProductivityApi.Services
             _templateService = templateService;
             _appSettings = appSettings;
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
+             => await _repository.AddLanAsync(dtos);
         public async Task<FcRefundModel?> GetByLanAsync(string lan)
             => await _repository.GetByLanAsync(lan);
+        public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
+            => await _repository.GetByStatusAsync(status);
 
-        // Branch
         public async Task<List<FcRefundModel>> GetByBranchAsync(string branchCode, string? status)
             => await _repository.GetByBranchAsync(branchCode, status);
-
-        //public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
-        //    => await _repository.BranchSubmitAsync(dto);
-
         public async Task<int> BranchSubmitAsync(FcRefundBranchSubmitDto dto)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
@@ -70,9 +70,30 @@ namespace ProductivityApi.Services
 
             return await _repository.BranchSubmitAsync(dto, bankProofFilePath, requestLetterFilePath);
         }
-        // COPS
-        public async Task<List<FcRefundModel>> GetByStatusAsync(string status)
-            => await _repository.GetByStatusAsync(status);
+
+        private bool IsAttachmentSizeValid(List<FcRefundModel> records, string basePath, out long totalSize)
+        {
+            totalSize = 0;
+
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
+                {
+                    var path = Path.Combine(basePath, record.BankProofFilePath);
+                    if (File.Exists(path))
+                        totalSize += new FileInfo(path).Length;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
+                {
+                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
+                    if (File.Exists(path))
+                        totalSize += new FileInfo(path).Length;
+                }
+            }
+
+            return totalSize <= MaxAttachmentSizeBytes;
+        }
 
         public async Task<int> TriggerMailAsync(FcRefundTriggerMailDto dto)
         {
@@ -93,37 +114,42 @@ namespace ProductivityApi.Services
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            // Step 2: Send mail
-            var (mailSent, mailMessage) = await SendRefundMailAsync(records);
-            if (!mailSent)
-                throw new Exception(mailMessage);
+            var kotakRecords = records;
 
-            // Step 3: Bulk update
-            return await _repository.UpdateMailTriggerAsync(distinctLans, dto.UpdatedBy);
+            var goDigitRecords = records
+                .Where(r => !string.IsNullOrWhiteSpace(r.GoDigitPolicyNo))
+                .ToList();
+
+            int totalUpdated = 0;
+
+            // Kotak (always)
+            if (kotakRecords.Any())
+            {
+                var (sent, msg) = await SendKotakMailAsync(kotakRecords);
+                if (!sent) throw new Exception("Kotak: " + msg);
+
+                var lans = kotakRecords.Select(x => x.Lan).ToList();
+                totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "Kotak");
+            }
+
+            // GoDigit (optional)
+            if (goDigitRecords.Any())
+            {
+                var (sent, msg) = await SendGoDigitMailAsync(goDigitRecords);
+                if (!sent) throw new Exception("GoDigit: " + msg);
+
+                var lans = goDigitRecords.Select(x => x.Lan).ToList();
+                totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "GoDigit");
+            }
+
+            return totalUpdated;
         }
-        public async Task<(bool Success, string Message)> SendRefundMailAsync(List<FcRefundModel> records)
+        public async Task<(bool Success, string Message)> SendKotakMailAsync(List<FcRefundModel> records)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
 
             // Size check
-            long totalSize = 0;
-            foreach (var record in records)
-            {
-                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
-                {
-                    var path = Path.Combine(basePath, record.BankProofFilePath);
-                    if (File.Exists(path))
-                        totalSize += new FileInfo(path).Length;
-                }
-                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
-                {
-                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
-                    if (File.Exists(path))
-                        totalSize += new FileInfo(path).Length;
-                }
-            }
-
-            if (totalSize > MaxAttachmentSizeBytes)
+            if (!IsAttachmentSizeValid(records, basePath, out _))
                 return (false, "Mail size exceeds 10MB. Please select fewer cases.");
 
             // Fetch To/Cc from DB
@@ -142,35 +168,54 @@ namespace ProductivityApi.Services
             var placeholders = new Dictionary<string, string>
             {
                 { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
-                { "Table",    BuildTableHtml(records) }
+                { "Table",    BuildKotakTableHtml(records) }
             };
 
             var subject = "Loan Foreclosure Premium refund | " + DateTime.Now;
 
             var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
-            // Build attachments using basePath + filename
-            var attachments = new List<Attachment>();
-            foreach (var record in records)
-            {
-                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
-                {
-                    var path = Path.Combine(basePath, record.BankProofFilePath);
-                    if (File.Exists(path))
-                        attachments.Add(new Attachment(path));
-                }
-                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
-                {
-                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
-                    if (File.Exists(path))
-                        attachments.Add(new Attachment(path));
-                }
-            }
+            var attachments = BuildAttachments(records, basePath);
 
             var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
             return result == "Success" ? (true, "Mail sent successfully") : (false, result);
         }
-        private string BuildTableHtml(List<FcRefundModel> records)
+        public async Task<(bool Success, string Message)> SendGoDigitMailAsync(List<FcRefundModel> records)
+        {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            // Size check
+            if (!IsAttachmentSizeValid(records, basePath, out _))
+                return (false, "Mail size exceeds 10MB. Please select fewer cases.");
+
+            var emailDetails = await _repository.GetBankEmailDetailsAsync("GoDigit");
+            if (!emailDetails.Any())
+                return (false, "No recipient email IDs configured for GoDigit");
+
+            var to = emailDetails.Where(e => e.EmailType == "1").Select(e => e.EmailId).ToList();
+            var cc = emailDetails.Where(e => e.EmailType == "2").Select(e => e.EmailId).ToList();
+
+            if (!to.Any())
+                return (false, "No recipients");
+
+            var template = _templateService.GetEmailTemplate("FcRefundMailTriggerEmail");
+
+            var placeholders = new Dictionary<string, string>
+            {
+                { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
+                { "Table", BuildGoDigitTableHtml(records) }
+            };
+
+            var subject = "Loan Foreclosure Premium refund | " + DateTime.Now;
+
+            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+            var attachments = BuildAttachments(records, basePath);
+
+            var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
+            return result == "Success" ? (true, "Mail sent successfully") : (false, result);
+        }
+        private string BuildKotakTableHtml(List<FcRefundModel> records)
         {
             var table = new StringBuilder();
 
@@ -207,14 +252,66 @@ namespace ProductivityApi.Services
             table.Append("</table>");
             return table.ToString();
         }
+        private string BuildGoDigitTableHtml(List<FcRefundModel> records)
+        {
+            var table = new StringBuilder();
+
+            table.Append("<table border='1' cellpadding='3' style='border-collapse: collapse;'>");
+            table.Append("<tr style='background-color: #f2f2f2;'>");
+            table.Append("<th>LAN</th>");
+            table.Append("<th>Policy Number</th>");
+            table.Append("<th>Customer Name</th>");
+            table.Append("<th>Foreclosure Date</th>");
+            table.Append("<th>Customer Name as per NEFT COPY</th>");
+            table.Append("<th>Account No</th>");
+            table.Append("<th>IFSC Code</th>");
+            table.Append("</tr>");
+
+            foreach (var r in records)
+            {
+                table.Append("<tr>");
+                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
+                table.Append($"<td style='text-align:center;'>{r.GoDigitPolicyNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.FullName}</td>");
+                table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
+                table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
+                table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.Ifsc}</td>");
+                table.Append("</tr>");
+            }
+
+            table.Append("</table>");
+            return table.ToString();
+        }
+        private List<Attachment> BuildAttachments(List<FcRefundModel> records, string basePath)
+        {
+            var attachments = new List<Attachment>();
+
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrWhiteSpace(record.BankProofFilePath))
+                {
+                    var path = Path.Combine(basePath, record.BankProofFilePath);
+                    if (File.Exists(path))
+                        attachments.Add(new Attachment(path));
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.RequestLetterFilePath))
+                {
+                    var path = Path.Combine(basePath, record.RequestLetterFilePath);
+                    if (File.Exists(path))
+                        attachments.Add(new Attachment(path));
+                }
+            }
+
+            return attachments;
+        }
+
         public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
             => await _repository.UpdateRefundAsync(dtos);
 
         public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
             => await _repository.UpdateAdditionalRequestAsync(dtos);
-
-        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
-            => await _repository.AddLanAsync(dtos);
 
         public (bool Success, string Message, FcRefundDownloadFileResponseDto? Data) GetFileAsBase64(FcRefundDownloadFileRequestDto dto)
         {
@@ -234,8 +331,6 @@ namespace ProductivityApi.Services
                 FileName = dto.FileName
             });
         }
-
-
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
             var completed = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.Completed);

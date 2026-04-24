@@ -83,7 +83,9 @@ namespace ProductivityApi.Jobs
             const string query = @"
                                 SELECT
                     F.finreference,
-                    c.custfname || ' ' || c.custmname || ' ' || c.custlname AS full_name,
+                    COALESCE(c.custfname, '') || ' ' ||
+                    COALESCE(c.custmname, '') || ' ' ||
+                    COALESCE(c.custlname, '') AS full_name,   
                     D.disbdate,
                     F.CLOSEDDATE,
                     F.finbranch
@@ -95,6 +97,7 @@ namespace ProductivityApi.Jobs
                     d.disbseq = 1 AND
                     finisactive = 0 AND
                     CLOSEDDATE = CURRENT_DATE - 1";
+
 
             var dtos = new List<LcRefundAddLanDto>();
 

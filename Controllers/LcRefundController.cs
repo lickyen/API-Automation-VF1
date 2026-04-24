@@ -16,6 +16,20 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
+        [HttpPost("addLans")]
+        public async Task<IActionResult> AddLan([FromBody] List<LcRefundAddLanDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.AddLanAsync(dtos);
+            return Ok(new Response(
+                result.Added > 0,
+                new { added = result.AddedLans, skipped = result.SkippedLans },
+                $"{result.Added} out of {result.Added + result.Skipped} LAN(s) added"
+            ));
+        }
+
         [HttpGet("getByLan/{lan}")]
         public async Task<IActionResult> GetByLan(string lan)
         {
@@ -66,22 +80,9 @@ namespace ProductivityApi.Controllers
             if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
-            if (string.IsNullOrWhiteSpace(dto.Insurer))
-                return BadRequest(new Response(false, null, "Insurer is required"));
+            var updatedCount = await _service.TriggerMailAsync(dto);
+            return Ok(new Response(true, new { updatedCount }, "Mail sent successfully"));
 
-            try
-            {
-                var updatedCount = await _service.TriggerMailAsync(dto);
-                return Ok(new Response(true, new { updatedCount }, "Mail sent successfully"));
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new Response(false, null, ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new Response(false, null, ex.Message));
-            }
         }
 
         [HttpPost("markNotCovered")]
@@ -90,60 +91,43 @@ namespace ProductivityApi.Controllers
             if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
                 return BadRequest(new Response(false, null, "Select at least one LAN"));
 
-            try
-            {
-                var updatedCount = await _service.MarkNotCoveredAsync(dto);
-                return Ok(new Response(true, new { updatedCount }, "Marked as Not Covered"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new Response(false, null, ex.Message));
-            }
+            var updatedCount = await _service.MarkNotCoveredAsync(dto);
+            return Ok(new Response(true, new { updatedCount }, "Marked as Not Covered"));
         }
 
-        [HttpPost("upsertUtr")]
-        public async Task<IActionResult> UpsertUtr([FromBody] LcRefundAddUtrDto dto)
-        {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Lan))
-                return BadRequest(new Response(false, null, "LAN is required"));
-
-            if (dto.Entries == null || !dto.Entries.Any())
-                return BadRequest(new Response(false, null, "At least one UTR entry is required"));
-
-            try
-            {
-                var affected = await _service.UpsertUtrAsync(dto);
-                return Ok(new Response(true, new { affected }, "UTR details saved"));
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new Response(false, null, ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new Response(false, null, ex.Message));
-            }
-        }
 
         [HttpPost("markCompleted")]
         public async Task<IActionResult> MarkCompleted([FromBody] LcRefundCompleteDto dto)
         {
-            if (dto == null || dto.Id <= 0)
-                return BadRequest(new Response(false, null, "Invalid request"));
+            if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
+                return BadRequest(new Response(false, null, "Select at least one LAN"));
 
-            var result = await _service.MarkCompletedAsync(dto);
-            return result switch
+            var updatedCount = await _service.MarkCompletedAsync(dto);
+            return Ok(new Response(true, new { updatedCount }, "Marked as Completed"));
+        }
+
+        [HttpPost("addUtr")]
+        public async Task<IActionResult> AddUtr([FromBody] LcRefundAddUtrDto dto)
+        {
+            var (success, duplicates) = await _service.AddUtrAsync(dto);
+
+            if (success == 0 && duplicates > 0)
             {
-                > 0 => Ok(new Response(true, null, "Marked as Completed")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                return Conflict(new Response( false, new { success, duplicates }, "All UTRs already exist" ));
+            }
+
+            if (success > 0)
+            {
+                var message = $"{success}/{dto.UtrList.Count} UTRs added";
+
+                return Ok(new Response(true, new { success, duplicates }, message ));
+            }
+
+            return StatusCode(500, new Response(false, null, "An error occurred"));
         }
 
         [HttpGet("report")]
-        public async Task<IActionResult> DownloadReport(
-            [FromQuery] DateTime? fromDate,
-            [FromQuery] DateTime? toDate)
+        public async Task<IActionResult> DownloadReport( [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
         {
             var fileBytes = await _service.GetReportExcelAsync(fromDate, toDate);
 

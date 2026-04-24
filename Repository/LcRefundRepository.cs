@@ -99,16 +99,41 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<int> UpsertUtrAsync(string lan, List<LcUtrEntryDto> entries, string updatedBy)
+
+        public async Task<int> MarkCompletedAsync(List<string> lans, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            int affected = 0;
+            var lanTable = new DataTable();
+            lanTable.Columns.Add("Lan", typeof(string));
+
+            foreach (var lan in lans)
+                lanTable.Rows.Add(lan);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
+            parameters.Add("@Status", LcRefundStatus.Completed);
+            parameters.Add("@UpdatedBy", updatedBy);
+
+            return await conn.ExecuteScalarAsync<int>(
+                "sp_LcRefund_MarkCompleted",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<(int success, int duplicates)> AddUtrAsync( string lan, List<LcUtrEntryDto> entries, string updatedBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            int success = 0;
+            int duplicates = 0;
+
             foreach (var entry in entries)
             {
-                affected += await conn.ExecuteAsync(
-                    "sp_LcRefund_UpsertUtr",
+                var result = await conn.ExecuteScalarAsync<int>(
+                    "sp_LcRefund_AddUtr",
                     new
                     {
                         Lan = lan,
@@ -116,55 +141,47 @@ namespace ProductivityApi.Repository
                         entry.Utr,
                         entry.PaymentDate,
                         entry.Amount,
-                        UpdatedBy = updatedBy
+                        CreatedBy = updatedBy
                     },
                     commandType: CommandType.StoredProcedure
                 );
+
+                if (result == -1)
+                    duplicates++;
+                else
+                    success++;
             }
-            return affected;
+
+            return (success, duplicates);
         }
-
-        public async Task<int> MarkCompletedAsync(int id, string updatedBy)
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            return await conn.ExecuteScalarAsync<int>(
-                "sp_LcRefund_MarkCompleted",
-                new
-                {
-                    Id = id,
-                    Status = LcRefundStatus.Completed,
-                    UpdatedBy = updatedBy
-                },
-                commandType: CommandType.StoredProcedure
-            );
-        }
-
         public async Task<List<FcRefundBankEmails>> GetInsurerEmailsAsync(string insurer)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
             var result = await conn.QueryAsync<FcRefundBankEmails>(
-                "FCRefund_GetInsurerEmails",       // reuse existing SP; extend if needed
+                "sp_GetInsurerEmails",      
                 new { Insurer = insurer },
                 commandType: CommandType.StoredProcedure
             );
             return result.ToList();
         }
 
-        public async Task<List<LcRefundModel>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
+        public async Task<(IEnumerable<dynamic> Refunds, IEnumerable<dynamic> Utrs)> GetReportAsync(DateTime? fromDate, DateTime? toDate)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            var result = await conn.QueryAsync<LcRefundModel>(
+            using var multi = await conn.QueryMultipleAsync(
                 "sp_LcRefund_GetReport",
                 new { FromDate = fromDate, ToDate = toDate },
                 commandType: CommandType.StoredProcedure
             );
-            return result.ToList();
+
+            var refunds = await multi.ReadAsync<dynamic>();
+            var utrs = await multi.ReadAsync<dynamic>();
+
+            return (refunds, utrs);
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<LcRefundAddLanDto> dtos)
