@@ -1,14 +1,17 @@
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.SqlServer;
 using Microsoft.Extensions.Options;
+using ProductivityApi;
+using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
-using ProductivityApi.Jobs;
+using ProductivityApi.Helpers;
 using Serilog;
-using Hangfire;
-using Hangfire.SqlServer;
-using ProductivityApi;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,15 +130,15 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture =
+    System.Globalization.CultureInfo.GetCultureInfo("en-IN");
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 
@@ -162,10 +165,12 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = Array.Empty<IDashboardAuthorizationFilter>()
+});
 
-// Hangfire Jobs
-app.UseHangfireDashboard("/hangfire");
+app.MapControllers();
 
 await app.MapJobsAsync();
 

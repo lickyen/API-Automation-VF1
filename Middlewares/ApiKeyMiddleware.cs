@@ -22,7 +22,8 @@ namespace ProductivityApi.Middlewares
 
         public async Task InvokeAsync(HttpContext context)
         {
-            if (ExcludedPaths.Any(p => context.Request.Path.StartsWithSegments(p)))
+            if (ExcludedPaths.Any(p => context.Request.Path.StartsWithSegments(
+                    p, StringComparison.OrdinalIgnoreCase)))
             {
                 await _next(context);
                 return;

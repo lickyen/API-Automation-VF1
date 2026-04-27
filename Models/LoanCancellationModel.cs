@@ -197,13 +197,8 @@ namespace ProductivityApi.Models
 
     public class LoanCancelReportDto
     {
-        public DateTime FromDt { get; set; }
-        public DateTime ToDt { get; set; }
-
-        public string? Zone { get; set; }
-        public string? MegaZone { get; set; }
-        public string? Status { get; set; }
-        public int? BranchCode { get; set; }
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
     }
 
     public class LoanCancelDeleteDto
