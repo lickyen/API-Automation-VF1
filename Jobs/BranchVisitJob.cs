@@ -31,7 +31,6 @@ namespace ProductivityApi.Jobs
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File(
-                    //Path.Combine(jobLogPath, "log-.txt"),
                     path: "logs/jobLogs/BranchVisitJob/log-.txt",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30)

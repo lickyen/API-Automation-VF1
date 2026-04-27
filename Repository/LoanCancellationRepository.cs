@@ -14,7 +14,7 @@ namespace ProductivityApi.Repository
             _conStr = config.GetConnectionString("DBConn");
         }
 
-        public async Task<int> CreateAsync(LoanCancelCreateDto dto, bool isCash)
+        public async Task<int> CreateAsync(LoanCancelCreateDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -38,10 +38,9 @@ namespace ProductivityApi.Repository
             param.Add("@CancellationType", dto.CancellationType);
             param.Add("@Mode", dto.Mode);
             param.Add("@VistaarCustody", dto.VistaarCustody);
-            param.Add("@PendingTranch", dto.PendingTranch);
+            param.Add("@PendingTranch", dto.PendingTranchCancel);
             param.Add("@EMIPaid", dto.EMIPaid);
             param.Add("@ReasonForCancellation", dto.ReasonForCancellation);
-            param.Add("@IsCashPayment", isCash);
             param.Add("@CreatedBy", dto.CreatedBy);
 
             param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -102,7 +101,6 @@ namespace ProductivityApi.Repository
             return param.Get<int>("@Output");
         }
 
-
         public async Task<int> TakeActionAsync(LoanCancelActionDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -147,6 +145,29 @@ namespace ProductivityApi.Repository
 
             return param.Get<int>("@Output");
         }
+
+        public async Task<int> UpdatePlfStatusAsync(PlfStatusUpdateDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var param = new DynamicParameters();
+
+            param.Add("@ID", dto.Id);
+            param.Add("@Plf_Status", dto.PlfStatus);
+            param.Add("@Plf_Response", dto.PlfResponse);
+            param.Add("@Plf_Remarks", dto.PlfRemarks);
+
+            param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "sp_LoanCancel_UpdatePlfStatus",
+                param,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return param.Get<int>("@Output");
+        }
+
 
         public async Task<LoanCancelRequest?> GetByIdAsync(int id)
         {
@@ -195,5 +216,25 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string fileName)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var param = new DynamicParameters();
+            param.Add("@ReqID", reqId);
+            param.Add("@FileType", fileType);
+            param.Add("@FileName", fileName);
+            param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "sp_LoanCancel_UpdateFilePath",
+                param,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return param.Get<int>("@Output");
+        }
+
     }
 }

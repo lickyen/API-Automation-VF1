@@ -88,6 +88,13 @@ namespace ProductivityApi.Services
             return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "addCustomerEmail", "3");
         }
 
+        public Task<ReturnStatus> CancelLoan(CancelLoanRequest request)
+        {
+            var endPoint = "pff-api/services/createFinanceRest/finance/cancelLoan";
+
+            return SendRequest<ReturnStatus>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
+        }
+
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")
         {
             var apiUrl = $"{_plfconfig.BaseUrl}{endPoint}";
@@ -147,6 +154,7 @@ namespace ProductivityApi.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     log.ErrorMessage = $"Error code: {response.StatusCode}";
+                    throw new HttpRequestException( $"API failed: {response.StatusCode}, Body: {responseBody}");
                 }
 
                 return JsonConvert.DeserializeObject<TResponse>(responseBody);
@@ -155,7 +163,7 @@ namespace ProductivityApi.Services
             catch (Exception ex)
             {
                 log.ErrorMessage = ex.ToString();
-                return default;
+                throw;
             }
             finally
             {

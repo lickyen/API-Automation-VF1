@@ -111,6 +111,7 @@ builder.Services.AddScoped<CustEmailUpdateRepository>();
 builder.Services.AddScoped<WabaRepository>();
 builder.Services.AddScoped<UserLogRepository>();
 builder.Services.AddScoped<LoanCancellationRepository>();
+builder.Services.AddScoped<PLFRepository>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();

@@ -1,51 +1,72 @@
-﻿using ProductivityApi.Helpers;
+﻿using Azure;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
     public class LoanCancellationService
     {
-        private readonly LoanCancellationRepository _repo;
+        private readonly LoanCancellationRepository _repository;
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
+        private readonly AppSettings _appSettings;
+        private readonly PLFRepository _plfRepository;
+        private readonly PLFService _plfService;
 
-        public LoanCancellationService(LoanCancellationRepository repo, EmailService emailService, TemplateService templateService, UserService userService)
+
+
+        public LoanCancellationService(LoanCancellationRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFRepository plfRepository, PLFService plfService)
         {
-            _repo = repo;
+            _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
             _userService = userService;
+            _appSettings = appSettings;
+            _plfRepository = plfRepository;
+            _plfService = plfService;
         }
 
         public async Task<LoanCancelDetailsDto?> GetByIdAsync(int id)
         {
-            var transaction = await _repo.GetByIdAsync(id);
+            var transaction = await _repository.GetByIdAsync(id);
             if (transaction == null) return null;
 
-            var logs = await _repo.GetLogsAsync(id);
+            var logs = await _repository.GetLogsAsync(id);
+
+            var payments = await _plfRepository.GetPaymentsByLan(transaction.Lan);
 
             return new LoanCancelDetailsDto
             {
                 Transaction = transaction,
-                Logs = logs
+                Logs = logs,
+                Payments = payments
             };
         }
 
         public async Task<List<LoanCancelListDto>> GetByUserAsync(LoanCancelGetByUserDto dto)
         {
-            return await _repo.GetByUserAsync(dto);
+            return await _repository.GetByUserAsync(dto);
         }
 
         public async Task<int> CreateAsync(LoanCancelCreateDto dto)
         {
-            var isCash = IsCashPayment(dto.Lan);
-
-            var id = await _repo.CreateAsync(dto, isCash);
+            var id = await _repository.CreateAsync(dto);
 
             if (id > 0)
             {
+                if (dto.ReqForm != null)
+                {
+                    await UploadBase64FileAsync(id, dto.ReqForm, "ReqForm");
+                }
+
+                if (dto.EmiProof != null)
+                {
+                    await UploadBase64FileAsync(id, dto.EmiProof, "EmiProof");
+                }
+
                 var record = await GetByIdAsync(id);
                 if (record != null)
                 {
@@ -58,11 +79,21 @@ namespace ProductivityApi.Services
 
         public async Task<int> UpdateAsync(LoanCancelUpdateDto dto)
         {
-            var result = await _repo.UpdateAsync(dto);
+            var result = await _repository.UpdateAsync(dto);
 
             if (result > 0)
             {
-                var record = await GetByIdAsync(result);
+                if (dto.ReqForm != null)
+                {
+                    await UploadBase64FileAsync(dto.Id, dto.ReqForm, "ReqForm");
+                }
+
+                if (dto.EmiProof != null)
+                {
+                    await UploadBase64FileAsync(dto.Id, dto.EmiProof, "EmiProof");
+                }
+
+                var record = await GetByIdAsync(dto.Id);
                 if (record != null)
                 {
                     await NotifyPendingUserAsync(record);
@@ -75,14 +106,13 @@ namespace ProductivityApi.Services
 
         public async Task<int> DeleteAsync(LoanCancelDeleteDto dto)
         {
-            var result = await _repo.DeleteAsync(dto);
+            var result = await _repository.DeleteAsync(dto);
 
             return result;
         }
-
         public async Task<int> TakeActionAsync(LoanCancelActionDto dto)
         {
-            var result = await _repo.TakeActionAsync(dto);
+            var result = await _repository.TakeActionAsync(dto);
             if (result < 1) return result;
 
             var record = await GetByIdAsync(dto.Id);
@@ -116,42 +146,119 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<int> CopsActionAsync(LoanCancelCopsDto dto)
+        public async Task<(int result, string message)> CopsActionAsync(LoanCancelCopsDto dto)
         {
-            var result = await _repo.CopsActionAsync(dto);
-            if (result < 1) return result;
+            var result = await _repository.CopsActionAsync(dto);
+            if (result < 1)
+                return (result, "Error");
 
             var record = await GetByIdAsync(dto.Id);
-            if (record != null)
+
+            if (record == null)
+                return (result, "Response submitted successfully");
+
+            var hasCashPayment = record.Payments?
+                .Any(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase)) == true;
+
+            var plfStatus = new PlfStatusUpdateDto
             {
-                if (dto.Status == "Loan-Cancelled")
-                {
-                    await NotifyBranchAsync(record, "Completed");
+                Id = dto.Id
+            };
 
-                }
-                else if (dto.Status == "SentBack")
+            string message;
+
+            if (string.Equals(dto.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!hasCashPayment)
                 {
-                    await NotifyPendingUserAsync(record);
+                    try
+                    {
+                        var cancelRequest = BuildCancelLoanRequest(record);
+                        var response = await _plfService.CancelLoan(cancelRequest);
+
+                        if (response.returnCode == "0000")
+                        {
+                            plfStatus.PlfStatus = "Success";
+                            plfStatus.PlfResponse = response.returnText;
+
+                            message = "Loan cancelled successfully in Pennant";
+                        }
+                        else
+                        {
+                            plfStatus.PlfStatus = "Failed";
+                            plfStatus.PlfResponse = response.returnText;
+
+                            message = "Loan cancellation failed in Pennant";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        plfStatus.PlfStatus = "Failed";
+                        plfStatus.PlfResponse = ex.Message;
+
+                        message = "Response submitted, but Pennant cancellation failed.";
+                    }
+                }
+                else
+                {
+                    plfStatus.PlfStatus = "Skipped";
+                    plfStatus.PlfRemarks = "Cash payment found. Manual cancellation required.";
+
+                    message = plfStatus.PlfRemarks;
                 }
 
-                else if (dto.Status == "Rejected")
-                {
-                    await NotifyBranchAsync(record, "Rejected");
-                }
+                await _repository.UpdatePlfStatusAsync(plfStatus);
+
+                await NotifyBranchAsync(record, dto.Status);
+
+                return (result, message);
+            }
+            else if (string.Equals(dto.Status, "SentBack", StringComparison.OrdinalIgnoreCase))
+            {
+                await NotifyPendingUserAsync(record);
+                message = "Request sent back successfully";
+            }
+            else if (string.Equals(dto.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                await NotifyBranchAsync(record, dto.Status);
+                message = "Request rejected successfully";
+            }
+            else
+            {
+                message = "Response submitted successfully";
             }
 
-            return result;
+            return (result, message);
+        }
+        private CancelLoanRequest BuildCancelLoanRequest(LoanCancelDetailsDto record)
+        {
+            var txn = record.Transaction;
+
+            return new CancelLoanRequest
+            {
+                financeSchedule = new financeSchedule
+                {
+                    finReference = txn.Lan 
+                },
+                reasonHeader = new ReasonHeader
+                {
+                    remarks = txn.ReasonForCancellation ?? "Loan cancelled via Productivity App",
+                    cancelType = "C",
+                    reasonDetails = new List<ReasonDetail>
+                    {
+                        new ReasonDetail
+                        {
+                            reasonCode = "LOANCANC"
+                        }
+                    }
+                }
+            };
         }
 
         public async Task<byte[]?> GetReportExcelAsync(LoanCancelReportDto dto)
         {
-            var data = await _repo.GetReportAsync(dto);
+            var data = await _repository.GetReportAsync(dto);
             return ExcelHelper.GenerateExcel(data, "Data");
-        }
-
-        public bool IsCashPayment(string lan)
-        {
-            return false;
         }
 
         private async Task NotifyPendingUserAsync(LoanCancelDetailsDto record)
@@ -259,6 +366,55 @@ namespace ProductivityApi.Services
                     );
                 }
             }
+        }
+
+        public async Task<int> UploadBase64FileAsync(int reqId, LoanCancelFileUploadDto fileDto, string fileType)
+        {
+            if (fileDto == null || string.IsNullOrEmpty(fileDto.Base64))
+                throw new Exception("File is empty");
+
+            var folderPath = _appSettings.FilePaths.LoanCancelFilePath;
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            var extension = Path.GetExtension(fileDto.FileName);
+            if (string.IsNullOrEmpty(extension))
+                throw new Exception("Invalid file extension");
+
+            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
+            
+            if (!allowedExtensions.Contains(extension.ToLower()))
+                throw new Exception("Invalid file format");
+
+            var fileName = $"{reqId}_{fileType}{extension}";
+            var fullPath = Path.Combine(folderPath, fileName);
+
+            var base64Data = fileDto.Base64.Contains(",")
+                ? fileDto.Base64.Split(',')[1]
+                : fileDto.Base64;
+
+            byte[] fileBytes;
+            try
+            {
+                fileBytes = Convert.FromBase64String(base64Data);
+            }
+            catch
+            {
+                throw new Exception("Invalid Base64 string");
+            }
+
+            if (File.Exists(fullPath))
+                File.Delete(fullPath);
+
+            await File.WriteAllBytesAsync(fullPath, fileBytes);
+
+            var result = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
+
+            if (result <= 0)
+                throw new Exception("Failed to update file path in DB");
+
+            return result;
         }
     }
 }

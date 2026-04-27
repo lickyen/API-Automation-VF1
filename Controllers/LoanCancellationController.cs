@@ -96,11 +96,11 @@ namespace ProductivityApi.Controllers
         [HttpPost("copsAction")]
         public async Task<IActionResult> CopsAction([FromBody] LoanCancelCopsDto dto)
         {
-            var result = await _service.CopsActionAsync(dto);
+            var (result, message) = await _service.CopsActionAsync(dto);
 
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Processed successfully")),
+                > 0 => Ok(new Response(true, null, message ?? "Processed successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "Error occurred"))
             };

@@ -8,25 +8,19 @@ namespace ProductivityApi.Services
     public class WabaService
     {
         private readonly WabaRepository _repository;
-        private readonly EmailService _emailService;
-        private readonly TemplateService _templateService;
-        private readonly AppSettings _appSettings;
 
         private static readonly Serilog.ILogger _logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.File(
-                path: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs/WABA/log-.txt"),
+                path: "logs/WABA/log-.txt",
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30
             )
             .CreateLogger();
 
-        public WabaService(WabaRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, ILogger<WabaService> logger)
+        public WabaService(WabaRepository repository)
         {
             _repository = repository;
-            _emailService = emailService;
-            _templateService = templateService;
-            _appSettings = appSettings;
         }
         public async Task<int> SaveWabaLogAsync(WabaModel dto)
         {
