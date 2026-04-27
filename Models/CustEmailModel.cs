@@ -8,7 +8,7 @@
         public string Mobile { get; set; }
         public DateTime? DOB { get; set; }
         public string Address { get; set; }
-        public string Aadhaar { get; set; }
+        public string Aadhar { get; set; }
         public string Old_EmailId { get; set; }
         public string New_EmailId { get; set; }
         public string PAN { get; set; }
