@@ -143,13 +143,29 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionMiddleware>();
 
 // Serilog Request Logging
+//app.UseSerilogRequestLogging(options =>
+//{
+//    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+//    options.GetLevel = (httpContext, elapsed, ex) =>
+//        ex != null || httpContext.Response.StatusCode >= 500
+//            ? Serilog.Events.LogEventLevel.Error
+//            : Serilog.Events.LogEventLevel.Information;
+//});
+
+
 app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     options.GetLevel = (httpContext, elapsed, ex) =>
-        ex != null || httpContext.Response.StatusCode >= 500
+    {
+        // Silence Hangfire dashboard polling noise
+        if (httpContext.Request.Path.StartsWithSegments("/hangfire"))
+            return Serilog.Events.LogEventLevel.Verbose;
+
+        return ex != null || httpContext.Response.StatusCode >= 500
             ? Serilog.Events.LogEventLevel.Error
             : Serilog.Events.LogEventLevel.Information;
+    };
 });
 
 //app.UseMiddleware<LoggingMiddleware>();
