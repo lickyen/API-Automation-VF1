@@ -13,8 +13,11 @@
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
         public DateTime? DisbDate { get; set; }
+        public List<string?> DisbModes { get; set; } = new List<string?>();
         public Decimal? LoanAmount { get; set; }
         public Decimal? DisbAmount { get; set; }
+        public Decimal? NetDisbAmount { get; set; }
+        public Decimal? PendingAmount { get; set; }
         public Decimal? TotalOutstanding { get; set; }
         public Decimal? PrincipalOutstanding { get; set; }
         public double? Dpd { get; set; }

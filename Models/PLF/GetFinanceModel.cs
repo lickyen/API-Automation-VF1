@@ -207,6 +207,8 @@
         public bool holdDisbursement { get; set; }
         public long disbInstId { get; set; }
         public string disbStatus { get; set; }
+        public decimal NetDisbursementAmount { get; set; }
+
     }
 
 

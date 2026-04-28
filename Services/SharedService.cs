@@ -50,6 +50,23 @@ namespace ProductivityApi.Services
             data.Dpd = loan.financeSchedule?.summary?.dpd;
             data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);
             data.DisbAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finCurrAssetValue / 100);
+
+            decimal totalNetDisbAmount = loan.disbursement != null
+                ? loan.disbursement.Sum(d => d.NetDisbursementAmount)
+                : 0m;
+
+            data.NetDisbAmount = Convert.ToDecimal(totalNetDisbAmount / 100);
+            data.PendingAmount = data.LoanAmount - data.DisbAmount;
+
+            var disbModes = loan.disbursement?
+                .Where(d => !string.IsNullOrEmpty(d.disbType))
+                .OrderBy(d => d.disbDate)
+                .Select(d => d.disbType)
+                .ToList()
+                ?? new List<string?>();
+
+            data.DisbModes = disbModes;
+
             data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
             data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
 
