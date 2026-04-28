@@ -180,11 +180,11 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<LoanCancelListDto>> GetByUserAsync(LoanCancelGetByUserDto dto)
+        public async Task<List<LoanCancelRequest>> GetByUserAsync(LoanCancelGetByUserDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
-            var data = await conn.QueryAsync<LoanCancelListDto>(
+            var data = await conn.QueryAsync<LoanCancelRequest>(
                 "SP_LoanCancel_GetLansByUserID",
                 new { dto.UserId, dto.Status, dto.Role },
                 commandType: CommandType.StoredProcedure

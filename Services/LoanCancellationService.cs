@@ -46,7 +46,7 @@ namespace ProductivityApi.Services
             };
         }
 
-        public async Task<List<LoanCancelListDto>> GetByUserAsync(LoanCancelGetByUserDto dto)
+        public async Task<List<LoanCancelRequest>> GetByUserAsync(LoanCancelGetByUserDto dto)
         {
             return await _repository.GetByUserAsync(dto);
         }
