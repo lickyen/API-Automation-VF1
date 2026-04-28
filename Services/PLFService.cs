@@ -11,14 +11,12 @@ namespace ProductivityApi.Services
     public class PLFService
     {
         private readonly string _conStr;
-        private readonly string _visConStr;
         private readonly HttpClient _httpClient;
         private readonly PlfApiSettings _plfconfig;
 
         public PLFService(IConfiguration configuration, HttpClient httpClient, AppSettings appSettings)
         {
             _conStr = configuration.GetConnectionString("DBConn");
-            _visConStr = configuration.GetConnectionString("VisDBConn");
             _httpClient = httpClient;
             _plfconfig = appSettings.PlfApiSettings;
         }
@@ -90,6 +88,13 @@ namespace ProductivityApi.Services
             return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "addCustomerEmail", "3");
         }
 
+        public Task<ReturnStatus> CancelLoan(CancelLoanRequest request)
+        {
+            var endPoint = "pff-api/services/createFinanceRest/finance/cancelLoan";
+
+            return SendRequest<ReturnStatus>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
+        }
+
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")
         {
             var apiUrl = $"{_plfconfig.BaseUrl}{endPoint}";
@@ -149,6 +154,7 @@ namespace ProductivityApi.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     log.ErrorMessage = $"Error code: {response.StatusCode}";
+                    throw new HttpRequestException( $"API failed: {response.StatusCode}, Body: {responseBody}");
                 }
 
                 return JsonConvert.DeserializeObject<TResponse>(responseBody);
@@ -157,7 +163,7 @@ namespace ProductivityApi.Services
             catch (Exception ex)
             {
                 log.ErrorMessage = ex.ToString();
-                return default;
+                throw;
             }
             finally
             {
@@ -174,7 +180,7 @@ namespace ProductivityApi.Services
 
         public async Task LogApiCall(ApiLogModel log)
         {
-            await using var conn = new SqlConnection(_visConStr);
+            await using var conn = new SqlConnection(_conStr);
             await using var cmd = new SqlCommand("SP_Insert_API_Logs", conn)
             {
                 CommandType = CommandType.StoredProcedure

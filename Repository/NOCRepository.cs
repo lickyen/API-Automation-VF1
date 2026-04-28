@@ -68,5 +68,62 @@ namespace ProductivityApi.Repository
 
             return request;
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<NeolotexDisb> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var added = new List<string>();
+            var skipped = new List<string>();
+            try
+            {
+
+            foreach (var dto in dtos)
+            {
+                var status = await connection.ExecuteScalarAsync<int>(
+                    "sp_insert_neolotex_disb",
+                    new
+                    {
+                        dto.sz_loan_account_no,
+                        dto.applicant_type,
+                        dto.branch_code,
+                        dto.branchname,
+                        dto.cluster_name,
+                        dto.state_name,
+                        dto.customerid,
+                        dto.customer_name,
+                        dto.sz_collateral_id,
+                        dto.loan_status,
+                        dto.loanclosure_date,
+                        dto.disbursement_date,
+                        dto.dt_correction,
+                        dto.noc_status,
+                        dto.extraction_dt,
+                        dto.external_reference
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (status == 1)
+                    added.Add(dto.sz_loan_account_no);
+                else
+                    skipped.Add(dto.sz_loan_account_no);
+            }
+            }
+            catch(Exception EX)
+            {
+
+            }
+
+            return new FcRefundBulkUploadResult
+            {
+                Added = added.Count,
+                Skipped = skipped.Count,
+                AddedLans = added,
+                SkippedLans = skipped
+            };
+        }
+
     }
 }

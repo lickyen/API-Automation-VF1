@@ -10,6 +10,9 @@ namespace ProductivityApi.Jobs
     public class BranchVisitJob  : IJob
     {
         public string JobId => "branch-visit-job";
+        public void Register(string cron) =>
+        RecurringJob.AddOrUpdate<BranchVisitJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
+
 
         private readonly Serilog.ILogger _logger;
         private readonly BranchVisitRepository _repository;
@@ -17,11 +20,7 @@ namespace ProductivityApi.Jobs
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
         private const int DUE_DATE = 10;
-        public BranchVisitJob(
-            BranchVisitRepository repository,
-            EmailService emailService,
-            TemplateService templateService,
-            UserService userService)
+        public BranchVisitJob( BranchVisitRepository repository, EmailService emailService, TemplateService templateService, UserService userService)
         {
             _repository = repository;
             _emailService = emailService;
@@ -32,8 +31,7 @@ namespace ProductivityApi.Jobs
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File(
-                    //Path.Combine(jobLogPath, "log-.txt"),
-                    path: "logs/BranchVisitJob/log-.txt",
+                    path: "logs/jobLogs/BranchVisitJob/log-.txt",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30)
                 .CreateLogger();

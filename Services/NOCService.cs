@@ -1,4 +1,5 @@
-﻿using ProductivityApi.Repository;
+﻿using ProductivityApi.Models;
+using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
@@ -36,5 +37,8 @@ namespace ProductivityApi.Services
 
             return await _repository.GetRequestById(id);
         }
+
+        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<NeolotexDisb> dtos)
+          => await _repository.AddLanAsync(dtos);
     }
 }

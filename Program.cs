@@ -1,14 +1,17 @@
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.SqlServer;
 using Microsoft.Extensions.Options;
+using ProductivityApi;
+using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
-using ProductivityApi.Jobs;
+using ProductivityApi.Helpers;
 using Serilog;
-using Hangfire;
-using Hangfire.SqlServer;
-using ProductivityApi;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,7 +55,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.File(
-        path: "logs/log-.txt",
+        path: "logs/appLogs/log-.txt",
         rollingInterval: RollingInterval.Day,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
         retainedFileCountLimit: 30
@@ -90,6 +93,8 @@ builder.Services.AddScoped<FcRefundService>();
 builder.Services.AddScoped<LcRefundService>();
 builder.Services.AddScoped<LegalBillingService>();
 builder.Services.AddScoped<CustEmailUpdateService>();
+builder.Services.AddScoped<WabaService>();
+builder.Services.AddScoped<LoanCancellationService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -106,13 +111,17 @@ builder.Services.AddScoped<FcRefundRepository>();
 builder.Services.AddScoped<LcRefundRepository>();
 builder.Services.AddScoped<LegalBillingRepository>();
 builder.Services.AddScoped<CustEmailUpdateRepository>();
+builder.Services.AddScoped<WabaRepository>();
 builder.Services.AddScoped<UserLogRepository>();
+builder.Services.AddScoped<LoanCancellationRepository>();
+builder.Services.AddScoped<PLFRepository>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
+builder.Services.AddScoped<IJob, NOCJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -120,6 +129,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture =
+    System.Globalization.CultureInfo.GetCultureInfo("en-IN");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -131,13 +143,29 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionMiddleware>();
 
 // Serilog Request Logging
+//app.UseSerilogRequestLogging(options =>
+//{
+//    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+//    options.GetLevel = (httpContext, elapsed, ex) =>
+//        ex != null || httpContext.Response.StatusCode >= 500
+//            ? Serilog.Events.LogEventLevel.Error
+//            : Serilog.Events.LogEventLevel.Information;
+//});
+
+
 app.UseSerilogRequestLogging(options =>
 {
     options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     options.GetLevel = (httpContext, elapsed, ex) =>
-        ex != null || httpContext.Response.StatusCode >= 500
+    {
+        // Silence Hangfire dashboard polling noise
+        if (httpContext.Request.Path.StartsWithSegments("/hangfire"))
+            return Serilog.Events.LogEventLevel.Verbose;
+
+        return ex != null || httpContext.Response.StatusCode >= 500
             ? Serilog.Events.LogEventLevel.Error
             : Serilog.Events.LogEventLevel.Information;
+    };
 });
 
 //app.UseMiddleware<LoggingMiddleware>();
@@ -153,10 +181,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = Array.Empty<IDashboardAuthorizationFilter>()
+});
+
 app.MapControllers();
 
-// Hangfire Jobs
-app.UseHangfireDashboard("/hangfire");
 await app.MapJobsAsync();
 
 app.Run();

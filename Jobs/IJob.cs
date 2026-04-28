@@ -4,5 +4,6 @@
     {
         string JobId { get; }
         Task ExecuteAsync(CancellationToken ct);
+        void Register(string cron); // each job knows its own type
     }
 }

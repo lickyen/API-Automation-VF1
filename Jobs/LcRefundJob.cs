@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using Hangfire;
+using Npgsql;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 using Serilog;
@@ -8,6 +9,9 @@ namespace ProductivityApi.Jobs
     public class LcRefundJob : IJob
     {
         public string JobId => "lc-refund-job";
+
+        public void Register(string cron) =>
+        RecurringJob.AddOrUpdate<LcRefundJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
         private readonly Serilog.ILogger _logger;
         private readonly LcRefundService _service;
@@ -22,7 +26,7 @@ namespace ProductivityApi.Jobs
                 .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.File(
-                    path: "logs/LcRefundJob/log-.txt",
+                    path: "logs/jobLogs/LcRefundJob/log-.txt",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30)
                 .CreateLogger();
