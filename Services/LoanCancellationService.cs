@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
@@ -367,54 +368,44 @@ namespace ProductivityApi.Services
                 }
             }
         }
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
+        {
+            return await FileHelper.ReadFileAsync(
+                _appSettings.FilePaths.LoanCancelFilePath,
+                fileName
+            );
+        }
 
         public async Task<int> UploadBase64FileAsync(int reqId, LoanCancelFileUploadDto fileDto, string fileType)
         {
-            if (fileDto == null || string.IsNullOrEmpty(fileDto.Base64))
-                throw new Exception("File is empty");
+            if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
+                throw new ArgumentException("File is empty");
 
             var folderPath = _appSettings.FilePaths.LoanCancelFilePath;
 
-            if (!Directory.Exists(folderPath))
-                Directory.CreateDirectory(folderPath);
+            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
 
             var extension = Path.GetExtension(fileDto.FileName);
-            if (string.IsNullOrEmpty(extension))
-                throw new Exception("Invalid file extension");
-
-            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
-            
-            if (!allowedExtensions.Contains(extension.ToLower()))
-                throw new Exception("Invalid file format");
 
             var fileName = $"{reqId}_{fileType}{extension}";
-            var fullPath = Path.Combine(folderPath, fileName);
+            var fullPathFileName = fileName;
 
-            var base64Data = fileDto.Base64.Contains(",")
-                ? fileDto.Base64.Split(',')[1]
-                : fileDto.Base64;
+            var result = await FileHelper.SaveBase64FileAsync(
+                folderPath,
+                fullPathFileName,
+                fileDto.Base64,
+                allowedExtensions
+            );
 
-            byte[] fileBytes;
-            try
-            {
-                fileBytes = Convert.FromBase64String(base64Data);
-            }
-            catch
-            {
-                throw new Exception("Invalid Base64 string");
-            }
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
 
-            if (File.Exists(fullPath))
-                File.Delete(fullPath);
+            var dbResult = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
 
-            await File.WriteAllBytesAsync(fullPath, fileBytes);
+            if (dbResult <= 0)
+                throw new InvalidOperationException("Failed to update file path in DB");
 
-            var result = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
-
-            if (result <= 0)
-                throw new Exception("Failed to update file path in DB");
-
-            return result;
+            return dbResult;
         }
     }
 }
