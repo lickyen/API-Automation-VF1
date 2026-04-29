@@ -23,6 +23,11 @@ namespace ProductivityApi.Models
         public int? AdvocateId { get; set; }
         public int? LegalCategoryId { get; set; }
         public decimal? PaymentAmount { get; set; }
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
+        public string? CancelledChequeFilePath { get; set; }
         public string? Remarks { get; set; }
         public string? Status { get; set; }
         public string? PendingRole { get; set; }
@@ -96,6 +101,7 @@ namespace ProductivityApi.Models
         public string? AdvocateName { get; set; }
         public string? LegalCategory { get; set; }
         public string? Status { get; set; }
+        public decimal PaymentAmount { get; set; }
         public string? PendingRole { get; set; }
         public string? PendingUser { get; set; }
         public DateTime CreatedDate { get; set; }
@@ -126,6 +132,12 @@ namespace ProductivityApi.Models
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
         public string? Remarks { get; set; }
+        [Required]
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
+        public string? CancelledChequeFilePath { get; set; }
 
     }
 
@@ -145,6 +157,11 @@ namespace ProductivityApi.Models
         public int? LegalCategoryId { get; set; }
         public decimal? PaymentAmount { get; set; }
         public string? Remarks { get; set; }
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
+        public string? CancelledChequeFilePath { get; set; }
     }
 
     public class LegalBillingActionDto
@@ -166,13 +183,23 @@ namespace ProductivityApi.Models
         [Required]
         public int Id { get; set; }
         [Required]
-        public decimal PaymentAmount { get; set; }
-        [Required]
         public string PaymentStatus { get; set; } = string.Empty;
-        [Required]
-        public string ModifiedBy { get; set; } = string.Empty;
+        public decimal? PaymentAmount { get; set; }
         public string? PaymentRemarks { get; set; }
         public string? Utr { get; set; }
+        public DateOnly? PaymentDate { get; set; }
+        public decimal? InvoiceAmount { get; set; }
+        public LegalBillingFileUploadDto? InvoiceCopy { get; set; }
+        [Required]
+        public string ModifiedBy { get; set; } = string.Empty;
+    }
+
+    public class LegalBillingFileUploadDto
+    {
+        [Required]
+        public string FileName { get; set; } = string.Empty;
+        [Required]
+        public string Base64 { get; set; } = string.Empty;
     }
 
     public class LegalBillingGetByUserDto

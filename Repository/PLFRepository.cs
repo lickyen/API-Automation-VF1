@@ -7,16 +7,21 @@ namespace ProductivityApi.Repository
     public class PLFRepository
     {
         private readonly string _plfConStr;
+        private readonly ILogger<PLFRepository> _logger;
 
-        public PLFRepository(IConfiguration configuration)
+        public PLFRepository(IConfiguration configuration, ILogger<PLFRepository> logger)
         {
             _plfConStr = configuration.GetConnectionString("PlfDBConn");
+            _logger = logger;
         }
         public async Task<List<PLFPayment>> GetPaymentsByLan(string lan)
         {
             var pastPayments = new List<PLFPayment>();
 
-            var sqlQuery = @"SELECT 
+            try
+            {
+
+                var sqlQuery = @"SELECT 
 	                               HDR.RECEIPTID,
 	                               HDR.RECEIPTMODE,
 	                               HDR.RECEIPTAMOUNT,
@@ -44,6 +49,13 @@ namespace ProductivityApi.Repository
                 };
 
                 pastPayments.Add(payment);
+            }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching payments for LAN: {Lan}", lan);
+                return new List<PLFPayment>();
             }
 
             return pastPayments;

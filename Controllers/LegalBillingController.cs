@@ -179,9 +179,12 @@ namespace ProductivityApi.Controllers
         {
             var newId = await _service.CreateLegalBillingAsync(dto);
 
-            return newId > 0
-                ? Ok(new Response(true, new { newId = newId }, "Legal billing created successfully"))
-                : StatusCode(500, new Response(false, null, "Failed to create legal billing"));
+            return newId switch
+            {
+                > 0 => Ok(new Response(true, new { newId = newId }, "Legal billing created successfully")),
+                - 1 => Conflict(new Response(false, null, "A request with the same LAN, Advocate and Legal Category already exists")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
 
         [HttpPost("resubmit")]

@@ -190,6 +190,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@Status", LegalBillingStatus.Initiated);
             parameters.Add("@CreatedBy", dto.CreatedBy);
+            parameters.Add("@PaymentType", dto.PaymentType);
+            parameters.Add("@BankAcNo", dto.BankAcNo);
+            parameters.Add("@BankName", dto.BankName);
+            parameters.Add("@IFSC", dto.Ifsc);
+            parameters.Add("@CancelledCheque_FilePath", dto.CancelledChequeFilePath);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
@@ -223,6 +228,11 @@ namespace ProductivityApi.Repository
                     dto.LegalCategoryId,
                     dto.PaymentAmount,
                     dto.Remarks,
+                    dto.PaymentType,
+                    dto.BankAcNo,
+                    dto.BankName,
+                    dto.Ifsc,
+                    dto.CancelledChequeFilePath,
                     Status = LegalBillingStatus.Initiated,
                     UpdatedBy = dto.ModifiedBy
                 },
@@ -247,7 +257,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto, string nextStatus)
+        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto, string nextStatus, string invoicePath)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -261,6 +271,11 @@ namespace ProductivityApi.Repository
                     dto.PaymentStatus,
                     dto.PaymentRemarks,
                     dto.Utr,
+
+                    PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
+                    dto.InvoiceAmount,
+                    InvoiceFilePath = invoicePath,
+
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy
                 },

@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using ProductivityApi.Constants;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
@@ -10,10 +11,13 @@ namespace ProductivityApi.Services
     public class LegalBillingService
     {
         private readonly LegalBillingRepository _repository;
+        private readonly string _filePath;
 
-        public LegalBillingService(LegalBillingRepository repository)
+
+        public LegalBillingService(LegalBillingRepository repository, AppSettings appSettings)
         {
             _repository = repository;
+            _filePath = appSettings.FilePaths.LegalBillingFilePath;
         }
 
         // ─────────────────────────────────────────────
@@ -100,7 +104,31 @@ namespace ProductivityApi.Services
             if (nextStatus is null)
                 return -2;
 
-            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus);
+            string? invoicePath = null;
+
+            if (dto.InvoiceCopy != null && !string.IsNullOrEmpty(dto.InvoiceCopy.Base64))
+            {
+                try
+                {
+                    var extension = Path.GetExtension(dto.InvoiceCopy.FileName);
+                    var fileName = $"{dto.Id}_Invoice{extension}";
+                    var fullPath = Path.Combine(_filePath, fileName);
+
+                    if (!Directory.Exists(_filePath))
+                        Directory.CreateDirectory(_filePath);
+
+                    var bytes = Convert.FromBase64String(dto.InvoiceCopy.Base64);
+                    await File.WriteAllBytesAsync(fullPath, bytes);
+
+                    invoicePath = fileName; 
+                }
+                catch
+                {
+                    return -3; // invalid file / base64
+                }
+            }
+
+            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus, invoicePath);
         }
         private static string? ResolveNextStatus(string role, string action, string? currentStatus)
         {
