@@ -13,9 +13,10 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
-        private readonly AppSettings _appSettings;
         private readonly PLFRepository _plfRepository;
         private readonly PLFService _plfService;
+        private readonly string _filePath;
+
 
 
 
@@ -25,9 +26,9 @@ namespace ProductivityApi.Services
             _emailService = emailService;
             _templateService = templateService;
             _userService = userService;
-            _appSettings = appSettings;
             _plfRepository = plfRepository;
             _plfService = plfService;
+            _filePath = appSettings.FilePaths.LegalBillingFilePath;
         }
 
         public async Task<LoanCancelDetailsDto?> GetByIdAsync(int id)
@@ -371,17 +372,15 @@ namespace ProductivityApi.Services
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
             return await FileHelper.ReadFileAsync(
-                _appSettings.FilePaths.LoanCancelFilePath,
+                _filePath,
                 fileName
             );
         }
 
-        public async Task<int> UploadBase64FileAsync(int reqId, LoanCancelFileUploadDto fileDto, string fileType)
+        public async Task<int> UploadBase64FileAsync(int reqId, FileUploadBase64 fileDto, string fileType)
         {
             if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
                 throw new ArgumentException("File is empty");
-
-            var folderPath = _appSettings.FilePaths.LoanCancelFilePath;
 
             var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
 
@@ -391,7 +390,7 @@ namespace ProductivityApi.Services
             var fullPathFileName = fileName;
 
             var result = await FileHelper.SaveBase64FileAsync(
-                folderPath,
+                _filePath,
                 fullPathFileName,
                 fileDto.Base64,
                 allowedExtensions

@@ -194,7 +194,6 @@ namespace ProductivityApi.Repository
             parameters.Add("@BankAcNo", dto.BankAcNo);
             parameters.Add("@BankName", dto.BankName);
             parameters.Add("@IFSC", dto.Ifsc);
-            parameters.Add("@CancelledCheque_FilePath", dto.CancelledChequeFilePath);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
@@ -232,7 +231,6 @@ namespace ProductivityApi.Repository
                     dto.BankAcNo,
                     dto.BankName,
                     dto.Ifsc,
-                    dto.CancelledChequeFilePath,
                     Status = LegalBillingStatus.Initiated,
                     UpdatedBy = dto.ModifiedBy
                 },
@@ -273,7 +271,6 @@ namespace ProductivityApi.Repository
                     dto.Utr,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     dto.InvoiceAmount,
-                    InvoiceFilePath = dto.InvoiceCopyFilePath,
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy
                 },
@@ -367,6 +364,25 @@ namespace ProductivityApi.Repository
                 },
                 commandType: CommandType.StoredProcedure
             );
+        }
+
+        public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string fileName)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var param = new DynamicParameters();
+            param.Add("@ReqID", reqId);
+            param.Add("@FileType", fileType);
+            param.Add("@FileName", fileName);
+            param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "sp_LegalBilling_UpdateFilePath",
+                param,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return param.Get<int>("@Output");
         }
 
     }

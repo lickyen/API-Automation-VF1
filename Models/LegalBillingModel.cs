@@ -35,6 +35,7 @@ namespace ProductivityApi.Models
         public string? PaymentStatus { get; set; }
         public string? PaymentRemarks { get; set; }
         public string? Utr { get; set; }
+        public DateOnly? PaymentDate { get; set; }
         public DateTime CreatedDate { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
@@ -137,7 +138,7 @@ namespace ProductivityApi.Models
         public string? BankAcNo { get; set; }
         public string? BankName { get; set; }
         public string? Ifsc { get; set; }
-        public string? CancelledChequeFilePath { get; set; }
+        public FileUploadBase64? CancelledChequeFile { get; set; }
 
     }
 
@@ -161,7 +162,7 @@ namespace ProductivityApi.Models
         public string? BankAcNo { get; set; }
         public string? BankName { get; set; }
         public string? Ifsc { get; set; }
-        public string? CancelledChequeFilePath { get; set; }
+        public FileUploadBase64? CancelledChequeFile { get; set; }
     }
 
     public class LegalBillingActionDto
@@ -188,7 +189,7 @@ namespace ProductivityApi.Models
         public string? Utr { get; set; }
         public DateOnly? PaymentDate { get; set; }
         public decimal? InvoiceAmount { get; set; }
-        public string? InvoiceCopyFilePath { get; set; }
+        public FileUploadBase64? InvoiceFile { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
     }

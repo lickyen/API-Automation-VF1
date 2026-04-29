@@ -65,7 +65,17 @@ namespace ProductivityApi.Services
 
         public async Task<int> CreateLegalBillingAsync(LegalBillingCreateDto dto)
         {
-            return await _repository.CreateLegalBillingAsync(dto);
+            var result =  await _repository.CreateLegalBillingAsync(dto);
+
+            if (result > 0)
+            {
+                if (dto.CancelledChequeFile != null)
+                {
+                    await UploadBase64FileAsync(result, dto.CancelledChequeFile, "CancelledCheque");
+                }
+            }
+
+            return result;
         }
 
         public async Task<int> ResubmitLegalBillingAsync(LegalBillingResubmitDto dto)
@@ -77,7 +87,17 @@ namespace ProductivityApi.Services
             if (!current.Transaction.Status.EndsWith("SentBack", StringComparison.OrdinalIgnoreCase))
                 return -2;
 
-            return await _repository.ResubmitLegalBillingAsync(dto);
+            var result = await _repository.ResubmitLegalBillingAsync(dto);
+
+            if (result > 0)
+            {
+                if (dto.CancelledChequeFile != null)
+                {
+                    await UploadBase64FileAsync(result, dto.CancelledChequeFile, "CancelledCheque");
+                }
+            }
+
+            return result;  
         }
 
         public async Task<int> UpdateLegalBillingStatusAsync(LegalBillingActionDto dto)
@@ -104,7 +124,16 @@ namespace ProductivityApi.Services
             if (nextStatus is null)
                 return -2;
 
-            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus);
+            var result =  await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus);
+
+            if (result > 0)
+            {
+                if (dto.InvoiceFile != null)
+                {
+                    await UploadBase64FileAsync(result, dto.InvoiceFile, "Invoice");
+                }
+            }
+            return result;
         }
 
         public async Task<int> UpdateLegalBillingFinanceAsync(LegalBillingUpdateFinanceDto dto)
@@ -182,6 +211,37 @@ namespace ProductivityApi.Services
 
             return ExcelHelper.GenerateExcel(data, "Data");
         }
+
+        public async Task<int> UploadBase64FileAsync(int reqId, FileUploadBase64 fileDto, string fileType)
+        {
+            if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
+                throw new ArgumentException("File is empty");
+
+            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
+
+            var extension = Path.GetExtension(fileDto.FileName);
+
+            var fileName = $"{reqId}_{fileType}{extension}";
+            var fullPathFileName = fileName;
+
+            var result = await FileHelper.SaveBase64FileAsync(
+                _filePath,
+                fullPathFileName,
+                fileDto.Base64,
+                allowedExtensions
+            );
+
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
+
+            var dbResult = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
+
+            if (dbResult <= 0)
+                throw new InvalidOperationException("Failed to update file path in DB");
+
+            return dbResult;
+        }
+
     }
 
 }

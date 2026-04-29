@@ -127,8 +127,8 @@ namespace ProductivityApi.Models
         [Required]
         public string CreatedBy { get; set; }
 
-        public LoanCancelFileUploadDto? EmiProof { get; set; }
-        public LoanCancelFileUploadDto? ReqForm { get; set; }
+        public FileUploadBase64? EmiProof { get; set; }
+        public FileUploadBase64? ReqForm { get; set; }
     }
     public class LoanCancelUpdateDto
     {
@@ -146,8 +146,8 @@ namespace ProductivityApi.Models
 
         [Required]
         public string UpdatedBy { get; set; }
-        public LoanCancelFileUploadDto? EmiProof { get; set; }
-        public LoanCancelFileUploadDto? ReqForm { get; set; }
+        public FileUploadBase64? EmiProof { get; set; }
+        public FileUploadBase64? ReqForm { get; set; }
     }
 
     public class LoanCancelGetByUserDto
@@ -206,13 +206,6 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
         public string UpdatedBy { get; set; }
     }
-
-    public class LoanCancelFileUploadDto
-    {
-        public string FileName { get; set; }
-        public string Base64 { get; set; }
-    }
-
     public class LoanCancelCashPaymentDto
     {
         public int paymentCount { get; set; }
