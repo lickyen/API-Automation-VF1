@@ -257,7 +257,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto, string nextStatus, string invoicePath)
+        public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto, string nextStatus)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -267,15 +267,33 @@ namespace ProductivityApi.Repository
                 new
                 {
                     dto.Id,
-                    dto.PaymentAmount,
                     dto.PaymentStatus,
+                    dto.PaymentAmount,
                     dto.PaymentRemarks,
                     dto.Utr,
-
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     dto.InvoiceAmount,
-                    InvoiceFilePath = invoicePath,
+                    InvoiceFilePath = dto.InvoiceCopyFilePath,
+                    Status = nextStatus,
+                    ModifiedBy = dto.ModifiedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
 
+
+        public async Task<int> UpdateLegalBillingFinanceAsync(LegalBillingUpdateFinanceDto dto, string nextStatus)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_LegalBilling_UpdateFinance",
+                new
+                {
+                    dto.Id,
+                    dto.Utr,
+                    PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy
                 },

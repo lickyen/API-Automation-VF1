@@ -83,11 +83,11 @@ namespace ProductivityApi.Services
         public async Task<int> UpdateLegalBillingStatusAsync(LegalBillingActionDto dto)
 
         {
-            var billingDetails = await _repository.GetLegalBillingByIdAsync(dto.Id);
-            if (billingDetails is null)
+            var data = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (data is null)
                 return -1;
 
-            var nextStatus = ResolveNextStatus(dto.Role, dto.Action, billingDetails.Transaction.Status);
+            var nextStatus = ResolveNextStatus(dto.Role, dto.Action, data);
             if (nextStatus is null)
                 return -2;
 
@@ -96,45 +96,38 @@ namespace ProductivityApi.Services
 
         public async Task<int> UpdateLegalBillingPaymentAsync(LegalBillingUpdatePaymentDto dto)
         {
-            var billingDetails = await _repository.GetLegalBillingByIdAsync(dto.Id);
-            if (billingDetails is null)
+            var data = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (data is null)
                 return -1;
 
-            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, billingDetails.Transaction.Status);
+            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, data);
             if (nextStatus is null)
                 return -2;
 
-            string? invoicePath = null;
-
-            if (dto.InvoiceCopy != null && !string.IsNullOrEmpty(dto.InvoiceCopy.Base64))
-            {
-                try
-                {
-                    var extension = Path.GetExtension(dto.InvoiceCopy.FileName);
-                    var fileName = $"{dto.Id}_Invoice{extension}";
-                    var fullPath = Path.Combine(_filePath, fileName);
-
-                    if (!Directory.Exists(_filePath))
-                        Directory.CreateDirectory(_filePath);
-
-                    var bytes = Convert.FromBase64String(dto.InvoiceCopy.Base64);
-                    await File.WriteAllBytesAsync(fullPath, bytes);
-
-                    invoicePath = fileName; 
-                }
-                catch
-                {
-                    return -3; // invalid file / base64
-                }
-            }
-
-            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus, invoicePath);
+            return await _repository.UpdateLegalBillingPaymentAsync(dto, nextStatus);
         }
-        private static string? ResolveNextStatus(string role, string action, string? currentStatus)
+
+        public async Task<int> UpdateLegalBillingFinanceAsync(LegalBillingUpdateFinanceDto dto)
+        {
+            var data = await _repository.GetLegalBillingByIdAsync(dto.Id);
+            if (data is null)
+                return -1;
+
+            var nextStatus = ResolveNextStatus(LegalBillingRoles.Finance, "", data);
+            if (nextStatus is null)
+                return -2;
+
+            return await _repository.UpdateLegalBillingFinanceAsync(dto, nextStatus);
+        }
+
+        private static string? ResolveNextStatus(string role, string action, LegalBillingDetailsDto data)
         {
             role = role.Trim().ToUpperInvariant();
             action = action.Trim().ToLowerInvariant();
-            currentStatus ??= string.Empty;
+            string? currentStatus = data?.Transaction?.Status;
+            string? paymentType = data?.Transaction?.PaymentType;
+
+            bool isBeforeService = string.Equals(paymentType, "Before Service", StringComparison.OrdinalIgnoreCase);
 
             return (role, action) switch
             {
@@ -153,8 +146,26 @@ namespace ProductivityApi.Services
                 ("CDSO", "rejected") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSORejected,
                 ("CDSO", "sentback") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSOSentBack,
 
-                // Legal can complete only after CDSO approved
-                ("LEGAL", _) when currentStatus == LegalBillingStatus.CDSOApproved => LegalBillingStatus.Completed,
+                //FINANCE (BEFORE SERVICE)
+                ("FINANCE", "") when currentStatus == LegalBillingStatus.CDSOApproved && isBeforeService
+                        => LegalBillingStatus.FinanceApproved,
+
+                // LEGAL (AFTER SERVICE → CDSOApproved path)
+                // LEGAL (BEFORE SERVICE → FinanceApproved path)
+                ("LEGAL", "payment done")
+                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                        => LegalBillingStatus.Completed,
+
+                ("LEGAL", "cancelled")
+                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                        => LegalBillingStatus.Cancelled,
+
+                ("LEGAL", "payment on hold")
+                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                        => LegalBillingStatus.Pending,
 
                 _ => null
             };

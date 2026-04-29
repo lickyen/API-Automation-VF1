@@ -38,7 +38,11 @@
         public const string CDSORejected = "CDSO-Rejected";
         public const string CDSOSentBack = "CDSO-SentBack";
 
+        public const string FinanceApproved = "Finance-Approved";
+
         public const string Completed = "Completed";
+        public const string Cancelled = "Cancelled";
+        public const string Pending = "Pending";
     }
 
     public static class LegalBillingRoles
@@ -48,5 +52,6 @@
         public const string MZDSH = "MZDSH";
         public const string CDSO = "CDSO";
         public const string Legal = "Legal";
+        public const string Finance = "Finance";
     }
 }

@@ -232,6 +232,20 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        [HttpPost("updateFinance")]
+        public async Task<IActionResult> UpdateLegalBillingFinance([FromBody] LegalBillingUpdateFinanceDto dto)
+        {
+            var result = await _service.UpdateLegalBillingFinanceAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Payment updated successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Action not allowed")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
         [HttpPost("report")]
         public async Task<IActionResult> GetReportExcel([FromBody] LegalBillingReportFilterDto dto)
         {

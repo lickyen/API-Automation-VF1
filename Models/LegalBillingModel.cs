@@ -169,7 +169,6 @@ namespace ProductivityApi.Models
         [Required]
         public int Id { get; set; }
         [Required]
-        [AllowedValues("approved", "rejected", "sentback")]
         public string Action { get; set; } = string.Empty;
         [Required]
         public string Role { get; set; } = string.Empty;
@@ -189,17 +188,21 @@ namespace ProductivityApi.Models
         public string? Utr { get; set; }
         public DateOnly? PaymentDate { get; set; }
         public decimal? InvoiceAmount { get; set; }
-        public LegalBillingFileUploadDto? InvoiceCopy { get; set; }
+        public string? InvoiceCopyFilePath { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
     }
 
-    public class LegalBillingFileUploadDto
+    public class LegalBillingUpdateFinanceDto
     {
         [Required]
-        public string FileName { get; set; } = string.Empty;
+        public int Id { get; set; }
         [Required]
-        public string Base64 { get; set; } = string.Empty;
+        public string Utr { get; set; } = string.Empty;
+        [Required]
+        public DateOnly? PaymentDate { get; set; }
+        [Required]
+        public string ModifiedBy { get; set; } = string.Empty;
     }
 
     public class LegalBillingGetByUserDto
