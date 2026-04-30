@@ -261,14 +261,16 @@ namespace ProductivityApi.Services
             );
         }
 
+        public async Task<IEnumerable<CollectionUserMappingDto>> GetAllocationAsync()
+        {
+            return await _repository.GetAllocationAsync();
+        }
         public async Task<byte[]?> GetAllocationExcelAsync()
         {
-            var data = await _repository.GetAllAllocationsAsync();
-            if (data == null || !data.Any()) return null;
+            var data = await _repository.GetAllocationForExcelAsync();
 
-            return ExcelHelper.GenerateExcel(data, "CDSM_ZDSH_Allocation");
+            return ExcelHelper.GenerateExcel(data, "data");
         }
-
 
         public async Task<int> UpdateAllocationBulkAsync(List<CollectionUserMappingUpdateDto> dtos)
             => await _repository.UpdateAllocationAsync(dtos);

@@ -286,6 +286,18 @@ namespace ProductivityApi.Controllers
             return File(fileBytes, contentType, fileName);
         }
 
+
+        [HttpPost("getUserAllocation")]
+        public async Task<IActionResult> GetAllocationExcel()
+        {
+            var data = await _service.GetAllocationAsync();
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "No data found"));
+
+            return Ok(data);
+        }
+
         [HttpGet("downloadUserAllocation")]
         public async Task<IActionResult> DownloadAllocationExcel()
         {

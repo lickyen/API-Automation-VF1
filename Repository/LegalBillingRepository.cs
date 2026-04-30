@@ -388,7 +388,20 @@ namespace ProductivityApi.Repository
         //  CDSM-ZDSH Allocation
         // ─────────────────────────────────────────────
 
-        public async Task<List<CollectionUserMappingDto>> GetAllAllocationsAsync()
+        public async Task<IEnumerable<dynamic>> GetAllocationForExcelAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<dynamic>(
+                "sp_Get_CDSM_ZDSH_Allocation",
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
+
+        public async Task<IEnumerable<CollectionUserMappingDto>> GetAllocationAsync()
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -398,7 +411,7 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
 
-            return result.ToList();
+            return result;
         }
 
         public async Task<int> UpdateAllocationAsync(List<CollectionUserMappingUpdateDto> dtos)
@@ -406,7 +419,6 @@ namespace ProductivityApi.Repository
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            // Build a DataTable to pass as TVP
             var table = new DataTable();
             table.Columns.Add("BranchID", typeof(string));
             table.Columns.Add("CDSM_ID", typeof(string));
@@ -414,18 +426,30 @@ namespace ProductivityApi.Repository
             table.Columns.Add("ModifiedBy", typeof(string));
 
             foreach (var dto in dtos)
-                table.Rows.Add(dto.BranchId, dto.CdsmId, dto.ZdshId, dto.ModifiedBy);
+            {
+                table.Rows.Add(
+                    dto.BranchId,
+                    dto.CdsmId,
+                    dto.ZdshId,
+                    dto.ModifiedBy
+                );
+            }
 
             var parameters = new DynamicParameters();
+
             parameters.Add("@Allocations", table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
 
-            return await connection.ExecuteScalarAsync<int>(
+            // IMPORTANT: OUTPUT PARAM
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
                 "sp_Update_CDSM_ZDSH_Allocation",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
-        }
 
+            return parameters.Get<int>("@Output");
+        }
 
     }
 }
