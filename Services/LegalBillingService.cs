@@ -93,7 +93,7 @@ namespace ProductivityApi.Services
             {
                 if (dto.CancelledChequeFile != null)
                 {
-                    await UploadBase64FileAsync(result, dto.CancelledChequeFile, "CancelledCheque");
+                    await UploadBase64FileAsync(dto.Id, dto.CancelledChequeFile, "CancelledCheque");
                 }
             }
 
@@ -130,7 +130,7 @@ namespace ProductivityApi.Services
             {
                 if (dto.InvoiceFile != null)
                 {
-                    await UploadBase64FileAsync(result, dto.InvoiceFile, "Invoice");
+                    await UploadBase64FileAsync(dto.Id, dto.InvoiceFile, "Invoice");
                 }
             }
             return result;
