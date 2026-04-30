@@ -24,6 +24,17 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<KotakData?> GetKotakByLanAsync(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<KotakData>(
+                "sp_GetKotakByLan",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
 
     }
 }

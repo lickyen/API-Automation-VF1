@@ -287,7 +287,7 @@ namespace ProductivityApi.Controllers
         }
 
 
-        [HttpPost("getUserAllocation")]
+        [HttpGet("getUserAllocation")]
         public async Task<IActionResult> GetAllocationExcel()
         {
             var data = await _service.GetAllocationAsync();

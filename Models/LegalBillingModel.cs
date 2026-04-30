@@ -44,7 +44,7 @@ namespace ProductivityApi.Models
         public DateTime? ApprovedDate { get; set; }
         public int? TurnaroundTime { get; set; }
         public string? CancelledChequeFilePath { get; set; }
-        public decimal? InvoiceFilePath { get; set; }
+        public string? InvoiceFilePath { get; set; }
 
     }
 
@@ -283,9 +283,7 @@ namespace ProductivityApi.Models
     {
         [Required]
         public string BranchId { get; set; } = string.Empty;
-        [Required]
         public string CdsmId { get; set; } = string.Empty;
-        [Required]
         public string ZdshId { get; set; } = string.Empty;
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;

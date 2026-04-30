@@ -101,5 +101,8 @@ namespace ProductivityApi.Services
             return data;
         }
 
+        public async Task<KotakData?> GetKotakByLanAsync(string lan)
+            => await _repository.GetKotakByLanAsync(lan);
+
     }
 }

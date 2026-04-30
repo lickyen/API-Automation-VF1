@@ -120,7 +120,7 @@ namespace ProductivityApi.Services
             if (data is null)
                 return -1;
 
-            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, data);
+            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, data, dto.InvoiceAmount);
             if (nextStatus is null)
                 return -2;
 
@@ -149,7 +149,7 @@ namespace ProductivityApi.Services
             return await _repository.UpdateLegalBillingFinanceAsync(dto, nextStatus);
         }
 
-        private static string? ResolveNextStatus(string role, string action, LegalBillingDetailsDto data)
+        private static string? ResolveNextStatus(string role, string action, LegalBillingDetailsDto data, decimal? dtoInvoiceAmount = null)
         {
             role = role.Trim().ToUpperInvariant();
             action = action.Trim().ToLowerInvariant();
@@ -159,7 +159,7 @@ namespace ProductivityApi.Services
             bool isBeforeService = string.Equals(paymentType, "Before Service", StringComparison.OrdinalIgnoreCase);
 
             var paymentAmount = data?.Transaction?.PaymentAmount;
-            var invoiceAmount = data?.Transaction?.InvoiceAmount;
+            var invoiceAmount = dtoInvoiceAmount;
 
             bool isAmountMatched = paymentAmount.HasValue &&  invoiceAmount.HasValue && paymentAmount.Value == invoiceAmount.Value;
 
@@ -189,6 +189,7 @@ namespace ProductivityApi.Services
                 ("LEGAL", "payment done")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                       || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                      || (currentStatus == LegalBillingStatus.Pending)
                         => isAmountMatched
                             ? LegalBillingStatus.Completed
                             : LegalBillingStatus.Pending,
@@ -196,16 +197,19 @@ namespace ProductivityApi.Services
                 ("LEGAL", "payment on hold")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                       || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                      || (currentStatus == LegalBillingStatus.Pending)
                         => LegalBillingStatus.Pending,
 
                 ("LEGAL", "others")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-                    || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-                    => LegalBillingStatus.Pending,
+                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                      || (currentStatus == LegalBillingStatus.Pending)
+                        => LegalBillingStatus.Pending,
 
                 ("LEGAL", "cancelled")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                       || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                      || (currentStatus == LegalBillingStatus.Pending)
                         => LegalBillingStatus.Cancelled,
 
                 _ => null

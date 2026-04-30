@@ -38,5 +38,16 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("getKotakByLan/{lan}")]
+        public async Task<IActionResult> GetKotakByLan(string lan)
+        {
+            var data = await _service.GetKotakByLanAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
     }
 }
