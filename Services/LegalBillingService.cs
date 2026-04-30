@@ -158,6 +158,11 @@ namespace ProductivityApi.Services
 
             bool isBeforeService = string.Equals(paymentType, "Before Service", StringComparison.OrdinalIgnoreCase);
 
+            var paymentAmount = data?.Transaction?.PaymentAmount;
+            var invoiceAmount = data?.Transaction?.InvoiceAmount;
+
+            bool isAmountMatched = paymentAmount.HasValue &&  invoiceAmount.HasValue && paymentAmount.Value == invoiceAmount.Value;
+
             return (role, action) switch
             {
                 // ZDSH
@@ -184,17 +189,24 @@ namespace ProductivityApi.Services
                 ("LEGAL", "payment done")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                       || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-                        => LegalBillingStatus.Completed,
-
-                ("LEGAL", "cancelled")
-                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-                        => LegalBillingStatus.Cancelled,
+                        => isAmountMatched
+                            ? LegalBillingStatus.Completed
+                            : LegalBillingStatus.Pending,
 
                 ("LEGAL", "payment on hold")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                       || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
                         => LegalBillingStatus.Pending,
+
+                ("LEGAL", "others")
+                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                    || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                    => LegalBillingStatus.Pending,
+
+                ("LEGAL", "cancelled")
+                    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                        => LegalBillingStatus.Cancelled,
 
                 _ => null
             };
@@ -211,7 +223,6 @@ namespace ProductivityApi.Services
 
             return ExcelHelper.GenerateExcel(data, "Data");
         }
-
         public async Task<int> UploadBase64FileAsync(int reqId, FileUploadBase64 fileDto, string fileType)
         {
             if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
@@ -241,6 +252,26 @@ namespace ProductivityApi.Services
 
             return dbResult;
         }
+
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
+        {
+            return await FileHelper.ReadFileAsync(
+                _filePath,
+                fileName
+            );
+        }
+
+        public async Task<byte[]?> GetAllocationExcelAsync()
+        {
+            var data = await _repository.GetAllAllocationsAsync();
+            if (data == null || !data.Any()) return null;
+
+            return ExcelHelper.GenerateExcel(data, "CDSM_ZDSH_Allocation");
+        }
+
+
+        public async Task<int> UpdateAllocationBulkAsync(List<CollectionUserMappingUpdateDto> dtos)
+            => await _repository.UpdateAllocationAsync(dtos);
 
     }
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
@@ -272,6 +273,49 @@ namespace ProductivityApi.Controllers
             return Ok(data);
         }
 
+        [HttpGet("downloadFile")]
+        public async Task<IActionResult> DownloadFile([FromQuery] string fileName)
+        {
+            var fileBytes = await _service.DownloadFileAsync(fileName);
+
+            if (fileBytes == null)
+                return NotFound("File not found");
+
+            var contentType = FileHelper.GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
+        }
+
+        [HttpGet("downloadUserAllocation")]
+        public async Task<IActionResult> DownloadAllocationExcel()
+        {
+            var bytes = await _service.GetAllocationExcelAsync();
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No data found"));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"CDSM_ZDSH_Allocation_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+
+
+        [HttpPost("updateUserAllocation")]
+        public async Task<IActionResult> UpdateAllocation([FromBody] List<CollectionUserMappingUpdateDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.UpdateAllocationBulkAsync(dtos);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, new { updatedCount = result }, "Updated successfully")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
 
     }
 }

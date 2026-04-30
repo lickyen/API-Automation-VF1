@@ -266,7 +266,6 @@ namespace ProductivityApi.Repository
                 {
                     dto.Id,
                     dto.PaymentStatus,
-                    dto.PaymentAmount,
                     dto.PaymentRemarks,
                     dto.Utr,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
@@ -384,6 +383,49 @@ namespace ProductivityApi.Repository
 
             return param.Get<int>("@Output");
         }
+
+        // ─────────────────────────────────────────────
+        //  CDSM-ZDSH Allocation
+        // ─────────────────────────────────────────────
+
+        public async Task<List<CollectionUserMappingDto>> GetAllAllocationsAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<CollectionUserMappingDto>(
+                "sp_Get_CDSM_ZDSH_Allocation",
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result.ToList();
+        }
+
+        public async Task<int> UpdateAllocationAsync(List<CollectionUserMappingUpdateDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            // Build a DataTable to pass as TVP
+            var table = new DataTable();
+            table.Columns.Add("BranchID", typeof(string));
+            table.Columns.Add("CDSM_ID", typeof(string));
+            table.Columns.Add("ZDSH_ID", typeof(string));
+            table.Columns.Add("ModifiedBy", typeof(string));
+
+            foreach (var dto in dtos)
+                table.Rows.Add(dto.BranchId, dto.CdsmId, dto.ZdshId, dto.ModifiedBy);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Allocations", table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_Update_CDSM_ZDSH_Allocation",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
 
     }
 }
