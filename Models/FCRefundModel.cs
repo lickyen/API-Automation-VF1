@@ -37,6 +37,8 @@
         public string CreatedBy { get; set; } = String.Empty;
         public DateTime? BranchRequestedDate { get; set; }
         public string? BranchRequestedBy { get; set; }
+        public DateTime? BranchResubmittedDate { get; set; } // ← new
+        public string? BranchResubmittedBy { get; set; }     // ← new
         public DateTime? UpdatedDate { get; set; }
         public string? UpdatedBy { get; set; }
     }

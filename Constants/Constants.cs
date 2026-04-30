@@ -6,12 +6,13 @@
         public const string PendingForAction = "Pending For Action";
         public const string MailSentToInsurer = "Mail Sent to Insurer";
         public const string Completed = "Completed";
+        public const string SentBack = "SentBack";
     }
     public static class LcRefundStatus
     {
         public const string New = "New";
-        public const string InProgress = "In Progress";  
-        public const string Completed = "Completed";   
+        public const string InProgress = "In Progress";
+        public const string Completed = "Completed";
         public const string NotCovered = "Not Covered";
     }
 
@@ -54,4 +55,11 @@
         public const string Legal = "Legal";
         public const string Finance = "Finance";
     }
+
+    //public static class LegalBillingAmountMatchStatus
+    //{
+    //    public const string Matched = "Invoice amount matches the advance payment amount";
+    //    public const string NotMatched = "Invoice amount DOES NOT match the advance payment amount";
+    //}
+
 }
