@@ -17,9 +17,6 @@ namespace ProductivityApi.Services
         private readonly PLFService _plfService;
         private readonly string _filePath;
 
-
-
-
         public LoanCancellationService(LoanCancellationRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFRepository plfRepository, PLFService plfService)
         {
             _repository = repository;

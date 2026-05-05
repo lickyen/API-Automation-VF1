@@ -55,6 +55,9 @@ namespace ProductivityApi.Models
 
         public string PendingRole { get; set; }
         public string PendingUser { get; set; }
+        public string PlfStatus { get; set; }
+        public string PlfResponse { get; set; }
+        public string PlfRemarks { get; set; }
     }
 
     public class LoanCancelLog
