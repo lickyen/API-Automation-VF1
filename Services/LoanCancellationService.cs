@@ -181,6 +181,8 @@ namespace ProductivityApi.Services
                             plfStatus.PlfResponse = response.returnText;
 
                             message = "Loan cancelled successfully in Pennant";
+                            plfStatus.PlfRemarks = message;
+
                         }
                         else
                         {
@@ -188,6 +190,8 @@ namespace ProductivityApi.Services
                             plfStatus.PlfResponse = response.returnText;
 
                             message = "Loan cancellation failed in Pennant";
+                            plfStatus.PlfRemarks = message;
+
                         }
                     }
                     catch (Exception ex)
@@ -196,14 +200,15 @@ namespace ProductivityApi.Services
                         plfStatus.PlfResponse = ex.Message;
 
                         message = "Response submitted, but Pennant cancellation failed.";
+                        plfStatus.PlfRemarks = message;
                     }
                 }
                 else
                 {
                     plfStatus.PlfStatus = "Skipped";
-                    plfStatus.PlfRemarks = "Cash payment found. Manual cancellation required.";
+                    message = "Cash payment found. Manual cancellation required.";
 
-                    message = plfStatus.PlfRemarks;
+                    plfStatus.PlfRemarks = message;
                 }
 
                 await _repository.UpdatePlfStatusAsync(plfStatus);
