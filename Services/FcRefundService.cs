@@ -114,15 +114,18 @@ namespace ProductivityApi.Services
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            var kotakRecords = records;
+            // 🔥 Split based on InsurerName
+            var kotakRecords = records
+                .Where(r => r.InsurerName == "Kotak")
+                .ToList();
 
             var goDigitRecords = records
-                .Where(r => !string.IsNullOrWhiteSpace(r.GoDigitPolicyNo))
+                .Where(r => r.InsurerName == "GoDigit")
                 .ToList();
 
             int totalUpdated = 0;
 
-            // Kotak (always)
+            // Kotak
             if (kotakRecords.Any())
             {
                 var (sent, msg) = await SendKotakMailAsync(kotakRecords);
@@ -132,7 +135,7 @@ namespace ProductivityApi.Services
                 totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "Kotak");
             }
 
-            // GoDigit (optional)
+            // GoDigit
             if (goDigitRecords.Any())
             {
                 var (sent, msg) = await SendGoDigitMailAsync(goDigitRecords);
@@ -271,7 +274,7 @@ namespace ProductivityApi.Services
             {
                 table.Append("<tr>");
                 table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
-                table.Append($"<td style='text-align:center;'>{r.GoDigitPolicyNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullName}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
@@ -306,10 +309,8 @@ namespace ProductivityApi.Services
 
             return attachments;
         }
-
         public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
             => await _repository.UpdateRefundAsync(dtos);
-
         public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
             => await _repository.UpdateAdditionalRequestAsync(dtos);
 
