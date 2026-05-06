@@ -115,9 +115,7 @@ namespace ProductivityApi.Repository
                     dto.PayoutLevel,
                     dto.UpdatedBy,
                     BankProofFilePath = bankProofFilePath,
-                    RequestLetterFilePath = requestLetterFilePath,
-                    Status = FcRefundStatus.PendingForAction
-                },
+                    RequestLetterFilePath = requestLetterFilePath                },
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -136,7 +134,7 @@ namespace ProductivityApi.Repository
 
             var parameters = new DynamicParameters();
             parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
-            parameters.Add("@Insurer", FcRefundStatus.MailSentToInsurer);
+            parameters.Add("@Insurer", insurer);
             parameters.Add("@Status", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@UpdatedBy", updatedBy);
 

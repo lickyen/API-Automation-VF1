@@ -18,14 +18,17 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly AppSettings _appSettings;
+        private readonly UserService _userService;
+
         private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings)
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService)
         {
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
             _appSettings = appSettings;
+            _userService = userService;
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
@@ -70,7 +73,6 @@ namespace ProductivityApi.Services
 
             return await _repository.BranchSubmitAsync(dto, bankProofFilePath, requestLetterFilePath);
         }
-
         private bool IsAttachmentSizeValid(List<FcRefundModel> records, string basePath, out long totalSize)
         {
             totalSize = 0;
@@ -94,7 +96,6 @@ namespace ProductivityApi.Services
 
             return totalSize <= MaxAttachmentSizeBytes;
         }
-
         public async Task<int> TriggerMailAsync(FcRefundTriggerMailDto dto)
         {
             if (dto.Lans == null || dto.Lans.Count == 0)
@@ -313,6 +314,34 @@ namespace ProductivityApi.Services
             => await _repository.UpdateRefundAsync(dtos);
         public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
             => await _repository.UpdateAdditionalRequestAsync(dtos);
+
+        private async Task NotifyPendingUserAsync(LoanCancelDetailsDto record)
+        {
+            var transaction = record.Transaction;
+
+            var user = _userService.GetUser(transaction.PendingUser);
+
+            if (user == null || string.IsNullOrEmpty(user.Email))
+                return;
+
+            var placeholders = new Dictionary<string, string>
+            {
+                { "Module", "Loan Cancellation" },
+                { "LAN", transaction.Lan }
+            };
+
+            var template = _templateService.GetEmailTemplate("MovedToQEmail");
+
+            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+            await _emailService.SendEmail(
+                "Action Required - Loan Cancellation",
+                body,
+                new List<string> { user.Email },
+                new List<string>()
+            );
+        }
+
 
         public (bool Success, string Message, FcRefundDownloadFileResponseDto? Data) GetFileAsBase64(FcRefundDownloadFileRequestDto dto)
         {
