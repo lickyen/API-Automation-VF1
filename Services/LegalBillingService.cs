@@ -186,11 +186,22 @@ namespace ProductivityApi.Services
 
                 // LEGAL (AFTER SERVICE → CDSOApproved path)
                 // LEGAL (BEFORE SERVICE → FinanceApproved path)
+
+                //("LEGAL", "payment done")
+                //    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                //      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                //      || (currentStatus == LegalBillingStatus.Pending)
+                //        => isAmountMatched
+                //            ? LegalBillingStatus.Completed
+                //            : LegalBillingStatus.Pending,
+
                 ("LEGAL", "payment done")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-                      || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-                      || (currentStatus == LegalBillingStatus.Pending)
-                        => isAmountMatched
+                    || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                    || (currentStatus == LegalBillingStatus.Pending)
+                    => (!isBeforeService)
+                        ? LegalBillingStatus.Completed
+                        : isAmountMatched
                             ? LegalBillingStatus.Completed
                             : LegalBillingStatus.Pending,
 

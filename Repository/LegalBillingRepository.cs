@@ -291,7 +291,8 @@ namespace ProductivityApi.Repository
                     dto.Utr,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     Status = nextStatus,
-                    ModifiedBy = dto.ModifiedBy
+                    ModifiedBy = dto.ModifiedBy,
+                    Remarks  = dto.Remarks
                 },
                 commandType: CommandType.StoredProcedure
             );

@@ -206,6 +206,8 @@ namespace ProductivityApi.Models
         public DateOnly? PaymentDate { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
+
     }
 
     public class LegalBillingGetByUserDto
