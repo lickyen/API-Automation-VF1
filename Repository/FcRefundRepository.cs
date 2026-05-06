@@ -115,7 +115,8 @@ namespace ProductivityApi.Repository
                     dto.PayoutLevel,
                     dto.UpdatedBy,
                     BankProofFilePath = bankProofFilePath,
-                    RequestLetterFilePath = requestLetterFilePath                },
+                    RequestLetterFilePath = requestLetterFilePath                
+                },
                 commandType: CommandType.StoredProcedure
             );
         }

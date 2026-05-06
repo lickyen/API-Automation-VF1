@@ -63,15 +63,10 @@
         [Required]
         public string PayoutLevel { get; set; } = string.Empty;
         [Required]
-        public string BankProofBase64 { get; set; } = string.Empty;
-        [Required]
-        public string BankProofFileName { get; set; } = string.Empty;
-        [Required]
-        public string RequestLetterBase64 { get; set; } = string.Empty;
-        [Required]
-        public string RequestLetterFileName { get; set; } = string.Empty;
-        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
+        public FileUploadBase64? BankProof { get; set; }
+        public FileUploadBase64? RequestLetter { get; set; }
+
     }
     public class FcRefundTriggerMailDto
     {

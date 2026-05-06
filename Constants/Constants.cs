@@ -7,6 +7,7 @@
         public const string MailSentToInsurer = "Mail Sent to Insurer";
         public const string Completed = "Completed";
         public const string SentBack = "SentBack";
+        public const string ReSubmitted = "Re-Submitted";
     }
     public static class LcRefundStatus
     {

@@ -368,11 +368,11 @@ namespace ProductivityApi.Services
 
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    var template = _templateService.GetEmailTemplate("LoanCancelCompletedEmail");
+                    var template = _templateService.GetEmailTemplate("LoanCancelProcessedEmail");
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
                     await _emailService.SendEmail(
-                        "Loan Cancellation Completed",
+                        "Loan Cancellation Processed",
                         body,
                         new List<string> { user.Email },
                         new List<string>()
