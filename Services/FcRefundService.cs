@@ -498,13 +498,10 @@ namespace ProductivityApi.Services
         }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
-            var completed = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.Completed);
-            var mailsent = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.MailSentToInsurer);
+            var data = await _repository.GetReportAsync(fromDate, toDate);
 
             return ExcelHelper.GenerateExcel(
-                (completed, "Completed"),
-                (mailsent, "Mail Sent To Insurer")
-            );
+                (data, "Data"));
         }
     }
 
