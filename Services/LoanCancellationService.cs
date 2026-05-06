@@ -25,7 +25,7 @@ namespace ProductivityApi.Services
             _userService = userService;
             _plfRepository = plfRepository;
             _plfService = plfService;
-            _filePath = appSettings.FilePaths.LegalBillingFilePath;
+            _filePath = appSettings.FilePaths.LoanCancelFilePath;
         }
 
         public async Task<LoanCancelDetailsDto?> GetByIdAsync(int id)
