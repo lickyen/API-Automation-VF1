@@ -182,6 +182,7 @@ namespace ProductivityApi.Models
         public string PlfStatus { get; set; }
         public string PlfResponse { get; set; }
         public string PlfRemarks { get; set; }
+        public string? PaymentDetails { get; set; }
     }
 
     public class LoanCancelListDto

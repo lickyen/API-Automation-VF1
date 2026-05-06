@@ -156,12 +156,21 @@ namespace ProductivityApi.Services
             if (record == null)
                 return (result, "Response submitted successfully");
 
-            var hasCashPayment = record.Payments?
-                .Any(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase)) == true;
+            var cashPayments = record.Payments?
+                .Where(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            string cashPaymentsString = cashPayments != null && cashPayments.Any()
+                ? string.Join(" | ", cashPayments.Select(p =>
+                    $"ReceiptId: {p.ReceiptId}, Mode: {p.ReceiptMode}, Amount: {p.ReceiptAmount}, Date: {p.ReceiptDate:yyyy-MM-dd}"))
+                : string.Empty;
+
+            bool hasCashPayment = cashPayments?.Any() == true;
 
             var plfStatus = new PlfStatusUpdateDto
             {
-                Id = dto.Id
+                Id = dto.Id,
+                PaymentDetails = cashPaymentsString
             };
 
             string message;

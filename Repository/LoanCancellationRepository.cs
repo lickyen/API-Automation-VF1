@@ -156,6 +156,7 @@ namespace ProductivityApi.Repository
             param.Add("@Plf_Status", dto.PlfStatus);
             param.Add("@Plf_Response", dto.PlfResponse);
             param.Add("@Plf_Remarks", dto.PlfRemarks);
+            param.Add("@PaymentDetails", dto.PaymentDetails);
 
             param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
