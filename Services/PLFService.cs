@@ -88,11 +88,11 @@ namespace ProductivityApi.Services
             return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "addCustomerEmail", "3");
         }
 
-        public Task<ReturnStatus> CancelLoan(CancelLoanRequest request)
+        public Task<CancelLoanResponse> CancelLoan(CancelLoanRequest request)
         {
             var endPoint = "pff-api/services/createFinanceRest/finance/cancelLoan";
 
-            return SendRequest<ReturnStatus>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
+            return SendRequest<CancelLoanResponse>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
         }
 
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")

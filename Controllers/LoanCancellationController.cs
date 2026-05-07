@@ -103,7 +103,7 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, null, message ?? "Processed successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "Error occurred"))
+                _ => StatusCode(500, new Response(false, null, message ?? "Error occurred"))
             };
         }
 
