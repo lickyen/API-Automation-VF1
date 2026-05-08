@@ -89,16 +89,33 @@
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
+    //public class LcRefundAddUtrDto
+    //{
+    //    [Required]
+    //    public string Lan { get; set; } = string.Empty;
+    //    [Required]
+    //    public List<LcUtrEntryDto> UtrList { get; set; } = new();
+    //    [Required]
+    //    public string UpdatedBy { get; set; } = string.Empty;
+    //}
+
     public class LcRefundAddUtrDto
     {
         [Required]
-        public string Lan { get; set; } = string.Empty;
-        [Required]
-        public List<LcUtrEntryDto> UtrList { get; set; } = new();
+        public List<LcLanUtrDto> lans { get; set; } = new();
+
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
+    public class LcLanUtrDto
+    {
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+
+        [Required]
+        public List<LcUtrEntryDto> UtrList { get; set; } = new();
+    }
     public class LcUtrEntryDto
     {
         [Required]
