@@ -56,7 +56,6 @@
         public string PolicyNo { get; set; } = string.Empty;
         [Required]
         public string MemberName { get; set; } = string.Empty;
-        [Required]
         public string SgNo { get; set; } = string.Empty;
         [Required]
         public string ClientName { get; set; } = string.Empty;

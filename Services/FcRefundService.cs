@@ -352,7 +352,7 @@ namespace ProductivityApi.Services
                 table.Append("<tr>");
                 table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
                 table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
-                table.Append($"<td style='text-align:center;'>{r.FullName}</td>");
+                table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
                 table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
@@ -436,7 +436,7 @@ namespace ProductivityApi.Services
                 table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
                 table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
                 table.Append($"<td style='text-align:center;'>{queryRemarks}</td>");
-                table.Append($"<td style='text-align:center;'>{r.FullName}</td>");
+                table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
                 table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
