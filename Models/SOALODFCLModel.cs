@@ -158,20 +158,21 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
     }
-    public class SOACategoryRequestDto
-    {
-        public string Lan { get; set; }
-        public string DPD { get; set; }
-       
-    }
-    public class SOACategoryResponseDto
-    {
-        public string Category { get; set; }
-        public string Bucket { get; set; }
-        public string Criticality { get; set; }
-        public string PAR { get; set; }
 
-    }
+    //public class SOACategoryRequestDto
+    //{
+    //    public string Lan { get; set; }
+    //    public string DPD { get; set; }
+       
+    //}
+    //public class SOACategoryResponseDto
+    //{
+    //    public string Category { get; set; }
+    //    public string Bucket { get; set; }
+    //    public string Criticality { get; set; }
+    //    public string PAR { get; set; }
+
+    //}
 
     public class SOABaseChargeResponseDto
     {

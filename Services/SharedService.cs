@@ -98,8 +98,15 @@ namespace ProductivityApi.Services
                 .Select(p => p.custEMail)
                 .FirstOrDefault();
 
+            var lanCategory = await _repository.GetLanCategoryAsync(lan, data.Dpd);
+
+            data.Action = lanCategory?.Criticality;
+            data.Allocation = lanCategory?.Category;
+            data.Bucket = lanCategory?.Bucket;
+
             return data;
         }
+
 
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);
