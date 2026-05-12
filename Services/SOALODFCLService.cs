@@ -37,11 +37,11 @@ namespace ProductivityApi.Services
             var result = await _repository.GetSettlementByIdAsync(id);
             return result;
         }
-        public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
-        {
-            var result = await _repository.GetLoanCategoryAsync(dto);
-            return result;
-        }
+        //public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
+        //{
+        //    var result = await _repository.GetLoanCategoryAsync(dto);
+        //    return result;
+        //}
         public async Task<SOABaseChargeResponseDto?> getBaseChargesAsyc(string type)
         {
             var result = await _repository.GetBaseChargesAsync(type);

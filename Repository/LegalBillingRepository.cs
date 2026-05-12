@@ -424,6 +424,7 @@ namespace ProductivityApi.Repository
             table.Columns.Add("BranchID", typeof(string));
             table.Columns.Add("CDSM_ID", typeof(string));
             table.Columns.Add("ZDSH_ID", typeof(string));
+            table.Columns.Add("MZDSH_ID", typeof(string));
             table.Columns.Add("ModifiedBy", typeof(string));
 
             foreach (var dto in dtos)
@@ -432,6 +433,7 @@ namespace ProductivityApi.Repository
                     dto.BranchId,
                     dto.CdsmId,
                     dto.ZdshId,
+                    dto.MzdshId,
                     dto.ModifiedBy
                 );
             }

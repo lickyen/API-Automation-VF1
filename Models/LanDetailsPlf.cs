@@ -21,6 +21,9 @@
         public Decimal? TotalOutstanding { get; set; }
         public Decimal? PrincipalOutstanding { get; set; }
         public double? Dpd { get; set; }
+        public string? Action { get; set; }
+        public string? Allocation { get; set; }
+        public string? Bucket { get; set; }
         public string? FinActiveStatus { get; set; }
     }
 }

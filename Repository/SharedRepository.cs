@@ -35,6 +35,27 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<LanCategoryDto?> GetLanCategoryAsync(string lan, double? dpd)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "sp_Closure_GetLanCategory",
+                new
+                {
+                    lan = lan,
+                    dpd = dpd
+
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var soa = await multi.ReadFirstOrDefaultAsync<LanCategoryDto>();
+
+            return soa;
+        }
+
 
     }
 }

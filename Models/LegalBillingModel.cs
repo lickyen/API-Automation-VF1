@@ -279,6 +279,7 @@ namespace ProductivityApi.Models
         public string BranchId { get; set; } = string.Empty;
         public string CdsmId { get; set; } = string.Empty;
         public string ZdshId { get; set; } = string.Empty;
+        public string MzdshId { get; set; } = string.Empty;
     }
 
     public class CollectionUserMappingUpdateDto
@@ -287,6 +288,7 @@ namespace ProductivityApi.Models
         public string BranchId { get; set; } = string.Empty;
         public string CdsmId { get; set; } = string.Empty;
         public string ZdshId { get; set; } = string.Empty;
+        public string MzdshId { get; set; } = string.Empty;
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
     }

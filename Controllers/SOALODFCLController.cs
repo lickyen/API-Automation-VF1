@@ -40,16 +40,16 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, settlement, "Success"));
         }
 
-        [HttpGet("GetLoancategory")]
-        public async Task<IActionResult> GetLoanCategory([FromQuery] SOACategoryRequestDto dto)
-        {
-            var settlement = await _service.GetLoanCategoryAsync(dto);
+        //[HttpGet("GetLoancategory")]
+        //public async Task<IActionResult> GetLoanCategory([FromQuery] SOACategoryRequestDto dto)
+        //{
+        //    var settlement = await _service.GetLoanCategoryAsync(dto);
 
-            if (settlement == null)
-                return NotFound(new Response(false, null, "Record not found"));
+        //    if (settlement == null)
+        //        return NotFound(new Response(false, null, "Record not found"));
 
-            return Ok(new Response(true, settlement, "Success"));
-        }
+        //    return Ok(new Response(true, settlement, "Success"));
+        //}
 
         [HttpGet("GetBaseCharges/{type}")]
         public async Task<IActionResult> GetBaseCharges(string type)

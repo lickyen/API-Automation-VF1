@@ -53,29 +53,29 @@ namespace ProductivityApi.Repositories
 
             return soa;
         }
-        public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
+        //public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+        //    await conn.OpenAsync();
 
-            using var multi = await conn.QueryMultipleAsync(
-                "sp_Closure_GetLanCategory",
-                new 
-                {
-                    lan = dto.Lan,
-                    dpd=dto.DPD
+        //    using var multi = await conn.QueryMultipleAsync(
+        //        "sp_Closure_GetLanCategory",
+        //        new 
+        //        {
+        //            lan = dto.Lan,
+        //            dpd=dto.DPD
 
 
-                },
-                commandType: CommandType.StoredProcedure
-            );
+        //        },
+        //        commandType: CommandType.StoredProcedure
+        //    );
 
-            var soa = await multi.ReadFirstOrDefaultAsync<SOACategoryResponseDto>();
+        //    var soa = await multi.ReadFirstOrDefaultAsync<SOACategoryResponseDto>();
 
            
 
-            return soa;
-        }
+        //    return soa;
+        //}
         public async Task<SOABaseChargeResponseDto?> GetBaseChargesAsync(string type)
         {
             using var conn = new SqlConnection(_conStr);
