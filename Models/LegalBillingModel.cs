@@ -34,6 +34,7 @@ namespace ProductivityApi.Models
         public string? PaymentStatus { get; set; }
         public string? PaymentRemarks { get; set; }
         public string? Utr { get; set; }
+        public decimal? UtrAmount { get; set; }
         public decimal? InvoiceAmount { get; set; }
         public DateTime? PaymentDate { get; set; }
         public DateTime CreatedDate { get; set; }
@@ -188,8 +189,9 @@ namespace ProductivityApi.Models
         [Required]
         public string PaymentStatus { get; set; } = string.Empty;
         public string? PaymentRemarks { get; set; }
-        public string? Utr { get; set; }
         public DateOnly? PaymentDate { get; set; }
+        public string? Utr { get; set; }
+        public decimal? UtrAmount { get; set; }
         public decimal? InvoiceAmount { get; set; }
         public FileUploadBase64? InvoiceFile { get; set; }
         [Required]
@@ -202,6 +204,7 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
         [Required]
         public string Utr { get; set; } = string.Empty;
+        public string UtrAmount { get; set; } = string.Empty;
         [Required]
         public DateOnly? PaymentDate { get; set; }
         [Required]
