@@ -4,6 +4,8 @@ using Dapper;
 using Microsoft.Extensions.Configuration;
 using ProductivityApi.Models;
 using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Models.PLF;
+using DocumentFormat.OpenXml.Office.Word;
 
 namespace ProductivityApi.Repositories
 {
@@ -24,7 +26,7 @@ namespace ProductivityApi.Repositories
                 new
                 {
                     UserID = dto.UserId,
-                    Role= dto.Role,
+                    Role = dto.Role,
                     Status = dto.status
                 },
                 commandType: CommandType.StoredProcedure
@@ -48,7 +50,7 @@ namespace ProductivityApi.Repositories
             {
                 soa.Payments = (await multi.ReadFirstOrDefaultAsync<SOALODFCLPayment>());
                 soa.Logs = (await multi.ReadAsync<SOALog>()).ToList();
-                soa.Charges= (await multi.ReadAsync<SOALODCharges>()).ToList();
+                soa.Charges = (await multi.ReadAsync<SOALODCharges>()).ToList();
             }
 
             return soa;
@@ -72,7 +74,7 @@ namespace ProductivityApi.Repositories
 
         //    var soa = await multi.ReadFirstOrDefaultAsync<SOACategoryResponseDto>();
 
-           
+
 
         //    return soa;
         //}
@@ -101,7 +103,7 @@ namespace ProductivityApi.Repositories
                 new
                 {
                     LAN = Lan,
-                  
+
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -152,11 +154,11 @@ namespace ProductivityApi.Repositories
 
             try
             {
-            await conn.ExecuteAsync(
-                "SOALOD_NewRequest",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+                await conn.ExecuteAsync(
+                    "SOALOD_NewRequest",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
             }
             catch (Exception ex)
             {
@@ -183,11 +185,11 @@ namespace ProductivityApi.Repositories
             using var conn = new SqlConnection(_conStr);
 
             var parameters = new DynamicParameters();
-           
+
             parameters.Add("@ID", dto.TID);
             parameters.Add("@ChargeType", dto.ChargeType);
             parameters.Add("@IsWaiver", dto.IsWaiver);
-     
+
             parameters.Add("@CreatedBy", dto.CreatedBy);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -213,12 +215,12 @@ namespace ProductivityApi.Repositories
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
             try
             {
-            await conn.ExecuteAsync(
-                "sp_SOALOD_Approval",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
-        }
+                await conn.ExecuteAsync(
+                    "sp_SOALOD_Approval",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
@@ -232,23 +234,23 @@ namespace ProductivityApi.Repositories
 
             using var conn = new SqlConnection(_conStr);
 
-           
-                using (SqlCommand cmd = new SqlCommand("sp_SOALOD_CheckIfApproved", conn))
+
+            using (SqlCommand cmd = new SqlCommand("sp_SOALOD_CheckIfApproved", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@ID", id);
+
+                await conn.OpenAsync();
+
+                SqlDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@ID", id);
-
-                    await conn.OpenAsync();
-
-                    SqlDataReader reader = await cmd.ExecuteReaderAsync();
-
-                    if (await reader.ReadAsync())
-                    {
-                        isApproved = Convert.ToInt32(reader["IsApproved"]);
-                    }
+                    isApproved = Convert.ToInt32(reader["IsApproved"]);
                 }
-            
+            }
+
 
             return isApproved;
         }
@@ -259,7 +261,7 @@ namespace ProductivityApi.Repositories
             using var conn = new SqlConnection(_conStr);
             var parameters = new DynamicParameters();
             parameters.Add("@ID", dto.Id);
-            parameters.Add("@Status", dto.Status); 
+            parameters.Add("@Status", dto.Status);
             parameters.Add("@UserId", dto.UserId);
             parameters.Add("@LODFileName", LODFilePath);
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -277,7 +279,7 @@ namespace ProductivityApi.Repositories
             }
 
             return parameters.Get<int>("@Output");
-            
+
         }
 
         public async Task<int> SaveSOALODFCLDocsAsync(int Id, String Doctype, String DocName)
@@ -288,8 +290,8 @@ namespace ProductivityApi.Repositories
             parameters.Add("@Id", Id);
             parameters.Add("@DocType", Doctype);
             parameters.Add("@DocName", DocName);
-           
-          
+
+
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
@@ -306,8 +308,88 @@ namespace ProductivityApi.Repositories
                 Console.WriteLine(ex.Message);
             }
             int TransactionId = parameters.Get<int>("@Output");
-         
+
             return TransactionId;
+
+        }
+
+        public async Task<string> GetPaymentRefID()
+        {
+            string RefId = "";
+            using var conn = new SqlConnection(_conStr);
+            using (SqlCommand cmd = new SqlCommand("sp_generateReferenceNo", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                await conn.OpenAsync();
+                SqlDataReader reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    RefId = Convert.ToString(reader["RefID"]);
+                }
+            }
+            return RefId;
+        }
+        //public async Task<PaymentLinkResponseDto> GeneratePaymentLink(string RefId)
+        //{
+        //    //string Refid= await
+
+        //    return 1;
+        //}
+
+        public async Task<int> AddPayment_Online(PaymentLinkResponseDto response, int Id, string Lan,string Createdby)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+
+
+            parameters.Add("@TId", Id);
+            parameters.Add("@Lan", Lan);
+            parameters.Add("@amount", response.Amount / 100);
+            parameters.Add("@expire_by", response.ExpireBy);
+            parameters.Add("@reference_id", response.ReferenceId);
+            parameters.Add("@name", response.Customer?.Name);
+            parameters.Add("@contact", response.Customer?.Contact);
+            parameters.Add("@email", response.Customer?.Email);
+            parameters.Add("@created_at", response.CreatedAt);
+            parameters.Add("@paymentLinkid", response.Id);
+            parameters.Add("@short_url", response.ShortUrl);
+            parameters.Add("@createdBy", Createdby);
+
+
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            try
+            {
+                await conn.ExecuteAsync(
+                    "SP_AddPaymentLink",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+
+            return TransactionId;
+
+        }
+
+        public async Task<IEnumerable<PaymentLinkTransaction>> GetPaylinkdetails(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+            return await conn.QueryAsync<PaymentLinkTransaction>(
+             "sp_SOALOD_getPaymentStatus",
+             new
+             {
+                 ID = id,
+
+             },
+             commandType: CommandType.StoredProcedure
+         );
+
 
         }
 

@@ -62,7 +62,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, settlement, "Success"));
         }
         [HttpGet("getActiveRequests/{Lan}")]
-        public async Task<IActionResult> GetDashboard( string Lan)
+        public async Task<IActionResult> GetDashboard(string Lan)
         {
             var data = await _service.GetActiverequestsAsync(Lan);
 
@@ -86,7 +86,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        
+
         [HttpPost("create")]
         public async Task<IActionResult> CreateSOALODFCL([FromBody] CreateSOALODDto dto)
         {
@@ -120,7 +120,7 @@ namespace ProductivityApi.Controllers
 
 
             return Ok(new Response(true, approved, "Success"));
-        
+
         }
         [HttpPost("NOCSubmit")]
         public async Task<IActionResult> NOCSubmit([FromBody] SOALODNOCSubmitDto dto)
@@ -133,7 +133,7 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
-        
+
         [HttpGet("GetSOA")]
         public async Task<IActionResult> GetSOA([FromQuery] GenerateStatementRequest request, int Id)
         {
@@ -142,6 +142,22 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
 
         }
+        [HttpGet("GeneratePaymentLink")]
+        public async Task<IActionResult> GeneratePaymentLink(int id)
+        {
+            var data = await _service.GeneratePaymentLink(id);
+            return Ok(new Response(true, data, "Success"));
+        }
 
+        [HttpGet("GetPaymentStatus/{id}")]
+        public async Task<IActionResult> GetPaymentStatus(int id)
+        {
+            var PaymentStatus = await _service.GetPaymentLinkstatus(id);
+
+            if (PaymentStatus == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, PaymentStatus, "Success"));
+        }
     }
 }

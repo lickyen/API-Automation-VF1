@@ -6,6 +6,10 @@ using System.Data;
 using System.Net.Mail;
 using System.Text;
 using ProductivityApi.Models.PLF;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System.Reflection;
+using Azure;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace ProductivityApi.Services
 {
@@ -17,9 +21,10 @@ namespace ProductivityApi.Services
         private readonly UserService _userService;
         private readonly AppSettings _appSettings;
         private readonly PLFService _plfService;
+        private readonly SharedService _sharedservice;
 
 
-        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService)
+        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice)
         {
             _repository = repository;
             _emailService = emailService;
@@ -27,6 +32,7 @@ namespace ProductivityApi.Services
             _userService = userService;
             _appSettings = appSettings;
             _plfService = plfService;
+            _sharedservice = sharedservice;
         }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
@@ -134,14 +140,14 @@ namespace ProductivityApi.Services
                 Directory.CreateDirectory(basePath);
 
                 // Bank Proof
-                if (dto.BankProof != null && !string.IsNullOrEmpty(dto.BankProof.Base64))
+                if (dto.LODDoc != null && !string.IsNullOrEmpty(dto.LODDoc.Base64))
                 {
-                    var bankProofExt = Path.GetExtension(dto.BankProof.FileName);
+                    var bankProofExt = Path.GetExtension(dto.LODDoc.FileName);
                     var bankProofName = $"{dto.Id}_NOCLOD{bankProofExt}";
 
                     await File.WriteAllBytesAsync(
                         Path.Combine(basePath, bankProofName),
-                        Convert.FromBase64String(dto.BankProof.Base64)
+                        Convert.FromBase64String(dto.LODDoc.Base64)
                     );
 
                     LODFilePath = bankProofName;
@@ -193,6 +199,60 @@ namespace ProductivityApi.Services
 
             return SOA;
         }
+        public async Task<PaymentLinkResponseDto> GeneratePaymentLink(int id)
+        {
+            PaymentLinkResponseDto response= new PaymentLinkResponseDto();
+            var settelment = await _repository.GetSettlementByIdAsync(id);
+            if (settelment != null)
+            {
+                string Refid = await _repository.GetPaymentRefID();
+                long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
+                string description = $"{settelment.Lan} - Payment for SOA/LOD/FCL";
+                int amount = Convert.ToInt16(settelment.Total_Charges);
+                var request = new PaymentLinkRequestDto
+                {
+                    Amount = (int)(amount * 100), // Razorpay accepts amount in paise
+                    Currency = "INR",
+                    AcceptPartial = false,
+                    ExpireBy = expireBy,
+                    ReferenceId = Refid,
+                    Description = description,
 
+                    Customer = new PaymentCustomerDto
+                    {
+                        Name = settelment.Cust_Name,
+                        Contact = settelment.Mobile,
+                        Email = settelment.Email
+                    },
+
+                    Notify = new NotifyDto
+                    {
+                        Sms = true,
+                        Email = true
+                    },
+
+                    ReminderEnable = true,
+
+                    Notes = new NotesDto
+                    {
+                        PolicyName = "SOA/LOD/FCL"
+                    },
+
+                    CallbackUrl = "https://vistaarfinance.com/",
+                    CallbackMethod = "get"
+                };
+                response = await _sharedservice.PaymentLink(request);
+                if (response.Error != null && !string.IsNullOrEmpty(response.ReferenceId))
+                {
+                    int Pid = await _repository.AddPayment_Online(response, id, settelment.Lan, "");
+                }
+            }
+            return response;
+        }
+        public async Task<IEnumerable<PaymentLinkTransaction>> GetPaymentLinkstatus(int Id)
+        { 
+            return await _repository.GetPaylinkdetails(Id);
+            
+        }
     }
 }

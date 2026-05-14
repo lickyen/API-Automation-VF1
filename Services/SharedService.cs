@@ -2,6 +2,10 @@
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text;
 
 namespace ProductivityApi.Services
 {
@@ -10,13 +14,15 @@ namespace ProductivityApi.Services
         private readonly SharedRepository _repository;
         private readonly PLFService _plfService;
         private readonly BranchServices _branchService;
+        private readonly AppSettings _appSettings;
 
 
-        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService)
+        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService, AppSettings appSettings)
         {
             _repository = repository;
             _plfService = plfService;
             _branchService = branchService;
+            _appSettings = appSettings;
         }
 
         public async Task<IEnumerable<string>?> GetVistaarBankAccountsAsync()
