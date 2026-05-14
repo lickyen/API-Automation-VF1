@@ -111,5 +111,10 @@ namespace ProductivityApi.Services
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);
 
+
+        public async Task<string?> GenerateReferenceNoAsync(string prefix)
+        {
+            return await _repository.GenerateReferenceNoAsync(prefix);
+        }
     }
 }

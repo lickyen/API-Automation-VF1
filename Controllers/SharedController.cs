@@ -49,5 +49,16 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("generateRefNo/{prefix}")]
+        public async Task<IActionResult> GenerateReferenceNo(string prefix)
+        {
+            var referenceNo = await _service.GenerateReferenceNoAsync(prefix);
+
+            if (string.IsNullOrWhiteSpace(referenceNo))
+                return NotFound(new Response(false, null, "Reference number generation failed"));
+
+            return Ok(new Response(true, referenceNo, "Success"));
+        }
+
     }
 }
