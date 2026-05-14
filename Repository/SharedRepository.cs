@@ -56,23 +56,18 @@ namespace ProductivityApi.Repository
             return soa;
         }
 
-        public async Task<string> GetRefID(String Prefix)
+        public async Task<string?> GenerateReferenceNoAsync(string prefix)
         {
-            
             using var conn = new SqlConnection(_conStr);
 
-
-            return await conn.QueryAsync<string>(
+            return await conn.QueryFirstOrDefaultAsync<string>(
                 "sp_generateReferenceNo",
-                 new
-                 {
-                     lan = Prefix
-
-                 },
+                new
+                {
+                    Prefix = prefix
+                },
                 commandType: CommandType.StoredProcedure
             );
-
-          
         }
 
 

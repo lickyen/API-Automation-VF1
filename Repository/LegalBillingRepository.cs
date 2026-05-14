@@ -268,6 +268,7 @@ namespace ProductivityApi.Repository
                     dto.PaymentStatus,
                     dto.PaymentRemarks,
                     dto.Utr,
+                    dto.UtrAmount,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     dto.InvoiceAmount,
                     Status = nextStatus,
@@ -289,6 +290,7 @@ namespace ProductivityApi.Repository
                 {
                     dto.Id,
                     dto.Utr,
+                    dto.UtrAmount,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy,

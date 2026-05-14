@@ -1,6 +1,6 @@
 ﻿namespace ProductivityApi.Models.PLF
 {
-    public class ForeclosureReportModel
+    public class GetForeclosureStmtV1
     {
         public ForeclosureReport ForeclosureReport { get; set; }
         public ReturnStatus ReturnStatus { get; set; }
@@ -82,6 +82,18 @@
         public string FirstInstDate { get; set; }
         public decimal LpiAccured { get; set; }
         public decimal LpiUnAccured { get; set; }
+
+        public decimal POS => OutstandingPri + PrincipalAmt;
+        public decimal Charges => ChargesIncGST + LatePayInterestAmt;
+        public decimal ChargesIncFC => Charges + ForeClosFees;
+        public decimal Interest => InstForTheMonth + InterestAmt;
+        public decimal Excess => TotalRefunds;
+
+        // Total outstanding excluding FC charges
+        public decimal TotalOutstanding => POS + Charges + Interest - Excess;
+
+        // Total outstanding including FC charges
+        public decimal TotalOutstandingIncFC => POS + ChargesIncFC + Interest - Excess;
     }
 
     public class ForeclosureReportRequest

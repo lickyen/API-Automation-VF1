@@ -68,12 +68,12 @@ namespace ProductivityApi.Services
 
             return SendRequest<TransferLetterResponse>(HttpMethod.Post, endPoint, request, serviceName: "transferLetter", "3");
         }
-        //Foreclosure letter
-        public Task<ForeclosureReportModel> GetForeclosureReport(ForeclosureReportRequest request)
+
+        public Task<GetForeclosureStmtV1> GetForeclosureStmtV1(ForeclosureReportRequest request)
         {
             var endPoint = "pff-api/services/statementRest/statementService/getForeclosureStmtV1";
 
-            return SendRequest<ForeclosureReportModel>(HttpMethod.Post, endPoint, request, serviceName: "getForeclosureStmtV1", "3");
+            return SendRequest<GetForeclosureStmtV1>(HttpMethod.Post, endPoint, request, serviceName: "getForeclosureStmtV1", "3");
         }
 
         public Task<ReturnStatus> UpdateCustomerEmail(CustomerEmailRequest request)
