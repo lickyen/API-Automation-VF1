@@ -53,6 +53,7 @@ namespace ProductivityApi.Services
         //    return SendRequest<StatementResponse>(HttpMethod.Get,endPoint,request, serviceName: "getStatement", "3");
         //}
 
+        // SOA Download step -1
         public Task<GenerateStatementResponse> GenerateStatement(GenerateStatementRequest request)
         {
             var endPoint = "pff-api/services/loanLetterRest/loanLetter/generateStatement";
@@ -60,6 +61,7 @@ namespace ProductivityApi.Services
             return SendRequest<GenerateStatementResponse>(HttpMethod.Post, endPoint, request, serviceName: "generateStatement", "3");
         }
 
+        //SOA Download step -1
         public Task<TransferLetterResponse> TransferLetter(TransferLetterRequest request)
         {
             var endPoint = "pff-api/services/loanLetterRest/loanLetter/transferLetter";

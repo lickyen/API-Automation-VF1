@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
@@ -109,6 +111,36 @@ namespace ProductivityApi.Controllers
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
+        }
+
+        [HttpGet("CheckIfApproved/{Id}")]
+        public async Task<IActionResult> CheckIfApproved(int Id)
+        {
+            var approved = await _service.CheckIfApproved(Id);
+
+
+            return Ok(new Response(true, approved, "Success"));
+        
+        }
+        [HttpPost("NOCSubmit")]
+        public async Task<IActionResult> NOCSubmit([FromBody] SOALODNOCSubmitDto dto)
+        {
+            var result = await _service.NOCSubmitAsync(dto);
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Saved successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+        
+        [HttpGet("GetSOA")]
+        public async Task<IActionResult> GetSOA([FromQuery] GenerateStatementRequest request, int Id)
+        {
+            var data = await _service.GetSOA(request, Id);
+
+            return Ok(new Response(true, data, "Success"));
+
         }
 
     }

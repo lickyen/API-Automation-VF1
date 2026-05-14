@@ -152,9 +152,6 @@ namespace ProductivityApi.Repositories
 
             try
             {
-
-          
-
             await conn.ExecuteAsync(
                 "SOALOD_NewRequest",
                 parameters,
@@ -229,7 +226,7 @@ namespace ProductivityApi.Repositories
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> CheckIfApproved(string id)
+        public async Task<int> CheckIfApproved(int id)
         {
             int isApproved = 0;
 
@@ -255,5 +252,64 @@ namespace ProductivityApi.Repositories
 
             return isApproved;
         }
+
+        public async Task<int> NOCSubmitAsync(SOALODNOCSubmitDto dto, string? LODFilePath)
+        {
+
+            using var conn = new SqlConnection(_conStr);
+            var parameters = new DynamicParameters();
+            parameters.Add("@ID", dto.Id);
+            parameters.Add("@Status", dto.Status); 
+            parameters.Add("@UserId", dto.UserId);
+            parameters.Add("@LODFileName", LODFilePath);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_SOALOD_updateNOC",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            return parameters.Get<int>("@Output");
+            
+        }
+
+        public async Task<int> SaveSOALODFCLDocsAsync(int Id, String Doctype, String DocName)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", Id);
+            parameters.Add("@DocType", Doctype);
+            parameters.Add("@DocName", DocName);
+           
+          
+
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_SOALOD_SaveDoc",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+         
+            return TransactionId;
+
+        }
+
     }
 }

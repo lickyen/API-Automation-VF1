@@ -58,5 +58,6 @@ namespace ProductivityApi.Models
         public string FcRefundFilePath { get; set; } = string.Empty;
         public string LoanCancelFilePath { get; set; } = string.Empty;
         public string LegalBillingFilePath { get; set; } = string.Empty;
+        public string SOALODFilePath { get; set; } = string.Empty;
     }
 }

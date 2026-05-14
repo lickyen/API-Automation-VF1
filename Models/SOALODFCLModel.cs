@@ -242,5 +242,13 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
         public string? Updated_By { get; set; }
     }
+
+    public class SOALODNOCSubmitDto
+    {
+        public int Id { get; set; }  // ReqId
+        public string? Status { get; set; }
+        public string? UserId { get; set; }
+        public FileUploadBase64? BankProof { get; set; }
+    }
 }
 

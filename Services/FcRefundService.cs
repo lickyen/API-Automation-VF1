@@ -46,8 +46,8 @@ namespace ProductivityApi.Services
             var record = await _repository.GetByLanAsync(dto.Lan);
             if (record == null) return -1;
 
-            string? bankProofFilePath = record.BankProofFilePath;
-            string? requestLetterFilePath = record.RequestLetterFilePath;
+            string? bankProofFilePath = "";
+            string? requestLetterFilePath = "";
 
             if (!string.IsNullOrWhiteSpace(basePath))
             {
