@@ -161,7 +161,7 @@ namespace ProductivityApi.Services
             var paymentAmount = data?.Transaction?.PaymentAmount;
             var invoiceAmount = dtoInvoiceAmount;
 
-            bool isAmountMatched = paymentAmount.HasValue &&  invoiceAmount.HasValue && paymentAmount.Value == invoiceAmount.Value;
+           // bool isAmountMatched = paymentAmount.HasValue &&  invoiceAmount.HasValue && paymentAmount.Value == invoiceAmount.Value;
 
             return (role, action) switch
             {
@@ -195,15 +195,21 @@ namespace ProductivityApi.Services
                 //            ? LegalBillingStatus.Completed
                 //            : LegalBillingStatus.Pending,
 
+                //("LEGAL", "payment done")
+                //    when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
+                //    || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
+                //    || (currentStatus == LegalBillingStatus.Pending)
+                //    => (!isBeforeService)
+                //        ? LegalBillingStatus.Completed
+                //        : isAmountMatched
+                //            ? LegalBillingStatus.Completed
+                //            : LegalBillingStatus.Pending,
+
                 ("LEGAL", "payment done")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
                     || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
                     || (currentStatus == LegalBillingStatus.Pending)
-                    => (!isBeforeService)
-                        ? LegalBillingStatus.Completed
-                        : isAmountMatched
-                            ? LegalBillingStatus.Completed
-                            : LegalBillingStatus.Pending,
+                    => LegalBillingStatus.Completed,
 
                 ("LEGAL", "payment on hold")
                     when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
