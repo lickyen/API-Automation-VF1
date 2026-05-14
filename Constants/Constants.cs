@@ -9,6 +9,22 @@
         public const string SentBack = "SentBack";
         public const string ReSubmitted = "Re-Submitted";
     }
+
+    public static class ClosureStatus
+    {
+        public const string New = "New";
+        public const string Initiated = "Initiated";
+        public const string ReInitiated = "Re-Initiated";
+        public const string ReSubmitted = "Re-Submitted";
+        public const string AmountCollected = "Amount Collected";
+        public const string Closed = "Closed";
+        public const string SentBack = "SentBack";
+        public const string Rejected = "Rejected";
+        public const string ClearancePending = "Clearance Pending";
+        public const string AutoApproved = "Auto-Approved";
+        public const string AutoRejected = "Auto-Rejected";
+        public const string Cancelled = "Cancelled";
+    }
     public static class LcRefundStatus
     {
         public const string New = "New";
