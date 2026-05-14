@@ -10,6 +10,7 @@ namespace ProductivityApi.Models
         public PlfApiSettings PlfApiSettings { get; set; } = new PlfApiSettings();
         public ADSettings ADSettings { get; set; } = new ADSettings();
         public FilePaths FilePaths { get; set; } = new FilePaths();
+        public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
     }
 
     public class EmailSettings
@@ -59,5 +60,10 @@ namespace ProductivityApi.Models
         public string LoanCancelFilePath { get; set; } = string.Empty;
         public string LegalBillingFilePath { get; set; } = string.Empty;
         public string SOALODFilePath { get; set; } = string.Empty;
+    }
+    public class RazorPaySettings
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

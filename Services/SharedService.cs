@@ -2,6 +2,10 @@
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text;
 
 namespace ProductivityApi.Services
 {
@@ -10,13 +14,15 @@ namespace ProductivityApi.Services
         private readonly SharedRepository _repository;
         private readonly PLFService _plfService;
         private readonly BranchServices _branchService;
+        private readonly AppSettings _appSettings;
 
 
-        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService)
+        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService, AppSettings appSettings)
         {
             _repository = repository;
             _plfService = plfService;
             _branchService = branchService;
+            _appSettings = appSettings;
         }
 
         public async Task<IEnumerable<string>?> GetVistaarBankAccountsAsync()
@@ -111,5 +117,63 @@ namespace ProductivityApi.Services
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);
 
+        public  async Task<PaymentLinkResponseDto> PaymentLink(
+        PaymentLinkRequestDto chargeRequest)
+        {
+            var responseObj = new PaymentLinkResponseDto();
+
+            string apiUrl = "https://api.razorpay.com/v1/payment_links";
+
+            using (HttpClient client = new HttpClient())
+            {
+                // Razorpay credentials
+                // string username = "rzp_live_wttpRiUPLjNEWp";
+                //string password = "XfOfOV8WuWYsdCPpNDWOc77L";
+
+                string username = _appSettings.RazorPaySettings.UserName;
+                string password = _appSettings.RazorPaySettings.Password;
+
+                string authToken = Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes($"{username}:{password}")
+                );
+
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Basic", authToken);
+
+                client.Timeout = TimeSpan.FromSeconds(30);
+
+                try
+                {
+                    string jsonRequest =
+                        JsonSerializer.Serialize(chargeRequest);
+
+                    var requestContent = new StringContent(
+                        jsonRequest,
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    HttpResponseMessage response =
+                        await client.PostAsync(apiUrl, requestContent);
+
+                    string content =
+                        await response.Content.ReadAsStringAsync();
+
+                    responseObj =
+                        JsonSerializer.Deserialize<PaymentLinkResponseDto>(
+                            content,
+                            new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return responseObj;
+        }
     }
 }
