@@ -122,5 +122,65 @@ namespace ProductivityApi.Services
         {
             return await _repository.GenerateReferenceNoAsync(prefix);
         }
+
+        public async Task<PaymentLinkResponseDto> PaymentLink(
+        PaymentLinkRequestDto chargeRequest)
+        {
+            var responseObj = new PaymentLinkResponseDto();
+
+            string apiUrl = "https://api.razorpay.com/v1/payment_links";
+
+            using (HttpClient client = new HttpClient())
+            {
+                // Razorpay credentials
+                // string username = "rzp_live_wttpRiUPLjNEWp";
+                //string password = "XfOfOV8WuWYsdCPpNDWOc77L";
+
+                string username = _appSettings.RazorPaySettings.UserName;
+                string password = _appSettings.RazorPaySettings.Password;
+
+                string authToken = Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes($"{username}:{password}")
+                );
+
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Basic", authToken);
+
+                client.Timeout = TimeSpan.FromSeconds(30);
+
+                try
+                {
+                    string jsonRequest =
+                        JsonSerializer.Serialize(chargeRequest);
+
+                    var requestContent = new StringContent(
+                        jsonRequest,
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    HttpResponseMessage response =
+                        await client.PostAsync(apiUrl, requestContent);
+
+                    string content =
+                        await response.Content.ReadAsStringAsync();
+
+                    responseObj =
+                        JsonSerializer.Deserialize<PaymentLinkResponseDto>(
+                            content,
+                            new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return responseObj;
+        }
+    
     }
 }
