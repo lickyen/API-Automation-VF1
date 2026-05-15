@@ -106,6 +106,7 @@ namespace ProductivityApi.Models
         public string? AdvocateName { get; set; }
         public string? LegalCategory { get; set; }
         public string? Status { get; set; }
+        public string? PaymentType { get; set; }
         public decimal PaymentAmount { get; set; }
         public string? PendingRole { get; set; }
         public string? PendingUser { get; set; }

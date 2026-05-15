@@ -31,23 +31,22 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<LanDetailsPlf?> GetLanDetailsAsync(string lan)
+        public async Task<(LanDetailsPlf? Data, string Message)> GetLanDetailsAsync(string lan)
         {
             var loan = await _plfService.GetFinance(lan);
-            LanDetailsPlf data = new LanDetailsPlf();
 
-            if (loan == null || loan?.returnStatus?.returnCode != "0000")
-            {
-                throw new Exception("LAN not found or InActive");
-            }
+            if (loan?.returnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+
+            if (loan.returnStatus.returnCode != "0000")
+                return (null, loan.returnStatus.returnText);
 
             var cif = loan.customer?.cif;
 
             if (string.IsNullOrWhiteSpace(cif))
-            {
-                throw new Exception("CIF not found or InActive");
-            }
+                return (null, "CIF not found or InActive");
 
+            LanDetailsPlf data = new LanDetailsPlf();
             data.CustId = cif;
             data.CustName = loan.customer?.personalInfo?.shortName;
             data.Lan = loan.finReference;
@@ -60,7 +59,6 @@ namespace ProductivityApi.Services
             decimal totalNetDisbAmount = loan.disbursement != null
                 ? loan.disbursement.Sum(d => d.NetDisbursementAmount)
                 : 0m;
-
             data.NetDisbAmount = Convert.ToDecimal(totalNetDisbAmount / 100);
             data.PendingAmount = data.LoanAmount - data.DisbAmount;
 
@@ -70,12 +68,10 @@ namespace ProductivityApi.Services
                 .Select(d => d.disbType)
                 .ToList()
                 ?? new List<string?>();
-
             data.DisbModes = disbModes;
 
             data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
             data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
-
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
             if (!string.IsNullOrEmpty(data.BranchCode))
@@ -89,39 +85,53 @@ namespace ProductivityApi.Services
 
             var customer = await _plfService.GetCustomerDetails(cif);
 
-            if (customer == null || customer?.ReturnStatus?.returnCode != "0000")
-            {
-                throw new Exception("Customer not found or InActive");
-            }
+            if (customer?.ReturnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+
+            if (customer.ReturnStatus.returnCode != "0000")
+                return (null, customer.ReturnStatus.returnText);
 
             data.Mobile = customer.Phones?
                 .OrderByDescending(p => p.priority)
                 .Select(p => p.phoneNumber)
                 .FirstOrDefault();
-
             data.Email = customer.Emails?
                 .OrderByDescending(p => p.custEMailPriority)
                 .Select(p => p.custEMail)
                 .FirstOrDefault();
 
             var lanCategory = await _repository.GetLanCategoryAsync(lan, data.Dpd);
-
             data.Action = lanCategory?.Criticality;
             data.Allocation = lanCategory?.Category;
             data.Bucket = lanCategory?.Bucket;
 
-            return data;
+            return (data, "Success");
         }
+        public async Task<(ForeclosureReport Report, string Message)> GetForeclosureReportAsync(string lan)
+        {
+            var request = new ForeclosureReportRequest
+            {
+                finReference = lan,
+                days = 1
+            };
 
+            var response = await _plfService.GetForeclosureStmtV1(request);
 
+            if (response?.ReturnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+
+            if (response.ReturnStatus.returnCode != "0000")
+                return (null, response.ReturnStatus.returnText);
+
+            return (response.ForeclosureReport, response.ReturnStatus.returnText);
+        }
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);
-
-
         public async Task<string?> GenerateReferenceNoAsync(string prefix)
         {
             return await _repository.GenerateReferenceNoAsync(prefix);
         }
+
         public async Task<PaymentLinkResponseDto> PaymentLink(
         PaymentLinkRequestDto chargeRequest)
         {
@@ -131,10 +141,12 @@ namespace ProductivityApi.Services
 
             using (HttpClient client = new HttpClient())
             {
-                
+                // Razorpay credentials
+                // string username = "rzp_live_wttpRiUPLjNEWp";
+                //string password = "XfOfOV8WuWYsdCPpNDWOc77L";
+
                 string username = _appSettings.RazorPaySettings.UserName;
                 string password = _appSettings.RazorPaySettings.Password;
-
 
                 string authToken = Convert.ToBase64String(
                     Encoding.ASCII.GetBytes($"{username}:{password}")
@@ -178,5 +190,6 @@ namespace ProductivityApi.Services
 
             return responseObj;
         }
+    
     }
 }

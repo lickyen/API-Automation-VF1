@@ -16,26 +16,12 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // GET: api/shared/getVistaarBankAcnts
         [HttpGet("getVistaarBankAcnts")]
         public async Task<IActionResult> GetVistaarBankAccounts()
         {
             var accounts = await _service.GetVistaarBankAccountsAsync();
 
             return Ok(new Response(true, accounts, "Success"));
-        }
-
-
-        // GET: api/shared/getLanDetails/{lan}
-        [HttpGet("getLanDetails/{lan}")]
-        public async Task<IActionResult> GetLanDetailsAsync(string lan)
-        {
-            var data = await _service.GetLanDetailsAsync(lan);
-
-            if (data == null)
-                return NotFound(new Response(false, null, "Record not found"));
-
-            return Ok(new Response(true, data, "Success"));
         }
 
         [HttpGet("getKotakByLan/{lan}")]
@@ -58,6 +44,28 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, "Reference number generation failed"));
 
             return Ok(new Response(true, referenceNo, "Success"));
+        }
+
+        [HttpGet("getLanDetails/{lan}")]
+        public async Task<IActionResult> GetLanDetailsAsync(string lan)
+        {
+            var (data, msg) = await _service.GetLanDetailsAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, msg));
+
+            return Ok(new Response(true, data, msg));
+        }
+
+        [HttpGet("getForeclosureReport/{lan}")]
+        public async Task<IActionResult> GetForeclosureReport(string lan)
+        {
+            var (report, msg) = await _service.GetForeclosureReportAsync(lan);
+
+            if (report == null)
+                return NotFound(new Response(false, null, msg));
+
+            return Ok(new Response(true, report, msg));
         }
 
     }
