@@ -172,5 +172,19 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        
+         [HttpGet("GenerateReceipt")]
+        public async Task<IActionResult> GenerateReceipt([FromQuery] SOALODReceiptRequestDto dto)
+        {
+            var data = await _service.GenerateReceipt(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("GetLOD")]
+        public async Task<IActionResult> GetLOD([FromQuery] LODRequestDto dto)
+        {
+            var data = await _service.GetLod(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }
