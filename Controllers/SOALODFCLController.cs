@@ -183,7 +183,18 @@ namespace ProductivityApi.Controllers
         [HttpGet("GetLOD")]
         public async Task<IActionResult> GetLOD([FromQuery] LODRequestDto dto)
         {
-            var data = await _service.GetLod(dto);
+            var(data, msg) = await _service.GetLod(dto);
+            if (data == null)
+                return NotFound(new Response(false, null, msg));
+            return Ok(new Response(true, data, "Success"));
+        }
+        [HttpGet("GetFCL")]
+        public async Task<IActionResult> GetFCL([FromQuery] LODRequestDto dto)
+        {
+            var (data, msg) = await _service.GetFCL(dto);
+            if (data == null)
+
+                return NotFound(new Response(false, null, msg));
             return Ok(new Response(true, data, "Success"));
         }
     }

@@ -18,6 +18,8 @@ using System.Globalization;
 using Humanizer;
 using Quartz.Util;
 using Org.BouncyCastle.Asn1.Ocsp;
+using Org.BouncyCastle.Ocsp;
+using DocumentFormat.OpenXml.Bibliography;
 
 namespace ProductivityApi.Services
 {
@@ -474,7 +476,7 @@ namespace ProductivityApi.Services
             return responsedto;
         }
 
-        public async Task<SOALODFileResponseDto> GetLod(LODRequestDto req)
+        public async Task<(SOALODFileResponseDto res, string Message)> GetLod(LODRequestDto req)
         {
             var soalod = await _repository.GetSettlementByIdAsync(req.Id);
             LODResponse lodResponse=null;
@@ -492,6 +494,7 @@ namespace ProductivityApi.Services
                         FileName = fileName
                     };
                 }
+                return (responsedto ,"Success");
             }
             else if (!soalod.LOD_FileName.IsNullOrWhiteSpace())
             {
@@ -506,6 +509,7 @@ namespace ProductivityApi.Services
                         FileName = fileName
                     };
                 }
+                return (responsedto, "Success");
 
             }
 
@@ -540,15 +544,141 @@ namespace ProductivityApi.Services
                                 FileName = fileName
                             };
                         }
+                        return (responsedto, "Success");
                     }
                     else
                     {
-                     
+                        return (responsedto, lodResponse.returnStatus.returnCode + "-" + lodResponse.returnStatus.returnText);
                     }
                 
             }
             
-            return responsedto;
+           // return responsedto;
         }
+
+        public async Task<(SOALODFileResponseDto res, string Message)> GetFCL(LODRequestDto req)
+        {
+            var soalod = await _repository.GetSettlementByIdAsync(req.Id);
+            LODResponse lodResponse = null;
+            SOALODFileResponseDto responsedto = null;
+            if (!soalod.FCL_FileName.IsNullOrWhiteSpace())
+            {
+                var basePath = _appSettings.FilePaths.SOALODFilePath;
+                var fileName = soalod.FCL_FileName;
+                var outputFilePath = Path.Combine(basePath, fileName);
+                if (File.Exists(outputFilePath))
+                {
+                    responsedto = new SOALODFileResponseDto
+                    {
+                        Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
+                        FileName = fileName
+                    };
+                }
+                return (responsedto, "Success");
+            }
+            else
+            {
+                var (report, msg) = await _sharedservice.GetForeclosureReportAsync(soalod.Lan);
+                if (report == null)
+                {
+                    return (null, msg);
+
+                }
+                else
+                {
+
+
+                    var basePath = _appSettings.FilePaths.SOALODFilePath;
+                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForeclosureLetter.pdf");
+                    if (!File.Exists(TemplatePath))
+                        throw new FileNotFoundException($"template file not found: {TemplatePath}");
+
+                    var outputFileName = $"{soalod.Id}_FCL.pdf";
+                    var outputFilePath = Path.Combine(basePath, outputFileName);
+
+                    string today = DateTime.Today.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
+                    using (PdfReader reader = new PdfReader(TemplatePath))
+                    {
+                        using (FileStream fs = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write))
+                        {
+                            using (PdfStamper stamper = new PdfStamper(reader, fs))
+                            {
+                                var fields = stamper.AcroFields;
+
+                                fields.SetField("Name", report.CustName);
+                                fields.SetFieldProperty("Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Loan Account No", report.FinReference);
+                                fields.SetFieldProperty("Loan Account No", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Branch Name", soalod.Branch_Name);
+                                fields.SetFieldProperty("Branch Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("LAN Name", report.FinReference);
+                                fields.SetFieldProperty("LAN", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Date", today);
+                                fields.SetFieldProperty("Date", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Financed Amount", report.FinCurrAssetValue.ToString());
+                                fields.SetFieldProperty("Financed Amount", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+
+
+                                fields.SetField("Customer No/Name", report.CustName + "/" + report.CustCIF);
+                                fields.SetFieldProperty("Customer No/Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Principal Outstanding", report.OutstandingPri.ToString());
+                                fields.SetFieldProperty("Principal Outstanding", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Principal Due", report.PrincipalAmt.ToString());
+                                fields.SetFieldProperty("Principal Due", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Interest Due", report.InterestAmt.ToString());
+                                fields.SetFieldProperty("Interest Due", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("GST", report.ForeClosFees.ToString());
+                                fields.SetFieldProperty("GST", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("BPI", report.InstForTheMonth.ToString());
+                                fields.SetFieldProperty("BPI", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("LPI", report.LatePayInterestAmt.ToString());
+                                fields.SetFieldProperty("LPI", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Other Charges", report.ChargesIncGST.ToString());
+                                fields.SetFieldProperty("GST", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Excess Amount", report.TotalRefunds.ToString());
+                                fields.SetFieldProperty("Excess Amount", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("Grand Total", report.NetReceivable.ToString());
+                                fields.SetFieldProperty("Grand Total", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                fields.SetField("BPI Per Day", report.IntPerDay.ToString());
+                                fields.SetFieldProperty("BPI Per Day", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                stamper.FormFlattening = true; // Make fields read-only
+                            }
+                        }
+                    }
+                    var db = _repository.SaveSOALODFCLDocsAsync(req.Id, "FCL", outputFileName);
+                    if (File.Exists(outputFilePath))
+                    {
+                        //return (false, "File not found on server", null);
+
+                        responsedto = new SOALODFileResponseDto
+                        {
+                            Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
+                            FileName = outputFileName
+                        };
+                    }
+
+
+                    return (responsedto, "Success");
+                }
+            }
+        }
+
     }
 }
