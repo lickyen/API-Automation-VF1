@@ -431,21 +431,14 @@ namespace ProductivityApi.Repository
 
             foreach (var dto in dtos)
             {
-                table.Rows.Add(
-                    dto.BranchId,
-                    dto.CdsmId,
-                    dto.ZdshId,
-                    dto.MzdshId,
-                    dto.ModifiedBy
-                );
+                table.Rows.Add(dto.BranchId, dto.CdsmId, dto.ZdshId, dto.MzdshId, dto.ModifiedBy);
             }
 
             var parameters = new DynamicParameters();
-
             parameters.Add("@Allocations", table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
 
-            // IMPORTANT: OUTPUT PARAM
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            // ✅ Use returnValue: true — Dapper handles RETURN without passing it as an SP argument
+            parameters.Add("@ReturnVal", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
             await connection.ExecuteAsync(
                 "sp_Update_CDSM_ZDSH_Allocation",
@@ -453,8 +446,7 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
 
-            return parameters.Get<int>("@Output");
+            return parameters.Get<int>("@ReturnVal");
         }
-
     }
 }
