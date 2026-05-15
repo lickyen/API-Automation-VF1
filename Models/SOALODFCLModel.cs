@@ -96,6 +96,11 @@ namespace ProductivityApi.Models
         public SOALODFCLPayment? Payments { get; set; }
         public List<SOALog>? Logs { get; set; }
         public List<SOALODCharges>? Charges { get; set; }
+        public string? SOA_FileName { get; set; }
+        public string? LOD_FileName { get; set; }
+        public string? FCL_FileName { get; set; }
+        public string? NOCLOD_FileName { get; set; }
+
     }
     public class SOALog
     {
@@ -440,6 +445,22 @@ namespace ProductivityApi.Models
         public string Charge_Id { get; set; }
 
        // public string CreatedBy { get; set; }
+
+    }
+    public class SOALODReceiptRequestDto
+    {
+        public int Id { get; set; }  // ReqId
+        public string ReceiptNo { get; set; }
+        public string UpdatedBy { get; set; }
+    }
+    public class SOALODFileResponseDto
+    {
+        public string Base64 { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+    }
+    public class LODRequestDto
+    {
+        public int Id { get; set; }
 
     }
 }

@@ -525,5 +525,34 @@ namespace ProductivityApi.Repositories
 
         }
 
+        public async Task<int> UpdateReceiptPath(int Tid, string ReceiptPath,  string Userid)
+        {
+
+
+            using var conn = new SqlConnection(_conStr);
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ID", Tid);
+            parameters.Add("@ReceiptPath", ReceiptPath);
+            parameters.Add("@UpdatedBy", Userid);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_SOALOD_UpdateReceiptPath",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+
+            return TransactionId;
+
+        }
+
     }
 }
