@@ -6,7 +6,7 @@ namespace ProductivityApi.Models.PLF
     public class PaymentRequest
     {
         public string finReference { get; set; }
-        public double amount { get; set; }
+        public int amount { get; set; }
         public string paymentMode { get; set; }
         public string subReceiptMode { get; set; }
         public string allocationType { get; set; }

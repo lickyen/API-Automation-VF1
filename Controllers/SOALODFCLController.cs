@@ -143,9 +143,9 @@ namespace ProductivityApi.Controllers
 
         }
         [HttpGet("GeneratePaymentLink")]
-        public async Task<IActionResult> GeneratePaymentLink(int id)
+        public async Task<IActionResult> GeneratePaymentLink([FromQuery] GenPaymentLinkDto dto)
         {
-            var data = await _service.GeneratePaymentLink(id);
+            var data = await _service.GeneratePaymentLink(dto);
             return Ok(new Response(true, data, "Success"));
         }
 
@@ -159,5 +159,18 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, PaymentStatus, "Success"));
         }
+        [HttpGet("AddCashPayment")]
+        public async Task<IActionResult> AddCashPayment([FromQuery] SOALODCashDto dto)
+        {
+            var data = await _service.AddCashPayment(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
+        [HttpPost("UpdatePaymenttoPLF")]
+        public async Task<IActionResult> UpdatePaymenttoPLF([FromBody] GenPaymentLinkDto dto)
+        {
+            var data = await _service.UpdatePaymenttoPLF(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
+
     }
 }

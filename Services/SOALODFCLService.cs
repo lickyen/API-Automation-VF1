@@ -10,6 +10,9 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using System.Reflection;
 using Azure;
 using DocumentFormat.OpenXml.Wordprocessing;
+using ProductivityApi.Repository;
+using Microsoft.IdentityModel.Tokens;
+using DocumentFormat.OpenXml.Office2010.Excel;
 
 namespace ProductivityApi.Services
 {
@@ -22,9 +25,10 @@ namespace ProductivityApi.Services
         private readonly AppSettings _appSettings;
         private readonly PLFService _plfService;
         private readonly SharedService _sharedservice;
+        private readonly SharedRepository _sharedRepository;
 
 
-        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice)
+        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice, SharedRepository sharedRepository)
         {
             _repository = repository;
             _emailService = emailService;
@@ -33,6 +37,7 @@ namespace ProductivityApi.Services
             _appSettings = appSettings;
             _plfService = plfService;
             _sharedservice = sharedservice;
+            _sharedRepository = sharedRepository;
         }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
@@ -199,16 +204,17 @@ namespace ProductivityApi.Services
 
             return SOA;
         }
-        public async Task<PaymentLinkResponseDto> GeneratePaymentLink(int id)
+        public async Task<PaymentLinkResponseDto> GeneratePaymentLink(GenPaymentLinkDto dto)
         {
             PaymentLinkResponseDto response= new PaymentLinkResponseDto();
-            var settelment = await _repository.GetSettlementByIdAsync(id);
-            if (settelment != null)
+            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
+            if (soalod != null)
             {
-                string Refid = await _repository.GetPaymentRefID();
+                string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
+
                 long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
-                string description = $"{settelment.Lan} - Payment for SOA/LOD/FCL";
-                int amount = Convert.ToInt16(settelment.Total_Charges);
+                string description = $"{soalod.Lan} - Payment for SOA/LOD/FCL";
+                int amount = Convert.ToInt16(soalod.Total_Charges);
                 var request = new PaymentLinkRequestDto
                 {
                     Amount = (int)(amount * 100), // Razorpay accepts amount in paise
@@ -220,9 +226,9 @@ namespace ProductivityApi.Services
 
                     Customer = new PaymentCustomerDto
                     {
-                        Name = settelment.Cust_Name,
-                        Contact = settelment.Mobile,
-                        Email = settelment.Email
+                        Name = soalod.Cust_Name,
+                        Contact = soalod.Mobile,
+                        Email = soalod.Email
                     },
 
                     Notify = new NotifyDto
@@ -241,10 +247,12 @@ namespace ProductivityApi.Services
                     CallbackUrl = "https://vistaarfinance.com/",
                     CallbackMethod = "get"
                 };
+
                 response = await _sharedservice.PaymentLink(request);
-                if (response.Error != null && !string.IsNullOrEmpty(response.ReferenceId))
+                if (response.Error == null)
+                    //&& !string.IsNullOrEmpty(response.ReferenceId))
                 {
-                    int Pid = await _repository.AddPayment_Online(response, id, settelment.Lan, "");
+                    int Pid = await _repository.AddPayment_Online(response, dto.Id, soalod.Lan, dto.UserId);
                 }
             }
             return response;
@@ -254,5 +262,123 @@ namespace ProductivityApi.Services
             return await _repository.GetPaylinkdetails(Id);
             
         }
+        public async Task<int> AddCashPayment(SOALODCashDto dto)
+        {
+            var result = await _repository.AddPayment_cash(dto);
+
+            return result;
+        }
+
+        public async Task<PaymentLinkTransaction> UpdatePaymenttoPLF(GenPaymentLinkDto dto)
+        {
+            bool Chargestatus = false;
+            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
+
+            var chargestatus = await CreateAdviceinPLF(dto);
+            if (chargestatus)
+            {
+               // PaymentLinkTransaction pl = new PaymentLinkTransaction();
+                var pl = (await _repository.GetPaylinkdetails(dto.Id)).FirstOrDefault();
+                if (pl is not null)
+                {
+                    if(pl.Payment_Link_Status== "paid")
+                    {
+                        if(string.IsNullOrEmpty(pl.Pennant_Response) || pl.Pennant_Response != "success")
+                            {
+                            bool isCash = pl.Payment_Type.ToLower() == "cash";
+                            var request = new PaymentRequest
+                            {
+                                
+                                finReference = pl.Lan,
+                                amount=pl.Amount*100,
+                                paymentMode=pl.Payment_Type.ToUpper(),
+                                subReceiptMode= isCash ? "CASH" :"PAYMENTGATEWAY",
+                                allocationType="A",
+                                excessAdjustTo="A",
+                                panNumber="",
+                                reqType= "Post",
+                                stpProcess=true,
+                                processStage="",
+                              receiptDetail = new ReceiptDetail
+                                {
+                                    paymentRef = isCash ? "" :pl.Payment_Id,
+                                    bankCode = "",
+                                    favourName = "",
+                                    favourNumber = "",
+                                    fundingAccount = "223",
+                                    transactionRef = pl.Reference_Id,
+                                    depositDate = pl.UpdatedDate,
+                                    receivedDate = pl.UpdatedDate,
+                                    remarks = ""
+                                },
+                                fees = new List<Fee>()
+                            };
+                           var plfResponse = await _plfService.ManualPayment(request);
+                            await _repository.UpdatePLFPaymentResponse(dto.Id, plfResponse, pl.Reference_Id, dto.UserId);
+                           
+                               
+                            
+                        }
+
+                    }
+                }
+            }
+            else
+            {
+
+            }
+            var Paymentdtl = (await _repository.GetPaylinkdetails(dto.Id)).FirstOrDefault();
+            return Paymentdtl;
+        }
+
+        public async Task<Boolean> CreateAdviceinPLF(GenPaymentLinkDto dto)
+            {
+            bool Chargestatus = false;
+            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
+            var Charges = await _repository.GetChargesById(dto.Id);
+            CreateAdviceResponse? adviseResponse = null;
+            int adviseid;
+            foreach (var charge in Charges)
+            {
+                if (charge.Charge_Amount > 0 && string.IsNullOrEmpty(charge.Charge_Id))
+                {
+                    // Your logic here
+                    var request = new CreateAdviceRequest
+                    {
+                        stp = true,
+                        finReference = soalod.Lan,
+                        adviseType = 1,
+                        valueDate = DateTime.Today,
+                        feeTypeCode = charge.Charge_Code,
+                        adviseAmount = charge.Charge_Amount * 100  //minor currency
+                    };
+                    adviseResponse = await _plfService.CreateAdvice(request);
+                    if (adviseResponse.returnStatus is not null)
+                    {
+                        var returnstatus = adviseResponse.returnStatus.returnCode + "-" + adviseResponse.returnStatus.returnText;
+                        adviseid = await _repository.UpdateAdviseID(dto.Id, charge.Charge_Code, "", returnstatus, dto.UserId);
+                    }
+                    else
+                    {
+                        adviseid = await _repository.UpdateAdviseID(dto.Id, charge.Charge_Code, adviseResponse.adviseId, adviseResponse.adviseId, dto.UserId);
+                    }
+                }
+            }
+            var Charges1 = await _repository.GetChargesById(dto.Id);
+
+            foreach (var charge1 in Charges)
+            {
+                if (charge1.Charge_Amount > 0 && string.IsNullOrEmpty(charge1.Charge_Id))
+                {
+                    Chargestatus = false;
+                }
+                else
+                {
+                    Chargestatus = true;
+                }
+            }
+            return Chargestatus;
+        }
+
     }
 }

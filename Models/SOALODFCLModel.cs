@@ -253,6 +253,13 @@ namespace ProductivityApi.Models
         public FileUploadBase64? LODDoc { get; set; }
     }
 
+    public class GenPaymentLinkDto
+    {
+        public int Id { get; set; }  // ReqId
+       // public string PaymentMode { get; set; }
+        public string? UserId { get; set; }
+
+    }
     public class PaymentLinkRequestDto
     {
         [JsonPropertyName("amount")]
@@ -296,57 +303,57 @@ namespace ProductivityApi.Models
     {
         public RazorPayErrorDto Error { get; set; }
 
-        public bool AcceptPartial { get; set; }
+        public bool accept_partial { get; set; }
 
-        public int Amount { get; set; }
+        public int amount { get; set; }
 
-        public int AmountPaid { get; set; }
+        public int amount_paid { get; set; }
 
-        public string CallbackMethod { get; set; }
+        public string callback_method { get; set; }
 
-        public string CallbackUrl { get; set; }
+        public string callback_url { get; set; }
 
-        public long CancelledAt { get; set; }
+        public long cancelled_at { get; set; }
 
-        public long CreatedAt { get; set; }
+        public long created_at { get; set; }
 
-        public string Currency { get; set; }
+        public string currency { get; set; }
 
-        public PaymentCustomerDto Customer { get; set; }
+        public PaymentCustomerDto customer { get; set; }
 
-        public string Description { get; set; }
+        public string description { get; set; }
 
-        public long ExpireBy { get; set; }
+        public long expire_by { get; set; }
 
-        public long ExpiredAt { get; set; }
+        public long expired_at { get; set; }
 
-        public int FirstMinPartialAmount { get; set; }
+        public int first_min_partial_amount { get; set; }
 
-        public string Id { get; set; }
+        public string id { get; set; }
 
-        public NotesDto Notes { get; set; }
+        public NotesDto notes { get; set; }
 
-        public NotifyDto Notify { get; set; }
+        public NotifyDto notify { get; set; }
 
-        public object Payments { get; set; }
+        public object payments { get; set; }
 
-        public string ReferenceId { get; set; }
+        public string reference_id { get; set; }
 
-        public bool ReminderEnable { get; set; }
+        public bool reminder_enable { get; set; }
 
-        public List<object> Reminders { get; set; }
+        public List<object> reminders { get; set; }
 
-        public string ShortUrl { get; set; }
+        public string short_url { get; set; }
 
-        public string Status { get; set; }
+        public string status { get; set; }
 
-        public long UpdatedAt { get; set; }
+        public long updated_at { get; set; }
 
-        public bool UpiLink { get; set; }
+        public bool upi_link { get; set; }
 
-        public string UserId { get; set; }
+        public string user_id { get; set; }
 
-        public bool WhatsappLink { get; set; }
+        public bool whatsapp_link { get; set; }
     }
     public class RazorPayErrorDto
     {
@@ -388,19 +395,19 @@ namespace ProductivityApi.Models
         public string? Lan { get; set; }
         public string? Charge_Type { get; set; }
         public string? Payment_Type { get; set; }
-        public decimal? Amount { get; set; }
-        public DateTime? Expire_By { get; set; }
+        public int Amount { get; set; }
+        public Int64? Expire_By { get; set; }
         public string? Reference_Id { get; set; }
         public string? Name { get; set; }
         public string? Contact { get; set; }
         public string? Email { get; set; }
-        public DateTime? Created_At { get; set; }
+        public Int64? Created_At { get; set; }
         public string? PaymentLinkId { get; set; }
         public string? Short_Url { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? CreatedDate { get; set; }
         public string? Event { get; set; }
-        public decimal? Amount_Paid { get; set; }
+        public int? Amount_Paid { get; set; }
         public string? Account_Id { get; set; }
         public string? Rrn { get; set; }
         public string? Payment_Id { get; set; }
@@ -410,12 +417,31 @@ namespace ProductivityApi.Models
         public string? User_Id { get; set; }
         public DateTime? Updated_At { get; set; }
         public string? UpdatedBy { get; set; }
-        public DateTime? UpdatedDate { get; set; }
+        public DateTime UpdatedDate { get; set; }
         public string? Pennant_Response { get; set; }
         public string? Pennant_Receipt_Id { get; set; }
         public DateTime? Pennant_UpdatedDT { get; set; }
     }
+    public class SOALODCashDto
+    {
+        public int Id { get; set; }  // ReqId
+        public string? Lan { get; set; }
+        public string? Amount { get; set; }
+        public string? RefId { get; set; }
+        public string? CreatedBy { get; set; }
+    }
+    public class ChargesResponseDto
+    {
+        public int? TID { get; set; }
+        public string Charge_Type { get; set; }
+        public string Charge_Code { get; set; }
+        public int Charge_Amount { get; set; }
+        public int IsWaiver { get; set; }
+        public string Charge_Id { get; set; }
 
+       // public string CreatedBy { get; set; }
+
+    }
 }
 
 

@@ -6,6 +6,7 @@ using ProductivityApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models.PLF;
 using DocumentFormat.OpenXml.Office.Word;
+using Azure;
 
 namespace ProductivityApi.Repositories
 {
@@ -339,21 +340,19 @@ namespace ProductivityApi.Repositories
         public async Task<int> AddPayment_Online(PaymentLinkResponseDto response, int Id, string Lan,string Createdby)
         {
             using var conn = new SqlConnection(_conStr);
-
             var parameters = new DynamicParameters();
-
 
             parameters.Add("@TId", Id);
             parameters.Add("@Lan", Lan);
-            parameters.Add("@amount", response.Amount / 100);
-            parameters.Add("@expire_by", response.ExpireBy);
-            parameters.Add("@reference_id", response.ReferenceId);
-            parameters.Add("@name", response.Customer?.Name);
-            parameters.Add("@contact", response.Customer?.Contact);
-            parameters.Add("@email", response.Customer?.Email);
-            parameters.Add("@created_at", response.CreatedAt);
-            parameters.Add("@paymentLinkid", response.Id);
-            parameters.Add("@short_url", response.ShortUrl);
+            parameters.Add("@amount", response.amount / 100);
+            parameters.Add("@expire_by", response.expire_by);
+            parameters.Add("@reference_id", response.reference_id);
+            parameters.Add("@name", response.customer?.Name);
+            parameters.Add("@contact", response.customer?.Contact);
+            parameters.Add("@email", response.customer?.Email);
+            parameters.Add("@created_at", response.created_at);
+            parameters.Add("@paymentLinkid", response.id);
+            parameters.Add("@short_url", response.short_url);
             parameters.Add("@createdBy", Createdby);
 
 
@@ -377,19 +376,152 @@ namespace ProductivityApi.Repositories
 
         }
 
-        public async Task<IEnumerable<PaymentLinkTransaction>> GetPaylinkdetails(int id)
+        public async Task<int> AddPayment_cash(SOALODCashDto dto)
         {
             using var conn = new SqlConnection(_conStr);
-            return await conn.QueryAsync<PaymentLinkTransaction>(
-             "sp_SOALOD_getPaymentStatus",
-             new
-             {
-                 ID = id,
+            var parameters = new DynamicParameters();
 
-             },
-             commandType: CommandType.StoredProcedure
-         );
+            parameters.Add("@TId", dto.Id);
+            parameters.Add("@Lan", dto.Lan);
+            parameters.Add("@amount", dto.Amount);
+            parameters.Add("@RefID", dto.RefId);
+            parameters.Add("@createdBy", dto.CreatedBy);
 
+
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_AddPayment_Cash",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+
+            return TransactionId;
+
+        }
+
+
+        public async Task<IEnumerable<PaymentLinkTransaction>> GetPaylinkdetails(int id)
+        {
+            PaymentLinkTransaction pt = new PaymentLinkTransaction();
+            using var conn = new SqlConnection(_conStr);
+            try {
+                return await conn.QueryAsync<PaymentLinkTransaction>(
+                 "sp_SOALOD_getPaymentStatus",
+                 new
+                 {
+                     ID = id,
+
+                 },
+                 commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return Enumerable.Empty<PaymentLinkTransaction>();
+            }
+        }
+
+        public async Task<IEnumerable<ChargesResponseDto>> GetChargesById(int id)
+        {
+            ChargesResponseDto pt = new ChargesResponseDto();
+            using var conn = new SqlConnection(_conStr);
+            try
+            {
+                return await conn.QueryAsync<ChargesResponseDto>(
+                 "sp_SOALOD_getChargesbyID",
+                 new
+                 {
+                     ID = id,
+
+                 },
+                 commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return Enumerable.Empty<ChargesResponseDto>();
+            }
+        }
+
+        public async Task<int> UpdateAdviseID(int Tid, string ChargeCode, string AdviseID, string ReturnstatusCode, string Userid)
+        {
+            using var conn = new SqlConnection(_conStr);
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ID", Tid);
+            parameters.Add("@ChargeType", ChargeCode);
+            parameters.Add("@ChargeID", AdviseID);
+            parameters.Add("@ReturnStatus", ReturnstatusCode);
+            parameters.Add("@UpdatedBy", Userid);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_SOALOD_UpdateChargeID",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+
+            return TransactionId;
+
+        }
+
+
+        public async Task<int> UpdatePLFPaymentResponse(int Tid, PaymentResponse PR , string RefId, string Userid)
+        {
+
+            string status = "";
+            string receipt = "";
+
+            if (PR.returnStatus.returnCode == "0000")
+            {
+                status = "success";
+                receipt = PR.receiptId.ToString();
+            }
+            else
+            {
+                status = PR.returnStatus.returnCode + "-" + PR.returnStatus.returnText;
+            }
+
+            using var conn = new SqlConnection(_conStr);
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ID", Tid);
+            parameters.Add("@ReferenceID", RefId);
+            parameters.Add("@Status", status);
+            parameters.Add("@ReceiptId", receipt);
+            parameters.Add("@UpdatedBy", Userid);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            try
+            {
+                await conn.ExecuteAsync(
+                    "sp_UpdatePaymentPushStatus",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            int TransactionId = parameters.Get<int>("@Output");
+
+            return TransactionId;
 
         }
 
