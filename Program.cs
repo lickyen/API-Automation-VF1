@@ -96,6 +96,7 @@ builder.Services.AddScoped<CustEmailUpdateService>();
 builder.Services.AddScoped<WabaService>();
 builder.Services.AddScoped<LoanCancellationService>();
 builder.Services.AddScoped<SOALODFCLService>();
+builder.Services.AddScoped<ClosureService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -117,6 +118,7 @@ builder.Services.AddScoped<UserLogRepository>();
 builder.Services.AddScoped<LoanCancellationRepository>();
 builder.Services.AddScoped<PLFRepository>();
 builder.Services.AddScoped<SOALODFCLRepository>();
+builder.Services.AddScoped<ClosureRepository>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();

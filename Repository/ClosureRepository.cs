@@ -63,7 +63,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteScalarAsync<int>(
-                    "sp_AddClosureRequest",
+                    "sp_newClosure_AddRequest",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -112,7 +112,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteAsync(
-                    "sp_ReinitiateClosureRequest",
+                    "sp_newClosure_ReInitiateRequest",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -140,7 +140,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteAsync(
-                    "sp_UpdateClosureAmountCollected",
+                    "sp_newClosure_UpdateAmountCollected",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -168,7 +168,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteAsync(
-                    "sp_ResubmitClosureRequest",
+                    "sp_newClosure_ReSubmitRequest",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -239,7 +239,7 @@ namespace ProductivityApi.Repository
 
                 // stored proc returns int status (1 success, -1 not found, -2 invalid role etc.)
                 return await connection.ExecuteScalarAsync<int>(
-                    "sp_ApproveClosureRequest",
+                    "sp_newClosure_Approval",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -256,7 +256,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 return await connection.QueryFirstOrDefaultAsync<ClosureTransaction>(
-                    "sp_GetClosureById",
+                    "sp_newClosure_GetById",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
             }
@@ -273,7 +273,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 var rows = await connection.QueryAsync<ClosurePayment>(
-                    "sp_GetClosurePayments",
+                    "sp_newClosure_GetPayments",
                     new { ReqId = reqId },
                     commandType: CommandType.StoredProcedure);
                 return rows.ToList();
@@ -291,7 +291,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 var rows = await connection.QueryAsync<ClosureLog>(
-                    "sp_GetClosureLogs",
+                    "sp_newClosure_GetLogs",
                     new { ReqId = reqId },
                     commandType: CommandType.StoredProcedure);
                 return rows.ToList();
@@ -309,7 +309,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 var rows = await connection.QueryAsync<ClosureQuestionnaireResponse>(
-                    "sp_GetClosureQuestionnaire",
+                    "sp_newClosure_GetQuestionnaire",
                     new { ReqId = reqId, ReqSource = reqSource },
                     commandType: CommandType.StoredProcedure);
                 return rows.ToList();
@@ -338,15 +338,15 @@ namespace ProductivityApi.Repository
             }
         }
 
-        public async Task<List<ClosureTransaction>> GetCompletedByUserAsync(string userId)
+        public async Task<List<ClosureTransaction>> GetPendingByUserAsync(string userId, string role)
         {
             try
             {
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 var rows = await connection.QueryAsync<ClosureTransaction>(
-                    "sp_GetCompletedClosureByUser",
-                    new { UserId = userId },
+                    "sp_newClosure_GetByUser_Pending",
+                    new { UserId = userId, Role = role },
                     commandType: CommandType.StoredProcedure);
                 return rows.ToList();
             }
@@ -356,6 +356,23 @@ namespace ProductivityApi.Repository
             }
         }
 
+        public async Task<List<ClosureTransaction>> GetCompletedByUserAsync(string userId, string role)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+                var rows = await connection.QueryAsync<ClosureTransaction>(
+                    "sp_newClosure_GetByUser_Completed",
+                    new { UserId = userId, Role = role },
+                    commandType: CommandType.StoredProcedure);
+                return rows.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
         public async Task<List<ClosureTransaction>> SearchByLanAsync(string lan)
         {
             try
@@ -363,7 +380,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 var rows = await connection.QueryAsync<ClosureTransaction>(
-                    "sp_SearchClosureByLan",
+                    "sp_newClosure_SearchByLan",
                     new { Lan = lan },
                     commandType: CommandType.StoredProcedure);
                 return rows.ToList();
@@ -394,7 +411,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteScalarAsync<int>(
-                    "sp_AddClosurePayment",
+                    "sp_newClosure_AddPayment",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -424,7 +441,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteAsync(
-                    "sp_UpdateClosurePayment",
+                    "sp_newClosure_UpdatePayment",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -441,7 +458,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 return await connection.ExecuteAsync(
-                    "sp_DeleteClosurePayment",
+                    "sp_newClosure_DeletePayment",
                     new { Id = id, DeletedBy = deletedBy },
                     commandType: CommandType.StoredProcedure);
             }
@@ -468,7 +485,7 @@ namespace ProductivityApi.Repository
                 };
 
                 return await connection.ExecuteScalarAsync<int>(
-                    "sp_AddClosureQuestionnaireResponse",
+                    "sp_newClosure_AddQuestionnaireResponse",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -485,7 +502,7 @@ namespace ProductivityApi.Repository
                 using var connection = new SqlConnection(_conStr);
                 await connection.OpenAsync();
                 return await connection.ExecuteScalarAsync<int>(
-                    "sp_SubmitClosureQuestionnaire",
+                    "sp_newClosure_SubmitQuestionnaire",
                     new { Id = dto.Id, Source = dto.Source, CreatedBy = dto.CreatedBy, status },
                     commandType: CommandType.StoredProcedure);
             }
@@ -493,6 +510,28 @@ namespace ProductivityApi.Repository
             {
                 throw new Exception("DB Error.", ex);
             }
+        }
+
+        public async Task<string?> GetWaiverApproverAsync(GetWaiverApproverDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<string>(
+                "SP_newClosure_GetWaiverApprover",
+                new
+                {
+                    dto.Allocation,
+                    dto.Criticality,
+                    dto.Bucket,
+                    dto.POSAmount,
+                    dto.POSWaiverAmount,
+                    dto.POSWaiverPerc,
+                    dto.InterestWaiverAmount,
+                    dto.InterestWaiverPer,
+                    dto.ChargesWaiverAmount,
+                    dto.ChargesWaiverPer
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

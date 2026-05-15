@@ -85,44 +85,10 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("getPayments/{reqId}")]
-        public async Task<IActionResult> GetPayments(int reqId)
-        {
-            var data = await _service.GetPaymentsAsync(reqId);
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("getLogs/{reqId}")]
-        public async Task<IActionResult> GetLogs(int reqId)
-        {
-            var data = await _service.GetLogsAsync(reqId);
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("getQuestionnaire/{reqId}")]
-        public async Task<IActionResult> GetQuestionnaire(int reqId, [FromQuery] string reqSource)
-        {
-            var data = await _service.GetQuestionnaireAsync(reqId, reqSource);
-            return Ok(new Response(true, data, "Success"));
-        }
-
         [HttpGet("getList")]
-        public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role)
+        public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role, [FromQuery] string status)
         {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(role))
-                return BadRequest(new Response(false, null, "UserId and Role are required"));
-
-            var data = await _service.GetListByUserAsync(userId, role);
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("getCompleted")]
-        public async Task<IActionResult> GetCompleted([FromQuery] string userId)
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-                return BadRequest(new Response(false, null, "UserId is required"));
-
-            var data = await _service.GetCompletedByUserAsync(userId);
+            var data = await _service.GetListByUserAsync(userId, role, status);
             return Ok(new Response(true, data, "Success"));
         }
 

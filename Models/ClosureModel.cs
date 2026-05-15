@@ -123,6 +123,11 @@
         public DateTime CreatedDt { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
+
+        // Related collections returned with GetById
+        public List<ClosurePayment> Payments { get; set; }
+        public List<ClosureLog> Logs { get; set; }
+        public List<ClosureQuestionnaireResponse> Questionnaire { get; set; }
     }
 
     public class ClosurePayment
@@ -358,6 +363,20 @@
     {
         public string UserId { get; set; }
         public string Role { get; set; }
+    }
+
+    public class GetWaiverApproverDto
+    {
+        public string Allocation { get; set; }
+        public string Criticality { get; set; }
+        public string Bucket { get; set; }
+        public decimal POSAmount { get; set; }
+        public decimal POSWaiverAmount { get; set; }
+        public decimal POSWaiverPerc { get; set; }
+        public decimal InterestWaiverAmount { get; set; }
+        public decimal InterestWaiverPer { get; set; }
+        public decimal ChargesWaiverAmount { get; set; }
+        public decimal ChargesWaiverPer { get; set; }
     }
 }
 
