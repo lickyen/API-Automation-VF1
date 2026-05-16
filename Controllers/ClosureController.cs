@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -167,6 +168,21 @@ namespace ProductivityApi.Controllers
                 -2 => BadRequest(new Response(false, null, "Invalid source")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
+        }
+
+        // File Download
+        [HttpGet("download/{fileName}")]
+        public async Task<IActionResult> DownloadFile(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return BadRequest(new Response(false, null, "File name is required"));
+
+            var fileBytes = await _service.DownloadFileAsync(fileName);
+            if (fileBytes == null)
+                return NotFound(new Response(false, null, "File not found"));
+
+            var contentType = Helpers.FileHelper.GetContentType(fileName);
+            return File(fileBytes, contentType, fileName);
         }
     }
 }

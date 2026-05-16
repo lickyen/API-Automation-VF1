@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using ProductivityApi.Constants;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 
@@ -14,13 +15,15 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
+        private readonly string _filePath;
 
-        public ClosureService(ClosureRepository repository, EmailService emailService, TemplateService templateService, UserService userService)
+        public ClosureService(ClosureRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings)
         {
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
             _userService = userService;
+            _filePath = appSettings.FilePaths.ClosureFilePath;
         }
 
         public static bool IsCritical(string? action)
@@ -52,6 +55,22 @@ namespace ProductivityApi.Services
             var id = await _repository.AddRequestAsync(dto, status);
             if (id > 0)
             {
+                // Handle file uploads
+                string? ackPath = null, checklistPath = null, fcLetterPath = null;
+
+                if (dto.AckFile != null)
+                    ackPath = await UploadFileAsync(id, dto.AckFile, "Ack");
+
+                if (dto.ChecklistFile != null)
+                    checklistPath = await UploadFileAsync(id, dto.ChecklistFile, "Checklist");
+
+                if (dto.FCLetterFile != null)
+                    fcLetterPath = await UploadFileAsync(id, dto.FCLetterFile, "FCLetter");
+
+                // Update file paths in DB if any file was uploaded
+                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
+                    await _repository.UpdateFilePathsAsync(id, ackPath, checklistPath, fcLetterPath);
+
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
                     ReqId = id,
@@ -103,6 +122,21 @@ namespace ProductivityApi.Services
             var result = await _repository.ReinitiateRequestAsync(dto, status);
             if (result > 0)
             {
+                // Handle file uploads
+                string? ackPath = null, checklistPath = null, fcLetterPath = null;
+
+                if (dto.AckFile != null)
+                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+
+                if (dto.ChecklistFile != null)
+                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+
+                if (dto.FCLetterFile != null)
+                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+
+                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
+                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
+
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
                     ReqId = dto.Id,
@@ -143,6 +177,21 @@ namespace ProductivityApi.Services
             var result = await _repository.UpdateAmountCollectedAsync(dto, status);
             if (result > 0)
             {
+                // Handle file uploads
+                string? ackPath = null, checklistPath = null, fcLetterPath = null;
+
+                if (dto.AckFile != null)
+                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+
+                if (dto.ChecklistFile != null)
+                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+
+                if (dto.FCLetterFile != null)
+                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+
+                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
+                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
+
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
                     ReqId = dto.Id,
@@ -166,6 +215,21 @@ namespace ProductivityApi.Services
             var result = await _repository.ResubmitRequestAsync(dto, status);
             if (result > 0)
             {
+                // Handle file uploads
+                string? ackPath = null, checklistPath = null, fcLetterPath = null;
+
+                if (dto.AckFile != null)
+                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+
+                if (dto.ChecklistFile != null)
+                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+
+                if (dto.FCLetterFile != null)
+                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+
+                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
+                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
+
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
                     ReqId = dto.Id,
@@ -369,10 +433,22 @@ namespace ProductivityApi.Services
             => await _repository.SearchByLanAsync(lan);
 
         public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto)
-            => await _repository.AddPaymentAsync(dto);
+        {
+            string? proofPath = null;
+            if (dto.ProofFile != null)
+                proofPath = await UploadFileAsync(dto.ReqId, dto.ProofFile, $"Payment_{DateTime.Now:yyyyMMddHHmmss}");
+
+            return await _repository.AddPaymentAsync(dto, proofPath);
+        }
 
         public async Task<int> UpdatePaymentAsync(UpdateClosurePaymentDto dto)
-            => await _repository.UpdatePaymentAsync(dto);
+        {
+            string? proofPath = null;
+            if (dto.ProofFile != null)
+                proofPath = await UploadFileAsync(dto.Id, dto.ProofFile, "Payment");
+
+            return await _repository.UpdatePaymentAsync(dto, proofPath);
+        }
 
         public async Task<int> DeletePaymentAsync(int id, string deletedBy)
             => await _repository.DeletePaymentAsync(id, deletedBy);
@@ -383,5 +459,34 @@ namespace ProductivityApi.Services
         public async Task<string?> GetWaiverApproverAsync(GetWaiverApproverDto dto)
             => await _repository.GetWaiverApproverAsync(dto);
 
+        // ── File Upload / Download ──────────────────────────────────────────
+
+        private async Task<string> UploadFileAsync(int reqId, FileUploadBase64 fileDto, string fileType)
+        {
+            if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
+                throw new ArgumentException("File is empty");
+
+            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
+
+            var extension = Path.GetExtension(fileDto.FileName);
+            var fileName = $"{reqId}_{fileType}{extension}";
+
+            var result = await FileHelper.SaveBase64FileAsync(
+                _filePath,
+                fileName,
+                fileDto.Base64,
+                allowedExtensions
+            );
+
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
+
+            return fileName;
+        }
+
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
+        {
+            return await FileHelper.ReadFileAsync(_filePath, fileName);
+        }
     }
 }

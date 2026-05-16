@@ -40,9 +40,6 @@ namespace ProductivityApi.Repository
                     dto.IsAmountCollected,
                     dto.ReasonAmountCollected,
                     dto.IsWaiver,
-                    dto.AckPath,
-                    dto.ChecklistPath,
-                    dto.FCLetterPath,
                     dto.LetterId,
                     dto.FinalApprover,
                     dto.Remarks,
@@ -90,9 +87,6 @@ namespace ProductivityApi.Repository
                     dto.IsAmountCollected,
                     dto.ReasonAmountCollected,
                     dto.IsWaiver,
-                    dto.AckPath,
-                    dto.ChecklistPath,
-                    dto.FCLetterPath,
                     dto.FinalApprover,
                     dto.Remarks,
                     dto.UpdatedBy,
@@ -131,9 +125,6 @@ namespace ProductivityApi.Repository
                 var parameters = new
                 {
                     dto.Id,
-                    dto.AckPath,
-                    dto.ChecklistPath,
-                    dto.FCLetterPath,
                     dto.Remarks,
                     dto.UpdatedBy,
                     status
@@ -159,9 +150,6 @@ namespace ProductivityApi.Repository
                 var parameters = new
                 {
                     dto.Id,
-                    dto.AckPath,
-                    dto.ChecklistPath,
-                    dto.FCLetterPath,
                     dto.Remarks,
                     dto.UpdatedBy,
                     status
@@ -391,7 +379,7 @@ namespace ProductivityApi.Repository
             }
         }
 
-        public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto)
+        public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto, string? proofPath)
         {
             try
             {
@@ -404,7 +392,7 @@ namespace ProductivityApi.Repository
                     dto.Amount,
                     dto.PaymentDetails,
                     dto.BankDetails,
-                    dto.ProofPath,
+                    ProofPath = proofPath,
                     dto.TransactionRef,
                     dto.PaymentDate,
                     dto.CreatedBy
@@ -421,7 +409,7 @@ namespace ProductivityApi.Repository
             }
         }
 
-        public async Task<int> UpdatePaymentAsync(UpdateClosurePaymentDto dto)
+        public async Task<int> UpdatePaymentAsync(UpdateClosurePaymentDto dto, string? proofPath)
         {
             try
             {
@@ -434,7 +422,7 @@ namespace ProductivityApi.Repository
                     dto.Amount,
                     dto.PaymentDetails,
                     dto.BankDetails,
-                    dto.ProofPath,
+                    ProofPath = proofPath,
                     dto.TransactionRef,
                     dto.PaymentDate,
                     dto.UpdatedBy
@@ -532,6 +520,32 @@ namespace ProductivityApi.Repository
                 },
                 commandType: CommandType.StoredProcedure
             );
+        }
+
+        public async Task<int> UpdateFilePathsAsync(int reqId, string? ackPath, string? checklistPath, string? fcLetterPath)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+
+                var parameters = new
+                {
+                    Id = reqId,
+                    AckPath = ackPath,
+                    ChecklistPath = checklistPath,
+                    FCLetterPath = fcLetterPath
+                };
+
+                return await connection.ExecuteAsync(
+                    "sp_newClosure_UpdateFilePaths",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
         }
     }
 }

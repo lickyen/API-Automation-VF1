@@ -230,14 +230,15 @@
         public bool IsAmountCollected { get; set; }
         public string ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public int? LetterId { get; set; }
         public string Status { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string CreatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Reinitiate Request ──────────────────────────────────────────────
@@ -252,34 +253,37 @@
         public bool IsAmountCollected { get; set; }
         public string ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Update Amount Collected ─────────────────────────────────────────
     public class UpdateAmountCollectedDto
     {
         public int Id { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Resubmit Request ────────────────────────────────────────────────
     public class ResubmitClosureRequestDto
     {
         public int Id { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Add Logs ────────────────────────────────────────────────────────
@@ -312,10 +316,11 @@
         public decimal Amount { get; set; }
         public string PaymentDetails { get; set; }
         public string BankDetails { get; set; }
-        public string ProofPath { get; set; }
         public string TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string CreatedBy { get; set; }
+
+        public FileUploadBase64? ProofFile { get; set; }
     }
 
     // ── Update Payment ──────────────────────────────────────────────────
@@ -326,10 +331,11 @@
         public decimal? Amount { get; set; }
         public string PaymentDetails { get; set; }
         public string BankDetails { get; set; }
-        public string ProofPath { get; set; }
         public string TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? ProofFile { get; set; }
     }
 
     // ── Delete Payment ──────────────────────────────────────────────────
