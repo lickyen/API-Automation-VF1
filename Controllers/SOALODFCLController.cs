@@ -148,6 +148,12 @@ namespace ProductivityApi.Controllers
             var data = await _service.GeneratePaymentLink(dto);
             return Ok(new Response(true, data, "Success"));
         }
+        [HttpGet("ResendPaymentLink")]
+        public async Task<IActionResult> ResendPaymentLink([FromQuery] GenPaymentLinkDto dto)
+        {
+            var data = await _service.GeneratePaymentLink(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
 
         [HttpGet("GetPaymentStatus/{id}")]
         public async Task<IActionResult> GetPaymentStatus(int id)
@@ -176,8 +182,11 @@ namespace ProductivityApi.Controllers
          [HttpGet("GenerateReceipt")]
         public async Task<IActionResult> GenerateReceipt([FromQuery] SOALODReceiptRequestDto dto)
         {
-            var data = await _service.GenerateReceipt(dto);
+            var (data, message) = await _service.GenerateReceipt(dto);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
             return Ok(new Response(true, data, "Success"));
+            // return Ok(new Response(true, data, "Success"));
         }
 
         [HttpGet("GetLOD")]

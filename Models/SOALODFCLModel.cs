@@ -100,6 +100,7 @@ namespace ProductivityApi.Models
         public string? LOD_FileName { get; set; }
         public string? FCL_FileName { get; set; }
         public string? NOCLOD_FileName { get; set; }
+        public string? Receipt_Path { get; set; }
 
     }
     public class SOALog

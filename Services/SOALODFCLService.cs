@@ -33,9 +33,10 @@ namespace ProductivityApi.Services
         private readonly PLFService _plfService;
         private readonly SharedService _sharedservice;
         private readonly SharedRepository _sharedRepository;
+        private readonly SmsService _smsservice;
 
 
-        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice, SharedRepository sharedRepository)
+        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice, SharedRepository sharedRepository, SmsService smsService)
         {
             _repository = repository;
             _emailService = emailService;
@@ -45,6 +46,7 @@ namespace ProductivityApi.Services
             _plfService = plfService;
             _sharedservice = sharedservice;
             _sharedRepository = sharedRepository;
+            _smsservice = smsService;
         }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
@@ -264,6 +266,82 @@ namespace ProductivityApi.Services
             }
             return response;
         }
+
+        public async Task<PaymentLinkResponseDto> ResendPaymentLink(GenPaymentLinkDto dto)
+        {
+            PaymentLinkResponseDto response = new PaymentLinkResponseDto();
+            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
+            if (soalod != null)
+            {
+                if(soalod.Payments.payment_link_status!= "expired" && !soalod.Payments.short_url.IsNullOrWhiteSpace())
+                {
+                    string url = soalod.Payments.short_url;
+                    string Mobile = soalod.Mobile;
+                    string Name = soalod.Cust_Name;
+                    string Amount = soalod.Total_Charges.ToString();
+
+                    var placeholders = new Dictionary<string, string>
+                    {
+                             { "Name", Name },
+                             { "Amount", Amount },
+                              { "PayLink", url }
+                    };
+
+                    var smsTemplate = _templateService.GetSmsTemplate("PaymentLinkSms");
+                    var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+
+                    await _smsservice.SendSms(Mobile, smsBody, smsTemplate.DltContentId);
+
+
+                }
+
+                string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
+
+                long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
+                string description = $"{soalod.Lan} - Payment for SOA/LOD/FCL";
+                int amount = Convert.ToInt16(soalod.Total_Charges);
+                var request = new PaymentLinkRequestDto
+                {
+                    Amount = (int)(amount * 100), // Razorpay accepts amount in paise
+                    Currency = "INR",
+                    AcceptPartial = false,
+                    ExpireBy = expireBy,
+                    ReferenceId = Refid,
+                    Description = description,
+
+                    Customer = new PaymentCustomerDto
+                    {
+                        Name = soalod.Cust_Name,
+                        Contact = soalod.Mobile,
+                        Email = soalod.Email
+                    },
+
+                    Notify = new NotifyDto
+                    {
+                        Sms = true,
+                        Email = true
+                    },
+
+                    ReminderEnable = true,
+
+                    Notes = new NotesDto
+                    {
+                        PolicyName = "SOA/LOD/FCL"
+                    },
+
+                    CallbackUrl = "https://vistaarfinance.com/",
+                    CallbackMethod = "get"
+                };
+
+                response = await _sharedservice.PaymentLink(request);
+                if (response.Error == null)
+                //&& !string.IsNullOrEmpty(response.ReferenceId))
+                {
+                    int Pid = await _repository.AddPayment_Online(response, dto.Id, soalod.Lan, dto.UserId);
+                }
+            }
+            return response;
+        }
         public async Task<IEnumerable<PaymentLinkTransaction>> GetPaymentLinkstatus(int Id)
         {
             return await _repository.GetPaylinkdetails(Id);
@@ -271,6 +349,8 @@ namespace ProductivityApi.Services
         }
         public async Task<int> AddCashPayment(SOALODCashDto dto)
         {
+            string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
+            dto.RefId = Refid;
             var result = await _repository.AddPayment_cash(dto);
 
             return result;
@@ -387,93 +467,123 @@ namespace ProductivityApi.Services
             return Chargestatus;
         }
 
-        public async Task<SOALODFileResponseDto?> GenerateReceipt(SOALODReceiptRequestDto dto)
+        public async Task<(SOALODFileResponseDto?,string Message)> GenerateReceipt(SOALODReceiptRequestDto dto)
         {
             var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
             var basePath = _appSettings.FilePaths.SOALODFilePath;
             SOALODFileResponseDto responsedto = null;
             try
             {
-                if (!dto.ReceiptNo.IsNullOrWhiteSpace())
+                if (soalod.Receipt_Path.IsNullOrWhiteSpace())
                 {
 
-
-                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PaymentReceipt.pdf");
-                    if (!File.Exists(TemplatePath))
-                        throw new FileNotFoundException($"template file not found: {TemplatePath}");
-
-                    var outputFileName = $"{soalod.Lan}_{dto.Id}_Receipt.pdf";
-                    var outputFilePath = Path.Combine(basePath, outputFileName);
-
-                    if (File.Exists(outputFilePath))
-                    {
-                        responsedto = new SOALODFileResponseDto
-                        {
-                            Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
-                            FileName = outputFileName
-                        };
-
-                    }
-                    else
+                    if (!dto.ReceiptNo.IsNullOrWhiteSpace())
                     {
 
-                        string today = DateTime.Today.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
-                        string time = DateTime.Now.ToString("hh:mm tt");
 
-                        int integerPart = (int)Math.Floor(Convert.ToDecimal(soalod.Total_Charges));
-                        string amountInWords = integerPart.ToWords().Transform(To.TitleCase) + " Rupees";
+                        var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PaymentReceipt.pdf");
+                        if (!File.Exists(TemplatePath))
+                            return (null, "Receipt Template Not Found");
+                        //throw new FileNotFoundException($"template file not found: {TemplatePath}");
 
-                        // --- Using blocks for PDF handling ---
-                        using (PdfReader reader = new PdfReader(TemplatePath))
-                        {
-                            using (FileStream fs = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write))
-                            {
-                                using (PdfStamper stamper = new PdfStamper(reader, fs))
-                                {
-                                    var fields = stamper.AcroFields;
+                        var outputFileName = $"{soalod.Lan}_{dto.Id}_Receipt.pdf";
+                        var outputFilePath = Path.Combine(basePath, outputFileName);
 
-                                    fields.SetField("text_Date", today);
-                                    fields.SetFieldProperty("text_Date", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    fields.SetField("text_Time", time);
-                                    fields.SetFieldProperty("text_Time", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    fields.SetField("text_No", dto.ReceiptNo);
-                                    fields.SetFieldProperty("text_No", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    fields.SetField("text_Customer Name", soalod.Cust_Name);
-                                    fields.SetFieldProperty("text_Customer", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    fields.SetField("text_Rupees in words", amountInWords);
-                                    fields.SetFieldProperty("text_Rupees in words", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    fields.SetField("text_Rupees", soalod.Total_Charges.ToString());
-                                    fields.SetFieldProperty("text_Rupees", "setfflags", PdfFormField.FF_READ_ONLY, null);
-
-                                    stamper.FormFlattening = true; // Make fields read-only
-                                }
-                            }
-                        }
-                        var id = await _repository.UpdateReceiptPath(dto.Id, outputFileName, dto.UpdatedBy);
                         if (File.Exists(outputFilePath))
                         {
-                            //return (false, "File not found on server", null);
-
                             responsedto = new SOALODFileResponseDto
                             {
                                 Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
                                 FileName = outputFileName
                             };
+                            return (responsedto, "Success");
+                        }
+                        else
+                        {
+
+                            string today = DateTime.Today.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
+                            string time = DateTime.Now.ToString("hh:mm tt");
+
+                            int integerPart = (int)Math.Floor(Convert.ToDecimal(soalod.Total_Charges));
+                            string amountInWords = integerPart.ToWords().Transform(To.TitleCase) + " Rupees";
+
+                            // --- Using blocks for PDF handling ---
+                            using (PdfReader reader = new PdfReader(TemplatePath))
+                            {
+                                using (FileStream fs = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write))
+                                {
+                                    using (PdfStamper stamper = new PdfStamper(reader, fs))
+                                    {
+                                        var fields = stamper.AcroFields;
+
+                                        fields.SetField("text_Date", today);
+                                        fields.SetFieldProperty("text_Date", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        fields.SetField("text_Time", time);
+                                        fields.SetFieldProperty("text_Time", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        fields.SetField("text_No", dto.ReceiptNo);
+                                        fields.SetFieldProperty("text_No", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        fields.SetField("text_Customer Name", soalod.Cust_Name);
+                                        fields.SetFieldProperty("text_Customer", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        fields.SetField("text_Rupees in words", amountInWords);
+                                        fields.SetFieldProperty("text_Rupees in words", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        fields.SetField("text_Rupees", soalod.Total_Charges.ToString());
+                                        fields.SetFieldProperty("text_Rupees", "setfflags", PdfFormField.FF_READ_ONLY, null);
+
+                                        stamper.FormFlattening = true; // Make fields read-only
+                                    }
+                                }
+                            }
+                            var id = await _repository.UpdateReceiptPath(dto.Id, outputFileName, dto.UpdatedBy);
+                            if (File.Exists(outputFilePath))
+                            {
+                                //return (false, "File not found on server", null);
+
+                                responsedto = new SOALODFileResponseDto
+                                {
+                                    Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
+                                    FileName = outputFileName
+                                };
+                              
+                            }
+                            
+                            return (responsedto, "Success");
                         }
                     }
+                    else
+                    {
+                        return (responsedto, "receipt Number should not be empty");
+                    }
+                }
+                else
+                {
+                    // var basePath = _appSettings.FilePaths.SOALODFilePath;
+                    var fileName = soalod.Receipt_Path;
+                    var outputFilePath = Path.Combine(basePath, fileName);
+                    if (File.Exists(outputFilePath))
+                    {
+                        responsedto = new SOALODFileResponseDto
+                        {
+                            Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
+                            FileName = fileName
+                        };
+                       
+
+                    }
+                    return (responsedto, "Success");
                 }
             }
             catch (Exception ex)
             {
                 // Handle exception
-                Console.WriteLine(ex.Message);
+               // Console.WriteLine(ex.Message);
+                return (responsedto, ex.Message);
             }
-            return responsedto;
+           // return (responsedto,"Success");
         }
 
         public async Task<(SOALODFileResponseDto res, string Message)> GetLod(LODRequestDto req)
@@ -493,8 +603,13 @@ namespace ProductivityApi.Services
                         Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
                         FileName = fileName
                     };
+                    return (responsedto, "Success");
                 }
-                return (responsedto ,"Success");
+                else
+                {
+                    return (null, "Document not found");
+                }
+                
             }
             else if (!soalod.LOD_FileName.IsNullOrWhiteSpace())
             {
@@ -508,8 +623,12 @@ namespace ProductivityApi.Services
                         Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
                         FileName = fileName
                     };
+                    return (responsedto, "Success");
                 }
-                return (responsedto, "Success");
+                else
+                {
+                    return (null, "Document not found");
+                }
 
             }
 
