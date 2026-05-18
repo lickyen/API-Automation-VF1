@@ -348,6 +348,19 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
+        public async Task<List<LegalBillingListDto>> GetPendingApprovalAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<LegalBillingListDto>(
+                "sp_LegalBilling_PendingApproval",
+                commandType: CommandType.StoredProcedure        
+            );
+
+            return result.ToList();
+        }
+
         public async Task<IEnumerable<dynamic>> GetLegalBillingReportAsync(LegalBillingReportFilterDto dto)
         {
             using var conn = new SqlConnection(_conStr);

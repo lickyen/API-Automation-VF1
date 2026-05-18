@@ -126,6 +126,7 @@ builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
+builder.Services.AddScoped<IJob, LegalBillingJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
