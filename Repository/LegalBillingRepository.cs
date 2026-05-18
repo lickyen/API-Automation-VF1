@@ -1,4 +1,4 @@
-﻿using Dapper;
+﻿    using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Constants;
 using ProductivityApi.Models;
@@ -194,6 +194,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@BankAcNo", dto.BankAcNo);
             parameters.Add("@BankName", dto.BankName);
             parameters.Add("@IFSC", dto.Ifsc);
+            parameters.Add("@IsRepeatRequest", dto.IsRepeatRequest);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
