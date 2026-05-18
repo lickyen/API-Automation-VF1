@@ -35,4 +35,13 @@
     <PackageReference Include="System.DirectoryServices.Protocols" Version="10.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Templates\ForeclosureLetter.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\PaymentReceipt.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
