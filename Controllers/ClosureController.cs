@@ -16,7 +16,7 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        [HttpPost("add")]
+        [HttpPost("create")]
         public async Task<IActionResult> Add([FromBody] AddClosureRequestDto dto)
         {
             var result = await _service.AddRequestAsync(dto);
@@ -64,7 +64,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPost("approve")]
+        [HttpPost("approval")]
         public async Task<IActionResult> Approve([FromBody] ClosureApprovalDto dto)
         {
             var result = await _service.ApproveAsync(dto);
@@ -86,7 +86,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("getList")]
+        [HttpGet("getListByUser")]
         public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role, [FromQuery] string status)
         {
             var data = await _service.GetListByUserAsync(userId, role, status);
@@ -104,7 +104,7 @@ namespace ProductivityApi.Controllers
         }
 
         // Payments
-        [HttpPost("payments/add")]
+        [HttpPost("addPayment")]
         public async Task<IActionResult> AddPayment([FromBody] AddClosurePaymentDto dto)
         {
             var result = await _service.AddPaymentAsync(dto);
@@ -116,7 +116,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("payments/update")]
+        [HttpPut("updatePayment")]
         public async Task<IActionResult> UpdatePayment([FromBody] UpdateClosurePaymentDto dto)
         {
             var result = await _service.UpdatePaymentAsync(dto);
@@ -128,7 +128,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpDelete("payments/delete/{id}")]
+        [HttpDelete("deletePayment/{id}")]
         public async Task<IActionResult> DeletePayment(int id, [FromQuery] string deletedBy)
         {
             if (string.IsNullOrWhiteSpace(deletedBy))
@@ -143,21 +143,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        // Questionnaire
-        [HttpPost("questionnaire/addResponse")]
-        public async Task<IActionResult> AddQuestionnaireResponse([FromBody] AddQuestionnaireResponseDto dto)
-        {
-            var result = await _service.AddQuestionnaireResponseAsync(dto);
-            return result switch
-            {
-                > 0 => Ok(new Response(true, new { id = result }, "Response saved successfully")),
-                -1 => NotFound(new Response(false, null, "Request not found")),
-                -2 => BadRequest(new Response(false, null, "Invalid or inactive question")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
-        }
-
-        [HttpPost("questionnaire/submit")]
+        [HttpPost("submitQuestionnaire")]
         public async Task<IActionResult> SubmitQuestionnaire([FromBody] SubmitQuestionnaireDto dto)
         {
             var result = await _service.SubmitQuestionnaireAsync(dto);
