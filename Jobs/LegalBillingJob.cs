@@ -107,7 +107,7 @@ namespace ProductivityApi.Jobs
                     // Fetch and populate template
                     var template = _templateService.GetEmailTemplate("LegalBillingReminderEmail");
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var subject = "Reminder: Pending Legal Billing Requests Awaiting Your Action";
+                    var subject = "Reminder: Pending Legal Billing Requests";
 
                     // Send email
                     await _emailService.SendEmail(subject, body, to, cc);
