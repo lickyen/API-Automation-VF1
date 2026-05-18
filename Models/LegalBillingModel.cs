@@ -42,6 +42,7 @@ namespace ProductivityApi.Models
         public DateTime? ModifiedDate { get; set; }
         public string? ModifiedBy { get; set; }
         public bool IsApproved { get; set; }
+        public bool IsRepeatRequest { get; set; }
         public DateTime? ApprovedDate { get; set; }
         public int? TurnaroundTime { get; set; }
         public string? CancelledChequeFilePath { get; set; }
@@ -144,6 +145,7 @@ namespace ProductivityApi.Models
         public string? BankName { get; set; }
         public string? Ifsc { get; set; }
         public FileUploadBase64? CancelledChequeFile { get; set; }
+        public bool IsRepeatRequest { get; set; } = false;
 
     }
 

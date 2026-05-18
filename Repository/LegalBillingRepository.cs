@@ -1,4 +1,4 @@
-﻿using Dapper;
+﻿    using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Constants;
 using ProductivityApi.Models;
@@ -194,6 +194,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@BankAcNo", dto.BankAcNo);
             parameters.Add("@BankName", dto.BankName);
             parameters.Add("@IFSC", dto.Ifsc);
+            parameters.Add("@IsRepeatRequest", dto.IsRepeatRequest);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
@@ -342,6 +343,19 @@ namespace ProductivityApi.Repository
                 "sp_LegalBilling_GetByUser",
                 new { UserId = dto.UserId, Role = dto.Role, Status = dto.Status },
                 commandType: CommandType.StoredProcedure
+            );
+
+            return result.ToList();
+        }
+
+        public async Task<List<LegalBillingListDto>> GetPendingApprovalAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<LegalBillingListDto>(
+                "sp_LegalBilling_PendingApproval",
+                commandType: CommandType.StoredProcedure        
             );
 
             return result.ToList();

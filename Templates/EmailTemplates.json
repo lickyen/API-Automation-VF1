@@ -37,5 +37,8 @@
   },
   "LoanCancelProcessedEmail": {
     "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been Processed for Loan Account No: <b><<LAN>></b>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "LegalBillingReminderEmail": {
+    "Body": "<p>Hi <b><<Name>></b>,</p><p>There are <b>open requests pending</b> for your action on the <b>Productivity – Legal Billing</b> mobile application.</p><p>Kindly review the pending requests and provide the necessary action at the earliest to avoid any delays in processing.</p><p>Regards,<br/>Vistaar Finance.</p>"
   }
 }

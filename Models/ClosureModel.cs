@@ -123,6 +123,11 @@
         public DateTime CreatedDt { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
+
+        // Related collections returned with GetById
+        public List<ClosurePayment> Payments { get; set; }
+        public List<ClosureLog> Logs { get; set; }
+        public List<ClosureQuestionnaireResponse> Questionnaire { get; set; }
     }
 
     public class ClosurePayment
@@ -225,14 +230,15 @@
         public bool IsAmountCollected { get; set; }
         public string ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public int? LetterId { get; set; }
         public string Status { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string CreatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Reinitiate Request ──────────────────────────────────────────────
@@ -247,34 +253,37 @@
         public bool IsAmountCollected { get; set; }
         public string ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Update Amount Collected ─────────────────────────────────────────
     public class UpdateAmountCollectedDto
     {
         public int Id { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Resubmit Request ────────────────────────────────────────────────
     public class ResubmitClosureRequestDto
     {
         public int Id { get; set; }
-        public string AckPath { get; set; }
-        public string ChecklistPath { get; set; }
-        public string FCLetterPath { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? AckFile { get; set; }
+        public FileUploadBase64? ChecklistFile { get; set; }
+        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Add Logs ────────────────────────────────────────────────────────
@@ -307,10 +316,11 @@
         public decimal Amount { get; set; }
         public string PaymentDetails { get; set; }
         public string BankDetails { get; set; }
-        public string ProofPath { get; set; }
         public string TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string CreatedBy { get; set; }
+
+        public FileUploadBase64? ProofFile { get; set; }
     }
 
     // ── Update Payment ──────────────────────────────────────────────────
@@ -321,10 +331,11 @@
         public decimal? Amount { get; set; }
         public string PaymentDetails { get; set; }
         public string BankDetails { get; set; }
-        public string ProofPath { get; set; }
         public string TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string UpdatedBy { get; set; }
+
+        public FileUploadBase64? ProofFile { get; set; }
     }
 
     // ── Delete Payment ──────────────────────────────────────────────────
@@ -358,6 +369,20 @@
     {
         public string UserId { get; set; }
         public string Role { get; set; }
+    }
+
+    public class GetWaiverApproverDto
+    {
+        public string Allocation { get; set; }
+        public string Criticality { get; set; }
+        public string Bucket { get; set; }
+        public decimal POSAmount { get; set; }
+        public decimal POSWaiverAmount { get; set; }
+        public decimal POSWaiverPerc { get; set; }
+        public decimal InterestWaiverAmount { get; set; }
+        public decimal InterestWaiverPer { get; set; }
+        public decimal ChargesWaiverAmount { get; set; }
+        public decimal ChargesWaiverPer { get; set; }
     }
 }
 
