@@ -267,7 +267,7 @@ namespace ProductivityApi.Services
             return response;
         }
 
-        public async Task<PaymentLinkResponseDto> ResendPaymentLink(GenPaymentLinkDto dto)
+        public async Task<IEnumerable<PaymentLinkTransaction>> ResendPaymentLink(GenPaymentLinkDto dto)
         {
             PaymentLinkResponseDto response = new PaymentLinkResponseDto();
             var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
@@ -278,8 +278,8 @@ namespace ProductivityApi.Services
                     string url = soalod.Payments.short_url;
                     string Mobile = soalod.Mobile;
                     string Name = soalod.Cust_Name;
-                    string Amount = soalod.Total_Charges.ToString();
-
+                    //string Amount = soalod.Total_Charges.ToString();
+                    string Amount = soalod.Total_Charges?.ToString("0") ?? "0";
                     var placeholders = new Dictionary<string, string>
                     {
                              { "Name", Name },
@@ -290,57 +290,59 @@ namespace ProductivityApi.Services
                     var smsTemplate = _templateService.GetSmsTemplate("PaymentLinkSms");
                     var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
 
-                    await _smsservice.SendSms(Mobile, smsBody, smsTemplate.DltContentId);
+                 string smsresponse=   await _smsservice.SendSms(Mobile, smsBody, smsTemplate.DltContentId);
+                   
+                }
+                else
+                {
+                    string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
 
+                    long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
+                    string description = $"{soalod.Lan} - Payment for SOA/LOD/FCL";
+                    int amount = Convert.ToInt16(soalod.Total_Charges);
+                    var request = new PaymentLinkRequestDto
+                    {
+                        Amount = (int)(amount * 100), // Razorpay accepts amount in paise
+                        Currency = "INR",
+                        AcceptPartial = false,
+                        ExpireBy = expireBy,
+                        ReferenceId = Refid,
+                        Description = description,
 
+                        Customer = new PaymentCustomerDto
+                        {
+                            Name = soalod.Cust_Name,
+                            Contact = soalod.Mobile,
+                            Email = soalod.Email
+                        },
+
+                        Notify = new NotifyDto
+                        {
+                            Sms = true,
+                            Email = true
+                        },
+
+                        ReminderEnable = true,
+
+                        Notes = new NotesDto
+                        {
+                            PolicyName = "SOA/LOD/FCL"
+                        },
+
+                        CallbackUrl = "https://vistaarfinance.com/",
+                        CallbackMethod = "get"
+                    };
+
+                    response = await _sharedservice.PaymentLink(request);
+                    if (response.Error == null)
+                    //&& !string.IsNullOrEmpty(response.ReferenceId))
+                    {
+                        int Pid = await _repository.AddPayment_Online(response, dto.Id, soalod.Lan, dto.UserId);
+                    }
                 }
 
-                string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
-
-                long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
-                string description = $"{soalod.Lan} - Payment for SOA/LOD/FCL";
-                int amount = Convert.ToInt16(soalod.Total_Charges);
-                var request = new PaymentLinkRequestDto
-                {
-                    Amount = (int)(amount * 100), // Razorpay accepts amount in paise
-                    Currency = "INR",
-                    AcceptPartial = false,
-                    ExpireBy = expireBy,
-                    ReferenceId = Refid,
-                    Description = description,
-
-                    Customer = new PaymentCustomerDto
-                    {
-                        Name = soalod.Cust_Name,
-                        Contact = soalod.Mobile,
-                        Email = soalod.Email
-                    },
-
-                    Notify = new NotifyDto
-                    {
-                        Sms = true,
-                        Email = true
-                    },
-
-                    ReminderEnable = true,
-
-                    Notes = new NotesDto
-                    {
-                        PolicyName = "SOA/LOD/FCL"
-                    },
-
-                    CallbackUrl = "https://vistaarfinance.com/",
-                    CallbackMethod = "get"
-                };
-
-                response = await _sharedservice.PaymentLink(request);
-                if (response.Error == null)
-                //&& !string.IsNullOrEmpty(response.ReferenceId))
-                {
-                    int Pid = await _repository.AddPayment_Online(response, dto.Id, soalod.Lan, dto.UserId);
-                }
             }
-            return response;
+            return await _repository.GetPaylinkdetails(dto.Id);
         }
         public async Task<IEnumerable<PaymentLinkTransaction>> GetPaymentLinkstatus(int Id)
         {
