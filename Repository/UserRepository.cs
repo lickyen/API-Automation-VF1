@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
 
@@ -12,317 +13,153 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
+
         public List<UserModel> GetAllUsers()
         {
-            var users = new List<UserModel>();
+            using var connection = new SqlConnection(_conStr);
 
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_getUsersList", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
-                connection.Open();
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var user = new UserModel
-                        {
-                            UserId = reader["EmpId"]?.ToString(),
-                            Name = reader["Name"]?.ToString(),
-                            Password = reader["Password"]?.ToString(),
-                            Role = reader["Role"]?.ToString(),
-                            BranchId = reader["BranchID"]?.ToString(),
-                            BranchName = reader["BranchName"]?.ToString(),
-                            Region = reader["ClusterName"]?.ToString(),
-                            Zone = reader["Zone"]?.ToString(),
-                            MegaZone = reader["Megazone"]?.ToString(),
-                            Status = reader["Status"]?.ToString(),
-                            Email = reader["EmailID"] != DBNull.Value ? reader["EmailID"].ToString() : null,
-                            Mobile = reader["MobileNo"] != DBNull.Value ? reader["MobileNo"].ToString() : null,
-                            CreatedBy = reader["CreatedBy"] != DBNull.Value ? reader["CreatedBy"].ToString() : null,
-                            CreatedDate = reader["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(reader["CreatedDate"]) : (DateTime?)null,
-                            UpdatedBy = reader["UpdatedBy"] != DBNull.Value ? reader["UpdatedBy"].ToString() : null,
-                            UpdatedDate = reader["UpdatedDate"] != DBNull.Value ? Convert.ToDateTime(reader["UpdatedDate"]) : (DateTime?)null,
-                        };
-
-                        users.Add(user);
-                    }
-                }
-            }
+            var users = connection.Query<UserModel>(
+                "sp_getUsersList",
+                commandType: CommandType.StoredProcedure
+            ).ToList();
 
             return users;
         }
 
         public UserModel? GetUser(string userId)
         {
-            UserModel? user = null;
+            using var connection = new SqlConnection(_conStr);
 
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_getUser", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
-                command.Parameters.AddWithValue("@UserID", userId);
+            var user = connection.QueryFirstOrDefault<UserModel>(
+                "sp_getUser",
+                new { UserID = userId },
+                commandType: CommandType.StoredProcedure
+            );
 
-                connection.Open();
-                using (var reader = command.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        user = new UserModel
-                        {
-                            UserId = reader["EmpId"]?.ToString(),
-                            Name = reader["Name"]?.ToString(),
-                            Password = reader["Password"]?.ToString(),
-                            Role = reader["Role"]?.ToString(),
-                            BranchId = reader["BranchID"]?.ToString(),
-                            BranchName = reader["BranchName"]?.ToString(),
-                            Region = reader["ClusterName"]?.ToString(),
-                            Zone = reader["Zone"]?.ToString(),
-                            MegaZone = reader["Megazone"]?.ToString(),
-                            Status = reader["Status"]?.ToString(),
-                            Email = reader["EmailID"] != DBNull.Value ? reader["EmailID"].ToString() : null,
-                            Mobile = reader["MobileNo"] != DBNull.Value ? reader["MobileNo"].ToString() : null,
-                            CreatedBy = reader["CreatedBy"] != DBNull.Value ? reader["CreatedBy"].ToString() : null,
-                            CreatedDate = reader["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(reader["CreatedDate"]) : (DateTime?)null,
-                            UpdatedBy = reader["UpdatedBy"] != DBNull.Value ? reader["UpdatedBy"].ToString() : null,
-                            UpdatedDate = reader["UpdatedDate"] != DBNull.Value ? Convert.ToDateTime(reader["UpdatedDate"]) : (DateTime?)null
-                        };
-                    }
-                }
-            }
             return user;
         }
 
         public int AddUser(AddUserDTO addUserDTO)
         {
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_insertUser", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
+            using var connection = new SqlConnection(_conStr);
 
-                command.Parameters.AddWithValue("@UserID", addUserDTO.UserId);
-                command.Parameters.AddWithValue("@Name", addUserDTO.Name);
-                command.Parameters.AddWithValue("@BranchID", addUserDTO.BranchId);
-                command.Parameters.AddWithValue("@BranchName", addUserDTO.BranchName);
-                command.Parameters.AddWithValue("@Region", addUserDTO.Region);
-                command.Parameters.AddWithValue("@Zone", addUserDTO.Zone);
-                command.Parameters.AddWithValue("@Megazone", addUserDTO.MegaZone);
-                command.Parameters.AddWithValue("@Role", addUserDTO.Role);
-                command.Parameters.AddWithValue("@EmailID", addUserDTO.Email);
-                command.Parameters.AddWithValue("@Mobile", addUserDTO.Mobile);
-                command.Parameters.AddWithValue("@CreatedBy", addUserDTO.CreatedBy);
+            var parameters = new DynamicParameters();
 
-                var outputParam = new SqlParameter("@Output", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(outputParam);
+            parameters.Add("@UserID", addUserDTO.UserId);
+            parameters.Add("@Name", addUserDTO.Name);
+            parameters.Add("@BranchID", addUserDTO.BranchId);
+            parameters.Add("@BranchName", addUserDTO.BranchName);
+            parameters.Add("@Region", addUserDTO.Region);
+            parameters.Add("@Zone", addUserDTO.Zone);
+            parameters.Add("@Megazone", addUserDTO.MegaZone);
+            parameters.Add("@Role", addUserDTO.Role);
+            parameters.Add("@EmailID", addUserDTO.Email);
+            parameters.Add("@Mobile", addUserDTO.Mobile);
+            parameters.Add("@CreatedBy", addUserDTO.CreatedBy);
 
-                connection.Open();
-                command.ExecuteNonQuery();
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-                int result = outputParam.Value != null && outputParam.Value != DBNull.Value
-                    ? Convert.ToInt32(outputParam.Value)
-                    : 0;
-                return result;
-            }
+            connection.Execute(
+                "sp_insertUser",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@Output");
         }
+
         public int UpdateUser(UpdateUserDTO user)
         {
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_updateUser", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
+            using var connection = new SqlConnection(_conStr);
 
-                command.Parameters.AddWithValue("@UserID", user.UserId);
-                command.Parameters.AddWithValue("@Name", user.Name ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Role", user.Role ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@BranchID", user.BranchId ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@BranchName", user.BranchName ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Region", user.Region ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Zone", user.Zone ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Megazone", user.MegaZone ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@EmailID", user.Email ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Mobile", user.Mobile ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@UpdatedBy", user.UpdatedBy ?? (object)DBNull.Value);
+            var parameters = new DynamicParameters();
 
-                var outputParam = new SqlParameter("@Output", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(outputParam);
+            parameters.Add("@UserID", user.UserId);
+            parameters.Add("@Name", user.Name);
+            parameters.Add("@Role", user.Role);
+            parameters.Add("@BranchID", user.BranchId);
+            parameters.Add("@BranchName", user.BranchName);
+            parameters.Add("@Region", user.Region);
+            parameters.Add("@Zone", user.Zone);
+            parameters.Add("@Megazone", user.MegaZone);
+            parameters.Add("@EmailID", user.Email);
+            parameters.Add("@Mobile", user.Mobile);
+            parameters.Add("@UpdatedBy", user.UpdatedBy);
 
-                connection.Open();
-                command.ExecuteNonQuery();
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-                int result = outputParam.Value != null && outputParam.Value != DBNull.Value
-                    ? Convert.ToInt32(outputParam.Value)
-                    : 0;
-                return result;
-            }
+            connection.Execute(
+                "sp_updateUser",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@Output");
         }
+
         public int DisableUser(DisableUserDTO disableUserDTO)
         {
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_disableUser", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
+            using var connection = new SqlConnection(_conStr);
 
-                command.Parameters.AddWithValue("@UserID", disableUserDTO.UserId);
-                command.Parameters.AddWithValue("@UpdatedBy", disableUserDTO.UpdatedBy);
+            var parameters = new DynamicParameters();
 
-                var outputParam = new SqlParameter("@Output", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(outputParam);
+            parameters.Add("@UserID", disableUserDTO.UserId);
+            parameters.Add("@UpdatedBy", disableUserDTO.UpdatedBy);
 
-                connection.Open();
-                command.ExecuteNonQuery();
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-                int result = outputParam.Value != null && outputParam.Value != DBNull.Value
-                    ? Convert.ToInt32(outputParam.Value)
-                    : 0; 
+            connection.Execute(
+                "sp_disableUser",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
 
-                return result;
-            }
+            return parameters.Get<int>("@Output");
         }
+
         public int ActivateUser(ActivateUserDTO activateUserDTO)
         {
-            using (var connection = new SqlConnection(_conStr))
-            using (var command = new SqlCommand("sp_activateUser", connection))
-            {
-                command.CommandType = CommandType.StoredProcedure;
+            using var connection = new SqlConnection(_conStr);
 
-                command.Parameters.AddWithValue("@UserID", activateUserDTO.UserId);
-                command.Parameters.AddWithValue("@UpdatedBy", activateUserDTO.UpdatedBy);
+            var parameters = new DynamicParameters();
 
-                var outputParam = new SqlParameter("@Output", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(outputParam);
+            parameters.Add("@UserID", activateUserDTO.UserId);
+            parameters.Add("@UpdatedBy", activateUserDTO.UpdatedBy);
 
-                connection.Open();
-                command.ExecuteNonQuery();
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-                int result = outputParam.Value != null && outputParam.Value != DBNull.Value
-                    ? Convert.ToInt32(outputParam.Value)
-                    : 0;
+            connection.Execute(
+                "sp_activateUser",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
 
-                return result;
-            }
+            return parameters.Get<int>("@Output");
         }
-        //public List<string> GetModulesByUser(string UserId)
-        //{
-        //    List<string> modules = new List<string>();
 
-        //    using (var connection = new SqlConnection(_conStr))
-        //    {
-        //        using (var command = new SqlCommand("sp_GetModulesByUser", connection))
-        //        {
-        //            command.CommandType = CommandType.StoredProcedure;
-        //            command.Parameters.AddWithValue("@UserId", UserId);
-        //            connection.Open();
-        //            using (var reader = command.ExecuteReader())
-        //            {
-        //                if (reader.HasRows)
-        //                {
-        //                    while (reader.Read())
-        //                    {
-        //                        string? module = reader.IsDBNull(reader.GetOrdinal("Module")) ? null : reader.GetString(reader.GetOrdinal("Module"));
-        //                        if (module != null)
-        //                        {
-        //                            modules.Add(module);
-        //                        }
-
-        //                    }
-        //                }
-
-        //            }
-        //        }
-        //    }
-
-        //    return modules;
-        //}
-
-        public List<ModuleDto> GetModulesByUser(string UserId)
+        public List<ModuleDto> GetModulesByUser(string userId)
         {
-            List<ModuleDto> modules = new List<ModuleDto>();
+            using var connection = new SqlConnection(_conStr);
 
-            using (var connection = new SqlConnection(_conStr))
-            {
-                using (var command = new SqlCommand("sp_GetModulesByUser", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@UserId", UserId);
-
-                    connection.Open();
-
-                    using (var reader = command.ExecuteReader())
-                    {
-                        if (reader.HasRows)
-                        {
-                            int moduleCodeOrdinal = reader.GetOrdinal("ModuleCode");
-                            int moduleNameOrdinal = reader.GetOrdinal("ModuleName");
-
-                            while (reader.Read())
-                            {
-                                var moduleDto = new ModuleDto
-                                {
-                                    ModuleCode = reader.IsDBNull(moduleCodeOrdinal)
-                                        ? string.Empty
-                                        : reader.GetString(moduleCodeOrdinal),
-
-                                    ModuleName = reader.IsDBNull(moduleNameOrdinal)
-                                        ? string.Empty
-                                        : reader.GetString(moduleNameOrdinal)
-                                };
-
-                                modules.Add(moduleDto);
-                            }
-                        }
-                    }
-                }
-            }
+            var modules = connection.Query<ModuleDto>(
+                "sp_GetModulesByUser",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure
+            ).ToList();
 
             return modules;
         }
+
         public List<string> GetRoles()
         {
-            List<string> roles = new List<string>();
+            using var connection = new SqlConnection(_conStr);
 
-            using (var connection = new SqlConnection(_conStr))
-            {
-                using (var command = new SqlCommand("sp_getRoles", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    connection.Open();
-                    using (var reader = command.ExecuteReader())
-                    {
-                        if (reader.HasRows)
-                        {
-                            while (reader.Read())
-                            {
-                                string? role = reader.IsDBNull(reader.GetOrdinal("Role")) ? null : reader.GetString(reader.GetOrdinal("Role"));
-                                if (role != null)
-                                {
-                                    roles.Add(role);
-                                }
-
-                            }
-                        }
-
-                    }
-                }
-            }
+            var roles = connection.Query<string>(
+                "sp_getRoles",
+                commandType: CommandType.StoredProcedure
+            ).ToList();
 
             return roles;
         }
-
     }
-
 }
-
-

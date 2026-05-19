@@ -14,6 +14,7 @@ using Serilog;
 
 
 var builder = WebApplication.CreateBuilder(args);
+Console.WriteLine("APP BUILD COMPLETE");
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -128,6 +129,9 @@ builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
 
+builder.Services.AddScoped<VendorService>();
+builder.Services.AddScoped<VendorRepository>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -195,4 +199,5 @@ app.MapControllers();
 
 await app.MapJobsAsync();
 
+Console.WriteLine("BEFORE APP.RUN");
 app.Run();
