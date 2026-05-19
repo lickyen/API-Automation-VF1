@@ -1,6 +1,11 @@
-SELECT * FROM Vendors;
+SELECT * FROM GoldLoanVendorMaster;
 
 SELECT * FROM sys.procedures;
+
+SELECT TABLE_NAME 
+FROM INFORMATION_SCHEMA.TABLES 
+WHERE TABLE_TYPE = 'BASE TABLE';
+
 
 -- /****** Object:  StoredProcedure [dbo].[sp_getVendorsList] ******/
 -- SET ANSI_NULLS ON
@@ -14,7 +19,7 @@ SELECT * FROM sys.procedures;
 --     SET NOCOUNT ON;
 
 --     SELECT *
---     FROM Vendors
+--     FROM GoldLoanVendorMaster
 --     WHERE Status = 1
 -- END
 -- GO
@@ -46,7 +51,7 @@ SELECT * FROM sys.procedures;
 --         CreatedDate,
 --         UpdatedBy,
 --         UpdatedDate
---     FROM Vendors
+--     FROM GoldLoanVendorMaster
 --     WHERE VendorID = @VendorID
 --       AND Status = 1
 -- END
@@ -78,7 +83,7 @@ SELECT * FROM sys.procedures;
 --         -- Check if vendor already exists
 --         IF EXISTS (
 --             SELECT 1
---             FROM Vendors
+--             FROM GoldLoanVendorMaster
 --             WHERE ContactNumber = @ContactNumber
 --               AND Status = 1
 --         )
@@ -87,7 +92,7 @@ SELECT * FROM sys.procedures;
 --             RETURN;
 --         END
 
---         INSERT INTO Vendors
+--         INSERT INTO GoldLoanVendorMaster
 --         (
 --             VendorName,
 --             ContactNumber,
@@ -151,7 +156,7 @@ SELECT * FROM sys.procedures;
 --         -- Check if vendor exists
 --         IF NOT EXISTS (
 --             SELECT 1
---             FROM Vendors
+--             FROM GoldLoanVendorMaster
 --             WHERE VendorID = @VendorID
 --         )
 --         BEGIN
@@ -159,7 +164,7 @@ SELECT * FROM sys.procedures;
 --             RETURN;
 --         END
 
---         UPDATE Vendors
+--         UPDATE GoldLoanVendorMaster
 --         SET
 --             VendorName = ISNULL(@VendorName, VendorName),
 --             ContactNumber = ISNULL(@ContactNumber, ContactNumber),
@@ -202,7 +207,7 @@ SELECT * FROM sys.procedures;
 --         -- Check if vendor exists
 --         IF NOT EXISTS (
 --             SELECT 1
---             FROM Vendors
+--             FROM GoldLoanVendorMaster
 --             WHERE VendorID = @VendorID
 --         )
 --         BEGIN
@@ -210,7 +215,7 @@ SELECT * FROM sys.procedures;
 --             RETURN;
 --         END
 
---         UPDATE Vendors
+--         UPDATE GoldLoanVendorMaster
 --         SET
 --             Status = 0,
 --             UpdatedBy = @UpdatedBy,
@@ -246,7 +251,7 @@ SELECT * FROM sys.procedures;
 --         -- Check if vendor exists
 --         IF NOT EXISTS (
 --             SELECT 1
---             FROM Vendors
+--             FROM GoldLoanVendorMaster
 --             WHERE VendorID = @VendorID
 --         )
 --         BEGIN
@@ -254,7 +259,7 @@ SELECT * FROM sys.procedures;
 --             RETURN;
 --         END
 
---         UPDATE Vendors
+--         UPDATE GoldLoanVendorMaster
 --         SET
 --             Status = 1,
 --             UpdatedBy = @UpdatedBy,
