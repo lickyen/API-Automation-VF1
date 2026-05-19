@@ -12,43 +12,91 @@ SELECT * FROM sys.procedures;
 -- SET QUOTED_IDENTIFIER ON
 -- GO
 
--- CREATE TABLE GoldLoanLeadMaster
--- (
---     Id INT IDENTITY(1,1) PRIMARY KEY,
-
---     VendorID INT NOT NULL,
-
---     Name NVARCHAR(100) NOT NULL,
-
---     MobileNumber NVARCHAR(20) NOT NULL,
-
---     Caratage NVARCHAR(10) NOT NULL,
-
---     ApproximateWeight DECIMAL(10,2) NOT NULL,
-
---     GoldLoanRequiredFor NVARCHAR(250) NOT NULL,
-
---     CreatedBy NVARCHAR(50) NOT NULL,
-
---     CreatedDate DATETIME NOT NULL DEFAULT DATEADD(MINUTE, 330, GETUTCDATE()),
-
---     UpdatedBy NVARCHAR(50) NULL,
-
---     UpdatedDate DATETIME NULL,
-
---     Status BIT NOT NULL DEFAULT 1
+-- IF NOT EXISTS (
+--     SELECT 1
+--     FROM sys.tables
+--     WHERE name = 'GoldLoanLeadMaster'
 -- )
+-- BEGIN
+
+--     CREATE TABLE GoldLoanLeadMaster
+--     (
+--         Id INT IDENTITY(1,1) PRIMARY KEY,
+
+--         VendorID INT NOT NULL,
+
+--         Name NVARCHAR(100) NOT NULL,
+
+--         MobileNumber NVARCHAR(20) NOT NULL,
+
+--         Caratage NVARCHAR(10) NOT NULL,
+
+--         ApproximateWeight DECIMAL(10,2) NOT NULL,
+
+--         GoldLoanRequiredFor NVARCHAR(250) NOT NULL,
+
+--         CreatedBy NVARCHAR(50) NOT NULL,
+
+--         CreatedDate DATETIME NOT NULL
+--             DEFAULT DATEADD(MINUTE, 330, GETUTCDATE()),
+
+--         UpdatedBy NVARCHAR(50) NULL,
+
+--         UpdatedDate DATETIME NULL,
+
+--         Status BIT NOT NULL DEFAULT 1
+--     )
+
+-- END
 -- GO
 
 
 -- /* =========================================================
---    FOREIGN KEY : Vendors(VendorID)
+--    FOREIGN KEY
 --    ========================================================= */
 
--- ALTER TABLE GoldLoanLeadMaster
--- ADD CONSTRAINT FK_GoldLoanLeadMaster_GoldLoanVendorMaster
--- FOREIGN KEY (VendorID)
--- REFERENCES GoldLoanVendorMaster(VendorID)
+-- IF NOT EXISTS (
+--     SELECT 1
+--     FROM sys.foreign_keys
+--     WHERE name = 'FK_GoldLoanLeadMaster_GoldLoanVendorMaster'
+-- )
+-- BEGIN
+
+--     ALTER TABLE GoldLoanLeadMaster
+--     ADD CONSTRAINT FK_GoldLoanLeadMaster_GoldLoanVendorMaster
+--     FOREIGN KEY (VendorID)
+--     REFERENCES GoldLoanVendorMaster(VendorID)
+
+-- END
+-- GO
+
+
+-- /* =========================================================
+--    DROP OLD PROCEDURES
+--    ========================================================= */
+
+-- IF EXISTS (
+--     SELECT * FROM sys.objects
+--     WHERE type = 'P'
+--     AND name = 'sp_getGoldLoanLeadsList'
+-- )
+-- DROP PROCEDURE sp_getGoldLoanLeadsList
+-- GO
+
+-- IF EXISTS (
+--     SELECT * FROM sys.objects
+--     WHERE type = 'P'
+--     AND name = 'sp_getGoldLoanLead'
+-- )
+-- DROP PROCEDURE sp_getGoldLoanLead
+-- GO
+
+-- IF EXISTS (
+--     SELECT * FROM sys.objects
+--     WHERE type = 'P'
+--     AND name = 'sp_insertGoldLoanLead'
+-- )
+-- DROP PROCEDURE sp_insertGoldLoanLead
 -- GO
 
 
@@ -56,32 +104,47 @@ SELECT * FROM sys.procedures;
 --    PROCEDURE : sp_getGoldLoanLeadsList
 --    ========================================================= */
 
--- SET ANSI_NULLS ON
--- GO
-
--- SET QUOTED_IDENTIFIER ON
--- GO
-
 -- CREATE PROCEDURE sp_getGoldLoanLeadsList
 -- AS
 -- BEGIN
 --     SET NOCOUNT ON;
 
 --     SELECT
---         Id,
---         VendorID,
---         Name,
---         MobileNumber,
---         Caratage,
---         ApproximateWeight,
---         GoldLoanRequiredFor,
---         CreatedBy,
---         CreatedDate,
---         UpdatedBy,
---         UpdatedDate,
---         Status
---     FROM GoldLoanLeadMaster
---     WHERE Status = 1
+
+--         GL.Id,
+--         GL.VendorID,
+
+--         /* Vendor Object */
+
+--         V.VendorID AS VendorId,
+--         V.VendorName,
+--         V.ContactNumber,
+--         V.BusinessShop,
+--         V.BusinessType,
+--         V.BranchID,
+--         V.BranchName,
+--         V.Region,
+
+--         /* Lead Details */
+
+--         GL.Name,
+--         GL.MobileNumber,
+--         GL.Caratage,
+--         GL.ApproximateWeight,
+--         GL.GoldLoanRequiredFor,
+
+--         GL.CreatedBy,
+--         GL.CreatedDate,
+--         GL.UpdatedBy,
+--         GL.UpdatedDate,
+--         GL.Status
+
+--     FROM GoldLoanLeadMaster GL
+
+--     INNER JOIN GoldLoanVendorMaster V
+--         ON GL.VendorID = V.VendorID
+
+--     WHERE GL.Status = 1
 -- END
 -- GO
 
@@ -90,12 +153,6 @@ SELECT * FROM sys.procedures;
 --    PROCEDURE : sp_getGoldLoanLead
 --    ========================================================= */
 
--- SET ANSI_NULLS ON
--- GO
-
--- SET QUOTED_IDENTIFIER ON
--- GO
-
 -- CREATE PROCEDURE sp_getGoldLoanLead
 --     @Id INT
 -- AS
@@ -103,21 +160,42 @@ SELECT * FROM sys.procedures;
 --     SET NOCOUNT ON;
 
 --     SELECT
---         Id,
---         VendorID,
---         Name,
---         MobileNumber,
---         Caratage,
---         ApproximateWeight,
---         GoldLoanRequiredFor,
---         CreatedBy,
---         CreatedDate,
---         UpdatedBy,
---         UpdatedDate,
---         Status
---     FROM GoldLoanLeadMaster
---     WHERE Id = @Id
---       AND Status = 1
+
+--         GL.Id,
+--         GL.VendorID,
+
+--         /* Vendor Object */
+
+--         V.VendorID AS VendorId,
+--         V.VendorName,
+--         V.ContactNumber,
+--         V.BusinessShop,
+--         V.BusinessType,
+--         V.BranchID,
+--         V.BranchName,
+--         V.Region,
+
+--         /* Lead Details */
+
+--         GL.Name,
+--         GL.MobileNumber,
+--         GL.Caratage,
+--         GL.ApproximateWeight,
+--         GL.GoldLoanRequiredFor,
+
+--         GL.CreatedBy,
+--         GL.CreatedDate,
+--         GL.UpdatedBy,
+--         GL.UpdatedDate,
+--         GL.Status
+
+--     FROM GoldLoanLeadMaster GL
+
+--     INNER JOIN GoldLoanVendorMaster V
+--         ON GL.VendorID = V.VendorID
+
+--     WHERE GL.Id = @Id
+--       AND GL.Status = 1
 -- END
 -- GO
 
@@ -125,12 +203,6 @@ SELECT * FROM sys.procedures;
 -- /* =========================================================
 --    PROCEDURE : sp_insertGoldLoanLead
 --    ========================================================= */
-
--- SET ANSI_NULLS ON
--- GO
-
--- SET QUOTED_IDENTIFIER ON
--- GO
 
 -- CREATE PROCEDURE sp_insertGoldLoanLead
 -- (
@@ -145,11 +217,15 @@ SELECT * FROM sys.procedures;
 -- )
 -- AS
 -- BEGIN
+
 --     SET NOCOUNT ON;
 
 --     BEGIN TRY
 
---         /* Validate Vendor Exists */
+--         /* =========================================
+--            VALIDATE VENDOR EXISTS
+--            ========================================= */
+
 --         IF NOT EXISTS
 --         (
 --             SELECT 1
@@ -161,6 +237,20 @@ SELECT * FROM sys.procedures;
 --             SET @Output = -1;
 --             RETURN;
 --         END
+
+--         /* =========================================
+--            VALIDATE MOBILE NUMBER
+--            ========================================= */
+
+--         IF LEN(@MobileNumber) < 10
+--         BEGIN
+--             SET @Output = -2;
+--             RETURN;
+--         END
+
+--         /* =========================================
+--            INSERT LEAD
+--            ========================================= */
 
 --         INSERT INTO GoldLoanLeadMaster
 --         (
@@ -187,14 +277,19 @@ SELECT * FROM sys.procedures;
 --             1
 --         )
 
---         /* Return newly generated Lead ID */
+--         /* =========================================
+--            RETURN GENERATED ID
+--            ========================================= */
+
 --         SET @Output = SCOPE_IDENTITY();
 
 --     END TRY
+
 --     BEGIN CATCH
 
 --         SET @Output = 0;
 
 --     END CATCH
+
 -- END
 -- GO
