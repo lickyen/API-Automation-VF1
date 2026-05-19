@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ProductivityApi.Models
 {
-    public class VendorModel
+    public class GoldLoanVendorModel
     {
         public int VendorId { get; set; } // Identity (1,1)
         public string? VendorName { get; set; }

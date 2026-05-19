@@ -129,8 +129,11 @@ builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
 
-builder.Services.AddScoped<VendorService>();
-builder.Services.AddScoped<VendorRepository>();
+builder.Services.AddScoped<GoldLoanVendorService>();
+builder.Services.AddScoped<GoldLoanVendorRepository>();
+
+builder.Services.AddScoped<GoldLoanLeadService>();
+builder.Services.AddScoped<GoldLoanLeadRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();

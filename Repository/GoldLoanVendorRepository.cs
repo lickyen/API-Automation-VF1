@@ -5,20 +5,20 @@ using System.Data;
 
 namespace ProductivityApi.Repository
 {
-    public class VendorRepository
+    public class GoldLoanVendorRepository
     {
         private readonly string _conStr;
 
-        public VendorRepository(IConfiguration configuration)
+        public GoldLoanVendorRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public List<VendorModel> GetAllVendors()
+        public List<GoldLoanVendorModel> GetAllVendors()
         {
             using var connection = new SqlConnection(_conStr);
 
-            var vendors = connection.Query<VendorModel>(
+            var vendors = connection.Query<GoldLoanVendorModel>(
                 "sp_getVendorsList",
                 commandType: CommandType.StoredProcedure
             ).ToList();
@@ -26,11 +26,11 @@ namespace ProductivityApi.Repository
             return vendors;
         }
 
-        public VendorModel? GetVendor(int vendorId)
+        public GoldLoanVendorModel? GetVendor(int vendorId)
         {
             using var connection = new SqlConnection(_conStr);
 
-            var vendor = connection.QueryFirstOrDefault<VendorModel>(
+            var vendor = connection.QueryFirstOrDefault<GoldLoanVendorModel>(
                 "sp_getVendor",
                 new { VendorID = vendorId },
                 commandType: CommandType.StoredProcedure

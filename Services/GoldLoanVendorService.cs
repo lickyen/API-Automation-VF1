@@ -3,21 +3,21 @@ using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
-    public class VendorService
+    public class GoldLoanVendorService
     {
-        private readonly VendorRepository _vendorRepository;
+        private readonly GoldLoanVendorRepository _vendorRepository;
 
-        public VendorService(VendorRepository vendorRepository)
+        public GoldLoanVendorService(GoldLoanVendorRepository vendorRepository)
         {
             _vendorRepository = vendorRepository;
         }
 
-        public VendorModel? GetVendor(int vendorId)
+        public GoldLoanVendorModel? GetVendor(int vendorId)
         {
             return _vendorRepository.GetVendor(vendorId);
         }
 
-        public List<VendorModel> GetAllVendors()
+        public List<GoldLoanVendorModel> GetAllVendors()
         {
             return _vendorRepository.GetAllVendors();
         }

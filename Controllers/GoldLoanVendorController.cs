@@ -6,11 +6,11 @@ namespace ProductivityApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class VendorsController : ControllerBase
+    public class GoldLoanVendorsController : ControllerBase
     {
-        private readonly VendorService _vendorService;
+        private readonly GoldLoanVendorService _vendorService;
 
-        public VendorsController(VendorService vendorService)
+        public GoldLoanVendorsController(GoldLoanVendorService vendorService)
         {
             _vendorService = vendorService;
         }
@@ -32,7 +32,7 @@ namespace ProductivityApi.Controllers
         [HttpGet]
         public IActionResult GetAllVendors()
         {
-            var vendors = _vendorService.GetAllVendors() ?? new List<VendorModel>();
+            var vendors = _vendorService.GetAllVendors() ?? new List<GoldLoanVendorModel>();
 
             return Ok(new Response(true, vendors, "Success"));
         }
