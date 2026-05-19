@@ -362,6 +362,7 @@
         public int Id { get; set; }
         public string Source { get; set; }
         public string CreatedBy { get; set; }
+        public List<AddQuestionnaireResponseDto>? Responses { get; set; }
     }
 
     // ── Get List ────────────────────────────────────────────────────────

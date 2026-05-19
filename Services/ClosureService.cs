@@ -284,7 +284,27 @@ namespace ProductivityApi.Services
         {
             string status = ClosureStatus.Initiated;
 
+            // First, save any questionnaire responses provided in the request
+            if (dto.Responses != null && dto.Responses.Any())
+            {
+                foreach (var r in dto.Responses)
+                {
+                    var addDto = new AddQuestionnaireResponseDto
+                    {
+                        ReqId = dto.Id,
+                        ReqSource = dto.Source,
+                        QuestionId = r.QuestionId,
+                        QuestionCode = r.QuestionCode,
+                        ResponseValue = r.ResponseValue,
+                        CreatedBy = dto.CreatedBy
+                    };
+
+                    await _repository.AddQuestionnaireResponseAsync(addDto);
+                }
+            }
+
             var result = await _repository.SubmitQuestionnaireAsync(dto, status);
+
             if (result == 0 && dto.Source == REQ_SOURCE)
             {
                 await _repository.AddLogAsync(new AddClosureLogDto

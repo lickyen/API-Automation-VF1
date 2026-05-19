@@ -183,7 +183,8 @@ namespace ProductivityApi.Controllers
             return newId switch
             {
                 > 0 => Ok(new Response(true, new { newId = newId }, "Legal billing created successfully")),
-                - 1 => Conflict(new Response(false, null, "A request with the same LAN, Advocate and Legal Category already exists")),
+                - 1 => Conflict(new Response(false, new { newId = newId }, "A request with the same LAN, Advocate and Legal Category already exists")),
+                - 2 => Conflict(new Response(true, new { newId = newId }, "The same LAN was considered under the same category in the current month. Do you still wish to proceed?")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
