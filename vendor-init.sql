@@ -2,11 +2,6 @@ SELECT * FROM GoldLoanVendorMaster;
 
 SELECT * FROM sys.procedures;
 
-SELECT TABLE_NAME 
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_TYPE = 'BASE TABLE';
-
-
 -- /****** Object:  StoredProcedure [dbo].[sp_getVendorsList] ******/
 -- SET ANSI_NULLS ON
 -- GO
@@ -116,7 +111,7 @@ WHERE TABLE_TYPE = 'BASE TABLE';
 --             @Region,
 --             1,
 --             @CreatedBy,
---             GETDATE()
+--             DATEADD(MINUTE, 330, GETUTCDATE())
 --         )
 
 --         -- Return newly generated VendorID
@@ -174,7 +169,7 @@ WHERE TABLE_TYPE = 'BASE TABLE';
 --             BranchName = ISNULL(@BranchName, BranchName),
 --             Region = ISNULL(@Region, Region),
 --             UpdatedBy = @UpdatedBy,
---             UpdatedDate = GETDATE()
+--             UpdatedDate = DATEADD(MINUTE, 330, GETUTCDATE())
 --         WHERE VendorID = @VendorID;
 
 --         IF @@ROWCOUNT > 0
@@ -219,7 +214,7 @@ WHERE TABLE_TYPE = 'BASE TABLE';
 --         SET
 --             Status = 0,
 --             UpdatedBy = @UpdatedBy,
---             UpdatedDate = GETDATE()
+--             UpdatedDate = DATEADD(MINUTE, 330, GETUTCDATE())
 --         WHERE VendorID = @VendorID;
 
 --         SET @Output = 1;
@@ -263,7 +258,7 @@ WHERE TABLE_TYPE = 'BASE TABLE';
 --         SET
 --             Status = 1,
 --             UpdatedBy = @UpdatedBy,
---             UpdatedDate = GETDATE()
+--             UpdatedDate = DATEADD(MINUTE, 330, GETUTCDATE())
 --         WHERE VendorID = @VendorID;
 
 --         SET @Output = 1;

@@ -19,7 +19,7 @@ namespace ProductivityApi.Models
         public bool Status { get; set; }
 
         public string? CreatedBy { get; set; }
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public DateTime CreatedDate { get; set; }
         public string? UpdatedBy { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }
