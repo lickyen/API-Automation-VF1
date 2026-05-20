@@ -142,6 +142,9 @@ builder.Services.AddScoped<NewBranchMasterRepository>();
 builder.Services.AddScoped<NewBranchTransactionServices>();
 builder.Services.AddScoped<NewBranchTransactionRepository>();
 
+builder.Services.AddScoped<TrainingDashboardService>();
+builder.Services.AddScoped<TrainingDashboardRepository>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

@@ -1,0 +1,226 @@
+using ClosedXML.Excel;
+using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Models;
+using ProductivityApi.Services;
+
+namespace ProductivityApi.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class TrainingDashboardController : ControllerBase
+    {
+        private readonly TrainingDashboardService _service;
+
+        public TrainingDashboardController(
+            TrainingDashboardService service)
+        {
+            _service = service;
+        }
+
+        // =========================================
+        // GET TRAINING NAMES
+        // =========================================
+
+        [HttpGet("trainings")]
+        public IActionResult GetTrainingNames()
+        {
+            try
+            {
+                var data = _service.GetTrainingNames();
+
+                return Ok(new Response(
+                    success: true,
+                    data: data,
+                    message: "Training list fetched successfully"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // GET LOCATIONS
+        // =========================================
+
+        [HttpGet("locations")]
+        public IActionResult GetLocations()
+        {
+            try
+            {
+                var data = _service.GetLocations();
+
+                return Ok(new Response(
+                    success: true,
+                    data: data,
+                    message: "Locations fetched successfully"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // GET EMPLOYEE LIST
+        // =========================================
+
+        [HttpGet("employees/{userId}")]
+        public IActionResult GetEmployeeList(string userId)
+        {
+            try
+            {
+                var data = _service.GetEmployeeList(userId);
+
+                return Ok(new Response(
+                    success: true,
+                    data: data,
+                    message: "Employee list fetched successfully"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // ASSIGN SINGLE TRAINING
+        // =========================================
+
+        [HttpPost("assign")]
+        public IActionResult AssignTraining(
+            [FromBody] AssignTrainingRequestModel model)
+        {
+            try
+            {
+                int result = _service.AssignTraining(model);
+
+                if (result == 1)
+                {
+                    return Ok(new Response(
+                        success: true,
+                        message: "Training assigned successfully"
+                    ));
+                }
+
+                return BadRequest(new Response(
+                    success: false,
+                    message: "Failed to assign training"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // BULK ASSIGN
+        // =========================================
+
+        [HttpPost("bulk-assign")]
+        public IActionResult BulkAssignTraining(
+            [FromBody] BulkAssignTrainingModel model)
+        {
+            try
+            {
+                var result = _service.BulkAssignTraining(model);
+
+                return Ok(new Response(
+                    success: true,
+                    data: result,
+                    message: "Bulk training assignment completed"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // DELETE EMPLOYEE
+        // =========================================
+
+        [HttpDelete("employee/{empId}")]
+        public IActionResult DeleteEmployee(string empId)
+        {
+            try
+            {
+                bool result = _service.DeleteEmployee(empId);
+
+                if (result)
+                {
+                    return Ok(new Response(
+                        success: true,
+                        message: "Employee training disabled successfully"
+                    ));
+                }
+
+                return BadRequest(new Response(
+                    success: false,
+                    message: "Failed to disable employee training"
+                ));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+
+        // =========================================
+        // DOWNLOAD REPORT
+        // =========================================
+
+        [HttpGet("download-report")]
+        public IActionResult DownloadReport()
+        {
+            try
+            {
+                var dt = _service.DownloadReport();
+
+                using XLWorkbook wb = new();
+
+                wb.Worksheets.Add(dt, "Report");
+
+                using MemoryStream stream = new();
+
+                wb.SaveAs(stream);
+
+                return File(
+                    stream.ToArray(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"TrainingReport_{DateTime.Now:ddMMyyyy}.xlsx"
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(
+                    success: false,
+                    message: ex.Message
+                ));
+            }
+        }
+    }
+}
