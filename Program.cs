@@ -135,6 +135,13 @@ builder.Services.AddScoped<GoldLoanVendorRepository>();
 builder.Services.AddScoped<GoldLoanLeadService>();
 builder.Services.AddScoped<GoldLoanLeadRepository>();
 
+builder.Services.AddScoped<NewBranchChecklistMasterServices>();
+builder.Services.AddScoped<NewBranchChecklistMasterRepository>();
+builder.Services.AddScoped<NewBranchMasterServices>();
+builder.Services.AddScoped<NewBranchMasterRepository>();
+builder.Services.AddScoped<NewBranchTransactionServices>();
+builder.Services.AddScoped<NewBranchTransactionRepository>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
