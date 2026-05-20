@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using DocumentFormat.OpenXml.Bibliography;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
@@ -18,7 +19,7 @@ namespace ProductivityApi.Services
             _conStr = configuration.GetConnectionString("DBConn");
 
         }
-        public async Task<string> SendEmail(string subject, string body, List<string> to, List<string> cc, List<Attachment>? attachments = null)
+        public async Task<string> SendEmail(string subject, string body, List<string> to, List<string> cc, List<Attachment>? attachments = null, string source = "ProductivityApi")
         {
             string result = string.Empty;
 
@@ -64,19 +65,19 @@ namespace ProductivityApi.Services
 
                 await client.SendMailAsync(msg);
 
-                await LogEmailAsync(subject, body, string.Join(", ", to), string.Join(", ", cc), "Success", null);
+                await LogEmailAsync(source, subject, body, string.Join(", ", to), string.Join(", ", cc), "Success", null);
                 result = "Success";
             }
             catch (Exception ex)
             {
-                await LogEmailAsync(subject, body, string.Join(", ", to), string.Join(", ", cc), "Failed", ex.Message);
+                await LogEmailAsync(source, subject, body, string.Join(", ", to), string.Join(", ", cc), "Failed", ex.Message);
                 result = ex.Message;
             }
 
             return result;
         }
 
-        private async Task LogEmailAsync(string subject, string body, string toEmails, string ccEmails, string status, string? errorMessage)
+        private async Task LogEmailAsync(string source, string subject, string body, string toEmails, string ccEmails, string status, string? errorMessage)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -84,7 +85,7 @@ namespace ProductivityApi.Services
                 "dbo.sp_InsertEmailLog",
                 new
                 {
-                    Source = "ProductivityApi",
+                    Source = source,
                     Subject = subject,
                     Body = body,
                     FromEmail = _emailSettings.FromEmail,
