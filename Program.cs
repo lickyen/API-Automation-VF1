@@ -97,6 +97,8 @@ builder.Services.AddScoped<WabaService>();
 builder.Services.AddScoped<LoanCancellationService>();
 builder.Services.AddScoped<SOALODFCLService>();
 builder.Services.AddScoped<ClosureService>();
+builder.Services.AddScoped<GoldLoanLeadService>();
+builder.Services.AddScoped<GoldLoanVendorService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -119,6 +121,8 @@ builder.Services.AddScoped<LoanCancellationRepository>();
 builder.Services.AddScoped<PLFRepository>();
 builder.Services.AddScoped<SOALODFCLRepository>();
 builder.Services.AddScoped<ClosureRepository>();
+builder.Services.AddScoped<GoldLoanLeadRepository>();
+builder.Services.AddScoped<GoldLoanVendorRepository>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
