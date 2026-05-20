@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
+using QRCoder;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace ProductivityApi.Controllers
 {
@@ -87,6 +90,33 @@ namespace ProductivityApi.Controllers
                 -1 => NotFound(new Response(false, null, "Vendor not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
+        }
+
+        [HttpGet("{vendorId}/QRCode")]
+        public IActionResult GenerateVendorQRCode(int vendorId)
+        {
+            var vendor = _vendorService.GetVendor(vendorId);
+
+            if (vendor == null)
+            {
+                return NotFound(
+                    new Response(false, null, "Vendor not found")
+                );
+            }
+
+            string qrUrl =
+                $"https://uatproductivity.vistaarfinance.com/gold-loan-enquiry?vendorCode={vendorId}";
+
+            using var qrGenerator = new QRCodeGenerator();
+
+            using var qrCodeData =
+                qrGenerator.CreateQrCode(qrUrl, QRCodeGenerator.ECCLevel.Q);
+
+            var pngQrCode = new PngByteQRCode(qrCodeData);
+
+            byte[] qrCodeBytes = pngQrCode.GetGraphic(20);
+
+            return File(qrCodeBytes, "image/png");
         }
     }
 }

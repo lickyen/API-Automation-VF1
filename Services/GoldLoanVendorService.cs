@@ -7,7 +7,8 @@ namespace ProductivityApi.Services
     {
         private readonly GoldLoanVendorRepository _vendorRepository;
 
-        public GoldLoanVendorService(GoldLoanVendorRepository vendorRepository)
+        public GoldLoanVendorService(
+            GoldLoanVendorRepository vendorRepository)
         {
             _vendorRepository = vendorRepository;
         }
@@ -32,14 +33,45 @@ namespace ProductivityApi.Services
             return _vendorRepository.UpdateVendor(updateVendorDTO);
         }
 
-        public int DisableVendor(DisableVendorDTO disableVendorDTO)
+        public int DisableVendor(
+            DisableVendorDTO disableVendorDTO)
         {
             return _vendorRepository.DisableVendor(disableVendorDTO);
         }
 
-        public int ActivateVendor(ActivateVendorDTO activateVendorDTO)
+        public int ActivateVendor(
+            ActivateVendorDTO activateVendorDTO)
         {
             return _vendorRepository.ActivateVendor(activateVendorDTO);
+        }
+
+        /* =========================================
+           VALIDATE VENDOR EXISTS
+           ========================================= */
+
+        public bool VendorExists(int vendorId)
+        {
+            return _vendorRepository.VendorExists(vendorId);
+        }
+
+        /* =========================================
+           GET QR LINK
+           ========================================= */
+
+        public string GetVendorQRCodeLink(int vendorId)
+        {
+            return
+                $"https://uatproductivity.vistaarfinance.com/gold-loan-enquiry?vendorCode={vendorId}";
+        }
+
+        /* =========================================
+           GET QR IMAGE API URL
+           ========================================= */
+
+        public string GetVendorQRCodeImageUrl(int vendorId)
+        {
+            return
+                $"/api/GoldLoanVendor/{vendorId}/QRCode";
         }
     }
 }

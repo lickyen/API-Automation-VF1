@@ -23,6 +23,19 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             ).ToList();
 
+            /* =========================================
+               ADD QR DETAILS
+               ========================================= */
+
+            foreach (var vendor in vendors)
+            {
+                vendor.QRCodeLink =
+                    $"https://uatproductivity.vistaarfinance.com/gold-loan-enquiry?vendorCode={vendor.VendorId}";
+
+                vendor.QRCodeImageUrl =
+                    $"/api/GoldLoanVendor/{vendor.VendorId}/QRCode";
+            }
+
             return vendors;
         }
 
@@ -35,6 +48,15 @@ namespace ProductivityApi.Repository
                 new { VendorID = vendorId },
                 commandType: CommandType.StoredProcedure
             );
+
+            if (vendor != null)
+            {
+                vendor.QRCodeLink =
+                    $"https://uatproductivity.vistaarfinance.com/gold-loan-enquiry?vendorCode={vendor.VendorId}";
+
+                vendor.QRCodeImageUrl =
+                    $"/api/GoldLoanVendor/{vendor.VendorId}/QRCode";
+            }
 
             return vendor;
         }
@@ -54,7 +76,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@Region", addVendorDTO.Region);
             parameters.Add("@CreatedBy", addVendorDTO.CreatedBy);
 
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add(
+                "@Output",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output
+            );
 
             connection.Execute(
                 "sp_insertVendor",
@@ -81,7 +107,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@Region", vendor.Region);
             parameters.Add("@UpdatedBy", vendor.UpdatedBy);
 
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add(
+                "@Output",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output
+            );
 
             connection.Execute(
                 "sp_updateVendor",
@@ -101,7 +131,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@VendorID", disableVendorDTO.VendorId);
             parameters.Add("@UpdatedBy", disableVendorDTO.UpdatedBy);
 
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add(
+                "@Output",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output
+            );
 
             connection.Execute(
                 "sp_disableVendor",
@@ -121,7 +155,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@VendorID", activateVendorDTO.VendorId);
             parameters.Add("@UpdatedBy", activateVendorDTO.UpdatedBy);
 
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add(
+                "@Output",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output
+            );
 
             connection.Execute(
                 "sp_activateVendor",
@@ -130,6 +168,34 @@ namespace ProductivityApi.Repository
             );
 
             return parameters.Get<int>("@Output");
+        }
+
+        /* =========================================
+           VALIDATE VENDOR EXISTS
+           ========================================= */
+
+        public bool VendorExists(int vendorId)
+        {
+            using var connection = new SqlConnection(_conStr);
+
+            var exists = connection.ExecuteScalar<bool>(
+                @"
+                SELECT CASE
+                    WHEN EXISTS
+                    (
+                        SELECT 1
+                        FROM GoldLoanVendorMaster
+                        WHERE VendorID = @VendorID
+                          AND Status = 1
+                    )
+                    THEN CAST(1 AS BIT)
+                    ELSE CAST(0 AS BIT)
+                END
+                ",
+                new { VendorID = vendorId }
+            );
+
+            return exists;
         }
     }
 }
