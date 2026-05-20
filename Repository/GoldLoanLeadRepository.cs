@@ -18,14 +18,16 @@ namespace ProductivityApi.Repository
         {
             using var connection = new SqlConnection(_conStr);
 
-            var leads = connection.Query<GoldLoanLeadModel, GoldLoanVendorModel, GoldLoanLeadModel>(
+            var leads = connection.Query<GoldLoanLeadModel,
+                                        GoldLoanVendorModel,
+                                        GoldLoanLeadModel>(
                 "sp_getGoldLoanLeadsList",
                 (goldLoanLead, vendor) =>
                 {
                     goldLoanLead.VendorObject = vendor;
                     return goldLoanLead;
                 },
-                splitOn: "VendorId",
+                splitOn: "SplitVendorID",
                 commandType: CommandType.StoredProcedure
             ).ToList();
 
@@ -43,7 +45,7 @@ namespace ProductivityApi.Repository
                     return goldLoanLead;
                 },
                 new { Id = id },
-                splitOn: "VendorId",
+                splitOn: "SplitVendorID",
                 commandType: CommandType.StoredProcedure
             ).FirstOrDefault();
 
