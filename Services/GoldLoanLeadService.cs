@@ -26,5 +26,12 @@ namespace ProductivityApi.Services
         {
             return _goldLoanLeadRepository.AddGoldLoanLead(addGoldLoanLeadDTO);
         }
+
+        public bool UpdateGoldLoanLead(
+            int id,
+            UpdateGoldLoanLeadDTO dto)
+        {
+            return _goldLoanLeadRepository.UpdateGoldLoanLead(id, dto);
+        }
     }
 }

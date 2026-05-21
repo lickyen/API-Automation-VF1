@@ -6,7 +6,6 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
 
-        // FK from GoldLoanVendorMaster / Vendors table
         public int VendorId { get; set; }
 
         public GoldLoanVendorModel? VendorObject { get; set; }
@@ -15,16 +14,12 @@ namespace ProductivityApi.Models
 
         public string? MobileNumber { get; set; }
 
-        // 22K / 24K
         public string? Caratage { get; set; }
 
-        // Approximate weight of gold
         public decimal? ApproximateWeight { get; set; }
 
-        // Purpose of gold loan
         public string? GoldLoanRequiredFor { get; set; }
 
-        // Employee ID
         public string? CreatedBy { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
@@ -33,10 +28,13 @@ namespace ProductivityApi.Models
 
         public DateTime? UpdatedDate { get; set; }
 
-        // Active / Inactive
-        public bool Status { get; set; }
-    }
+        // NEW COLUMNS
+        public string? CallingStatus { get; set; }
 
+        public string? Status { get; set; }
+
+        public string? Remarks { get; set; }
+    }
 
     public class AddGoldLoanLeadDTO
     {
@@ -61,5 +59,18 @@ namespace ProductivityApi.Models
 
         [Required]
         public string CreatedBy { get; set; }
+    }
+
+    // DTO FOR UPDATE API
+    public class UpdateGoldLoanLeadDTO
+    {
+        public string? CallingStatus { get; set; }
+
+        public string? Status { get; set; }
+
+        public string? Remarks { get; set; }
+
+        [Required]
+        public string UpdatedBy { get; set; }
     }
 }
