@@ -1,40 +1,8 @@
 /* =========================================================
-   TRIGGER 1:
-   Update NewBranchMaster.Status = 'Completed'
-   when all department statuses are NOT 'Pending'
-========================================================= */
-
-CREATE OR ALTER TRIGGER TRG_UpdateBranchMasterStatus
-ON NewBranchMaster
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE NBM
-    SET
-        Status = 'Completed',
-        UpdatedDate = GETDATE()
-    FROM NewBranchMaster NBM
-    WHERE
-        ISNULL(AdminStatus, 'Pending') <> 'Pending'
-        AND ISNULL(HRStatus, 'Pending') <> 'Pending'
-        AND ISNULL(ITStatus, 'Pending') <> 'Pending'
-        AND ISNULL(RCHRCBStatus, 'Pending') <> 'Pending'
-        AND ISNULL(FinanceStatus, 'Pending') <> 'Pending'
-        AND ISNULL(MarketingStatus, 'Pending') <> 'Pending'
-        AND ISNULL(OPSStatus, 'Pending') <> 'Pending'
-        AND Status <> 'Completed';
-END;
-GO
-
-
-/* =========================================================
-   TRIGGER 2:
+   DYNAMIC TRIGGER:
    Update OverallStatus = 'Done'
-   for all rows of a Tid
-   when all 20 checklist CurrentStatus values
-   are NOT 'Pending'
+   when ALL ACTIVE checklist items
+   for a Tid are completed
 ========================================================= */
 
 CREATE OR ALTER TRIGGER TRG_UpdateTransactionOverallStatus
@@ -44,28 +12,68 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    ;WITH CompletedTids AS
+    /* =========================================
+       FIND TIDs WHERE ALL ACTIVE CHECKLISTS
+       ARE NOT PENDING
+    ========================================= */
+
+    ;WITH PendingCounts AS
     (
-        SELECT Tid
-        FROM NewBranchTransaction
-        GROUP BY Tid
-        HAVING COUNT(*) = 20
-           AND SUM(
+        SELECT
+            NBT.Tid,
+
+            COUNT(*) AS TotalActiveChecklists,
+
+            SUM(
                 CASE
-                    WHEN ISNULL(CurrentStatus, 'Pending') = 'Pending'
+                    WHEN ISNULL(NBT.CurrentStatus, 'Pending') = 'Pending'
                     THEN 1
                     ELSE 0
                 END
-           ) = 0
+            ) AS PendingCount
+
+        FROM NewBranchTransaction NBT
+        INNER JOIN NewBranchChecklistMaster NBCM
+            ON NBT.ChecklistId = NBCM.Id
+
+        WHERE NBCM.ActionStatus = 'Active'
+
+        GROUP BY NBT.Tid
     )
+
+    /* =========================================
+       UPDATE TO DONE
+    ========================================= */
 
     UPDATE NBT
     SET
         OverallStatus = 'Done',
         UpdatedDate = GETDATE()
     FROM NewBranchTransaction NBT
-    INNER JOIN CompletedTids CT
-        ON NBT.Tid = CT.Tid
-    WHERE ISNULL(NBT.OverallStatus, '') <> 'Done';
+    INNER JOIN PendingCounts PC
+        ON NBT.Tid = PC.Tid
+    WHERE
+        PC.TotalActiveChecklists > 0
+        AND PC.PendingCount = 0
+        AND ISNULL(NBT.OverallStatus, '') <> 'Done';
+
+
+    /* =========================================
+       OPTIONAL:
+       RESET BACK TO PENDING
+       IF ANY CHECKLIST BECOMES PENDING AGAIN
+    ========================================= */
+
+    UPDATE NBT
+    SET
+        OverallStatus = 'Pending',
+        UpdatedDate = GETDATE()
+    FROM NewBranchTransaction NBT
+    INNER JOIN PendingCounts PC
+        ON NBT.Tid = PC.Tid
+    WHERE
+        PC.PendingCount > 0
+        AND ISNULL(NBT.OverallStatus, '') <> 'Pending';
+
 END;
 GO
