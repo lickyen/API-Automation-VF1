@@ -62,7 +62,6 @@ namespace ProductivityApi.Repository
                         parameters.Add("@TransactionId", item.TransactionId);
                         parameters.Add("@ChecklistId", item.ChecklistId);
                         parameters.Add("@CurrentStatus", item.CurrentStatus);
-                        parameters.Add("@OverallStatus", item.OverallStatus);
                         parameters.Add("@Remarks", item.Remarks);
                         parameters.Add("@UpdatedBy", model.UpdatedBy);
 

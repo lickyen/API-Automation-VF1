@@ -73,8 +73,6 @@ namespace ProductivityApi.Models
 
         public string CurrentStatus { get; set; } = string.Empty;
 
-        public string OverallStatus { get; set; } = string.Empty;
-
         public string? Remarks { get; set; }
     }
 
