@@ -46,11 +46,11 @@ namespace ProductivityApi.Models
 
         public DateTime? OPSDate { get; set; }
 
-        public int CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
 
         public DateTime CreatedDate { get; set; }
 
-        public int? UpdatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
     }
@@ -77,8 +77,8 @@ namespace ProductivityApi.Models
         public string Megazone { get; set; } = string.Empty;
 
         [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "CreatedBy must be greater than 0.")]
-        public int CreatedBy { get; set; }
+        [StringLength(50, MinimumLength = 1, ErrorMessage = "CreatedBy must be between 1 and 50 characters.")]
+        public string CreatedBy { get; set; } = string.Empty;
     }
 
     public class AddNewBranchResponseDto

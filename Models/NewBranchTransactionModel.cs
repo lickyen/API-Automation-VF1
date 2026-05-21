@@ -15,11 +15,11 @@ namespace ProductivityApi.Models
 
         public string? Remarks { get; set; }
 
-        public int CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
 
         public DateTime CreatedDate { get; set; }
 
-        public int? UpdatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
     }
@@ -59,7 +59,7 @@ namespace ProductivityApi.Models
     {
         public int Tid { get; set; }
 
-        public int UpdatedBy { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
 
         public List<UpdateTransactionItemDto> Transactions { get; set; }
             = new List<UpdateTransactionItemDto>();

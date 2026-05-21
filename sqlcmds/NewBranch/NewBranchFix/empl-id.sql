@@ -1,0 +1,17 @@
+ALTER TABLE dbo.NewBranchMaster
+ALTER COLUMN CreatedBy VARCHAR(50) NOT NULL;
+
+ALTER TABLE dbo.NewBranchMaster
+ALTER COLUMN UpdatedBy VARCHAR(50) NULL;
+
+ALTER TABLE dbo.NewBranchChecklistMaster
+ALTER COLUMN CreatedBy VARCHAR(50) NOT NULL;
+
+ALTER TABLE dbo.NewBranchChecklistMaster
+ALTER COLUMN UpdatedBy VARCHAR(50) NULL;
+
+ALTER TABLE dbo.NewBranchTransaction
+ALTER COLUMN CreatedBy VARCHAR(50) NOT NULL;
+
+ALTER TABLE dbo.NewBranchTransaction
+ALTER COLUMN UpdatedBy VARCHAR(50) NULL;
