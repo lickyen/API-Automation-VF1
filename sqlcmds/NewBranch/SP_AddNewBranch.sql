@@ -42,7 +42,7 @@ BEGIN
             @Zone,
             @Region,
             @Megazone,
-            'Pending',
+            'Initialised',
 
             'Pending',
             'Pending',
