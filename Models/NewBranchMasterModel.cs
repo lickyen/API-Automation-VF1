@@ -114,6 +114,22 @@ namespace ProductivityApi.Models
         public string? Status { get; set; }
 
         public string? TeamStatus { get; set; }
+
+        // NEW
+        public List<PendingTransactionDto> PendingTransactions { get; set; } = new();
+    }
+
+    public class PendingTransactionDto
+    {
+        public int TransactionId { get; set; }
+
+        public int ChecklistId { get; set; }
+
+        public string ChecklistName { get; set; } = string.Empty;
+
+        public string CurrentStatus { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
     }
 
     #endregion

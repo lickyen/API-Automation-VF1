@@ -52,27 +52,85 @@ namespace ProductivityApi.Repository
 
         public List<NewBranchListItemDto> GetBranches(GetNewBranchListRequestDto model)
         {
-            try
+            using var connection = new SqlConnection(_conStr);
+
+            string roleColumn = model.Role switch
             {
-                using IDbConnection connection = new SqlConnection(_conStr);
+                "Admin" => "nb.AdminStatus",
+                "HR" => "nb.HRStatus",
+                "IT" => "nb.ITStatus",
+                "Finance & Compliance" => "nb.FinanceStatus",
+                "Ops" => "nb.OPSStatus",
+                _ => "nb.Status"
+            };
 
-                var parameters = new DynamicParameters();
+            string query = $@"
+                SELECT
+                    nb.Id,
+                    nb.Name,
+                    nb.State,
+                    nb.Zone,
+                    nb.Region,
+                    nb.Megazone,
+                    nb.Status,
+                    {roleColumn} AS TeamStatus,
 
-                parameters.Add("@Role", model.Role);
-                parameters.Add("@Status", model.Status);
+                    nt.Id AS TransactionId,
+                    nt.ChecklistId,
+                    cm.ChecklistName,
+                    nt.CurrentStatus,
+                    nt.Remarks
 
-                var branches = connection.Query<NewBranchListItemDto>(
-                    "SP_GetNewBranches",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                ).ToList();
+                FROM NewBranchMaster nb
 
-                return branches;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("DB Error.", ex);
-            }
+                LEFT JOIN NewBranchTransaction nt
+                    ON nb.Id = nt.Tid
+
+                LEFT JOIN NewBranchChecklistMaster cm
+                    ON nt.ChecklistId = cm.Id
+
+                WHERE
+                    (@Status IS NULL OR {roleColumn} = @Status)
+                    AND (@Role IS NULL OR cm.Team = @Role)
+                    AND nt.CurrentStatus = 'Pending'
+
+                ORDER BY nb.Id
+            ";
+
+            var branchDictionary = new Dictionary<int, NewBranchListItemDto>();
+
+            var result = connection.Query<
+                NewBranchListItemDto,
+                PendingTransactionDto,
+                NewBranchListItemDto>
+            (
+                query,
+                (branch, transaction) =>
+                {
+                    if (!branchDictionary.TryGetValue(branch.Id, out var existingBranch))
+                    {
+                        existingBranch = branch;
+                        existingBranch.PendingTransactions = new List<PendingTransactionDto>();
+
+                        branchDictionary.Add(existingBranch.Id, existingBranch);
+                    }
+
+                    if (transaction != null)
+                    {
+                        existingBranch.PendingTransactions.Add(transaction);
+                    }
+
+                    return existingBranch;
+                },
+                new
+                {
+                    Status = model.Status,
+                    Role = model.Role
+                },
+                splitOn: "TransactionId"
+            );
+
+            return branchDictionary.Values.ToList();
         }
 
         #endregion

@@ -1,11 +1,11 @@
-EXEC sp_help 'NewBranchMaster';
-GO
+-- EXEC sp_help 'NewBranchMaster';
+-- GO
 
-EXEC sp_help 'NewBranchChecklistMaster';
-GO
+-- EXEC sp_help 'NewBranchChecklistMaster';
+-- GO
 
-EXEC sp_help 'NewBranchTransaction';
-GO
+-- EXEC sp_help 'NewBranchTransaction';
+-- GO
 
 -- Data
 SELECT * 
