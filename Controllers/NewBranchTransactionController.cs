@@ -16,38 +16,10 @@ namespace ProductivityApi.Controllers
             _services = services;
         }
 
-        #region GET BRANCH TRANSACTIONS
+        #region GET BRANCH TRANSACTION DETAILS
 
         // GET : api/NewBranchTransaction/5
         [HttpGet("{tid}")]
-        public IActionResult GetBranchTransactions(int tid)
-        {
-            try
-            {
-                var transactions = _services.GetBranchTransactions(tid);
-
-                if (transactions == null || !transactions.Any())
-                    return Ok(new Response(false, null, "No records found"));
-
-                return Ok(new Response(true, transactions, "Success"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    500,
-                    new Response(false, null,
-                    $"Internal server error : {ex.Message}")
-                );
-            }
-        }
-
-        #endregion
-
-
-        #region GET BRANCH DETAILS
-
-        // GET : api/NewBranchTransaction/details/5
-        [HttpGet("details/{tid}")]
         public IActionResult GetBranchDetails(int tid)
         {
             try
