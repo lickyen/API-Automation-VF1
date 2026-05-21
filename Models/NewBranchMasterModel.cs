@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ProductivityApi.Models
 {
     public class NewBranchMasterModel
@@ -59,16 +61,23 @@ namespace ProductivityApi.Models
     // POST : /api/NewBranch
     public class AddNewBranchRequestDto
     {
+        [Required]
         public string Name { get; set; } = string.Empty;
 
-        public string? State { get; set; }
+        [Required]
+        public string State { get; set; } = string.Empty;
 
-        public string? Zone { get; set; }
+        [Required]
+        public string Zone { get; set; } = string.Empty;
 
-        public string? Region { get; set; }
+        [Required]
+        public string Region { get; set; } = string.Empty;
 
-        public string? Megazone { get; set; }
+        [Required]
+        public string Megazone { get; set; } = string.Empty;
 
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "CreatedBy must be greater than 0.")]
         public int CreatedBy { get; set; }
     }
 

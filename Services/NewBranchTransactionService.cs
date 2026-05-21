@@ -20,16 +20,21 @@ namespace ProductivityApi.Services
 
         public List<ChecklistTransactionDto> GetBranchTransactions(int tid)
         {
+            if (tid <= 0)
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
+
             return _transactionRepository.GetBranchTransactions(tid);
         }
 
         #endregion
 
-
         #region GET BRANCH DETAILS
 
         public NewBranchDetailsResponseDto? GetBranchDetails(int tid)
         {
+            if (tid <= 0)
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
+
             var branch = _masterRepository.GetBranchById(tid);
 
             if (branch == null)
@@ -46,12 +51,23 @@ namespace ProductivityApi.Services
 
         #endregion
 
-
         #region UPDATE TRANSACTIONS
 
         public UpdateBranchTransactionsResponseDto UpdateTransactions(
             UpdateBranchTransactionsRequestDto model)
         {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            if (model.Tid <= 0)
+            {
+                return new UpdateBranchTransactionsResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Invalid Transaction Id. Must be greater than 0."
+                };
+            }
+
             bool isCompleted = _masterRepository.IsBranchCompleted(model.Tid);
 
             if (isCompleted)
@@ -65,19 +81,12 @@ namespace ProductivityApi.Services
 
             bool result = _transactionRepository.UpdateTransactions(model);
 
-            if (result)
-            {
-                return new UpdateBranchTransactionsResponseDto
-                {
-                    IsSuccess = true,
-                    Message = "Transactions updated successfully"
-                };
-            }
-
             return new UpdateBranchTransactionsResponseDto
             {
-                IsSuccess = false,
-                Message = "Failed to update transactions"
+                IsSuccess = result,
+                Message = result
+                    ? "Transactions updated successfully"
+                    : "Failed to update transactions"
             };
         }
 

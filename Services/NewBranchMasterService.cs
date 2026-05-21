@@ -27,7 +27,6 @@ namespace ProductivityApi.Services
 
         #endregion
 
-
         #region GET BRANCH LIST
 
         public List<NewBranchListItemDto> GetBranches(GetNewBranchListRequestDto model)
@@ -37,21 +36,25 @@ namespace ProductivityApi.Services
 
         #endregion
 
-
         #region GET BRANCH BY ID
 
         public NewBranchMasterModel? GetBranchById(int id)
         {
+            if (id <= 0)
+                throw new ArgumentException("Branch Id must be greater than 0.", nameof(id));
+
             return _repository.GetBranchById(id);
         }
 
         #endregion
 
-
         #region CHECK BRANCH COMPLETED
 
         public bool IsBranchCompleted(int tid)
         {
+            if (tid <= 0)
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
+
             return _repository.IsBranchCompleted(tid);
         }
 
