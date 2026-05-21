@@ -1,21 +1,30 @@
--- EXEC sp_help 'NewBranchMaster';
--- GO
+SELECT
+                    nb.Id,
+                    nb.Name,
+                    nb.State,
+                    nb.Zone,
+                    nb.Region,
+                    nb.Megazone,
+                    nb.Status,
+                    CurrentStatus AS TeamStatus,
 
--- EXEC sp_help 'NewBranchChecklistMaster';
--- GO
+                    nt.Id AS TransactionId,
+                    nt.ChecklistId,
+                    cm.ChecklistName,
+                    nt.CurrentStatus,
+                    nt.Remarks
 
--- EXEC sp_help 'NewBranchTransaction';
--- GO
+                FROM NewBranchMaster nb
 
--- Data
-SELECT * 
-FROM dbo.NewBranchMaster;
-GO
+                LEFT JOIN NewBranchTransaction nt
+                    ON nb.Id = nt.Tid
 
-SELECT * 
-FROM dbo.NewBranchChecklistMaster;
-GO
+                LEFT JOIN NewBranchChecklistMaster cm
+                    ON nt.ChecklistId = cm.Id
 
-SELECT * 
-FROM dbo.NewBranchTransaction;
-GO
+                WHERE
+                    ('Pending' IS NULL OR nt.CurrentStatus = 'Pending')
+                    AND ('Admin' IS NULL OR cm.Team = 'Admin')
+                    AND nt.CurrentStatus = 'Pending'
+
+                ORDER BY nb.Id
