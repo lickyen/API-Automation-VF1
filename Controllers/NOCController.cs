@@ -39,7 +39,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
-        [HttpGet("GetLinkedLans")]
+        [HttpGet("getLinkedLans")]
         public async Task<IActionResult> GetLinkedLans([FromQuery] string lan)
         {
             if (string.IsNullOrEmpty(lan))
