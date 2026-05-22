@@ -32,7 +32,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
-        [HttpGet("getClosedLans")]
+        [HttpGet("getEligibleLans")]
         public async Task<IActionResult> GetEligibleClosedLans()
         {
             var data = await _service.GetEligibleClosedLansAsync();

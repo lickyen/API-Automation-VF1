@@ -41,26 +41,32 @@ namespace ProductivityApi.Services
 
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
-            // Step 1: Get all cust ids for the lan (applicant + co-applicants)
-            var lanLoans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
+            // Step 1: Get all loans for the lan (borrower only)
+            var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
 
-            var custIds = lanLoans
-                .Select(x => x.CustomerId)
-                .Where(x => !string.IsNullOrEmpty(x))
-                .Distinct()
+            // Step 2: Get all customers for the lan
+            var customers = await _plfRepository.GetCustomersByLanAsync(lan);
+
+            var custList = customers
+                .Where(x => !string.IsNullOrEmpty(x.CustomerId))
+                .Select(x => new
+                {
+                    CustId = x.CustomerId,
+                    CustName = x.CustomerName,
+                    ApplicantType = x.ApplicantType                
+                })
                 .ToList();
 
-            // Step 2: Get all loans for each cust id
-            var result = new List<object>();
-            foreach (var custId in custIds)
+            // Step 3: Attach customer list to each loan
+            var result = loans.Select(loan => new
             {
-                var loans = await _plfRepository.GetLoansByCustIdAsync(custId!);
-                result.Add(new
-                {
-                    CustId = custId,
-                    Loans = loans
-                });
-            }
+                LoanAccountNo = loan.LoanAccountNo,
+                LoanStatus = loan.LoanStatus,
+                NocStatus = loan.NocStatus,
+                DisbDate = loan.DisbursementDate,
+                ClosureDate = loan.LoanClosureDate,
+                Customers = custList
+            });
 
             return result;
         }
