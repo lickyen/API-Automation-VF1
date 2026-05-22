@@ -44,7 +44,7 @@ namespace ProductivityApi.Controllers
         #region GET BRANCH LIST
 
         // GET : api/NewBranchMaster?status=Pending&role=IT
-        [HttpGet]
+        [HttpGet("byRole")]
         public IActionResult GetBranches(
             [FromQuery] string? status,
             [FromQuery] string? role)
