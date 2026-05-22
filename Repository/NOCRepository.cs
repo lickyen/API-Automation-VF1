@@ -16,33 +16,6 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public async Task<NocTransaction> GetById(int id)
-        {
-            using var conn = new SqlConnection(_conStr);
-            conn.Open();
-            var data = await conn.QueryFirstOrDefaultAsync<NocTransaction>(
-                "sp_NOC_GetById",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure
-            );
-
-            return data;
-        }
-
-        public async Task<IEnumerable<NocTransaction>> GetByUser(string userId, string status)
-        {
-            using var conn = new SqlConnection(_conStr);
-            conn.Open();
-
-            var data = await conn.QueryAsync<NocTransaction>(
-                "sp_NOC_GetByUser",
-                new { UserId = userId, Status = status },
-                commandType: CommandType.StoredProcedure
-            );
-
-            return data;
-        }
-
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
         {
             int affected = 0;
@@ -73,12 +46,12 @@ namespace ProductivityApi.Repository
             return affected;
         }
 
-        public async Task<IEnumerable<NocClosedLan>> GetEligibleClosedLansAsync()
+        public async Task<IEnumerable<NocClosedLan>> GetEligibleLansAsync()
         {
             using var conn = new SqlConnection(_conStr);
             conn.Open();
             return await conn.QueryAsync<NocClosedLan>(
-                "sp_NOC_GetEligibleClosedLans",
+                "sp_NOC_GetEligibleLans",
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -92,6 +65,18 @@ namespace ProductivityApi.Repository
                 dto,
                 commandType: CommandType.StoredProcedure
             );
+        }
+        public async Task<NocTransaction> GetById(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+            conn.Open();
+            var data = await conn.QueryFirstOrDefaultAsync<NocTransaction>(
+                "sp_NOC_GetById",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return data;
         }
     }
 }
