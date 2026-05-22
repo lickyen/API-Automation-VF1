@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using Dapper;
+using Npgsql;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 
@@ -9,6 +10,20 @@ namespace ProductivityApi.Repository
         private readonly string _plfConStr;
         private readonly ILogger<PLFRepository> _logger;
 
+        private const string NeolotexDisbColumns = @"
+            SELECT
+                sz_loan_account_no   AS LoanAccountNo,
+                applicant_type       AS ApplicantType,
+                branch_code          AS BranchCode,
+                customerid           AS CustomerId,
+                customer_name        AS CustomerName,
+                sz_collateral_id     AS CollateralId,
+                loan_status          AS LoanStatus,
+                loanclosure_date     AS LoanClosureDate,
+                disbursement_date    AS DisbursementDate,
+                noc_status           AS NocStatus
+            FROM plf.neolotex_disb";
+
         public PLFRepository(IConfiguration configuration, ILogger<PLFRepository> logger)
         {
             _plfConStr = configuration.GetConnectionString("PlfDBConn");
@@ -16,49 +31,110 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<PLFPayment>> GetPaymentsByLan(string lan)
         {
-            var pastPayments = new List<PLFPayment>();
-
             try
             {
+                var sql = @"SELECT 
+                        HDR.RECEIPTID       AS ReceiptId,
+                        HDR.RECEIPTMODE     AS ReceiptMode,
+                        HDR.RECEIPTAMOUNT   AS ReceiptAmount,
+                        HDR.RECEIPTDATE     AS ReceiptDate
+                    FROM PLF.FINRECEIPTHEADER HDR
+                    INNER JOIN PLF.FINRECEIPTDETAIL DTL ON HDR.RECEIPTID = DTL.RECEIPTID
+                    WHERE HDR.REFERENCE = @reference
+                    ORDER BY HDR.RECEIPTDATE DESC;";
 
-                var sqlQuery = @"SELECT 
-	                               HDR.RECEIPTID,
-	                               HDR.RECEIPTMODE,
-	                               HDR.RECEIPTAMOUNT,
-	                               HDR.RECEIPTDATE
-                            FROM PLF.FINRECEIPTHEADER HDR
-                            INNER JOIN PLF.FINRECEIPTDETAIL DTL ON HDR.RECEIPTID = DTL.RECEIPTID
-                            WHERE HDR.REFERENCE = @reference
-                            ORDER BY HDR.RECEIPTDATE DESC;";
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
 
-            await using var connection = new Npgsql.NpgsqlConnection(_plfConStr);
-            await using var command = new Npgsql.NpgsqlCommand(sqlQuery, connection);
-            command.Parameters.AddWithValue("@reference", lan);
-
-            await connection.OpenAsync();
-
-            await using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var payment = new PLFPayment
-                {
-                    ReceiptId = reader["RECEIPTID"]?.ToString() ?? string.Empty,
-                    ReceiptMode = reader["RECEIPTMODE"]?.ToString() ?? string.Empty,
-                    ReceiptAmount = reader["RECEIPTAMOUNT"] != DBNull.Value ? Convert.ToDecimal(reader["RECEIPTAMOUNT"]) : 0,
-                    ReceiptDate = reader["RECEIPTDATE"] != DBNull.Value ? Convert.ToDateTime(reader["RECEIPTDATE"]) : DateTime.MinValue
-                };
-
-                pastPayments.Add(payment);
-            }
-
+                var result = await connection.QueryAsync<PLFPayment>(sql, new { reference = lan });
+                return result.ToList();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching payments for LAN: {Lan}", lan);
                 return new List<PLFPayment>();
             }
+        }
+        public async Task<List<NeolotexDisb>> GetClosedLansAsync()
+        {
+            try
+            {
+                var sql = $@"{NeolotexDisbColumns}
+                WHERE loan_status <> 'Active Loan'
+                    AND loanclosure_date >= CURRENT_DATE - 1
+                    AND loanclosure_date <  CURRENT_DATE;";
 
-            return pastPayments;
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<NeolotexDisb>(sql);
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching closed loans from PLF.");
+                return new List<NeolotexDisb>();
+            }
+        }
+
+        public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
+        {
+            try
+            {
+                var sql = $@"{NeolotexDisbColumns}
+                    WHERE sz_collateral_id = @collId;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { collId });
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching loans for CollId: {CollId}", collId);
+                return new List<NeolotexDisb>();
+            }
+        }
+
+        public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
+        {
+            try
+            {
+                var sql = $@"{NeolotexDisbColumns}
+                    WHERE customerid = @custId;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { custId });
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching loans for CustId: {CustId}", custId);
+                return new List<NeolotexDisb>();
+            }
+        }
+
+        public async Task<List<NeolotexDisb>> GetLinkedLoansByLanAsync(string lan)
+        {
+            try
+            {
+                var sql = $@"{NeolotexDisbColumns}
+            WHERE customerid IN (
+                SELECT DISTINCT customerid
+                FROM plf.neolotex_disb
+                WHERE sz_loan_account_no = @lan
+            );";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { lan });
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching loans for LAN: {Lan}", lan);
+                return new List<NeolotexDisb>();
+            }
         }
     }
 }
