@@ -8,11 +8,13 @@ namespace ProductivityApi.Services
     {
         private readonly NOCRepository _repository;
         private readonly PLFRepository _plfRepository;
+        private readonly BranchServices _branchService;
 
-        public NOCService(NOCRepository repository, PLFRepository plfRepository)
+        public NOCService(NOCRepository repository, PLFRepository plfRepository, BranchServices branchService)
         {
             _repository = repository;
             _plfRepository = plfRepository;
+            _branchService = branchService;
         }
 
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
@@ -33,7 +35,7 @@ namespace ProductivityApi.Services
             var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
 
             // Step 2: Get all customers for the lan
-            var customers = await _plfRepository.GetCustomersByLanAsync(lan);
+            var customers = await _plfRepository.GetApplicantsByLanAsync(lan);
 
             var custList = customers
                 .Where(x => !string.IsNullOrEmpty(x.CustomerId))
@@ -63,6 +65,26 @@ namespace ProductivityApi.Services
             await _repository.InsertTransactionAsync(dto);
             return true;
         }
+
+        //public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
+        //{
+        //    if (dto == null)
+        //        return false;
+
+        //    // 🔹 Get branch details
+        //    var branch = _branchService.GetBranchByID(dto.BranchCode);
+
+        //    // 🔹 Enrich DTO before insert
+        //    dto.BranchName = branch?.BranchName;
+        //    dto.Region = branch?.Region;
+        //    dto.Zone = branch?.Zone;
+        //    dto.MegaZone = branch?.MegaZone;
+
+        //    // 🔹 Insert final enriched data
+        //    await _repository.InsertTransactionAsync(dto);
+
+        //    return true;
+        //}
         public async Task<NocTransaction?> GetByIdAsync(int id)
         {
             return await _repository.GetById(id);

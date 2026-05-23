@@ -61,7 +61,7 @@ namespace ProductivityApi.Repository
             {
                 var sql = $@"{NeolotexDisbColumns}
                 WHERE loan_status <> 'Active Loan'
-                    AND loanclosure_date >= CURRENT_DATE - 1
+                    AND loanclosure_date >= CURRENT_DATE - 2
                     AND loanclosure_date <  CURRENT_DATE;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
@@ -111,7 +111,30 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
-        public async Task<List<NeolotexDisb>> GetCustomersByLanAsync(string lan)
+        public async Task<List<NeolotexDisb>> GetLinkedLoansByLanAsync(string lan)
+        {
+            try
+            {
+                var sql = $@"{NeolotexDisbColumns}
+                WHERE customerid IN (
+                    SELECT customerid
+                    FROM plf.neolotex_disb
+                    WHERE sz_loan_account_no = @lan
+                )
+                AND applicant_type = 'B';";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { lan });
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching loans for LAN: {Lan}", lan);
+                return new List<NeolotexDisb>();
+            }
+        }
+        public async Task<List<NeolotexDisb>> GetApplicantsByLanAsync(string lan)
         {
             try
             {
@@ -126,29 +149,6 @@ namespace ProductivityApi.Repository
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching customers for LAN: {Lan}", lan);
-                return new List<NeolotexDisb>();
-            }
-        }
-        public async Task<List<NeolotexDisb>> GetLinkedLoansByLanAsync(string lan)
-        {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
-            WHERE customerid IN (
-                SELECT customerid
-                FROM plf.neolotex_disb
-                WHERE sz_loan_account_no = @lan
-            )
-            AND applicant_type = 'B';";
-
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { lan });
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching loans for LAN: {Lan}", lan);
                 return new List<NeolotexDisb>();
             }
         }
