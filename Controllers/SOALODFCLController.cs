@@ -151,7 +151,7 @@ namespace ProductivityApi.Controllers
         [HttpGet("ResendPaymentLink")]
         public async Task<IActionResult> ResendPaymentLink([FromQuery] GenPaymentLinkDto dto)
         {
-            var data = await _service.GeneratePaymentLink(dto);
+            var data = await _service.ResendPaymentLink(dto);
             return Ok(new Response(true, data, "Success"));
         }
 
