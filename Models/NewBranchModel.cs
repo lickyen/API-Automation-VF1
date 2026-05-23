@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ProductivityApi.Models
 {
+    #region Master Models
+
     public class NewBranchMasterModel
     {
         public int Id { get; set; }
@@ -53,10 +55,43 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
+
+        // Navigation Property
+        public List<NewBranchTransactionModel> Transactions { get; set; }
+            = new List<NewBranchTransactionModel>();
     }
 
+    public class NewBranchTransactionModel
+    {
+        public int Id { get; set; }
 
-    #region DTOs
+        // Branch Master Id
+        public int Tid { get; set; }
+
+        public int ChecklistId { get; set; }
+
+        public string CurrentStatus { get; set; } = string.Empty;
+
+        public string OverallStatus { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime CreatedDate { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedDate { get; set; }
+
+        // Navigation Property
+        public NewBranchMasterModel? Branch { get; set; }
+    }
+
+    #endregion
+
+
+    #region POST DTOs
 
     // POST : /api/NewBranch
     public class AddNewBranchRequestDto
@@ -77,7 +112,8 @@ namespace ProductivityApi.Models
         public string Megazone { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(50, MinimumLength = 1, ErrorMessage = "CreatedBy must be between 1 and 50 characters.")]
+        [StringLength(50, MinimumLength = 1,
+            ErrorMessage = "CreatedBy must be between 1 and 50 characters.")]
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -88,6 +124,10 @@ namespace ProductivityApi.Models
         public string Message { get; set; } = string.Empty;
     }
 
+    #endregion
+
+
+    #region GET LIST DTOs
 
     // GET : /api/NewBranch?status=Pending&role=IT
     public class GetNewBranchListRequestDto
@@ -115,8 +155,8 @@ namespace ProductivityApi.Models
 
         public string? TeamStatus { get; set; }
 
-        // NEW
-        public List<PendingTransactionDto> PendingTransactions { get; set; } = new();
+        public List<PendingTransactionDto> PendingTransactions { get; set; }
+            = new();
     }
 
     public class PendingTransactionDto
@@ -130,6 +170,71 @@ namespace ProductivityApi.Models
         public string CurrentStatus { get; set; } = string.Empty;
 
         public string? Remarks { get; set; }
+    }
+
+    #endregion
+
+
+    #region GET DETAILS DTOs
+
+    // GET : /api/NewBranch/{id}
+    public class NewBranchDetailsResponseDto
+    {
+        public NewBranchMasterModel? Branch { get; set; }
+
+        public List<ChecklistTransactionDto> Transactions { get; set; }
+            = new();
+    }
+
+    public class ChecklistTransactionDto
+    {
+        public int TransactionId { get; set; }
+
+        public int ChecklistId { get; set; }
+
+        public string Team { get; set; } = string.Empty;
+
+        public string ChecklistName { get; set; } = string.Empty;
+
+        public string CurrentStatus { get; set; } = string.Empty;
+
+        public string OverallStatus { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+    }
+
+    #endregion
+
+
+    #region UPDATE DTOs
+
+    // PUT : /api/NewBranch/{id}
+    public class UpdateBranchTransactionsRequestDto
+    {
+        public int Tid { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public List<UpdateTransactionItemDto> Transactions { get; set; }
+            = new();
+    }
+
+    public class UpdateTransactionItemDto
+    {
+        public int TransactionId { get; set; }
+
+        public int ChecklistId { get; set; }
+
+        public string CurrentStatus { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+    }
+
+    public class UpdateBranchTransactionsResponseDto
+    {
+        public bool IsSuccess { get; set; }
+
+        public string Message { get; set; } = string.Empty;
     }
 
     #endregion

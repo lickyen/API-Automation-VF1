@@ -5,11 +5,11 @@ using System.Data;
 
 namespace ProductivityApi.Repository
 {
-    public class NewBranchMasterRepository
+    public class NewBranchRepository
     {
         private readonly string _conStr;
 
-        public NewBranchMasterRepository(IConfiguration configuration)
+        public NewBranchRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
@@ -50,7 +50,8 @@ namespace ProductivityApi.Repository
 
         #region GET BRANCH LIST
 
-        public List<NewBranchListItemDto> GetBranches(GetNewBranchListRequestDto model)
+        public List<NewBranchListItemDto> GetBranches(
+            GetNewBranchListRequestDto model)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -97,20 +98,12 @@ namespace ProductivityApi.Repository
 
                 WHERE
 
-                    /* =========================================
-                    FILTER BY BRANCH STATUS
-                    ========================================= */
                     (
                         @Status IS NULL
                         OR {roleColumn} IS NULL
                         OR {roleColumn} = @Status
                     )
 
-                    /* =========================================
-                    FILTER BY ROLE
-                    Admin includes DepartmentGroup
-                    Others use Team
-                    ========================================= */
                     AND
                     (
                         @Role IS NULL
@@ -130,20 +123,10 @@ namespace ProductivityApi.Repository
                         )
                     )
 
-                    /* =========================================
-                    ONLY PENDING TASKS
-                    ========================================= */
                     AND nt.CurrentStatus = 'Pending'
 
-                    /* =========================================
-                    WORKFLOW LOGIC
-                    ========================================= */
                     AND
                     (
-
-                        /* =====================================
-                        NORMAL TASKS
-                        ===================================== */
                         (
                             cm.ParentChecklistId IS NULL
 
@@ -167,10 +150,6 @@ namespace ProductivityApi.Repository
                                         WHERE
                                             nt2.Tid = nt.Tid
 
-                                            /* IMPORTANT:
-                                            dependency should use Team
-                                            NOT DepartmentGroup
-                                            */
                                             AND cm2.Team = cm.PrereqName
 
                                             AND nt2.CurrentStatus = 'Pending'
@@ -181,10 +160,6 @@ namespace ProductivityApi.Repository
 
                         OR
 
-                        /* =====================================
-                        CHECKER TASKS
-                        ONLY depend on parent completion
-                        ===================================== */
                         (
                             cm.ParentChecklistId IS NOT NULL
 
@@ -198,7 +173,6 @@ namespace ProductivityApi.Repository
 
                                     AND ntParent.ChecklistId = cm.ParentChecklistId
 
-                                    /* Parent task completed */
                                     AND ntParent.CurrentStatus <> 'Pending'
                             )
                         )
@@ -207,7 +181,8 @@ namespace ProductivityApi.Repository
                 ORDER BY nb.Id, nt.Id
             ";
 
-            var branchDictionary = new Dictionary<int, NewBranchListItemDto>();
+            var branchDictionary =
+                new Dictionary<int, NewBranchListItemDto>();
 
             var result = connection.Query<
                 NewBranchListItemDto,
@@ -217,19 +192,24 @@ namespace ProductivityApi.Repository
                 query,
                 (branch, transaction) =>
                 {
-                    if (!branchDictionary.TryGetValue(branch.Id, out var existingBranch))
+                    if (!branchDictionary.TryGetValue(
+                        branch.Id,
+                        out var existingBranch))
                     {
                         existingBranch = branch;
 
                         existingBranch.PendingTransactions =
                             new List<PendingTransactionDto>();
 
-                        branchDictionary.Add(existingBranch.Id, existingBranch);
+                        branchDictionary.Add(
+                            existingBranch.Id,
+                            existingBranch);
                     }
 
                     if (transaction != null)
                     {
-                        existingBranch.PendingTransactions.Add(transaction);
+                        existingBranch.PendingTransactions
+                            .Add(transaction);
                     }
 
                     return existingBranch;
@@ -254,18 +234,118 @@ namespace ProductivityApi.Repository
         {
             try
             {
-                using IDbConnection connection = new SqlConnection(_conStr);
+                using IDbConnection connection =
+                    new SqlConnection(_conStr);
 
                 var parameters = new DynamicParameters();
                 parameters.Add("@Id", id);
 
-                var branch = connection.QueryFirstOrDefault<NewBranchMasterModel>(
-                    "SP_GetNewBranchById",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                );
+                var branch =
+                    connection.QueryFirstOrDefault<NewBranchMasterModel>(
+                        "SP_GetNewBranchById",
+                        parameters,
+                        commandType: CommandType.StoredProcedure
+                    );
 
                 return branch;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
+
+
+        #region GET BRANCH TRANSACTIONS
+
+        public List<ChecklistTransactionDto> GetBranchTransactions(int tid)
+        {
+            try
+            {
+                using IDbConnection connection =
+                    new SqlConnection(_conStr);
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@Tid", tid);
+
+                var transactions =
+                    connection.Query<ChecklistTransactionDto>(
+                        "SP_GetBranchTransactions",
+                        parameters,
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                return transactions;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
+
+
+        #region UPDATE TRANSACTIONS
+
+        public bool UpdateTransactions(
+            UpdateBranchTransactionsRequestDto model)
+        {
+            try
+            {
+                using IDbConnection connection =
+                    new SqlConnection(_conStr);
+
+                connection.Open();
+
+                using var transaction =
+                    connection.BeginTransaction();
+
+                try
+                {
+                    foreach (var item in model.Transactions)
+                    {
+                        var parameters = new DynamicParameters();
+
+                        parameters.Add(
+                            "@TransactionId",
+                            item.TransactionId);
+
+                        parameters.Add(
+                            "@ChecklistId",
+                            item.ChecklistId);
+
+                        parameters.Add(
+                            "@CurrentStatus",
+                            item.CurrentStatus);
+
+                        parameters.Add(
+                            "@Remarks",
+                            item.Remarks);
+
+                        parameters.Add(
+                            "@UpdatedBy",
+                            model.UpdatedBy);
+
+                        connection.Execute(
+                            "SP_UpdateBranchTransaction",
+                            parameters,
+                            commandType: CommandType.StoredProcedure,
+                            transaction: transaction
+                        );
+                    }
+
+                    transaction.Commit();
+
+                    return true;
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -282,16 +362,18 @@ namespace ProductivityApi.Repository
         {
             try
             {
-                using IDbConnection connection = new SqlConnection(_conStr);
+                using IDbConnection connection =
+                    new SqlConnection(_conStr);
 
                 var parameters = new DynamicParameters();
                 parameters.Add("@Tid", tid);
 
-                bool isCompleted = connection.ExecuteScalar<bool>(
-                    "SP_CheckBranchCompleted",
-                    parameters,
-                    commandType: CommandType.StoredProcedure
-                );
+                bool isCompleted =
+                    connection.ExecuteScalar<bool>(
+                        "SP_CheckBranchCompleted",
+                        parameters,
+                        commandType: CommandType.StoredProcedure
+                    );
 
                 return isCompleted;
             }
