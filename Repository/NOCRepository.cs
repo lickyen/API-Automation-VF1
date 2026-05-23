@@ -78,5 +78,101 @@ namespace ProductivityApi.Repository
 
             return data;
         }
+
+        public async Task<NocApplicantDetails?> GetApplicantByLanAsync(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            var result = await conn.QueryFirstOrDefaultAsync<NocApplicantDetails>(
+                @"SELECT 
+                        Lan,
+                        Cust_Id AS CustId,
+                        Cust_Name AS CustName,
+                        Cust_Mobile AS CustMobile,
+                        PropertyOwner_CustId AS PropertyOwnerCustId,
+                        PropertyOwner_Name AS PropertyOwnerName,
+                        PropertyOwner_Mobile AS PropertyOwnerMobile,
+                        Branch_Code AS BranchCode,
+                        Branch_Name AS BranchName,
+                        Loan_Status AS LoanStatus,
+                        Noc_Status AS NocStatus
+                FROM NOC_Transactions
+                WHERE Lan = @Lan
+                    AND GenerateNOC = 1",
+                new { Lan = lan }
+            );
+
+            return result;
+        }
+
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
+            string userId,
+            string role,
+            string status)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_conStr);
+
+                var result = await conn.QueryAsync<UserLanDto>(
+                    "sp_NOC_GetLansByUser",
+                    new
+                    {
+                        UserId = userId,
+                        Role = role,
+                        Status = status
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return (result, null);
+            }
+            catch (SqlException ex)
+            {
+                return (null, ex.Message);
+            }
+        }
+
+        public async Task<(bool IsValid, string? Error)> ValidateRoleExistsAsync(string role)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var sql = @"
+                SELECT COUNT(1)
+                FROM NOC_RoleStatusMap
+                WHERE Role = @Role
+            ";
+
+            var exists = await conn.ExecuteScalarAsync<int>(sql, new { Role = role });
+
+            if (exists == 0)
+                return (false, $"Invalid role: {role}");
+
+            return (true, null);
+        }
+
+        public async Task<bool> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@Id", dto.Id);
+            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Remarks", dto.Remarks);
+            parameters.Add("@CreatedBy", dto.CreatedBy);
+
+            var result = await conn.ExecuteScalarAsync<int>(
+                "sp_NOC_UpdateTransactionStatus",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result > 0;
+        }
     }
 }

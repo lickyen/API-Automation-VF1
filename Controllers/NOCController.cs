@@ -41,5 +41,73 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, data));
         }
+
+        [HttpGet("getApplicantByLan")]
+        public async Task<IActionResult> GetApplicantByLan([FromQuery] string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+            {
+                return BadRequest(
+                    new Response(false, message: "LAN is required.")
+                );
+            }
+
+            var result = await _service.GetApplicantByLanAsync(lan);
+
+            if (result == null)
+            {
+                return NotFound(
+                    new Response(false, message: "Applicant not found.")
+                );
+            }
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getLansByUser")]
+        public async Task<IActionResult> GetLansByUser([FromQuery] GetLanByUserRequestDto dto)
+        {
+            var result = await _service.GetLansByUserAsync(dto);
+
+            if (result.Error != null)
+            {
+                return BadRequest(
+                    new Response(false, message: result.Error)
+                );
+            }
+
+            return Ok(new Response(true, result.Data));
+        }
+
+        [HttpPut("updateStatus")]
+        public async Task<IActionResult> UpdateStatus([FromBody] UpdateNocStatusDto dto)
+        {
+            if (dto.Id <= 0)
+            {
+                return BadRequest(
+                    new Response(false, message: "Invalid transaction id.")
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Status))
+            {
+                return BadRequest(
+                    new Response(false, message: "Status is required.")
+                );
+            }
+
+            var result = await _service.UpdateTransactionStatusAsync(dto);
+
+            if (!result)
+            {
+                return BadRequest(
+                    new Response(false, message: "Status update failed.")
+                );
+            }
+
+            return Ok(
+                new Response(true, message: "Status updated successfully.")
+            );
+        }
     }
 }

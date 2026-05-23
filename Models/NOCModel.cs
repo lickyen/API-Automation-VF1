@@ -79,4 +79,63 @@ namespace ProductivityApi.Models
         public DateTime? ClosureDate { get; set; }
         public string? NocStatus { get; set; }
     }
+
+    public class NocApplicantDetails
+    {
+        public string Lan { get; set; } = string.Empty;
+
+        public string? CustId { get; set; }
+
+        public string? CustName { get; set; }
+
+        public string? CustMobile { get; set; }
+
+        public string? PropertyOwnerCustId { get; set; }
+
+        public string? PropertyOwnerName { get; set; }
+
+        public string? PropertyOwnerMobile { get; set; }
+
+        public string? BranchCode { get; set; }
+
+        public string? BranchName { get; set; }
+
+        public string? LoanStatus { get; set; }
+
+        public string? NocStatus { get; set; }
+    }
+
+    public class UserLanDto
+    {
+        public int Id { get; set; }
+        public string Lan { get; set; }
+        public string CustId { get; set; }
+        public string CustName { get; set; }
+        public string LoanStatus { get; set; }
+        public string Status { get; set; }
+        public DateTime? ClosureDate { get; set; }
+        public string BranchCode { get; set; }
+        public string BranchName { get; set; }
+        public string? RoleAccess { get; set; }
+    }
+
+    public class UpdateNocStatusDto
+    {
+        public int Id { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+
+        public string CreatedBy { get; set; } = string.Empty;
+    }
+
+    public class GetLanByUserRequestDto
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string? Status { get; set; } = string.Empty;
+    }
+
+    
 }

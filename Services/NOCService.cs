@@ -67,5 +67,32 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetById(id);
         }
+
+        public async Task<NocApplicantDetails?> GetApplicantByLanAsync(string lan)
+        {
+            return await _repository.GetApplicantByLanAsync(lan);
+        }
+
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(GetLanByUserRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.UserId))
+                return (null, "UserId is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.Role))
+                return (null, "Role is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.Status))
+                return (null, "Status is required.");
+
+            return await _repository.GetLansByUserAsync(
+                dto.UserId,
+                dto.Role,
+                dto.Status
+            );
+        }
+        public async Task<bool> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
+        {
+            return await _repository.UpdateTransactionStatusAsync(dto);
+        }
     }
 }
