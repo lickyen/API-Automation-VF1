@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 
@@ -192,5 +193,19 @@ namespace ProductivityApi.Services
         }
 
         #endregion
+
+        public async Task<byte[]?> GetNewBranchReportAsync()
+        {
+            var (master, transactions) = await _repository.GetNewBranchReportAsync();
+
+            if ((master == null || !master.Any()) &&
+                (transactions == null || !transactions.Any()))
+                return null;
+
+            return ExcelHelper.GenerateExcel(
+                (master, "NewBranchMaster"),
+                (transactions, "NewBranchTransaction")
+            );
+        }
     }
 }

@@ -492,5 +492,22 @@ namespace ProductivityApi.Repository
         }
 
         #endregion
+
+        public async Task<(IEnumerable<dynamic> Master, IEnumerable<dynamic> Transactions)> GetNewBranchReportAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "SP_GetNewBranchReport",
+                commandType: CommandType.StoredProcedure
+            );
+
+            var master = await multi.ReadAsync();
+            var transactions = await multi.ReadAsync();
+
+            return (master, transactions);
+        }
     }
 }

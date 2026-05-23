@@ -282,7 +282,23 @@ namespace ProductivityApi.Controllers
                 );
             }
         }
-
         #endregion
+
+        [HttpGet("export/new-branch-report")]
+        public async Task<IActionResult> ExportNewBranchReport()
+        {
+            var file = await _services.GetNewBranchReportAsync();
+
+            if (file == null)
+            {
+                return NotFound(new Response(false, null, "No data found"));
+            }
+
+            return File(
+                file,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"NewBranch_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
     }
 }
