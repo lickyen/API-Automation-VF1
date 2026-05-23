@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 
@@ -107,47 +108,70 @@ namespace ProductivityApi.Services
 
         #region UPDATE TRANSACTIONS
 
-        public UpdateBranchTransactionsResponseDto UpdateTransactions(
-            UpdateBranchTransactionsRequestDto model)
+        public UpdateBranchTransactionsResponseDto UpdateTransactions(UpdateBranchTransactionsRequestDto model)
         {
             if (model == null)
-            {
                 throw new ArgumentNullException(nameof(model));
-            }
 
             if (model.Tid <= 0)
             {
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message =
-                        "Invalid Transaction Id. Must be greater than 0."
+                    Message = "Invalid Transaction Id. Must be greater than 0."
                 };
             }
 
-            bool isCompleted =
-                _repository.IsBranchCompleted(model.Tid);
+            try
+            {
+                // Optional: branch-level lock check (keep if still needed)
+                bool isCompleted = _repository.IsBranchCompleted(model.Tid);
 
-            if (isCompleted)
+                if (isCompleted)
+                {
+                    return new UpdateBranchTransactionsResponseDto
+                    {
+                        IsSuccess = false,
+                        Message = "Branch already completed. Update not allowed."
+                    };
+                }
+
+                // Main update (SQL will now enforce Pending rule)
+                bool result = _repository.UpdateTransactions(model);
+
+                return new UpdateBranchTransactionsResponseDto
+                {
+                    IsSuccess = true,
+                    Message = "Transactions updated successfully"
+                };
+            }
+            catch (SqlException ex)
+            {
+                // This will now catch your SQL THROW:
+                // "Update not allowed. Transaction is already processed."
+                return new UpdateBranchTransactionsResponseDto
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+            catch (InvalidOperationException ex)
+            {
+                // In case repository throws business validation error
+                return new UpdateBranchTransactionsResponseDto
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+            catch (Exception ex)
             {
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message =
-                        "Branch already completed. Update not allowed."
+                    Message = ex.InnerException?.Message ?? ex.Message
                 };
             }
-
-            bool result =
-                _repository.UpdateTransactions(model);
-
-            return new UpdateBranchTransactionsResponseDto
-            {
-                IsSuccess = result,
-                Message = result
-                    ? "Transactions updated successfully"
-                    : "Failed to update transactions"
-            };
         }
 
         #endregion

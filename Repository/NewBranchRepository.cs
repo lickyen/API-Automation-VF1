@@ -57,19 +57,45 @@ namespace ProductivityApi.Repository
 
             string roleColumn = model.Role switch
             {
-                "Admin" => "nb.AdminStatus",
-                "HR" => "nb.HRStatus",
-                "IT" => "nb.ITStatus",
-                "Finance & Compliance" => "nb.FinanceStatus",
-                "Ops" => "nb.OPSStatus",
-                "Marketing" => "nb.MarketingStatus",
-                "RCHRBH" => "nb.RCHRCBStatus",
+                "Admin" or "Admin1" or "Admin2"
+                    => "nb.AdminStatus",
+
+                "HR" or "HR1" or "HR2"
+                    => "nb.HRStatus",
+
+                "IT" or "IT1" or "IT2"
+                    => "nb.ITStatus",
+
+                "Finance" or "Finance1" or "Finance2"
+                    => "nb.FinanceStatus",
+
+                "Ops" or "Ops1" or "Ops2"
+                    => "nb.OPSStatus",
+
+                "Marketing" or "Marketing1" or "Marketing2"
+                    => "nb.MarketingStatus",
+
+                "RCHRBH"
+                    => "nb.RCHRCBStatus",
 
                 // Checker-only role
-                "BH" => "NULL",
+                "BH"
+                    => "NULL",
 
                 _ => "nb.Status"
             };
+
+            string departmentGroupCase = @"
+                CASE
+                    WHEN @Role LIKE 'Admin%' THEN 'Admin'
+                    WHEN @Role LIKE 'HR%' THEN 'HR'
+                    WHEN @Role LIKE 'IT%' THEN 'IT'
+                    WHEN @Role LIKE 'Finance%' THEN 'Finance'
+                    WHEN @Role LIKE 'Ops%' THEN 'Ops'
+                    WHEN @Role LIKE 'Marketing%' THEN 'Marketing'
+                    ELSE @Role
+                END
+            ";
 
             string query = $@"
                 SELECT
@@ -80,6 +106,7 @@ namespace ProductivityApi.Repository
                     nb.Region,
                     nb.Megazone,
                     nb.Status,
+
                     {roleColumn} AS TeamStatus,
 
                     nt.Id AS TransactionId,
@@ -97,88 +124,157 @@ namespace ProductivityApi.Repository
                     ON nt.ChecklistId = cm.Id
 
                 WHERE
+                (
+                    @Status IS NULL
+                    OR {roleColumn} IS NULL
+                    OR {roleColumn} = @Status
+                )
+
+                AND
+                (
+                    @Role IS NULL
+
+                    OR
 
                     (
-                        @Status IS NULL
-                        OR {roleColumn} IS NULL
-                        OR {roleColumn} = @Status
+                        cm.DepartmentGroup = ({departmentGroupCase})
                     )
 
-                    AND
+                    OR
+
                     (
-                        @Role IS NULL
-
-                        OR
-
-                        (
-                            @Role = 'Admin'
-                            AND cm.DepartmentGroup = 'Admin'
-                        )
-
-                        OR
-
-                        (
-                            @Role <> 'Admin'
-                            AND cm.Team = @Role
-                        )
+                        cm.Team = @Role
                     )
+                )
 
-                    AND nt.CurrentStatus = 'Pending'
-
-                    AND
+                AND
+                (
+                    -- STAGE VIEW ROLES
                     (
-                        (
-                            cm.ParentChecklistId IS NULL
+                        cm.DepartmentGroup = ({departmentGroupCase})
 
-                            AND
+                        AND {roleColumn} = 'Pending'
+
+                        AND
+                        (
                             (
-                                cm.PrereqStatus = 0
+                                cm.ParentChecklistId IS NULL
 
-                                OR
-
+                                AND
                                 (
-                                    cm.PrereqStatus = 1
+                                    cm.PrereqStatus = 0
 
-                                    AND NOT EXISTS
+                                    OR
+
                                     (
-                                        SELECT 1
-                                        FROM NewBranchTransaction nt2
+                                        cm.PrereqStatus = 1
 
-                                        INNER JOIN NewBranchChecklistMaster cm2
-                                            ON nt2.ChecklistId = cm2.Id
+                                        AND NOT EXISTS
+                                        (
+                                            SELECT 1
+                                            FROM NewBranchTransaction nt2
 
-                                        WHERE
-                                            nt2.Tid = nt.Tid
+                                            INNER JOIN NewBranchChecklistMaster cm2
+                                                ON nt2.ChecklistId = cm2.Id
 
-                                            AND cm2.Team = cm.PrereqName
+                                            WHERE
+                                                nt2.Tid = nt.Tid
 
-                                            AND nt2.CurrentStatus = 'Pending'
+                                                AND cm2.Team = cm.PrereqName
+
+                                                AND nt2.CurrentStatus = 'Pending'
+                                        )
                                     )
                                 )
                             )
-                        )
 
-                        OR
+                            OR
 
-                        (
-                            cm.ParentChecklistId IS NOT NULL
-
-                            AND EXISTS
                             (
-                                SELECT 1
-                                FROM NewBranchTransaction ntParent
+                                cm.ParentChecklistId IS NOT NULL
 
-                                WHERE
-                                    ntParent.Tid = nt.Tid
+                                AND EXISTS
+                                (
+                                    SELECT 1
+                                    FROM NewBranchTransaction ntParent
 
-                                    AND ntParent.ChecklistId = cm.ParentChecklistId
+                                    WHERE
+                                        ntParent.Tid = nt.Tid
 
-                                    AND ntParent.CurrentStatus <> 'Pending'
+                                        AND ntParent.ChecklistId = cm.ParentChecklistId
+
+                                        AND ntParent.CurrentStatus <> 'Pending'
+                                )
                             )
                         )
                     )
 
-                ORDER BY nb.Id, nt.Id
+                    OR
+
+                    -- INDIVIDUAL TEAM VIEW
+                    (
+                        cm.Team = @Role
+
+                        AND nt.CurrentStatus = 'Pending'
+
+                        AND
+                        (
+                            (
+                                cm.ParentChecklistId IS NULL
+
+                                AND
+                                (
+                                    cm.PrereqStatus = 0
+
+                                    OR
+
+                                    (
+                                        cm.PrereqStatus = 1
+
+                                        AND NOT EXISTS
+                                        (
+                                            SELECT 1
+                                            FROM NewBranchTransaction nt2
+
+                                            INNER JOIN NewBranchChecklistMaster cm2
+                                                ON nt2.ChecklistId = cm2.Id
+
+                                            WHERE
+                                                nt2.Tid = nt.Tid
+
+                                                AND cm2.Team = cm.PrereqName
+
+                                                AND nt2.CurrentStatus = 'Pending'
+                                        )
+                                    )
+                                )
+                            )
+
+                            OR
+
+                            (
+                                cm.ParentChecklistId IS NOT NULL
+
+                                AND EXISTS
+                                (
+                                    SELECT 1
+                                    FROM NewBranchTransaction ntParent
+
+                                    WHERE
+                                        ntParent.Tid = nt.Tid
+
+                                        AND ntParent.ChecklistId = cm.ParentChecklistId
+
+                                        AND ntParent.CurrentStatus <> 'Pending'
+                                )
+                            )
+                        )
+                    )
+                )
+
+                ORDER BY
+                    nb.Id,
+                    nt.Id
             ";
 
             var branchDictionary =
@@ -290,8 +386,7 @@ namespace ProductivityApi.Repository
 
         #region UPDATE TRANSACTIONS
 
-        public bool UpdateTransactions(
-            UpdateBranchTransactionsRequestDto model)
+        public bool UpdateTransactions(UpdateBranchTransactionsRequestDto model)
         {
             try
             {
@@ -340,6 +435,19 @@ namespace ProductivityApi.Repository
                     transaction.Commit();
 
                     return true;
+                }
+                catch (SqlException ex)
+                {
+                    transaction.Rollback();
+
+                    // Custom SQL error
+                    if (ex.Number == 50001)
+                    {
+                        throw new Exception(
+                            "One or more transactions do not exist.");
+                    }
+
+                    throw;
                 }
                 catch
                 {
