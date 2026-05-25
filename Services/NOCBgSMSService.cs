@@ -37,16 +37,18 @@ namespace ProductivityApi.BackgroundServices
 
                     var pendingSms =
                         (await conn.QueryAsync<dynamic>(@"
-
-                            UPDATE TOP (100)
-                            dbo.NOC_SMS_Queue
+                            ;WITH cte AS
+                            (
+                                SELECT TOP (100) *
+                                FROM dbo.NOC_SMS_Queue
+                                WHERE IsSent = 0
+                                AND Processing = 0
+                                AND RetryCount < 5
+                                ORDER BY Id
+                            )
+                            UPDATE cte
                             SET Processing = 1
-                            OUTPUT inserted.*
-                            WHERE IsSent = 0
-                            AND Processing = 0
-                            AND RetryCount < 5
-                            ORDER BY Id
-
+                            OUTPUT inserted.*;
                         ")).ToList();
 
                     foreach (var sms in pendingSms)
