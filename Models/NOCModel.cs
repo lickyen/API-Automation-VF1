@@ -165,6 +165,7 @@ namespace ProductivityApi.Models
 
         public string? PropertyOwnerName { get; set; }
 
+        [Phone]
         public string? PropertyOwnerMobile { get; set; }
 
         public string UpdatedBy { get; set; } = string.Empty;

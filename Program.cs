@@ -11,6 +11,7 @@ using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using ProductivityApi.Helpers;
 using Serilog;
+using ProductivityApi.BackgroundServices;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -144,6 +145,8 @@ builder.Services.AddScoped<NewBranchRepository>();
 
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
+
+builder.Services.AddHostedService<NocSmsBackgroundService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
