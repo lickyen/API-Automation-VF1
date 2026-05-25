@@ -1,17 +1,12 @@
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.SqlServer;
-using Microsoft.Extensions.Options;
-using ProductivityApi;
 using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
-using ProductivityApi.Helpers;
 using Serilog;
-using ProductivityApi.BackgroundServices;
 
 
 var builder = WebApplication.CreateBuilder(args);
