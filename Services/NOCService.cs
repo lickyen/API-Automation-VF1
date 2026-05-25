@@ -94,5 +94,65 @@ namespace ProductivityApi.Services
         {
             return await _repository.UpdateTransactionStatusAsync(dto);
         }
+
+        public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
+        {
+            return await _repository.UpdatePropertyOwnerAsync(dto);
+        }
+
+        public async Task<List<NeolotexDisb>> GetCustomersByLanAsync(string lan)
+        {
+            return await _plfRepository.GetCustomersByLanAsync(lan);
+        }
+
+        public async Task<bool> UploadAcknowledgementAndKycAsync(
+            UploadAcknowledgementKycDto dto,
+            IWebHostEnvironment env)
+        {
+            string uploadRoot = Path.Combine(env.WebRootPath, "uploads", "noc");
+
+            if (!Directory.Exists(uploadRoot))
+                Directory.CreateDirectory(uploadRoot);
+
+            string? acknowledgementPath = null;
+            string? kycPath = null;
+
+            if (dto.AcknowledgementFile != null)
+            {
+                var ackFileName =
+                    $"ACK_{dto.Id}_{DateTime.Now.Ticks}{Path.GetExtension(dto.AcknowledgementFile.FileName)}";
+
+                var ackFullPath = Path.Combine(uploadRoot, ackFileName);
+
+                using (var stream = new FileStream(ackFullPath, FileMode.Create))
+                {
+                    await dto.AcknowledgementFile.CopyToAsync(stream);
+                }
+
+                acknowledgementPath = $"/uploads/noc/{ackFileName}";
+            }
+
+            if (dto.KycFile != null)
+            {
+                var kycFileName =
+                    $"KYC_{dto.Id}_{DateTime.Now.Ticks}{Path.GetExtension(dto.KycFile.FileName)}";
+
+                var kycFullPath = Path.Combine(uploadRoot, kycFileName);
+
+                using (var stream = new FileStream(kycFullPath, FileMode.Create))
+                {
+                    await dto.KycFile.CopyToAsync(stream);
+                }
+
+                kycPath = $"/uploads/noc/{kycFileName}";
+            }
+
+            return await _repository.UploadAcknowledgementAndKycAsync(
+                dto.Id,
+                acknowledgementPath,
+                kycPath,
+                dto.UpdatedBy
+            );
+        }
     }
 }

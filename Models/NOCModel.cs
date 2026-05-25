@@ -37,8 +37,11 @@ namespace ProductivityApi.Models
         public DateTime? DisbDate { get; set; }
         public DateTime? ClosureDate { get; set; }
         public string? NocStatus { get; set; }
+        public string? Status { get; set; }
         public string? EsignerId { get; set; }
         public string? RmuFilePath { get; set; }
+        public string? KYCFilePath { get; set; }
+        public string? AcknowledgementFilePath { get; set; }
         public string? PropertyOwnerCustId { get; set; }
         public string? PropertyOwnerName { get; set; }
         public string? PropertyOwnerMobile { get; set; }
@@ -46,6 +49,23 @@ namespace ProductivityApi.Models
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
+
+        public List<NocTransactionLog> Logs { get; set; } = new();
+    }
+
+    public class NocTransactionLog
+    {
+        public int Id { get; set; }
+
+        public int TransactionId { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime CreatedDt { get; set; }
     }
 
     public class NocClosedLanInsertDto
@@ -137,5 +157,27 @@ namespace ProductivityApi.Models
         public string? Status { get; set; } = string.Empty;
     }
 
-    
+    public class UpdatePropertyOwnerDto
+    {
+        public int Id { get; set; }
+
+        public string? PropertyOwnerCustId { get; set; }
+
+        public string? PropertyOwnerName { get; set; }
+
+        public string? PropertyOwnerMobile { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class UploadAcknowledgementKycDto
+    {
+        public int Id { get; set; }
+
+        public IFormFile? AcknowledgementFile { get; set; }
+
+        public IFormFile? KycFile { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
 }

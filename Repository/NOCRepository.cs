@@ -66,17 +66,28 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<NocTransaction> GetById(int id)
+        public async Task<NocTransaction?> GetById(int id)
         {
             using var conn = new SqlConnection(_conStr);
-            conn.Open();
-            var data = await conn.QueryFirstOrDefaultAsync<NocTransaction>(
+
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
                 "sp_NOC_GetById",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure
             );
 
-            return data;
+            var transaction = await multi.ReadFirstOrDefaultAsync<NocTransaction>();
+
+            if (transaction == null)
+                return null;
+
+            var logs = (await multi.ReadAsync<NocTransactionLog>()).ToList();
+
+            transaction.Logs = logs;
+
+            return transaction;
         }
 
         public async Task<NocApplicantDetails?> GetApplicantByLanAsync(string lan)
@@ -173,6 +184,68 @@ namespace ProductivityApi.Repository
             );
 
             return result > 0;
+        }
+
+        public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@Id", dto.Id);
+            parameters.Add("@PropertyOwnerCustId", dto.PropertyOwnerCustId);
+            parameters.Add("@PropertyOwnerName", dto.PropertyOwnerName);
+            parameters.Add("@PropertyOwnerMobile", dto.PropertyOwnerMobile);
+            parameters.Add("@UpdatedBy", dto.UpdatedBy);
+
+            var result = await conn.ExecuteScalarAsync<int>(
+                "sp_NOC_UpdatePropertyOwner",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result > 0;
+        }
+
+        public async Task<bool> UploadAcknowledgementAndKycAsync(int id,string? acknowledgementPath,string? kycPath,string updatedBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            var sql = @"
+                UPDATE NOC_Transactions
+                SET
+                    Acknowledgement_FilePath = 
+                        CASE 
+                            WHEN @AcknowledgementFilePath IS NOT NULL 
+                            THEN @AcknowledgementFilePath
+                            ELSE Acknowledgement_FilePath
+                        END,
+
+                    KYC_FilePath =
+                        CASE
+                            WHEN @KycFilePath IS NOT NULL
+                            THEN @KycFilePath
+                            ELSE KYC_FilePath
+                        END,
+
+                    Updated_By = @UpdatedBy,
+                    Updated_Dt = GETDATE()
+                WHERE Id = @Id
+            ";
+
+            var rows = await conn.ExecuteAsync(sql, new
+            {
+                Id = id,
+                AcknowledgementFilePath = acknowledgementPath,
+                KycFilePath = kycPath,
+                UpdatedBy = updatedBy
+            });
+
+            return rows > 0;
         }
     }
 }

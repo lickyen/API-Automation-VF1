@@ -10,9 +10,12 @@ namespace ProductivityApi.Controllers
     {
         private readonly NOCService _service;
 
-        public NOCController(NOCService service)
+        private readonly IWebHostEnvironment _env;
+
+        public NOCController(NOCService service, IWebHostEnvironment env)
         {
             _service = service;
+            _env = env;
         }
 
         [HttpGet("getEligibleLans")]
@@ -36,8 +39,13 @@ namespace ProductivityApi.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var data = await _service.GetByIdAsync(id);
+
             if (data == null)
-                return NotFound(new Response(false, message: $"Transaction {id} not found."));
+            {
+                return NotFound(
+                    new Response(false, message: $"Transaction {id} not found.")
+                );
+            }
 
             return Ok(new Response(true, data));
         }
@@ -107,6 +115,91 @@ namespace ProductivityApi.Controllers
 
             return Ok(
                 new Response(true, message: "Status updated successfully.")
+            );
+        }
+
+        [HttpPut("updatePropertyOwner")]
+        public async Task<IActionResult> UpdatePropertyOwner(
+            [FromBody] UpdatePropertyOwnerDto dto)
+        {
+            if (dto.Id <= 0)
+            {
+                return BadRequest(
+                    new Response(false, message: "Invalid transaction id.")
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(
+                    new Response(false, message: "UpdatedBy is required.")
+                );
+            }
+
+            var result = await _service.UpdatePropertyOwnerAsync(dto);
+
+            if (!result)
+            {
+                return BadRequest(
+                    new Response(false, message: "Property owner update failed.")
+                );
+            }
+
+            return Ok(
+                new Response(true, message: "Property owner updated successfully.")
+            );
+        }
+
+        [HttpGet("customers/{lan}")]
+        public async Task<IActionResult> GetCustomersByLan(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest("LAN is required.");
+
+            var result = await _service.GetCustomersByLanAsync(lan);
+
+            if (result == null || !result.Any())
+                return NotFound($"No customers found for LAN: {lan}");
+
+            return Ok(result);
+        }
+
+        [HttpPost("uploadAcknowledgementAndKyc")]
+        public async Task<IActionResult> UploadAcknowledgementAndKyc(
+            [FromForm] UploadAcknowledgementKycDto dto)
+        {
+            if (dto.Id <= 0)
+            {
+                return BadRequest(
+                    new Response(false, message: "Invalid transaction id.")
+                );
+            }
+
+            if (dto.AcknowledgementFile == null && dto.KycFile == null)
+            {
+                return BadRequest(
+                    new Response(false, message: "Please upload at least one file.")
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(
+                    new Response(false, message: "UpdatedBy is required.")
+                );
+            }
+
+            var result = await _service.UploadAcknowledgementAndKycAsync(dto, _env);
+
+            if (!result)
+            {
+                return BadRequest(
+                    new Response(false, message: "File upload failed.")
+                );
+            }
+
+            return Ok(
+                new Response(true, message: "Files uploaded successfully.")
             );
         }
     }
