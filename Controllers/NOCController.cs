@@ -202,5 +202,94 @@ namespace ProductivityApi.Controllers
                 new Response(true, message: "Files uploaded successfully.")
             );
         }
+
+        [HttpGet("downloadNoc/{id}")]
+        public async Task<IActionResult> DownloadNoc(
+            int id,
+            [FromQuery] string updatedBy)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(
+                    new Response(false, message: "Invalid transaction id.")
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedBy))
+            {
+                return BadRequest(
+                    new Response(false, message: "UpdatedBy is required.")
+                );
+            }
+
+            var result = await _service.GenerateNocAsync(id, updatedBy);
+
+            if (result.FileBytes == null)
+            {
+                return BadRequest(
+                    new Response(false, message: result.Message)
+                );
+            }
+
+            return File(
+                result.FileBytes,
+                "application/pdf",
+                result.FileName
+            );
+        }
+
+        [HttpGet("downloadAcknowledgement")]
+        public async Task<IActionResult> DownloadAcknowledgement(
+            [FromQuery] string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+            {
+                return BadRequest(
+                    new Response(false, message: "LAN is required.")
+                );
+            }
+
+            var result = await _service.GenerateAcknowledgementAsync(lan);
+
+            if (result.FileBytes == null)
+            {
+                return BadRequest(
+                    new Response(false, message: result.Message)
+                );
+            }
+
+            return File(
+                result.FileBytes,
+                "application/pdf",
+                result.FileName
+            );
+        }
+
+        [HttpGet("downloadLanPdf")]
+        public async Task<IActionResult> DownloadLanPdf(
+            [FromQuery] string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+            {
+                return BadRequest(
+                    new Response(false, message: "LAN is required.")
+                );
+            }
+
+            var result = await _service.GenerateLanPdfAsync(lan);
+
+            if (result.FileBytes == null)
+            {
+                return BadRequest(
+                    new Response(false, message: result.Message)
+                );
+            }
+
+            return File(
+                result.FileBytes,
+                "application/pdf",
+                result.FileName
+            );
+        }
     }
 }

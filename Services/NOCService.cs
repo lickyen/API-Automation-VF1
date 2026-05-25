@@ -1,6 +1,8 @@
 ﻿using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
 
 namespace ProductivityApi.Services
 {
@@ -153,6 +155,199 @@ namespace ProductivityApi.Services
                 kycPath,
                 dto.UpdatedBy
             );
+        }
+
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateNocAsync(int id, string updatedBy)
+        {
+            try
+            {
+                var transaction = await _repository.GetById(id);
+
+                if (transaction == null)
+                {
+                    return (null, "", "Transaction not found.");
+                }
+
+                string folderPath = Path.Combine(
+                    AppContext.BaseDirectory,
+                    "GeneratedFiles",
+                    "NOC");
+
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string fileName = $"{transaction.Lan}_{id}_NOC.pdf";
+
+                string filePath = Path.Combine(folderPath, fileName);
+
+                if (!File.Exists(filePath))
+                {
+                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                    {
+                        Document document = new Document(PageSize.A4);
+
+                        PdfWriter.GetInstance(document, fs);
+
+                        document.Open();
+
+                        document.Add(new Paragraph("NO OBJECTION CERTIFICATE"));
+                        document.Add(new Paragraph(" "));
+                        document.Add(new Paragraph($"LAN : {transaction.Lan}"));
+                        document.Add(new Paragraph($"Customer : {transaction.CustName}"));
+                        document.Add(new Paragraph($"Date : {DateTime.Now:dd-MMM-yyyy}"));
+
+                        document.Close();
+                    }
+                }
+
+                var statusUpdated = await _repository.UpdateTransactionStatusAsync(
+                    new UpdateNocStatusDto
+                    {
+                        Id = id,
+                        Status = "Document Collected",
+                        Remarks = "NOC Downloaded",
+                        CreatedBy = updatedBy
+                    });
+
+                if (!statusUpdated)
+                {
+                    return (null, "", "Failed to update status.");
+                }
+
+                var bytes = await File.ReadAllBytesAsync(filePath);
+
+                return (bytes, fileName, "Success");
+            }
+            catch (Exception ex)
+            {
+                return (null, "", ex.Message);
+            }
+        }
+
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateAcknowledgementAsync(string lan)
+        {
+            try
+            {
+                var transaction = await _repository.GetTransactionByLanAsync(lan);
+
+                if (transaction == null)
+                {
+                    return (null, "", "Transaction not found.");
+                }
+
+                string folderPath = Path.Combine(
+                    AppContext.BaseDirectory,
+                    "GeneratedFiles",
+                    "Acknowledgements");
+
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string fileName = $"{lan}_Acknowledgement.pdf";
+
+                string filePath = Path.Combine(folderPath, fileName);
+
+                if (!File.Exists(filePath))
+                {
+                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                    {
+                        Document document = new Document(PageSize.A4);
+
+                        PdfWriter.GetInstance(document, fs);
+
+                        document.Open();
+
+                        document.Add(new Paragraph("ACKNOWLEDGEMENT"));
+                        document.Add(new Paragraph(" "));
+                        document.Add(new Paragraph($"LAN : {transaction.Lan}"));
+                        document.Add(new Paragraph($"Customer : {transaction.CustName}"));
+                        document.Add(new Paragraph($"Branch : {transaction.BranchName}"));
+                        document.Add(new Paragraph($"Date : {DateTime.Now:dd-MMM-yyyy}"));
+
+                        document.Close();
+                    }
+                }
+
+                var bytes = await File.ReadAllBytesAsync(filePath);
+
+                return (bytes, fileName, "Success");
+            }
+            catch (Exception ex)
+            {
+                return (null, "", ex.Message);
+            }
+        }
+
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateLanPdfAsync(string lan)
+        {
+            try
+            {
+                string folderPath = Path.Combine(
+                    AppContext.BaseDirectory,
+                    "GeneratedFiles",
+                    "LanPdf");
+
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string fileName = $"{lan}_OneNeil.pdf";
+
+                string filePath = Path.Combine(folderPath, fileName);
+
+                if (!File.Exists(filePath))
+                {
+                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                    {
+                        Document document = new Document(PageSize.A4);
+
+                        PdfWriter.GetInstance(document, fs);
+
+                        document.Open();
+
+                        var titleFont = FontFactory.GetFont(
+                            FontFactory.HELVETICA_BOLD,
+                            18);
+
+                        var normalFont = FontFactory.GetFont(
+                            FontFactory.HELVETICA,
+                            14);
+
+                        Paragraph title = new Paragraph(
+                            "OneNeil",
+                            titleFont);
+
+                        title.Alignment = Element.ALIGN_CENTER;
+
+                        document.Add(title);
+
+                        document.Add(new Paragraph(" "));
+
+                        Paragraph lanText = new Paragraph(
+                            $"LAN Number : {lan}",
+                            normalFont);
+
+                        lanText.Alignment = Element.ALIGN_CENTER;
+
+                        document.Add(lanText);
+
+                        document.Close();
+                    }
+                }
+
+                var bytes = await File.ReadAllBytesAsync(filePath);
+
+                return (bytes, fileName, "Success");
+            }
+            catch (Exception ex)
+            {
+                return (null, "", ex.Message);
+            }
         }
     }
 }

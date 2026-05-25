@@ -181,4 +181,11 @@ namespace ProductivityApi.Models
 
         public string UpdatedBy { get; set; } = string.Empty;
     }
+
+    public class NocDownloadResponseDto
+    {
+        public byte[] FileBytes { get; set; } = Array.Empty<byte>();
+
+        public string FileName { get; set; } = string.Empty;
+    }
 }

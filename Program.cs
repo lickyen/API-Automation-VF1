@@ -146,7 +146,8 @@ builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
 
-builder.Services.AddHostedService<NocSmsBackgroundService>();
+// builder.Services.AddHostedService<NocSmsBackgroundService>();
+builder.Services.AddScoped<IJob, NocSmsJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
