@@ -61,6 +61,7 @@ namespace ProductivityApi.Models
         public string LegalBillingFilePath { get; set; } = string.Empty;
         public string SOALODFilePath { get; set; } = string.Empty;
         public string ClosureFilePath { get; set; } = string.Empty;
+        public string SARFAESIFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {
