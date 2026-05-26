@@ -247,24 +247,5 @@ namespace ProductivityApi.Repository
 
             return rows > 0;
         }
-
-        public async Task<NocTransaction?> GetTransactionByLanAsync(string lan)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            await conn.OpenAsync();
-
-            var sql = @"
-                SELECT TOP 1 *
-                FROM NOC_Transactions
-                WHERE Lan = @Lan
-                ORDER BY Id DESC
-            ";
-
-            return await conn.QueryFirstOrDefaultAsync<NocTransaction>(
-                sql,
-                new { Lan = lan }
-            );
-        }
     }
 }

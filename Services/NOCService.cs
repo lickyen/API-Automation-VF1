@@ -226,16 +226,18 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateAcknowledgementAsync(string lan)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateAcknowledgementAsync(int id)
         {
             try
             {
-                var transaction = await _repository.GetTransactionByLanAsync(lan);
+                var transaction = await _repository.GetById(id);
 
                 if (transaction == null)
                 {
                     return (null, "", "Transaction not found.");
                 }
+
+                string lan = transaction.Lan;
 
                 string folderPath = Path.Combine(
                     AppContext.BaseDirectory,
@@ -282,10 +284,19 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateLanPdfAsync(string lan)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateLanPdfAsync(int id)
         {
             try
             {
+                var transaction = await _repository.GetById(id);
+
+                if (transaction == null)
+                {
+                    return (null, "", "Transaction not found.");
+                }
+
+                string lan = transaction.Lan;
+
                 string folderPath = Path.Combine(
                     AppContext.BaseDirectory,
                     "GeneratedFiles",

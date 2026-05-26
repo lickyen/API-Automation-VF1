@@ -238,18 +238,17 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpGet("downloadAcknowledgement")]
-        public async Task<IActionResult> DownloadAcknowledgement(
-            [FromQuery] string lan)
+        [HttpGet("downloadAcknowledgement/{id}")]
+        public async Task<IActionResult> DownloadAcknowledgement(int id)
         {
-            if (string.IsNullOrWhiteSpace(lan))
+            if (id <= 0)
             {
                 return BadRequest(
-                    new Response(false, message: "LAN is required.")
+                    new Response(false, message: "Invalid transaction id.")
                 );
             }
 
-            var result = await _service.GenerateAcknowledgementAsync(lan);
+            var result = await _service.GenerateAcknowledgementAsync(id);
 
             if (result.FileBytes == null)
             {
@@ -265,18 +264,17 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpGet("downloadLanPdf")]
-        public async Task<IActionResult> DownloadLanPdf(
-            [FromQuery] string lan)
+        [HttpGet("downloadLanPdf/{id}")]
+        public async Task<IActionResult> DownloadLanPdf(int id)
         {
-            if (string.IsNullOrWhiteSpace(lan))
+            if (id <= 0)
             {
                 return BadRequest(
-                    new Response(false, message: "LAN is required.")
+                    new Response(false, message: "Invalid transaction id.")
                 );
             }
 
-            var result = await _service.GenerateLanPdfAsync(lan);
+            var result = await _service.GenerateLanPdfAsync(id);
 
             if (result.FileBytes == null)
             {
