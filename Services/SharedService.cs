@@ -95,9 +95,21 @@ namespace ProductivityApi.Services
                 .OrderByDescending(p => p.priority)
                 .Select(p => p.phoneNumber)
                 .FirstOrDefault();
+
+            data.AlternateMobile = customer.Phones?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.phoneNumber)
+                .Skip(1)
+                .FirstOrDefault();
+
             data.Email = customer.Emails?
                 .OrderByDescending(p => p.custEMailPriority)
                 .Select(p => p.custEMail)
+                .FirstOrDefault();
+
+            data.ResidentialAddress = customer.Addresses?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.GetFullAddress())
                 .FirstOrDefault();
 
             var lanCategory = await _repository.GetLanCategoryAsync(lan, data.Dpd);
@@ -131,9 +143,7 @@ namespace ProductivityApi.Services
         {
             return await _repository.GenerateReferenceNoAsync(prefix);
         }
-
-        public async Task<PaymentLinkResponseDto> PaymentLink(
-        PaymentLinkRequestDto chargeRequest)
+        public async Task<PaymentLinkResponseDto> PaymentLink(PaymentLinkRequestDto chargeRequest)
         {
             var responseObj = new PaymentLinkResponseDto();
 
@@ -190,6 +200,13 @@ namespace ProductivityApi.Services
 
             return responseObj;
         }
-    
+        public async Task<PolicyDetails?> GetPolicyByLanAsync(string lan)
+        {
+            if (string.IsNullOrEmpty(lan))
+                return null;
+
+            return await _repository.GetPolicyByLanAsync(lan);
+        }
+
     }
 }
