@@ -68,5 +68,16 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, report, msg));
         }
 
+        [HttpGet("getPolicyByLan/{lan}")]
+        public async Task<IActionResult> GetPolicyByLan(string lan)
+        {
+            var data = await _service.GetPolicyByLanAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
     }
 }
