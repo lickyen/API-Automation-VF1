@@ -40,5 +40,25 @@
   },
   "LegalBillingReminderEmail": {
     "Body": "<p>Hi <b><<Name>></b>,</p><p>There are <b>open requests pending</b> for your action on the <b>Vistaar Field Assist – Legal Billing</b> mobile application.</p><p>Kindly review the pending requests and provide the necessary action at the earliest to avoid any delays in processing.</p><br/><<RecordsTable>><br/><p>Regards,<br/>Vistaar Finance.</p>"
+  },
+    "NocDeliveredEscalationEmail": {
+    "Body": "<p>Dear Team,</p><p>Below NOC is pending collection for more than <b><<Days>></b> days.</p><ul><li>LAN: <<LAN>></li><li>Customer: <<CustomerName>></li><li>Branch: <<BranchName>></li><li>Closure Date: <<ClosureDate>></li></ul><p>Please take necessary action.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "NocReturnedToHOEmail": {
+    "Body": "<p>Dear Team,</p><p>NOC status is still marked as <b>Returned to HO</b> for more than <b><<Days>></b> days.</p><ul><li>LAN: <<LAN>></li><li>Customer: <<CustomerName>></li><li>Branch: <<BranchName>></li></ul><p>Please take necessary action.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "NocPendingDispatchEmail": {
+    "Body": "<p>Dear Team,</p><p>Below NOC is pending before dispatch for more than <b><<Days>></b> days.</p><ul><li>LAN: <<LAN>></li><li>Status: <<Status>></li><li>Customer: <<CustomerName>></li><li>Branch: <<BranchName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "NocDocumentNotCollectedEmail": {
+    "Body": "<p>Dear Team,</p><p>Below NOC is not collected even after <b><<Days>></b> days from closure.</p><ul><li>LAN: <<LAN>></li><li>Status: <<Status>></li><li>Customer: <<CustomerName>></li><li>Branch: <<BranchName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "NocDispatchedEmail": {
+    "Subject": "NOC Dispatched - LAN <<LAN>>",
+    "Body": "<p>Dear Team,</p><br/><p>NOC for below LAN has been dispatched.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><br/><p>Regards,<br/>NOC Team</p>"
+  },
+  "NocDiscrepancyEmail": {
+    "Subject": "NOC Discrepancy - LAN <<LAN>>",
+    "Body": "<p>Dear Team,</p><br/><p>NOC has been marked as <b>Received with discrepancy</b>.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><p><b>Status:</b> <<Status>></p><br/><p>Please review the discrepancy.</p><br/><p>Regards,<br/>NOC System</p>"
   }
 }

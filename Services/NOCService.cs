@@ -14,19 +14,22 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly SmsService _smsService;
         private readonly IConfiguration _configuration;
+        private readonly TemplateService _templateService;
 
         public NOCService(
             NOCRepository repository,
             PLFRepository plfRepository,
             EmailService emailService,
             SmsService smsService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            TemplateService templateService)
         {
             _repository = repository;
             _plfRepository = plfRepository;
             _emailService = emailService;
             _smsService = smsService;
             _configuration = configuration;
+            _templateService = templateService;
         }
 
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
@@ -55,7 +58,7 @@ namespace ProductivityApi.Services
                 {
                     CustId = x.CustomerId,
                     CustName = x.CustomerName,
-                    ApplicantType = x.ApplicantType                
+                    ApplicantType = x.ApplicantType
                 })
                 .ToList();
 
@@ -130,7 +133,9 @@ namespace ProductivityApi.Services
             return (true, "Status updated successfully.");
         }
 
-        private async Task HandleStatusTriggersAsync(NocTransaction transaction,string status)
+        private async Task HandleStatusTriggersAsync(
+            NocTransaction transaction,
+            string status)
         {
             switch (status.Trim().ToUpper())
             {
@@ -144,119 +149,123 @@ namespace ProductivityApi.Services
             }
         }
 
-        private async Task SendDispatchedNotifications(NocTransaction transaction)
+        private async Task SendDispatchedNotifications(
+            NocTransaction transaction)
         {
-            //---------------------------------------------------
-            // CUSTOMER SMS
-            //---------------------------------------------------
-
-            if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
+            try
             {
-                string sms =
-                    $"Dear {transaction.CustName}, your NOC for LAN {transaction.Lan} has been dispatched to branch {transaction.BranchName}.";
+                //---------------------------------------------------
+                // CUSTOMER SMS
+                //---------------------------------------------------
 
-                await _smsService.SendSms(
-                    transaction.CustMobile,
-                    sms,
-                    "YOUR_DLT_TEMPLATE_ID"
-                );
-            }
-
-            //---------------------------------------------------
-            // BRANCH EMAILS
-            //---------------------------------------------------
-
-            var branchEmails =await _repository.GetBranchEmailsAsync(transaction.BranchCode);
-
-            if (branchEmails != null)
-            {
-                var to = new List<string>();
-
-                if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
-                    to.Add(branchEmails.OPS_Email);
-
-                if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
-                    to.Add(branchEmails.BM_Email);
-
-                if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
-                    to.Add(branchEmails.CM_Email);
-
-                // remove duplicates
-                to = to.Distinct().ToList();
-
-                if (to.Any())
+                if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
                 {
-                    string subject =
-                        $"NOC Dispatched - LAN {transaction.Lan}";
+                    var smsTemplate =
+                        _templateService.GetSmsTemplate(
+                            "NocDispatchedSms");
 
-                    string body = $@"
-                        Dear Team,<br/><br/>
+                    var smsContent =
+                        _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            BuildPlaceholders(transaction));
 
-                        NOC for below LAN has been dispatched.<br/><br/>
-
-                        <b>LAN:</b> {transaction.Lan}<br/>
-                        <b>Customer:</b> {transaction.CustName}<br/>
-                        <b>Branch:</b> {transaction.BranchName}<br/><br/>
-
-                        Regards,<br/>
-                        NOC Team
-                    ";
-
-                    await _emailService.SendEmail(
-                        subject,
-                        body,
-                        to,
-                        new List<string>()
-                    );
+                    await _smsService.SendSms(
+                        transaction.CustMobile,
+                        smsContent,
+                        smsTemplate.DltContentId);
                 }
+
+                //---------------------------------------------------
+                // BRANCH EMAILS
+                //---------------------------------------------------
+
+                var to =
+                    await GetNotificationRecipientsAsync(
+                        transaction.BranchCode);
+
+                if (!to.Any())
+                    return;
+
+                var template =
+                    _templateService.GetEmailTemplate(
+                        "NocDispatchedEmail");
+
+                var body =
+                    _templateService.ReplacePlaceholders(
+                        template.Body,
+                        BuildPlaceholders(transaction));
+
+                var subject =
+                    _templateService.ReplacePlaceholders(
+                        template.Subject,
+                        BuildPlaceholders(transaction));
+
+                await _emailService.SendEmail(
+                    subject,
+                    body,
+                    to,
+                    new List<string>());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    $"Error sending dispatched notifications: {ex.Message}",
+                    ex);
             }
         }
 
-        private async Task SendDiscrepancyNotifications(NocTransaction transaction)
+        private async Task SendDiscrepancyNotifications(
+            NocTransaction transaction)
         {
-            string nocEmail =
-                _configuration["NocSettings:NocEmail"];
+            try
+            {
+                var to = new List<string>();
 
-            string supervisorEmail =
-                _configuration["NocSettings:SupervisorEmail"];
+                var nocEmail =
+                    _configuration["NocSettings:NocEmail"];
 
-            var to = new List<string>();
+                var supervisorEmail =
+                    _configuration["NocSettings:SupervisorEmail"];
 
-            if (!string.IsNullOrWhiteSpace(nocEmail))
-                to.Add(nocEmail);
+                if (!string.IsNullOrWhiteSpace(nocEmail))
+                    to.Add(nocEmail);
 
-            if (!string.IsNullOrWhiteSpace(supervisorEmail))
-                to.Add(supervisorEmail);
+                if (!string.IsNullOrWhiteSpace(supervisorEmail))
+                    to.Add(supervisorEmail);
 
-            if (!to.Any())
-                return;
+                to = to
+                    .Distinct()
+                    .ToList();
 
-            string subject =
-                $"NOC Discrepancy - LAN {transaction.Lan}";
+                if (!to.Any())
+                    return;
 
-            string body = $@"
-                Dear Team,<br/><br/>
+                var template =
+                    _templateService.GetEmailTemplate(
+                        "NocDiscrepancyEmail");
 
-                NOC has been marked as 
-                <b>Received with discrepancy</b>.<br/><br/>
+                var body =
+                    _templateService.ReplacePlaceholders(
+                        template.Body,
+                        BuildPlaceholders(transaction));
 
-                <b>LAN:</b> {transaction.Lan}<br/>
-                <b>Customer:</b> {transaction.CustName}<br/>
-                <b>Branch:</b> {transaction.BranchName}<br/>
-                <b>Status:</b> {transaction.Status}<br/><br/>
+                var subject =
+                    _templateService.ReplacePlaceholders(
+                        template.Subject,
+                        BuildPlaceholders(transaction));
 
-                Please review the discrepancy.<br/><br/>
-
-                Regards,<br/>
-                NOC System
-            ";
-
-            await _emailService.SendEmail(
-                subject,
-                body,
-                to,
-                new List<string>()
-            );
+                await _emailService.SendEmail(
+                    subject,
+                    body,
+                    to,
+                    new List<string>());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    $"Error sending discrepancy notifications: {ex.Message}",
+                    ex);
+            }
         }
 
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
@@ -319,7 +328,7 @@ namespace ProductivityApi.Services
             );
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateNocAsync(int id, string updatedBy, string role)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateNocAsync(int id, string updatedBy, string role)
         {
             try
             {
@@ -398,7 +407,7 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateAcknowledgementAsync(int id)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateAcknowledgementAsync(int id)
         {
             try
             {
@@ -456,7 +465,7 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateLanPdfAsync(int id)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateLanPdfAsync(int id)
         {
             try
             {
@@ -531,6 +540,44 @@ namespace ProductivityApi.Services
             {
                 return (null, "", ex.Message);
             }
+        }
+
+        private Dictionary<string, string> BuildPlaceholders(
+            NocTransaction txn)
+        {
+            return new Dictionary<string, string>
+            {
+                { "LAN", txn.Lan ?? "" },
+                { "CustName", txn.CustName ?? "" },
+                { "CustomerName", txn.CustName ?? "" },
+                { "BranchName", txn.BranchName ?? "" },
+                { "Status", txn.Status ?? "" }
+            };
+        }
+
+        private async Task<List<string>> GetNotificationRecipientsAsync(
+            string branchCode)
+        {
+            var to = new List<string>();
+
+            var branchEmails =
+                await _repository.GetBranchEmailsAsync(branchCode);
+
+            if (branchEmails != null)
+            {
+                if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
+                    to.Add(branchEmails.OPS_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
+                    to.Add(branchEmails.BM_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
+                    to.Add(branchEmails.CM_Email);
+            }
+
+            return to
+                .Distinct()
+                .ToList();
         }
     }
 }

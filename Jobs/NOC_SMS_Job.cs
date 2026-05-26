@@ -1,5 +1,4 @@
 using Hangfire;
-using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
@@ -10,27 +9,29 @@ namespace ProductivityApi.Jobs
     {
         public string JobId => "noc-sms-job";
 
-        public void Register(string cron) =>
-            RecurringJob.AddOrUpdate<NOC_SMS_Job>(
-                JobId,
-                j => j.ExecuteAsync(CancellationToken.None),
-                cron);
+        private const int DELIVERED_ESCALATION_DAYS = 35;
+        private const int RETURNED_TO_HO_DAYS = 5;
+        private const int PENDING_DISPATCH_DAYS = 15;
+        private const int DOC_NOT_COLLECTED_DAYS = 25;
 
         private readonly Serilog.ILogger _logger;
         private readonly NOCRepository _repository;
         private readonly EmailService _emailService;
         private readonly SmsService _smsService;
+        private readonly TemplateService _templateService;
         private readonly IConfiguration _configuration;
 
         public NOC_SMS_Job(
             NOCRepository repository,
             EmailService emailService,
             SmsService smsService,
+            TemplateService templateService,
             IConfiguration configuration)
         {
             _repository = repository;
             _emailService = emailService;
             _smsService = smsService;
+            _templateService = templateService;
             _configuration = configuration;
 
             _logger = new LoggerConfiguration()
@@ -43,9 +44,17 @@ namespace ProductivityApi.Jobs
                 .CreateLogger();
         }
 
+        public void Register(string cron) =>
+            RecurringJob.AddOrUpdate<NOC_SMS_Job>(
+                JobId,
+                j => j.ExecuteAsync(CancellationToken.None),
+                cron);
+
         public async Task ExecuteAsync(CancellationToken ct)
         {
-            _logger.Information("NOC_SMS_Job started at {Time}", DateTimeOffset.Now);
+            _logger.Information(
+                "NOC_SMS_Job started at {Time}",
+                DateTimeOffset.Now);
 
             try
             {
@@ -55,11 +64,13 @@ namespace ProductivityApi.Jobs
 
                 await ReturnedToHOReminderAsync(ct);
 
-                await ClosureDate15DaysPendingDispatchAsync(ct);
+                await PendingDispatchReminderAsync(ct);
 
-                await ClosureDate25DaysDocNotCollectedAsync(ct);
+                await DocumentNotCollectedReminderAsync(ct);
 
-                _logger.Information("NOC_SMS_Job completed at {Time}", DateTimeOffset.Now);
+                _logger.Information(
+                    "NOC_SMS_Job completed at {Time}",
+                    DateTimeOffset.Now);
             }
             catch (Exception ex)
             {
@@ -68,12 +79,15 @@ namespace ProductivityApi.Jobs
         }
 
         //--------------------------------------------------------
-        // 1. Delivered in branch -> customer SMS daily till 35 days
+        // 1. Delivered In Branch Reminder
         //--------------------------------------------------------
-        private async Task DeliveredInBranchReminderAsync(CancellationToken ct)
+
+        private async Task DeliveredInBranchReminderAsync(
+            CancellationToken ct)
         {
             var transactions =
-                await _repository.GetDeliveredInBranchPendingTransactionsAsync();
+                await _repository
+                    .GetDeliveredInBranchPendingTransactionsAsync();
 
             foreach (var txn in transactions)
             {
@@ -82,167 +96,62 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
-                    var deliveredDate =
-                        await _repository.GetStatusDateAsync(
-                            txn.Id,
-                            "Delivered in Branch");
-
-                    if (deliveredDate == null)
+                    if (!txn.UpdatedDt.HasValue)
                         continue;
 
-                    int days =
-                        (DateTime.Now.Date - deliveredDate.Value.Date).Days;
+                    var days =
+                        CalculateDays(txn.UpdatedDt.Value);
 
-                    if (days <= 35)
-                    {
-                        if (!string.IsNullOrWhiteSpace(txn.CustMobile))
-                        {
-                            string sms =
-                                $"Dear {txn.CustName}, your NOC document for LAN {txn.Lan} is available at branch {txn.BranchName}. Kindly collect the documents.";
-
-                            await _smsService.SendSms(
-                                txn.CustMobile,
-                                sms,
-                                "NOC_DELIVERED_TEMPLATE");
-
-                            _logger.Information(
-                                "Delivered in Branch reminder SMS sent for Transaction {Id}",
-                                txn.Id);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(
-                        ex,
-                        "Error in DeliveredInBranchReminderAsync for Transaction {Id}",
-                        txn.Id);
-                }
-            }
-        }
-
-        //--------------------------------------------------------
-        // 2. Delivered in branch > 35 days
-        // email NOC + Branch + SMS customer
-        //--------------------------------------------------------
-        private async Task DeliveredInBranchEscalationAsync(CancellationToken ct)
-        {
-            var transactions =
-                await _repository.GetDeliveredInBranchPendingTransactionsAsync();
-
-            foreach (var txn in transactions)
-            {
-                if (ct.IsCancellationRequested)
-                    break;
-
-                try
-                {
-                    var deliveredDate =
-                        await _repository.GetStatusDateAsync(
-                            txn.Id,
-                            "Delivered in Branch");
-
-                    if (deliveredDate == null)
+                    if (days > DELIVERED_ESCALATION_DAYS)
                         continue;
 
-                    int days =
-                        (DateTime.Now.Date - deliveredDate.Value.Date).Days;
-
-                    if (days > 35)
+                    if (string.IsNullOrWhiteSpace(txn.CustMobile))
                     {
-                        //------------------------------------------
-                        // SMS CUSTOMER
-                        //------------------------------------------
-
-                        if (!string.IsNullOrWhiteSpace(txn.CustMobile))
-                        {
-                            string sms =
-                                $"Reminder: Your NOC documents for LAN {txn.Lan} are pending collection at branch {txn.BranchName}. Kindly collect immediately.";
-
-                            await _smsService.SendSms(
-                                txn.CustMobile,
-                                sms,
-                                "NOC_ESCALATION_TEMPLATE");
-                        }
-
-                        //------------------------------------------
-                        // EMAIL NOC + BRANCH
-                        //------------------------------------------
-
-                        var to = new List<string>();
-
-                        var nocEmail =
-                            _configuration["NocSettings:NocEmail"];
-
-                        if (!string.IsNullOrWhiteSpace(nocEmail))
-                            to.Add(nocEmail);
-
-                        var branchEmails =
-                            await _repository.GetBranchEmailsAsync(
-                                txn.BranchCode);
-
-                        if (branchEmails != null)
-                        {
-                            if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
-                                to.Add(branchEmails.OPS_Email);
-
-                            if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
-                                to.Add(branchEmails.BM_Email);
-
-                            if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
-                                to.Add(branchEmails.CM_Email);
-                        }
-
-                        to = to.Distinct().ToList();
-
-                        if (to.Any())
-                        {
-                            string subject =
-                                $"NOC Pending Collection >35 Days - {txn.Lan}";
-
-                            string body = $@"
-                                Dear Team,<br/><br/>
-
-                                Below NOC is pending collection for more than 35 days.<br/><br/>
-
-                                <b>LAN:</b> {txn.Lan}<br/>
-                                <b>Customer:</b> {txn.CustName}<br/>
-                                <b>Branch:</b> {txn.BranchName}<br/>
-                                <b>Closure Date:</b> {txn.ClosureDate:dd-MMM-yyyy}<br/><br/>
-
-                                Regards,<br/>
-                                NOC System
-                            ";
-
-                            await _emailService.SendEmail(
-                                subject,
-                                body,
-                                to,
-                                new List<string>());
-                        }
-
-                        _logger.Information(
-                            "Delivered in Branch escalation processed for Transaction {Id}",
+                        _logger.Warning(
+                            "Customer mobile missing for transaction {Id}",
                             txn.Id);
+
+                        continue;
                     }
+
+                    var smsTemplate =
+                        _templateService
+                            .GetSmsTemplate("NocDeliveredReminderSms");
+
+                    var smsContent =
+                        _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            BuildPlaceholders(txn, days));
+
+                    await _smsService.SendSms(
+                        txn.CustMobile,
+                        smsContent,
+                        smsTemplate.DltContentId);
+
+                    _logger.Information(
+                        "Delivered reminder SMS sent for transaction {Id}",
+                        txn.Id);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(
                         ex,
-                        "Error in DeliveredInBranchEscalationAsync for Transaction {Id}",
+                        "Error in DeliveredInBranchReminderAsync for transaction {Id}",
                         txn.Id);
                 }
             }
         }
 
         //--------------------------------------------------------
-        // 3. Returned to HO > 5 days
+        // 2. Delivered In Branch Escalation
         //--------------------------------------------------------
-        private async Task ReturnedToHOReminderAsync(CancellationToken ct)
+
+        private async Task DeliveredInBranchEscalationAsync(
+            CancellationToken ct)
         {
             var transactions =
-                await _repository.GetReturnedToHOTransactionsAsync();
+                await _repository
+                    .GetDeliveredInBranchPendingTransactionsAsync();
 
             foreach (var txn in transactions)
             {
@@ -251,95 +160,95 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
-                    var returnedDate =
-                        await _repository.GetStatusDateAsync(
-                            txn.Id,
-                            "Returned to HO");
-
-                    if (returnedDate == null)
+                    if (!txn.UpdatedDt.HasValue)
                         continue;
 
-                    int days =
-                        (DateTime.Now.Date - returnedDate.Value.Date).Days;
+                    var days =
+                        CalculateDays(txn.UpdatedDt.Value);
 
-                    if (days > 5)
+                    if (days <= DELIVERED_ESCALATION_DAYS)
+                        continue;
+
+                    //--------------------------------------------------------
+                    // SMS
+                    //--------------------------------------------------------
+
+                    if (!string.IsNullOrWhiteSpace(txn.CustMobile))
                     {
-                        var to = new List<string>();
+                        var smsTemplate =
+                            _templateService
+                                .GetSmsTemplate("NocDeliveredEscalationSms");
 
-                        var nocEmail =
-                            _configuration["NocSettings:NocEmail"];
+                        var smsContent =
+                            _templateService.ReplacePlaceholders(
+                                smsTemplate.Content,
+                                BuildPlaceholders(txn, days));
 
-                        if (!string.IsNullOrWhiteSpace(nocEmail))
-                            to.Add(nocEmail);
-
-                        var branchEmails =
-                            await _repository.GetBranchEmailsAsync(
-                                txn.BranchCode);
-
-                        if (branchEmails != null)
-                        {
-                            if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
-                                to.Add(branchEmails.OPS_Email);
-
-                            if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
-                                to.Add(branchEmails.BM_Email);
-
-                            if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
-                                to.Add(branchEmails.CM_Email);
-                        }
-
-                        to = to.Distinct().ToList();
-
-                        if (to.Any())
-                        {
-                            string subject =
-                                $"Returned To HO Pending - {txn.Lan}";
-
-                            string body = $@"
-                                Dear Team,<br/><br/>
-
-                                NOC status is still marked as 
-                                <b>Returned to HO</b> for more than 5 days.<br/><br/>
-
-                                <b>LAN:</b> {txn.Lan}<br/>
-                                <b>Customer:</b> {txn.CustName}<br/>
-                                <b>Branch:</b> {txn.BranchName}<br/><br/>
-
-                                Please take necessary action.<br/><br/>
-
-                                Regards,<br/>
-                                NOC System
-                            ";
-
-                            await _emailService.SendEmail(
-                                subject,
-                                body,
-                                to,
-                                new List<string>());
-                        }
-
-                        _logger.Information(
-                            "ReturnedToHO reminder sent for Transaction {Id}",
-                            txn.Id);
+                        await _smsService.SendSms(
+                            txn.CustMobile,
+                            smsContent,
+                            smsTemplate.DltContentId);
                     }
+
+                    //--------------------------------------------------------
+                    // EMAIL
+                    //--------------------------------------------------------
+
+                    var to =
+                        await GetNotificationRecipientsAsync(
+                            txn.BranchCode);
+
+                    if (!to.Any())
+                    {
+                        _logger.Warning(
+                            "No recipients found for transaction {Id}",
+                            txn.Id);
+
+                        continue;
+                    }
+
+                    var template =
+                        _templateService.GetEmailTemplate(
+                            "NocDeliveredEscalationEmail");
+
+                    var body =
+                        _templateService.ReplacePlaceholders(
+                            template.Body,
+                            BuildPlaceholders(txn, days));
+
+                    var subject =
+                        $"NOC Pending Collection >35 Days - {txn.Lan}";
+
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        to,
+                        new List<string>());
+
+                    _logger.Information(
+                        "Delivered escalation processed for transaction {Id}",
+                        txn.Id);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(
                         ex,
-                        "Error in ReturnedToHOReminderAsync for Transaction {Id}",
+                        "Error in DeliveredInBranchEscalationAsync for transaction {Id}",
                         txn.Id);
                 }
             }
         }
 
         //--------------------------------------------------------
-        // 4. Closure date > 15 days and before dispatch
+        // 3. Returned To HO Reminder
         //--------------------------------------------------------
-        private async Task ClosureDate15DaysPendingDispatchAsync(CancellationToken ct)
+
+        private async Task ReturnedToHOReminderAsync(
+            CancellationToken ct)
         {
             var transactions =
-                await _repository.GetPendingBeforeDispatchTransactionsAsync();
+                await _repository
+                    .GetReturnedToHOTransactionsAsync();
 
             foreach (var txn in transactions)
             {
@@ -348,68 +257,129 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
-                    // NULL CHECK
+                    if (!txn.UpdatedDt.HasValue)
+                        continue;
+
+                    var days =
+                        CalculateDays(txn.UpdatedDt.Value);
+
+                    if (days <= RETURNED_TO_HO_DAYS)
+                        continue;
+
+                    var to =
+                        await GetNotificationRecipientsAsync(
+                            txn.BranchCode);
+
+                    if (!to.Any())
+                        continue;
+
+                    var template =
+                        _templateService.GetEmailTemplate(
+                            "NocReturnedToHOEmail");
+
+                    var body =
+                        _templateService.ReplacePlaceholders(
+                            template.Body,
+                            BuildPlaceholders(txn, days));
+
+                    var subject =
+                        $"Returned To HO Pending - {txn.Lan}";
+
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        to,
+                        new List<string>());
+
+                    _logger.Information(
+                        "Returned To HO reminder sent for transaction {Id}",
+                        txn.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(
+                        ex,
+                        "Error in ReturnedToHOReminderAsync for transaction {Id}",
+                        txn.Id);
+                }
+            }
+        }
+
+        //--------------------------------------------------------
+        // 4. Pending Dispatch
+        //--------------------------------------------------------
+
+        private async Task PendingDispatchReminderAsync(
+            CancellationToken ct)
+        {
+            var transactions =
+                await _repository
+                    .GetPendingBeforeDispatchTransactionsAsync();
+
+            foreach (var txn in transactions)
+            {
+                if (ct.IsCancellationRequested)
+                    break;
+
+                try
+                {
                     if (!txn.ClosureDate.HasValue)
                         continue;
 
-                    int days =
-                        (DateTime.Now.Date - txn.ClosureDate.Value.Date).Days;
+                    var days =
+                        CalculateDays(txn.ClosureDate.Value);
 
-                    if (days > 15)
-                    {
-                        var to = new List<string>();
+                    if (days <= PENDING_DISPATCH_DAYS)
+                        continue;
 
-                        var nocEmail =
-                            _configuration["NocSettings:NocEmail"];
+                    var to =
+                        await GetNocRecipientsAsync();
 
-                        if (!string.IsNullOrWhiteSpace(nocEmail))
-                            to.Add(nocEmail);
+                    if (!to.Any())
+                        continue;
 
-                        if (!to.Any())
-                            continue;
+                    var template =
+                        _templateService.GetEmailTemplate(
+                            "NocPendingDispatchEmail");
 
-                        string subject =
-                            $"NOC Pending Before Dispatch >15 Days - {txn.Lan}";
+                    var body =
+                        _templateService.ReplacePlaceholders(
+                            template.Body,
+                            BuildPlaceholders(txn, days));
 
-                        string body = $@"
-                            Dear Team,<br/><br/>
+                    var subject =
+                        $"NOC Pending Before Dispatch >15 Days - {txn.Lan}";
 
-                            Below NOC is pending before dispatch for more than 15 days.<br/><br/>
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        to,
+                        new List<string>());
 
-                            <b>LAN:</b> {txn.Lan}<br/>
-                            <b>Status:</b> {txn.Status}<br/>
-                            <b>Customer:</b> {txn.CustName}<br/>
-                            <b>Branch:</b> {txn.BranchName}<br/><br/>
-
-                            Regards,<br/>
-                            NOC System
-                        ";
-
-                        await _emailService.SendEmail(
-                            subject,
-                            body,
-                            to,
-                            new List<string>());
-
-                        _logger.Information(
-                            "15 days pending dispatch alert sent for Transaction {Id}",
-                            txn.Id);
-                    }
+                    _logger.Information(
+                        "Pending dispatch reminder sent for transaction {Id}",
+                        txn.Id);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(
                         ex,
-                        "Error in ClosureDate15DaysPendingDispatchAsync for Transaction {Id}",
+                        "Error in PendingDispatchReminderAsync for transaction {Id}",
                         txn.Id);
                 }
             }
         }
 
-        private async Task ClosureDate25DaysDocNotCollectedAsync(CancellationToken ct)
+        //--------------------------------------------------------
+        // 5. Document Not Collected
+        //--------------------------------------------------------
+
+        private async Task DocumentNotCollectedReminderAsync(
+            CancellationToken ct)
         {
             var transactions =
-                await _repository.GetDocumentNotCollectedTransactionsAsync();
+                await _repository
+                    .GetDocumentNotCollectedTransactionsAsync();
 
             foreach (var txn in transactions)
             {
@@ -418,62 +388,114 @@ namespace ProductivityApi.Jobs
 
                 try
                 {
-                    // NULL CHECK
                     if (!txn.ClosureDate.HasValue)
                         continue;
 
-                    int days =
-                        (DateTime.Now.Date - txn.ClosureDate.Value.Date).Days;
+                    var days =
+                        CalculateDays(txn.ClosureDate.Value);
 
-                    if (days > 25)
-                    {
-                        var to = new List<string>();
+                    if (days <= DOC_NOT_COLLECTED_DAYS)
+                        continue;
 
-                        var nocEmail =
-                            _configuration["NocSettings:NocEmail"];
+                    var to =
+                        await GetNocRecipientsAsync();
 
-                        if (!string.IsNullOrWhiteSpace(nocEmail))
-                            to.Add(nocEmail);
+                    if (!to.Any())
+                        continue;
 
-                        if (!to.Any())
-                            continue;
+                    var template =
+                        _templateService.GetEmailTemplate(
+                            "NocDocumentNotCollectedEmail");
 
-                        string subject =
-                            $"Document Not Collected >25 Days - {txn.Lan}";
+                    var body =
+                        _templateService.ReplacePlaceholders(
+                            template.Body,
+                            BuildPlaceholders(txn, days));
 
-                        string body = $@"
-                            Dear Team,<br/><br/>
+                    var subject =
+                        $"Document Not Collected >25 Days - {txn.Lan}";
 
-                            Below NOC is not collected even after 25 days from closure.<br/><br/>
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        to,
+                        new List<string>());
 
-                            <b>LAN:</b> {txn.Lan}<br/>
-                            <b>Status:</b> {txn.Status}<br/>
-                            <b>Customer:</b> {txn.CustName}<br/>
-                            <b>Branch:</b> {txn.BranchName}<br/><br/>
-
-                            Regards,<br/>
-                            NOC System
-                        ";
-
-                        await _emailService.SendEmail(
-                            subject,
-                            body,
-                            to,
-                            new List<string>());
-
-                        _logger.Information(
-                            "25 days document not collected alert sent for Transaction {Id}",
-                            txn.Id);
-                    }
+                    _logger.Information(
+                        "Document not collected reminder sent for transaction {Id}",
+                        txn.Id);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(
                         ex,
-                        "Error in ClosureDate25DaysDocNotCollectedAsync for Transaction {Id}",
+                        "Error in DocumentNotCollectedReminderAsync for transaction {Id}",
                         txn.Id);
                 }
             }
+        }
+
+        //--------------------------------------------------------
+        // HELPERS
+        //--------------------------------------------------------
+
+        private int CalculateDays(DateTime referenceDate)
+        {
+            return (DateTime.Now.Date - referenceDate.Date).Days;
+        }
+
+        private Dictionary<string, string> BuildPlaceholders(
+            dynamic txn,
+            int days)
+        {
+            return new Dictionary<string, string>
+            {
+                { "LAN", txn.Lan ?? "" },
+                { "CustomerName", txn.CustName ?? "" },
+                { "BranchName", txn.BranchName ?? "" },
+                { "ClosureDate", txn.ClosureDate?.ToString("dd-MMM-yyyy") ?? "" },
+                { "Status", txn.Status ?? "" },
+                { "Days", days.ToString() }
+            };
+        }
+
+        private async Task<List<string>> GetNocRecipientsAsync()
+        {
+            var to = new List<string>();
+
+            var nocEmail =
+                _configuration["NocSettings:NocEmail"];
+
+            if (!string.IsNullOrWhiteSpace(nocEmail))
+            {
+                to.Add(nocEmail);
+            }
+
+            return to.Distinct().ToList();
+        }
+
+        private async Task<List<string>> GetNotificationRecipientsAsync(
+            string branchCode)
+        {
+            var to =
+                await GetNocRecipientsAsync();
+
+            var branchEmails =
+                await _repository.GetBranchEmailsAsync(branchCode);
+
+            if (branchEmails != null)
+            {
+                if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
+                    to.Add(branchEmails.OPS_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
+                    to.Add(branchEmails.BM_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
+                    to.Add(branchEmails.CM_Email);
+            }
+
+            return to.Distinct().ToList();
         }
     }
 }
