@@ -134,14 +134,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpGet("GetSOA")]
-        public async Task<IActionResult> GetSOA([FromQuery] GenerateStatementRequest request, int Id)
-        {
-            var data = await _service.GetSOA(request, Id);
-
-            return Ok(new Response(true, data, "Success"));
-
-        }
+     
         [HttpGet("GeneratePaymentLink")]
         public async Task<IActionResult> GeneratePaymentLink([FromQuery] GenPaymentLinkDto dto)
         {
@@ -151,8 +144,10 @@ namespace ProductivityApi.Controllers
         [HttpGet("ResendPaymentLink")]
         public async Task<IActionResult> ResendPaymentLink([FromQuery] GenPaymentLinkDto dto)
         {
-            var data = await _service.ResendPaymentLink(dto);
-            return Ok(new Response(true, data, "Success"));
+            var (status, message) = await _service.ResendPaymentLink(dto);
+            if (status !=false)
+                return Ok(new Response(true, null, "Success"));
+            return Ok(new Response(false, null, message));
         }
 
         [HttpGet("GetPaymentStatus/{id}")]
@@ -187,6 +182,15 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, message));
             return Ok(new Response(true, data, "Success"));
             // return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("GetSOA")]
+        public async Task<IActionResult> GetSOA([FromQuery] GenerateStatementRequest request, int Id)
+        {
+            var data = await _service.GetSOA(request, Id);
+
+            return Ok(new Response(true, data, "Success"));
+
         }
 
         [HttpGet("GetLOD")]

@@ -219,82 +219,10 @@ namespace ProductivityApi.Services
             var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
             if (soalod != null)
             {
-                string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
-
-                long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
-                string description = $"{soalod.Lan} - Payment for SOA/LOD/FCL";
-                int amount = Convert.ToInt16(soalod.Total_Charges);
-                var request = new PaymentLinkRequestDto
+                if ((soalod.Payments == null) || (soalod.Payments != null && soalod.Payments.Payment_Type == "online" && soalod.Payments.payment_link_status == "expired"))
                 {
-                    Amount = (int)(amount * 100), // Razorpay accepts amount in paise
-                    Currency = "INR",
-                    AcceptPartial = false,
-                    ExpireBy = expireBy,
-                    ReferenceId = Refid,
-                    Description = description,
 
-                    Customer = new PaymentCustomerDto
-                    {
-                        Name = soalod.Cust_Name,
-                        Contact = soalod.Mobile,
-                        Email = soalod.Email
-                    },
 
-                    Notify = new NotifyDto
-                    {
-                        Sms = true,
-                        Email = true
-                    },
-
-                    ReminderEnable = true,
-
-                    Notes = new NotesDto
-                    {
-                        PolicyName = "SOA/LOD/FCL"
-                    },
-
-                    CallbackUrl = "https://vistaarfinance.com/",
-                    CallbackMethod = "get"
-                };
-
-                response = await _sharedservice.PaymentLink(request);
-                if (response.Error == null)
-                //&& !string.IsNullOrEmpty(response.ReferenceId))
-                {
-                    int Pid = await _repository.AddPayment_Online(response, dto.Id, soalod.Lan, dto.UserId);
-                }
-            }
-            return response;
-        }
-
-        public async Task<IEnumerable<PaymentLinkTransaction>> ResendPaymentLink(GenPaymentLinkDto dto)
-        {
-            PaymentLinkResponseDto response = new PaymentLinkResponseDto();
-            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
-            if (soalod != null)
-            {
-                if(soalod.Payments.payment_link_status!= "expired" && !soalod.Payments.short_url.IsNullOrWhiteSpace())
-                {
-                    string url = soalod.Payments.short_url;
-                    string Mobile = soalod.Mobile;
-                    string Name = soalod.Cust_Name;
-                    //string Amount = soalod.Total_Charges.ToString();
-                    string Amount = soalod.Total_Charges?.ToString("0") ?? "0";
-                    var placeholders = new Dictionary<string, string>
-                    {
-                             { "Name", Name },
-                             { "Amount", Amount },
-                              { "PayLink", url }
-                    };
-
-                    var smsTemplate = _templateService.GetSmsTemplate("PaymentLinkSms");
-                    var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
-
-                 string smsresponse=   await _smsservice.SendSms(Mobile, smsBody, smsTemplate.DltContentId);
-                   
-                }
-                else
-                {
                     string Refid = await _sharedRepository.GenerateReferenceNoAsync("CHG");
 
                     long expireBy = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds();
@@ -342,7 +270,81 @@ namespace ProductivityApi.Services
                 }
 
             }
-            return await _repository.GetPaylinkdetails(dto.Id);
+            return response;
+        }
+
+        public async Task<(bool Status, string Message)> ResendPaymentLink(GenPaymentLinkDto dto)
+        {
+            
+            string Responsestring;
+
+            var soalod = await _repository.GetSettlementByIdAsync(dto.Id);
+            if (soalod != null)
+            {
+                if (soalod.Payments != null && soalod.Payments.Payment_Type == "online" )
+                {
+
+
+                    if (soalod.Payments.payment_link_status != "expired" && soalod.Payments.payment_link_status != "paid" && !soalod.Payments.short_url.IsNullOrWhiteSpace())
+                    {
+                        string url = soalod.Payments.short_url;
+                        string Mobile = soalod.Mobile;
+                        string Name = soalod.Cust_Name;
+                        //string Amount = soalod.Total_Charges.ToString();
+                        string Amount = soalod.Total_Charges?.ToString("0") ?? "0";
+                        var placeholders = new Dictionary<string, string>
+                    {
+                             { "Name", Name },
+                             { "Amount", Amount },
+                              { "PayLink", url }
+                    };
+                        var smsTemplate = _templateService.GetSmsTemplate("PaymentLinkSms");
+                        var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+                        string smsresponse = await _smsservice.SendSms(Mobile, smsBody, smsTemplate.DltContentId);
+
+                        Responsestring = "SMS Sent";
+                        return (true, Responsestring);
+
+                    }
+                    else if (soalod.Payments.payment_link_status == "expired")
+                    {
+                        Responsestring = "Payment link expired Generate Again";
+                        return (false, Responsestring);
+                    }
+                    else if (soalod.Payments.payment_link_status == "paid")
+                    {
+                        Responsestring = "Already Paid";
+                        return (false, Responsestring);
+                    }
+                    else if (soalod.Payments.short_url.IsNullOrWhiteSpace())
+                    {
+                        Responsestring = "Link not generated";
+                        return (false, Responsestring);
+                    } 
+                    else
+                    {
+                        Responsestring = "Something went wrong";
+                        return (false, Responsestring);
+                    }
+                }
+                else if(soalod.Payments == null)
+                {
+                    Responsestring = "Payment link not Generated";
+                    return (false, Responsestring);
+                }
+                else
+                {
+                    Responsestring = "Payment mode is not online";
+                    return (false, Responsestring);
+                }
+
+            }
+            else
+            {
+                Responsestring = "Record not found";
+                return (false, Responsestring);
+            }
+                
         }
         public async Task<IEnumerable<PaymentLinkTransaction>> GetPaymentLinkstatus(int Id)
         {
