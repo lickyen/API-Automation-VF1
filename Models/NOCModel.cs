@@ -49,6 +49,8 @@ namespace ProductivityApi.Models
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
+        public string? BranchEmail { get; set; }
+        public string? SupervisorEmail { get; set; }
 
         public List<NocTransactionLog> Logs { get; set; } = new();
     }
@@ -185,5 +187,22 @@ namespace ProductivityApi.Models
         public byte[] FileBytes { get; set; } = Array.Empty<byte>();
 
         public string FileName { get; set; } = string.Empty;
+    }
+
+    public class BranchEmailMaster
+    {
+        public int Id { get; set; }
+
+        public string BranchCode { get; set; }
+
+        public string BranchName { get; set; }
+
+        public string OPS_Email { get; set; }
+
+        public string BM_Email { get; set; }
+
+        public string CM_Email { get; set; }
+
+        public bool IsActive { get; set; }
     }
 }

@@ -11,10 +11,22 @@ namespace ProductivityApi.Services
         private readonly NOCRepository _repository;
         private readonly PLFRepository _plfRepository;
 
-        public NOCService(NOCRepository repository, PLFRepository plfRepository)
+        private readonly EmailService _emailService;
+        private readonly SmsService _smsService;
+        private readonly IConfiguration _configuration;
+
+        public NOCService(
+            NOCRepository repository,
+            PLFRepository plfRepository,
+            EmailService emailService,
+            SmsService smsService,
+            IConfiguration configuration)
         {
             _repository = repository;
             _plfRepository = plfRepository;
+            _emailService = emailService;
+            _smsService = smsService;
+            _configuration = configuration;
         }
 
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
@@ -97,13 +109,154 @@ namespace ProductivityApi.Services
         {
             var result = await _repository.UpdateTransactionStatusAsync(dto);
 
-            return result switch
+            if (result != 1)
             {
-                1 => (true, "Status updated successfully."),
-                -1 => (false, "You are not authorized to update this status."),
-                -2 => (false, "Transaction not found."),
-                _ => (false, "Update failed.")
-            };
+                return result switch
+                {
+                    -1 => (false, "You are not authorized to update this status."),
+                    -2 => (false, "Transaction not found."),
+                    _ => (false, "Update failed.")
+                };
+            }
+
+            // FETCH UPDATED TRANSACTION
+            var transaction = await _repository.GetById(dto.Id);
+
+            if (transaction != null)
+            {
+                await HandleStatusTriggersAsync(transaction, dto.Status);
+            }
+
+            return (true, "Status updated successfully.");
+        }
+
+        private async Task HandleStatusTriggersAsync(NocTransaction transaction,string status)
+        {
+            switch (status.Trim().ToUpper())
+            {
+                case "DISPATCHED":
+                    await SendDispatchedNotifications(transaction);
+                    break;
+
+                case "RECEIVED WITH DISCREPANCY":
+                    await SendDiscrepancyNotifications(transaction);
+                    break;
+            }
+        }
+
+        private async Task SendDispatchedNotifications(NocTransaction transaction)
+        {
+            //---------------------------------------------------
+            // CUSTOMER SMS
+            //---------------------------------------------------
+
+            if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
+            {
+                string sms =
+                    $"Dear {transaction.CustName}, your NOC for LAN {transaction.Lan} has been dispatched to branch {transaction.BranchName}.";
+
+                await _smsService.SendSms(
+                    transaction.CustMobile,
+                    sms,
+                    "YOUR_DLT_TEMPLATE_ID"
+                );
+            }
+
+            //---------------------------------------------------
+            // BRANCH EMAILS
+            //---------------------------------------------------
+
+            var branchEmails =await _repository.GetBranchEmailsAsync(transaction.BranchCode);
+
+            if (branchEmails != null)
+            {
+                var to = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
+                    to.Add(branchEmails.OPS_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
+                    to.Add(branchEmails.BM_Email);
+
+                if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
+                    to.Add(branchEmails.CM_Email);
+
+                // remove duplicates
+                to = to.Distinct().ToList();
+
+                if (to.Any())
+                {
+                    string subject =
+                        $"NOC Dispatched - LAN {transaction.Lan}";
+
+                    string body = $@"
+                        Dear Team,<br/><br/>
+
+                        NOC for below LAN has been dispatched.<br/><br/>
+
+                        <b>LAN:</b> {transaction.Lan}<br/>
+                        <b>Customer:</b> {transaction.CustName}<br/>
+                        <b>Branch:</b> {transaction.BranchName}<br/><br/>
+
+                        Regards,<br/>
+                        NOC Team
+                    ";
+
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        to,
+                        new List<string>()
+                    );
+                }
+            }
+        }
+
+        private async Task SendDiscrepancyNotifications(NocTransaction transaction)
+        {
+            string nocEmail =
+                _configuration["NocSettings:NocEmail"];
+
+            string supervisorEmail =
+                _configuration["NocSettings:SupervisorEmail"];
+
+            var to = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(nocEmail))
+                to.Add(nocEmail);
+
+            if (!string.IsNullOrWhiteSpace(supervisorEmail))
+                to.Add(supervisorEmail);
+
+            if (!to.Any())
+                return;
+
+            string subject =
+                $"NOC Discrepancy - LAN {transaction.Lan}";
+
+            string body = $@"
+                Dear Team,<br/><br/>
+
+                NOC has been marked as 
+                <b>Received with discrepancy</b>.<br/><br/>
+
+                <b>LAN:</b> {transaction.Lan}<br/>
+                <b>Customer:</b> {transaction.CustName}<br/>
+                <b>Branch:</b> {transaction.BranchName}<br/>
+                <b>Status:</b> {transaction.Status}<br/><br/>
+
+                Please review the discrepancy.<br/><br/>
+
+                Regards,<br/>
+                NOC System
+            ";
+
+            await _emailService.SendEmail(
+                subject,
+                body,
+                to,
+                new List<string>()
+            );
         }
 
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)

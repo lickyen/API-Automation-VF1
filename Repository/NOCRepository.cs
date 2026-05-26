@@ -271,5 +271,122 @@ namespace ProductivityApi.Repository
 
             return count > 0;
         }
+
+        public async Task<BranchEmailMaster?> GetBranchEmailsAsync(string branchCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT TOP 1 *
+                FROM BranchEmail_Master
+                WHERE BranchCode = @BranchCode
+                AND IsActive = 1";
+
+            return await conn.QueryFirstOrDefaultAsync<BranchEmailMaster>(
+                sql,
+                new { BranchCode = branchCode }
+            );
+        }
+
+        //--------------------------------------------------------
+        // Pending before dispatch
+        //--------------------------------------------------------
+        public async Task<IEnumerable<NocTransaction>>
+            GetPendingBeforeDispatchTransactionsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status IN
+                (
+                    'Generate NOC',
+                    'File Indented',
+                    'File at NOC',
+                    'Ready for dispatch'
+                )
+                AND Closure_Date IS NOT NULL
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+
+        //--------------------------------------------------------
+        // Delivered in Branch pending
+        //--------------------------------------------------------
+        public async Task<IEnumerable<NocTransaction>>
+            GetDeliveredInBranchPendingTransactionsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status = 'Delivered in Branch'
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+
+        //--------------------------------------------------------
+        // Returned to HO
+        //--------------------------------------------------------
+        public async Task<IEnumerable<NocTransaction>>
+            GetReturnedToHOTransactionsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status = 'Returned to HO'
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+
+        //--------------------------------------------------------
+        // Document not collected
+        //--------------------------------------------------------
+        public async Task<IEnumerable<NocTransaction>>
+            GetDocumentNotCollectedTransactionsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status <> 'Document Collected'
+                AND Closure_Date IS NOT NULL
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+        //--------------------------------------------------------
+        // Get status date from logs
+        //--------------------------------------------------------
+        public async Task<DateTime?> GetStatusDateAsync(
+            int transactionId,
+            string status)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT TOP 1 Created_Dt
+                FROM NOC_TransactionLogs
+                WHERE TransactionId = @TransactionId
+                AND Status = @Status
+                ORDER BY Created_Dt ASC
+            ";
+
+            return await conn.ExecuteScalarAsync<DateTime?>(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    Status = status
+                });
+        }
     }
 }

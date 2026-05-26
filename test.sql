@@ -1,11 +1,17 @@
-SELECT * FROM NOC_TransactionLogs;
+SELECT TOP 20 * FROM NOC_TransactionLogs;
 GO
 
-SELECT * FROM NOC_RoleStatusMap;
+SELECT TOP 20 * FROM NOC_RoleStatusMap;
 GO
 
-SELECT * FROM NOC_Transactions;
+SELECT TOP 20 * FROM NOC_Transactions;
 GO
 
-SELECT * FROM UserMaster;
+SELECT TOP 20 * FROM JobConfigs;
+GO
+
+SELECT TOP 20 * FROM UserMaster;
+GO
+
+SELECT TOP 20 * FROM BranchEmail_Master;
 GO

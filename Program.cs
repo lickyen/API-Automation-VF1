@@ -128,6 +128,7 @@ builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
+builder.Services.AddScoped<IJob, NOC_SMS_Job>();
 
 builder.Services.AddScoped<GoldLoanVendorService>();
 builder.Services.AddScoped<GoldLoanVendorRepository>();
