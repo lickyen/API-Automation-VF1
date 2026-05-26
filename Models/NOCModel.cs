@@ -142,12 +142,10 @@ namespace ProductivityApi.Models
     public class UpdateNocStatusDto
     {
         public int Id { get; set; }
-
         public string Status { get; set; } = string.Empty;
-
         public string? Remarks { get; set; }
-
         public string CreatedBy { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
     }
 
     public class GetLanByUserRequestDto

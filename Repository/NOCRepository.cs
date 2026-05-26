@@ -118,10 +118,7 @@ namespace ProductivityApi.Repository
             return result;
         }
 
-        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
-            string userId,
-            string role,
-            string status)
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(string userId,string role,string status)
         {
             try
             {
@@ -137,6 +134,12 @@ namespace ProductivityApi.Repository
                     },
                     commandType: CommandType.StoredProcedure
                 );
+
+                // 🔥 DEBUG SAFETY CHECK (add temporarily)
+                if (!result.Any())
+                {
+                    return (result, null); // DO NOT treat as error
+                }
 
                 return (result, null);
             }
@@ -164,26 +167,24 @@ namespace ProductivityApi.Repository
             return (true, null);
         }
 
-        public async Task<bool> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
+        public async Task<int> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
         {
             using var conn = new SqlConnection(_conStr);
-
             await conn.OpenAsync();
 
             var parameters = new DynamicParameters();
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Status", dto.Status);
+            parameters.Add("@Role", dto.Role);   // IMPORTANT
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@CreatedBy", dto.CreatedBy);
 
-            var result = await conn.ExecuteScalarAsync<int>(
+            return await conn.ExecuteScalarAsync<int>(
                 "sp_NOC_UpdateTransactionStatus",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
-
-            return result > 0;
         }
 
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
@@ -246,6 +247,29 @@ namespace ProductivityApi.Repository
             });
 
             return rows > 0;
+        }
+
+        public async Task<bool> ValidateRoleStatusPermissionAsync(string role, string status, string permission)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var sql = @"
+                SELECT COUNT(1)
+                FROM NOC_RoleStatusMap
+                WHERE Role = @Role
+                AND Status = @Status
+                AND Permissions = @Permission
+            ";
+
+            var count = await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                Role = role,
+                Status = status,
+                Permission = permission
+            });
+
+            return count > 0;
         }
     }
 }

@@ -75,14 +75,13 @@ namespace ProductivityApi.Controllers
         [HttpGet("getLansByUser")]
         public async Task<IActionResult> GetLansByUser([FromQuery] GetLanByUserRequestDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.UserId))
+                return BadRequest(new Response(false, "UserId is required."));
+
             var result = await _service.GetLansByUserAsync(dto);
 
             if (result.Error != null)
-            {
-                return BadRequest(
-                    new Response(false, message: result.Error)
-                );
-            }
+                return BadRequest(new Response(false, result.Error));
 
             return Ok(new Response(true, result.Data));
         }
@@ -91,31 +90,25 @@ namespace ProductivityApi.Controllers
         public async Task<IActionResult> UpdateStatus([FromBody] UpdateNocStatusDto dto)
         {
             if (dto.Id <= 0)
-            {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
-            }
+                return BadRequest(new Response(false, "Invalid transaction id"));
 
             if (string.IsNullOrWhiteSpace(dto.Status))
-            {
-                return BadRequest(
-                    new Response(false, message: "Status is required.")
-                );
-            }
+                return BadRequest(new Response(false, "Status is required"));
 
             var result = await _service.UpdateTransactionStatusAsync(dto);
 
-            if (!result)
+            if (!result.Success)
             {
-                return BadRequest(
-                    new Response(false, message: "Status update failed.")
-                );
+                if (result.Message.Contains("not authorized"))
+                    return StatusCode(403, new Response(false, result.Message));
+
+                if (result.Message.Contains("not found"))
+                    return NotFound(new Response(false, result.Message));
+
+                return BadRequest(new Response(false, result.Message));
             }
 
-            return Ok(
-                new Response(true, message: "Status updated successfully.")
-            );
+            return Ok(new Response(true, result.Message));
         }
 
         [HttpPut("updatePropertyOwner")]
@@ -204,38 +197,22 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("downloadNoc/{id}")]
-        public async Task<IActionResult> DownloadNoc(
-            int id,
-            [FromQuery] string updatedBy)
+        public async Task<IActionResult> DownloadNoc(int id, [FromQuery] string updatedBy, [FromQuery] string role)
         {
             if (id <= 0)
-            {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
-            }
+                return BadRequest(new Response(false, "Invalid transaction id"));
 
-            if (string.IsNullOrWhiteSpace(updatedBy))
-            {
-                return BadRequest(
-                    new Response(false, message: "UpdatedBy is required.")
-                );
-            }
-
-            var result = await _service.GenerateNocAsync(id, updatedBy);
+            var result = await _service.GenerateNocAsync(id, updatedBy, role);
 
             if (result.FileBytes == null)
             {
-                return BadRequest(
-                    new Response(false, message: result.Message)
-                );
+                if (result.Message.Contains("not authorized"))
+                    return StatusCode(403, new Response(false, result.Message));
+
+                return BadRequest(new Response(false, result.Message));
             }
 
-            return File(
-                result.FileBytes,
-                "application/pdf",
-                result.FileName
-            );
+            return File(result.FileBytes, "application/pdf", result.FileName);
         }
 
         [HttpGet("downloadAcknowledgement/{id}")]

@@ -80,8 +80,9 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(dto.UserId))
                 return (null, "UserId is required.");
 
+            // Role should NOT block data fetch (only used in SP permission check)
             if (string.IsNullOrWhiteSpace(dto.Role))
-                return (null, "Role is required.");
+                dto.Role = "NOCCOPS"; // optional default OR fetch from DB
 
             if (string.IsNullOrWhiteSpace(dto.Status))
                 return (null, "Status is required.");
@@ -92,9 +93,17 @@ namespace ProductivityApi.Services
                 dto.Status
             );
         }
-        public async Task<bool> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
+        public async Task<(bool Success, string Message)> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
         {
-            return await _repository.UpdateTransactionStatusAsync(dto);
+            var result = await _repository.UpdateTransactionStatusAsync(dto);
+
+            return result switch
+            {
+                1 => (true, "Status updated successfully."),
+                -1 => (false, "You are not authorized to update this status."),
+                -2 => (false, "Transaction not found."),
+                _ => (false, "Update failed.")
+            };
         }
 
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
@@ -157,29 +166,39 @@ namespace ProductivityApi.Services
             );
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateNocAsync(int id, string updatedBy)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)>GenerateNocAsync(int id, string updatedBy, string role)
         {
             try
             {
                 var transaction = await _repository.GetById(id);
 
                 if (transaction == null)
-                {
                     return (null, "", "Transaction not found.");
-                }
 
+                //----------------------------------------------------
+                // 1. RBAC CHECK BEFORE ANY ACTION
+                //----------------------------------------------------
+                var hasEditAccess = await _repository.ValidateRoleStatusPermissionAsync(
+                    role,
+                    "Document Collected",
+                    "EDIT"
+                );
+
+                if (!hasEditAccess)
+                    return (null, "", "You are not authorized to generate NOC.");
+
+                //----------------------------------------------------
+                // 2. File generation
+                //----------------------------------------------------
                 string folderPath = Path.Combine(
                     AppContext.BaseDirectory,
                     "GeneratedFiles",
                     "NOC");
 
                 if (!Directory.Exists(folderPath))
-                {
                     Directory.CreateDirectory(folderPath);
-                }
 
                 string fileName = $"{transaction.Lan}_{id}_NOC.pdf";
-
                 string filePath = Path.Combine(folderPath, fileName);
 
                 if (!File.Exists(filePath))
@@ -187,7 +206,6 @@ namespace ProductivityApi.Services
                     using (FileStream fs = new FileStream(filePath, FileMode.Create))
                     {
                         Document document = new Document(PageSize.A4);
-
                         PdfWriter.GetInstance(document, fs);
 
                         document.Open();
@@ -202,19 +220,20 @@ namespace ProductivityApi.Services
                     }
                 }
 
-                var statusUpdated = await _repository.UpdateTransactionStatusAsync(
-                    new UpdateNocStatusDto
-                    {
-                        Id = id,
-                        Status = "Document Collected",
-                        Remarks = "NOC Downloaded",
-                        CreatedBy = updatedBy
-                    });
-
-                if (!statusUpdated)
+                //----------------------------------------------------
+                // 3. Update status ONLY AFTER SUCCESS
+                //----------------------------------------------------
+                var statusUpdated = await _repository.UpdateTransactionStatusAsync(new UpdateNocStatusDto
                 {
+                    Id = id,
+                    Status = "Document Collected",
+                    Remarks = "NOC Downloaded",
+                    CreatedBy = updatedBy,
+                    Role = role // IMPORTANT
+                });
+
+                if (statusUpdated != 1)
                     return (null, "", "Failed to update status.");
-                }
 
                 var bytes = await File.ReadAllBytesAsync(filePath);
 
