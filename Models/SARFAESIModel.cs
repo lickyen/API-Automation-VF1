@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Org.BouncyCastle.Bcpg.OpenPgp;
+using System.ComponentModel.DataAnnotations;
 
 namespace ProductivityApi.Models
 {
@@ -59,8 +60,6 @@ namespace ProductivityApi.Models
 
         public bool IsPossessionTaken { get; set; }
 
-        // ── Fields when IsPossessionTaken = true ───
-
         public DateTime? PossessionDate { get; set; }
 
         public bool? Is134HandService { get; set; }
@@ -77,8 +76,10 @@ namespace ProductivityApi.Models
 
         public string? CustomerIntentCapability { get; set; }
 
-        // ── Fields when IsPossessionTaken = false ──
+        public string? ResponseStatus { get; set; }
+
         public string? NonPossessionReason { get; set; }
+
         public string CreatedBy { get; set; } = string.Empty;
 
         public DateTime CreatedDt { get; set; }
@@ -86,6 +87,8 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDt { get; set; }
+
+        public string Status { get; set; } = string.Empty;
 
         public List<SARFAESIFile> Files { get; set; } = [];
     }
@@ -173,6 +176,7 @@ namespace ProductivityApi.Models
         public decimal? EstimatedPropertyValue { get; set; }
 
         public string? CustomerIntentCapability { get; set; }
+        public string? ResponseStatus { get; set; }
 
         // ── Possession = NO fields ──────────────────
 
@@ -182,7 +186,7 @@ namespace ProductivityApi.Models
         public string CreatedBy { get; set; } = string.Empty;
     }
 
-    public class PossessionFileUploadDto
+    public class SARFAESIFileUploadDto
     {
         [Required]
         public int ReqId { get; set; }
@@ -195,6 +199,14 @@ namespace ProductivityApi.Models
 
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESISubmitDto
+    {
+        [Required]
+        public int ReqId { get; set; }
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
     }
 
     public class SARFAESIReportFilterDto
