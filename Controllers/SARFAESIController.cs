@@ -45,7 +45,7 @@ namespace ProductivityApi.Controllers
 
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Created successfully")),
+                > 0 => Ok(new Response(true, result, "Created successfully")),
                 -1 => Conflict(new Response(false, null, "Record already exists")),
                 _ => StatusCode(500, new Response(false, null, "Error occurred"))
             };

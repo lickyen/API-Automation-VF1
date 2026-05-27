@@ -185,7 +185,6 @@
     public class SubmitBranch2RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
         public string? Remarks { get; set; }
         public string? ClaimFormatPath { get; set; }
         public string? KotakClaimFormPath { get; set; }
@@ -196,7 +195,6 @@
     public class SubmitBranch3RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
         public string? AdditionalDoc1 { get; set; }
         public string? AdditionalDoc2 { get; set; }
         public string? AdditionalDoc3 { get; set; }
@@ -208,7 +206,6 @@
     public class SubmitBranch5RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
         public decimal? TotalOutstanding { get; set; }
         public decimal? Deficit { get; set; }
         public string? DeficitCollectedRemarks { get; set; }
@@ -235,19 +232,19 @@
         public string? ClaimNo { get; set; }
         public string? AdditionalReq { get; set; }
         public string? Remarks { get; set; }
-        public string? Status { get; set; }
+        public string Status { get; set; } = null!;
         public string UpdatedBy { get; set; } = null!;
     }
 
-    public class SaveCops2RequestDto
-    {
-        public int Id { get; set; }
-        public string? PortalUploadStatus { get; set; }
-        public DateTime? ClaimSubmittedDt { get; set; }
-        public string? ClaimNo { get; set; }
-        public string? Remarks { get; set; }
-        public string UpdatedBy { get; set; } = null!;
-    }
+    //public class SaveCops2RequestDto
+    //{
+    //    public int Id { get; set; }
+    //    public string? PortalUploadStatus { get; set; }
+    //    public DateTime? ClaimSubmittedDt { get; set; }
+    //    public string? ClaimNo { get; set; }
+    //    public string? Remarks { get; set; }
+    //    public string UpdatedBy { get; set; } = null!;
+    //}
 
     public class SubmitCops3RequestDto
     {
@@ -268,7 +265,7 @@
         public int? Dpd { get; set; }
         public decimal? TotalOutstanding { get; set; }
         public decimal? Deficit { get; set; }
-        public string Status { get; set; } = "CO_A_5";
+        public string Status { get; set; } = null!;
         public string UpdatedBy { get; set; } = null!;
     }
 
