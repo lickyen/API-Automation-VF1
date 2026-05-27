@@ -363,30 +363,5 @@ namespace ProductivityApi.Repository
 
             return await conn.QueryAsync<NocTransaction>(sql);
         }
-        //--------------------------------------------------------
-        // Get status date from logs
-        //--------------------------------------------------------
-        public async Task<DateTime?> GetStatusDateAsync(
-            int transactionId,
-            string status)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                SELECT TOP 1 Created_Dt
-                FROM NOC_TransactionLogs
-                WHERE TransactionId = @TransactionId
-                AND Status = @Status
-                ORDER BY Created_Dt ASC
-            ";
-
-            return await conn.ExecuteScalarAsync<DateTime?>(
-                sql,
-                new
-                {
-                    TransactionId = transactionId,
-                    Status = status
-                });
-        }
     }
 }

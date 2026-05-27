@@ -1,4 +1,8 @@
-CREATE PROCEDURE SP_CheckBranchCompleted
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_CheckBranchCompleted]
 (
     @Tid INT
 )

@@ -1,4 +1,9 @@
-CREATE PROCEDURE SP_GetBranchTransactions
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[SP_GetBranchTransactions]
 (
     @Tid INT
 )
@@ -18,6 +23,7 @@ BEGIN
         T.OverallStatus,
         T.Remarks,
 
+        -- Audit Fields
         T.CreatedBy,
         T.CreatedDate,
         T.UpdatedBy,
@@ -31,6 +37,6 @@ BEGIN
 
     ORDER BY
         C.Team,
-        T.Id
+        T.Id;
 END
 GO
