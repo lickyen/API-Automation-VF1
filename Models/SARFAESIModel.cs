@@ -8,15 +8,16 @@ namespace ProductivityApi.Models
     {
         public const string Notice134ByHandToCustomer = "Notice134ByHandToCustomer";
         public const string Notice134Affixture = "Notice134Affixture";
+        public const string Notice134Signed = "Notice134Signed";
         public const string PropertyVideo = "PropertyVideo";
-        public const string Notice134ScannedSigned = "Notice134ScannedSigned";
+
 
         public static readonly string[] All =
         [
             Notice134ByHandToCustomer,
             Notice134Affixture,
+            Notice134Signed,
             PropertyVideo,
-            Notice134ScannedSigned
         ];
     }
 

@@ -83,7 +83,7 @@ namespace ProductivityApi.Services
             if (record == null)
                 throw new InvalidOperationException("Record not found");
 
-            var fileName = $"{record.Lan}_{dto.ReqId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
+            var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
             var fullPath = Path.Combine(_filePath, fileName);
 
             if (!Directory.Exists(_filePath))
