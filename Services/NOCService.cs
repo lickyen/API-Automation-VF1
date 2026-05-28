@@ -1,9 +1,9 @@
-﻿using ProductivityApi.Models;
-using ProductivityApi.Models.PLF;
-using ProductivityApi.Repository;
-using iTextSharp.text;
+﻿using iTextSharp.text;
 using iTextSharp.text.pdf;
 using ProductivityApi.Helpers;
+using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
+using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
@@ -23,7 +23,8 @@ namespace ProductivityApi.Services
             EmailService emailService,
             SmsService smsService,
             IConfiguration configuration,
-            TemplateService templateService)
+            TemplateService templateService
+        )
         {
             _repository = repository;
             _plfRepository = plfRepository;
@@ -37,14 +38,17 @@ namespace ProductivityApi.Services
         {
             return await _repository.InsertClosedLansAsync(lans);
         }
+
         public async Task<IEnumerable<NocClosedLan>> GetEligibleLansAsync()
         {
             return await _repository.GetEligibleLansAsync();
         }
+
         public async Task<IEnumerable<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
             return await _plfRepository.GetLoansByCustIdAsync(custId);
         }
+
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
             // Step 1: Get all loans for the lan (borrower only)
@@ -59,7 +63,7 @@ namespace ProductivityApi.Services
                 {
                     CustId = x.CustomerId,
                     CustName = x.CustomerName,
-                    ApplicantType = x.ApplicantType
+                    ApplicantType = x.ApplicantType,
                 })
                 .ToList();
 
@@ -71,16 +75,18 @@ namespace ProductivityApi.Services
                 NocStatus = loan.NocStatus,
                 DisbDate = loan.DisbursementDate,
                 ClosureDate = loan.LoanClosureDate,
-                Customers = custList
+                Customers = custList,
             });
 
             return result;
         }
+
         public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
         {
             await _repository.InsertTransactionAsync(dto);
             return true;
         }
+
         public async Task<NocTransaction?> GetByIdAsync(int id)
         {
             return await _repository.GetById(id);
@@ -91,7 +97,9 @@ namespace ProductivityApi.Services
             return await _repository.GetApplicantByLanAsync(lan);
         }
 
-        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(GetLanByUserRequestDto dto)
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
+            GetLanByUserRequestDto dto
+        )
         {
             if (string.IsNullOrWhiteSpace(dto.UserId))
                 return (null, "UserId is required.");
@@ -103,13 +111,12 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(dto.Status))
                 return (null, "Status is required.");
 
-            return await _repository.GetLansByUserAsync(
-                dto.UserId,
-                dto.Role,
-                dto.Status
-            );
+            return await _repository.GetLansByUserAsync(dto.UserId, dto.Role, dto.Status);
         }
-        public async Task<(bool Success, string Message)> UpdateTransactionStatusAsync(UpdateNocStatusDto dto)
+
+        public async Task<(bool Success, string Message)> UpdateTransactionStatusAsync(
+            UpdateNocStatusDto dto
+        )
         {
             var result = await _repository.UpdateTransactionStatusAsync(dto);
 
@@ -119,7 +126,7 @@ namespace ProductivityApi.Services
                 {
                     -1 => (false, "You are not authorized to update this status."),
                     -2 => (false, "Transaction not found."),
-                    _ => (false, "Update failed.")
+                    _ => (false, "Update failed."),
                 };
             }
 
@@ -134,9 +141,7 @@ namespace ProductivityApi.Services
             return (true, "Status updated successfully.");
         }
 
-        private async Task HandleStatusTriggersAsync(
-            NocTransaction transaction,
-            string status)
+        private async Task HandleStatusTriggersAsync(NocTransaction transaction, string status)
         {
             switch (status.Trim().ToUpper())
             {
@@ -150,8 +155,7 @@ namespace ProductivityApi.Services
             }
         }
 
-        private async Task SendDispatchedNotifications(
-            NocTransaction transaction)
+        private async Task SendDispatchedNotifications(NocTransaction transaction)
         {
             try
             {
@@ -161,72 +165,58 @@ namespace ProductivityApi.Services
 
                 if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
                 {
-                    var smsTemplate =
-                        _templateService.GetSmsTemplate(
-                            "NocDispatchedSms");
+                    var smsTemplate = _templateService.GetSmsTemplate("NocDispatchedSms");
 
-                    var smsContent =
-                        _templateService.ReplacePlaceholders(
-                            smsTemplate.Content,
-                            BuildPlaceholders(transaction));
+                    var smsContent = _templateService.ReplacePlaceholders(
+                        smsTemplate.Content,
+                        BuildPlaceholders(transaction)
+                    );
 
                     await _smsService.SendSms(
                         transaction.CustMobile,
                         smsContent,
-                        smsTemplate.DltContentId);
+                        smsTemplate.DltContentId
+                    );
                 }
 
                 //---------------------------------------------------
                 // BRANCH EMAILS
                 //---------------------------------------------------
 
-                var to =
-                    await GetNotificationRecipientsAsync(
-                        transaction.BranchCode);
+                var to = await GetNotificationRecipientsAsync(transaction.BranchCode);
 
                 if (!to.Any())
                     return;
 
-                var template =
-                    _templateService.GetEmailTemplate(
-                        "NocDispatchedEmail");
+                var template = _templateService.GetEmailTemplate("NocDispatchedEmail");
 
-                var body =
-                    _templateService.ReplacePlaceholders(
-                        template.Body,
-                        BuildPlaceholders(transaction));
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    BuildPlaceholders(transaction)
+                );
 
-                var subject =
-                    _templateService.ReplacePlaceholders(
-                        template.Subject,
-                        BuildPlaceholders(transaction));
+                var subject = _templateService.ReplacePlaceholders(
+                    template.Subject,
+                    BuildPlaceholders(transaction)
+                );
 
-                await _emailService.SendEmail(
-                    subject,
-                    body,
-                    to,
-                    new List<string>());
+                await _emailService.SendEmail(subject, body, to, new List<string>());
             }
             catch (Exception ex)
             {
-                throw new Exception(
-                    $"Error sending dispatched notifications: {ex.Message}",
-                    ex);
+                throw new Exception($"Error sending dispatched notifications: {ex.Message}", ex);
             }
         }
 
-        private async Task SendDiscrepancyNotifications(
-            NocTransaction transaction)
+        private async Task SendDiscrepancyNotifications(NocTransaction transaction)
         {
             try
             {
                 var to = new List<string>();
 
-                var nocEmail =
-                    _configuration["NocSettings:NocEmail"];
+                var nocEmail = _configuration["NocSettings:NocEmail"];
 
-                var supervisorEmail =
-                    _configuration["NocSettings:SupervisorEmail"];
+                var supervisorEmail = _configuration["NocSettings:SupervisorEmail"];
 
                 if (!string.IsNullOrWhiteSpace(nocEmail))
                     to.Add(nocEmail);
@@ -234,38 +224,28 @@ namespace ProductivityApi.Services
                 if (!string.IsNullOrWhiteSpace(supervisorEmail))
                     to.Add(supervisorEmail);
 
-                to = to
-                    .Distinct()
-                    .ToList();
+                to = to.Distinct().ToList();
 
                 if (!to.Any())
                     return;
 
-                var template =
-                    _templateService.GetEmailTemplate(
-                        "NocDiscrepancyEmail");
+                var template = _templateService.GetEmailTemplate("NocDiscrepancyEmail");
 
-                var body =
-                    _templateService.ReplacePlaceholders(
-                        template.Body,
-                        BuildPlaceholders(transaction));
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    BuildPlaceholders(transaction)
+                );
 
-                var subject =
-                    _templateService.ReplacePlaceholders(
-                        template.Subject,
-                        BuildPlaceholders(transaction));
+                var subject = _templateService.ReplacePlaceholders(
+                    template.Subject,
+                    BuildPlaceholders(transaction)
+                );
 
-                await _emailService.SendEmail(
-                    subject,
-                    body,
-                    to,
-                    new List<string>());
+                await _emailService.SendEmail(subject, body, to, new List<string>());
             }
             catch (Exception ex)
             {
-                throw new Exception(
-                    $"Error sending discrepancy notifications: {ex.Message}",
-                    ex);
+                throw new Exception($"Error sending discrepancy notifications: {ex.Message}", ex);
             }
         }
 
@@ -281,7 +261,8 @@ namespace ProductivityApi.Services
 
         public async Task<bool> UploadAcknowledgementAndKycAsync(
             UploadAcknowledgementKycDto dto,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env
+        )
         {
             string uploadRoot = Path.Combine(env.WebRootPath, "uploads", "noc");
 
@@ -329,7 +310,11 @@ namespace ProductivityApi.Services
             );
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateNocAsync(int id, string updatedBy, string role)
+        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateNocAsync(
+            int id,
+            string updatedBy,
+            string role
+        )
         {
             try
             {
@@ -353,10 +338,7 @@ namespace ProductivityApi.Services
                 //----------------------------------------------------
                 // 2. File generation
                 //----------------------------------------------------
-                string folderPath = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "GeneratedFiles",
-                    "NOC");
+                string folderPath = Path.Combine(AppContext.BaseDirectory, "GeneratedFiles", "NOC");
 
                 if (!Directory.Exists(folderPath))
                     Directory.CreateDirectory(folderPath);
@@ -386,14 +368,16 @@ namespace ProductivityApi.Services
                 //----------------------------------------------------
                 // 3. Update status ONLY AFTER SUCCESS
                 //----------------------------------------------------
-                var statusUpdated = await _repository.UpdateTransactionStatusAsync(new UpdateNocStatusDto
-                {
-                    Id = id,
-                    Status = "Document Collected",
-                    Remarks = "NOC Downloaded",
-                    CreatedBy = updatedBy,
-                    Role = role // IMPORTANT
-                });
+                var statusUpdated = await _repository.UpdateTransactionStatusAsync(
+                    new UpdateNocStatusDto
+                    {
+                        Id = id,
+                        Status = "Document Collected",
+                        Remarks = "NOC Downloaded",
+                        CreatedBy = updatedBy,
+                        Role = role, // IMPORTANT
+                    }
+                );
 
                 if (statusUpdated != 1)
                     return (null, "", "Failed to update status.");
@@ -408,7 +392,11 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateAcknowledgementAsync(int id)
+        public async Task<(
+            byte[]? FileBytes,
+            string FileName,
+            string Message
+        )> GenerateAcknowledgementAsync(int id)
         {
             try
             {
@@ -424,7 +412,8 @@ namespace ProductivityApi.Services
                 string folderPath = Path.Combine(
                     AppContext.BaseDirectory,
                     "GeneratedFiles",
-                    "Acknowledgements");
+                    "Acknowledgements"
+                );
 
                 if (!Directory.Exists(folderPath))
                 {
@@ -466,22 +455,62 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<byte[]?> GenerateOneilReportAsync(List<int> ids)
+        public async Task<(
+            bool Success,
+            byte[]? FileBytes,
+            string Message
+        )> GenerateOneilReportAsync(List<int> ids, string updatedBy, string role)
         {
+            //----------------------------------------------------
+            // VALIDATE PERMISSION FIRST
+            //----------------------------------------------------
+            var hasEditAccess = await _repository.ValidateRoleStatusPermissionAsync(
+                role,
+                "File Indented",
+                "EDIT"
+            );
+
+            if (!hasEditAccess)
+            {
+                return (false, null, "You are not authorized to download Oneil Report.");
+            }
+
+            //----------------------------------------------------
+            // FETCH DATA
+            //----------------------------------------------------
             var data = await _repository.GetOneilReportDataAsync(ids);
 
             if (data == null || !data.Any())
             {
-                return null;
+                return (false, null, "No data found.");
             }
 
-            return ExcelHelper.GenerateExcel(
-                (data, "OneilReport")
-            );
+            //----------------------------------------------------
+            // GENERATE EXCEL
+            //----------------------------------------------------
+            var fileBytes = ExcelHelper.GenerateExcel((data, "OneilReport"));
+
+            //----------------------------------------------------
+            // UPDATE STATUS AFTER SUCCESSFUL GENERATION
+            //----------------------------------------------------
+            foreach (var id in ids)
+            {
+                await _repository.UpdateTransactionStatusAsync(
+                    new UpdateNocStatusDto
+                    {
+                        Id = id,
+                        Status = "File Indented",
+                        Remarks = "Oneil Report Downloaded",
+                        CreatedBy = updatedBy,
+                        Role = role,
+                    }
+                );
+            }
+
+            return (true, fileBytes, "Success");
         }
 
-        private Dictionary<string, string> BuildPlaceholders(
-            NocTransaction txn)
+        private Dictionary<string, string> BuildPlaceholders(NocTransaction txn)
         {
             return new Dictionary<string, string>
             {
@@ -489,17 +518,15 @@ namespace ProductivityApi.Services
                 { "CustName", txn.CustName ?? "" },
                 { "CustomerName", txn.CustName ?? "" },
                 { "BranchName", txn.BranchName ?? "" },
-                { "Status", txn.Status ?? "" }
+                { "Status", txn.Status ?? "" },
             };
         }
 
-        private async Task<List<string>> GetNotificationRecipientsAsync(
-            string branchCode)
+        private async Task<List<string>> GetNotificationRecipientsAsync(string branchCode)
         {
             var to = new List<string>();
 
-            var branchEmails =
-                await _repository.GetBranchEmailsAsync(branchCode);
+            var branchEmails = await _repository.GetBranchEmailsAsync(branchCode);
 
             if (branchEmails != null)
             {
@@ -513,9 +540,7 @@ namespace ProductivityApi.Services
                     to.Add(branchEmails.CM_Email);
             }
 
-            return to
-                .Distinct()
-                .ToList();
+            return to.Distinct().ToList();
         }
 
         public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)

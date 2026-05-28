@@ -1,9 +1,9 @@
-﻿using Dapper;
+﻿using System.Data;
+using Dapper;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
-using System.Data;
 
 namespace ProductivityApi.Repository
 {
@@ -37,7 +37,7 @@ namespace ProductivityApi.Repository
                         ClosureDate = lan.ClosureDate,
                         NocStatus = lan.NocStatus,
                         IsEligible = lan.IsEligible,
-                        Remarks = lan.Remarks
+                        Remarks = lan.Remarks,
                     },
                     commandType: CommandType.StoredProcedure
                 );
@@ -66,6 +66,7 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+
         public async Task<NocTransaction?> GetById(int id)
         {
             using var conn = new SqlConnection(_conStr);
@@ -118,7 +119,11 @@ namespace ProductivityApi.Repository
             return result;
         }
 
-        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(string userId,string role,string status)
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
+            string userId,
+            string role,
+            string status
+        )
         {
             try
             {
@@ -130,7 +135,7 @@ namespace ProductivityApi.Repository
                     {
                         UserId = userId,
                         Role = role,
-                        Status = status
+                        Status = status,
                     },
                     commandType: CommandType.StoredProcedure
                 );
@@ -153,7 +158,8 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            var sql = @"
+            var sql =
+                @"
                 SELECT COUNT(1)
                 FROM NOC_RoleStatusMap
                 WHERE Role = @Role
@@ -176,7 +182,7 @@ namespace ProductivityApi.Repository
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Status", dto.Status);
-            parameters.Add("@Role", dto.Role);   // IMPORTANT
+            parameters.Add("@Role", dto.Role); // IMPORTANT
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@CreatedBy", dto.CreatedBy);
 
@@ -210,13 +216,19 @@ namespace ProductivityApi.Repository
             return result > 0;
         }
 
-        public async Task<bool> UploadAcknowledgementAndKycAsync(int id,string? acknowledgementPath,string? kycPath,string updatedBy)
+        public async Task<bool> UploadAcknowledgementAndKycAsync(
+            int id,
+            string? acknowledgementPath,
+            string? kycPath,
+            string updatedBy
+        )
         {
             using var conn = new SqlConnection(_conStr);
 
             await conn.OpenAsync();
 
-            var sql = @"
+            var sql =
+                @"
                 UPDATE NOC_Transactions
                 SET
                     Acknowledgement_FilePath = 
@@ -238,23 +250,31 @@ namespace ProductivityApi.Repository
                 WHERE Id = @Id
             ";
 
-            var rows = await conn.ExecuteAsync(sql, new
-            {
-                Id = id,
-                AcknowledgementFilePath = acknowledgementPath,
-                KycFilePath = kycPath,
-                UpdatedBy = updatedBy
-            });
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    Id = id,
+                    AcknowledgementFilePath = acknowledgementPath,
+                    KycFilePath = kycPath,
+                    UpdatedBy = updatedBy,
+                }
+            );
 
             return rows > 0;
         }
 
-        public async Task<bool> ValidateRoleStatusPermissionAsync(string role, string status, string permission)
+        public async Task<bool> ValidateRoleStatusPermissionAsync(
+            string role,
+            string status,
+            string permission
+        )
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            var sql = @"
+            var sql =
+                @"
                 SELECT COUNT(1)
                 FROM NOC_RoleStatusMap
                 WHERE Role = @Role
@@ -262,12 +282,15 @@ namespace ProductivityApi.Repository
                 AND Permissions = @Permission
             ";
 
-            var count = await conn.ExecuteScalarAsync<int>(sql, new
-            {
-                Role = role,
-                Status = status,
-                Permission = permission
-            });
+            var count = await conn.ExecuteScalarAsync<int>(
+                sql,
+                new
+                {
+                    Role = role,
+                    Status = status,
+                    Permission = permission,
+                }
+            );
 
             return count > 0;
         }
@@ -276,7 +299,8 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT TOP 1 *
                 FROM BranchEmail_Master
                 WHERE BranchCode = @BranchCode
@@ -291,12 +315,12 @@ namespace ProductivityApi.Repository
         //--------------------------------------------------------
         // Pending before dispatch
         //--------------------------------------------------------
-        public async Task<IEnumerable<NocTransaction>>
-            GetPendingBeforeDispatchTransactionsAsync()
+        public async Task<IEnumerable<NocTransaction>> GetPendingBeforeDispatchTransactionsAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT *
                 FROM NOC_Transactions
                 WHERE Status IN
@@ -315,12 +339,14 @@ namespace ProductivityApi.Repository
         //--------------------------------------------------------
         // Delivered in Branch pending
         //--------------------------------------------------------
-        public async Task<IEnumerable<NocTransaction>>
-            GetDeliveredInBranchPendingTransactionsAsync()
+        public async Task<
+            IEnumerable<NocTransaction>
+        > GetDeliveredInBranchPendingTransactionsAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT *
                 FROM NOC_Transactions
                 WHERE Status = 'Delivered in Branch'
@@ -332,12 +358,12 @@ namespace ProductivityApi.Repository
         //--------------------------------------------------------
         // Returned to HO
         //--------------------------------------------------------
-        public async Task<IEnumerable<NocTransaction>>
-            GetReturnedToHOTransactionsAsync()
+        public async Task<IEnumerable<NocTransaction>> GetReturnedToHOTransactionsAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT *
                 FROM NOC_Transactions
                 WHERE Status = 'Returned to HO'
@@ -349,12 +375,12 @@ namespace ProductivityApi.Repository
         //--------------------------------------------------------
         // Document not collected
         //--------------------------------------------------------
-        public async Task<IEnumerable<NocTransaction>>
-            GetDocumentNotCollectedTransactionsAsync()
+        public async Task<IEnumerable<NocTransaction>> GetDocumentNotCollectedTransactionsAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT *
                 FROM NOC_Transactions
                 WHERE Status <> 'Document Collected'
@@ -368,17 +394,15 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            string sql =
+                @"
                 SELECT DISTINCT Status
                 FROM NOC_RoleStatusMap
                 WHERE Role = @Role
                 ORDER BY Status
             ";
 
-            var result = await conn.QueryAsync<string>(
-                sql,
-                new { Role = role }
-            );
+            var result = await conn.QueryAsync<string>(sql, new { Role = role });
 
             return result;
         }
@@ -389,7 +413,8 @@ namespace ProductivityApi.Repository
 
             await conn.OpenAsync();
 
-            string query = @"
+            string query =
+                @"
                 SELECT
                     Id,
                     Lan,
@@ -404,10 +429,7 @@ namespace ProductivityApi.Repository
                 ORDER BY Id
             ";
 
-            var result = await conn.QueryAsync(
-                query,
-                new { Ids = ids }
-            );
+            var result = await conn.QueryAsync(query, new { Ids = ids });
             return result;
         }
     }

@@ -213,25 +213,20 @@ namespace ProductivityApi.Controllers
             return File(result.FileBytes, "application/pdf", result.FileName);
         }
 
-        [HttpPost("DownloadOneilReport")]
-        public async Task<IActionResult> DownloadOneilReport([FromBody] List<int> ids)
+        [HttpPost("downloadOneilReport")]
+        public async Task<IActionResult> DownloadOneilReport([FromBody] OneilReportRequestDto dto)
         {
-            if (ids == null || !ids.Any())
-            {
-                return BadRequest(new Response(false, message: "Please provide valid transaction ids."));
-            }
+            var result = await _service.GenerateOneilReportAsync(dto.Ids, dto.UpdatedBy, dto.Role);
 
-            var fileBytes = await _service.GenerateOneilReportAsync(ids);
-
-            if (fileBytes == null)
+            if (!result.Success)
             {
-                return NotFound(new Response(false, message: "No data found."));
+                return BadRequest(new { success = false, message = result.Message });
             }
 
             return File(
-                fileBytes,
+                result.FileBytes!,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Oneil_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+                $"OneilReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
         }
 
