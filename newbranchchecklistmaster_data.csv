@@ -1,0 +1,24 @@
+Id,DepartmentGroup,Team,ChecklistName,ActionStatus,Checker,ParentChecklistId,PrereqName,PrereqStatus,Status,CreatedBy,CreatedDate,UpdatedBy,UpdatedDate
+1,Admin,Admin,Premises status,Ready/Pending,BH,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+2,Admin,Admin,Interior status,Done/Pending,BH,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+3,Admin,Admin,Safe status,Received/Pending,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+4,Admin,Admin1,KEY,Handedover/Pending,NULL,NULL,RCHRBH,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+5,Admin,Admin,Registers,Received/Pending,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+6,Admin,Admin,S&E Registration,Received/Pending,Finance & Compliance,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+7,Admin,Admin,Rental agreement status,Received/Pending,Finance & Compliance,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+8,IT,IT,Branch code creation,Pending/Created,NULL,NULL,Admin,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+9,IT,IT,Asset dispatch,Pending/Received,NULL,NULL,RCHRBH,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+10,RCHRBH,RCHRBH,IT asset dispatch go ahead,Go ahead/Wait,NULL,NULL,Admin,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+11,RCHRBH,RCHRBH,Key dispatch go ahead,Go ahead/Wait,NULL,NULL,Admin,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+12,Finance & Compliance,Finance & Compliance,Navision code creation,Pending/Created,NULL,NULL,IT,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+13,Finance & Compliance,Finance & Compliance,GST Compliance,Pending/Created,NULL,NULL,IT,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+14,Ops,Ops,Training,Pending/Completed,NULL,NULL,HR,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+15,Marketing,Marketing,Collateral dispatch,Pending/Completed,NULL,NULL,RCHRBH,1,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+16,HR,HR,BM,EMP CODE,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+17,HR,HR,CM,EMP CODE,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+18,HR,HR,CRO,EMP CODE,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+19,HR,HR,DSO,EMP CODE,NULL,NULL,Business team,0,1,employee1,2026-05-20 09:02:02.490,NULL,NULL
+20,BH,BH,Premises status verification,Pending/Approved,NULL,1,Admin,1,1,employee1,2026-05-21 10:17:24.240,NULL,NULL
+21,BH,BH,Interior status verification,Pending/Approved,NULL,2,Admin,1,1,employee1,2026-05-21 10:17:24.240,NULL,NULL
+22,Finance & Compliance,Finance & Compliance,Rental agreement verification,Pending/Approved,NULL,7,Admin,1,1,employee1,2026-05-21 10:17:24.240,NULL,NULL
+23,Finance & Compliance,Finance & Compliance,S&E Registration verification,Pending/Approved,NULL,6,Admin,1,1,employee1,2026-05-21 10:25:23.467,NULL,NULL

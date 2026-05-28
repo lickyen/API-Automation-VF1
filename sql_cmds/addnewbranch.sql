@@ -1,5 +1,8 @@
-
-ALTER PROCEDURE SP_AddNewBranch
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddNewBranch]
 (
     @Name NVARCHAR(400),
     @State NVARCHAR(200) = NULL,
@@ -13,8 +16,7 @@ BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
-
-        BEGIN TRAN
+        BEGIN TRAN;
 
         INSERT INTO NewBranchMaster
         (
@@ -24,7 +26,6 @@ BEGIN
             Region,
             Megazone,
             Status,
-
             AdminStatus,
             HRStatus,
             ITStatus,
@@ -32,7 +33,6 @@ BEGIN
             FinanceStatus,
             MarketingStatus,
             OPSStatus,
-
             CreatedBy,
             CreatedDate
         )
@@ -43,7 +43,7 @@ BEGIN
             @Zone,
             @Region,
             @Megazone,
-            'Pending',
+            'Initialised',
 
             'Pending',
             'Pending',
@@ -55,11 +55,10 @@ BEGIN
 
             @CreatedBy,
             GETDATE()
-        )
+        );
 
-        DECLARE @BranchId INT
-
-        SET @BranchId = SCOPE_IDENTITY()
+        DECLARE @BranchId INT;
+        SET @BranchId = SCOPE_IDENTITY();
 
         INSERT INTO NewBranchTransaction
         (
@@ -78,46 +77,28 @@ BEGIN
             @CreatedBy,
             GETDATE()
         FROM NewBranchChecklistMaster
-        WHERE ActionStatus = 'Active'
+        WHERE Status = 1;
 
-        COMMIT TRAN
+        COMMIT TRAN;
 
-        SELECT @BranchId
-
+        SELECT @BranchId AS BranchId;
     END TRY
-
     BEGIN CATCH
 
         IF @@TRANCOUNT > 0
-            ROLLBACK TRAN
+            ROLLBACK TRAN;
 
-        THROW
+        DECLARE @ErrorMessage NVARCHAR(MAX);
+        DECLARE @ErrorSeverity INT;
+        DECLARE @ErrorState INT;
+
+        SELECT
+            @ErrorMessage = ERROR_MESSAGE(),
+            @ErrorSeverity = ERROR_SEVERITY(),
+            @ErrorState = ERROR_STATE();
+
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
 
     END CATCH
-END
-GO
-
-
-ALTER PROCEDURE SP_UpdateBranchTransaction
-(
-    @TransactionId INT,
-    @ChecklistId INT,
-    @CurrentStatus NVARCHAR(200),
-    @OverallStatus NVARCHAR(200),
-    @Remarks NVARCHAR(1000) = NULL,
-    @UpdatedBy VARCHAR(50)
-)
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE NewBranchTransaction
-    SET
-        CurrentStatus = @CurrentStatus,
-        OverallStatus = @OverallStatus,
-        Remarks = @Remarks,
-        UpdatedBy = @UpdatedBy,
-        UpdatedDate = GETDATE()
-    WHERE Id = @TransactionId
 END
 GO

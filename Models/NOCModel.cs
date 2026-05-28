@@ -205,4 +205,13 @@ namespace ProductivityApi.Models
 
         public bool IsActive { get; set; }
     }
+
+    public class OneilReportRequestDto
+    {
+        public List<int> Ids { get; set; } = new();
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
 }
