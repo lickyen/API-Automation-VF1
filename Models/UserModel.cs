@@ -84,12 +84,11 @@ namespace ProductivityApi.Models
 
     public class ModuleDto
     {
-        [Required]
         public string ModuleCode { get; set; } = string.Empty;
-        [Required]
         public string ModuleName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string Access { get; set; } = string.Empty;
     }
-
 
 }
 
