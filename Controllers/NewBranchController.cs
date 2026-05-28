@@ -10,8 +10,7 @@ namespace ProductivityApi.Controllers
     {
         private readonly NewBranchServices _services;
 
-        public NewBranchController(
-            NewBranchServices services)
+        public NewBranchController(NewBranchServices services)
         {
             _services = services;
         }
@@ -20,29 +19,51 @@ namespace ProductivityApi.Controllers
 
         // POST : api/NewBranch
         [HttpPost]
-        public IActionResult AddNewBranch(
-            AddNewBranchRequestDto model)
+        public IActionResult AddNewBranch(AddNewBranchRequestDto model)
         {
             try
             {
-                var response =
-                    _services.AddNewBranch(model);
+                var response = _services.AddNewBranch(model);
 
-                return Ok(
-                    new Response(
-                        true,
-                        response,
-                        response.Message)
-                );
+                return Ok(new Response(true, response, response.Message));
             }
             catch (Exception ex)
             {
                 return StatusCode(
                     500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
+                    new Response(false, null, $"Internal server error : {ex.Message}")
+                );
+            }
+        }
+
+        #endregion
+
+        // Controller
+
+        // Controller
+
+        #region GET ALL BRANCHES
+
+        // GET : api/NewBranch/all
+        [HttpGet("all")]
+        public IActionResult GetAllBranches()
+        {
+            try
+            {
+                var branches = _services.GetAllBranches();
+
+                if (branches == null || !branches.Any())
+                {
+                    return Ok(new Response(false, null, "No branches found"));
+                }
+
+                return Ok(new Response(true, branches, "Success"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(false, null, $"Internal server error : {ex.Message}")
                 );
             }
         }
@@ -54,231 +75,90 @@ namespace ProductivityApi.Controllers
 
         // GET : api/NewBranch/byRole?status=Pending&role=IT
         [HttpGet("byRole")]
-        public IActionResult GetBranches(
-            [FromQuery] string? status,
-            [FromQuery] string? role)
+        public IActionResult GetBranches([FromQuery] string? status, [FromQuery] string? role)
         {
             try
             {
-                GetNewBranchListRequestDto model =
-                    new GetNewBranchListRequestDto
-                    {
-                        Status = status,
-                        Role = role
-                    };
+                GetNewBranchListRequestDto model = new GetNewBranchListRequestDto
+                {
+                    Status = status,
+                    Role = role,
+                };
 
-                var branches =
-                    _services.GetBranches(model);
+                var branches = _services.GetBranches(model);
 
                 if (branches == null || !branches.Any())
                 {
-                    return Ok(
-                        new Response(
-                            false,
-                            null,
-                            "No records found")
-                    );
+                    return Ok(new Response(false, null, "No records found"));
                 }
 
-                return Ok(
-                    new Response(
-                        true,
-                        branches,
-                        "Success")
-                );
+                return Ok(new Response(true, branches, "Success"));
             }
             catch (Exception ex)
             {
                 return StatusCode(
                     500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
+                    new Response(false, null, $"Internal server error : {ex.Message}")
                 );
             }
         }
 
         #endregion
-
-
-        #region GET BRANCH BY ID
-
-        // GET : api/NewBranch/5
-        [HttpGet("{id}")]
-        public IActionResult GetBranchById(int id)
-        {
-            try
-            {
-                var branch =
-                    _services.GetBranchById(id);
-
-                if (branch == null)
-                {
-                    return Ok(
-                        new Response(
-                            false,
-                            null,
-                            "Branch not found")
-                    );
-                }
-
-                return Ok(
-                    new Response(
-                        true,
-                        branch,
-                        "Success")
-                );
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
-                );
-            }
-        }
-
-        #endregion
-
 
         #region GET BRANCH DETAILS
 
-        // GET : api/NewBranch/details/5
-        [HttpGet("details/{tid}")]
+        [HttpGet("branchDetails/{tid}")]
         public IActionResult GetBranchDetails(int tid)
         {
             try
             {
-                var response =
-                    _services.GetBranchDetails(tid);
+                var response = _services.GetBranchDetails(tid);
 
                 if (response == null)
                 {
-                    return Ok(
-                        new Response(
-                            false,
-                            null,
-                            "Branch not found")
-                    );
+                    return Ok(new Response(false, null, "Branch not found"));
                 }
 
-                return Ok(
-                    new Response(
-                        true,
-                        response,
-                        "Success")
-                );
+                return Ok(new Response(true, response, "Success"));
             }
             catch (Exception ex)
             {
                 return StatusCode(
                     500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
+                    new Response(false, null, $"Internal server error : {ex.Message}")
                 );
             }
         }
 
         #endregion
-
-
-        #region GET BRANCH TRANSACTIONS
-
-        // GET : api/NewBranch/transactions/5
-        [HttpGet("transactions/{tid}")]
-        public IActionResult GetBranchTransactions(int tid)
-        {
-            try
-            {
-                var transactions =
-                    _services.GetBranchTransactions(tid);
-
-                if (transactions == null || !transactions.Any())
-                {
-                    return Ok(
-                        new Response(
-                            false,
-                            null,
-                            "No transactions found")
-                    );
-                }
-
-                return Ok(
-                    new Response(
-                        true,
-                        transactions,
-                        "Success")
-                );
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
-                );
-            }
-        }
-
-        #endregion
-
 
         #region UPDATE TRANSACTIONS
 
         // PUT : api/NewBranch/transactions/5
         [HttpPut("transactions/{tid}")]
-        public IActionResult UpdateTransactions(
-            int tid,
-            UpdateBranchTransactionsRequestDto model)
+        public IActionResult UpdateTransactions(int tid, UpdateBranchTransactionsRequestDto model)
         {
             try
             {
                 if (tid != model.Tid)
                 {
-                    return BadRequest(
-                        new Response(
-                            false,
-                            null,
-                            "Invalid branch id")
-                    );
+                    return BadRequest(new Response(false, null, "Invalid branch id"));
                 }
 
-                var response =
-                    _services.UpdateTransactions(model);
+                var response = _services.UpdateTransactions(model);
 
                 if (!response.IsSuccess)
                 {
-                    return Ok(
-                        new Response(
-                            false,
-                            null,
-                            response.Message)
-                    );
+                    return Ok(new Response(false, null, response.Message));
                 }
 
-                return Ok(
-                    new Response(
-                        true,
-                        null,
-                        response.Message)
-                );
+                return Ok(new Response(true, null, response.Message));
             }
             catch (Exception ex)
             {
                 return StatusCode(
                     500,
-                    new Response(
-                        false,
-                        null,
-                        $"Internal server error : {ex.Message}")
+                    new Response(false, null, $"Internal server error : {ex.Message}")
                 );
             }
         }

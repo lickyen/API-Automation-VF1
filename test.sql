@@ -1,17 +1,47 @@
-SELECT TOP 20 * FROM NOC_TransactionLogs;
-GO
+CREATE PROCEDURE [dbo].[SP_GetAllNewBranches]
+AS
+BEGIN
+    SET NOCOUNT ON;
 
-SELECT TOP 20 * FROM NOC_Transactions;
-GO
+    SELECT
+        Id,
+        Name,
+        State,
+        Zone,
+        Region,
+        Megazone,
 
-SELECT TOP 20 * FROM JobConfigs;
-GO
+        Status,
 
-SELECT TOP 20 * FROM NOC_RoleStatusMap;
-GO
+        AdminStatus,
+        AdminDate,
 
-SELECT TOP 20 * FROM UserMaster;
-GO
+        HRStatus,
+        HRDate,
 
-SELECT TOP 20 * FROM BranchEmail_Master;
+        ITStatus,
+        ITDate,
+
+        RCHRCBStatus,
+        RCHRCBDate,
+
+        FinanceStatus,
+        FinanceDate,
+
+        MarketingStatus,
+        MarketingDate,
+
+        OPSStatus,
+        OPSDate,
+
+        CreatedBy,
+        CreatedDate,
+
+        UpdatedBy,
+        UpdatedDate
+
+    FROM NewBranchMaster
+
+    ORDER BY Id DESC
+END
 GO

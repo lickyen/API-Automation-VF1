@@ -16,16 +16,24 @@ namespace ProductivityApi.Services
 
         #region ADD NEW BRANCH
 
-        public AddNewBranchResponseDto AddNewBranch(
-            AddNewBranchRequestDto model)
+        public AddNewBranchResponseDto AddNewBranch(AddNewBranchRequestDto model)
         {
             int branchId = _repository.AddNewBranch(model);
 
             return new AddNewBranchResponseDto
             {
                 BranchId = branchId,
-                Message = "Branch created successfully"
+                Message = "Branch created successfully",
             };
+        }
+
+        #endregion
+
+        #region GET ALL BRANCHES
+
+        public List<NewBranchMasterModel> GetAllBranches()
+        {
+            return _repository.GetAllBranches();
         }
 
         #endregion
@@ -33,8 +41,7 @@ namespace ProductivityApi.Services
 
         #region GET BRANCH LIST
 
-        public List<NewBranchListItemDto> GetBranches(
-            GetNewBranchListRequestDto model)
+        public List<NewBranchListItemDto> GetBranches(GetNewBranchListRequestDto model)
         {
             return _repository.GetBranches(model);
         }
@@ -48,9 +55,7 @@ namespace ProductivityApi.Services
         {
             if (id <= 0)
             {
-                throw new ArgumentException(
-                    "Branch Id must be greater than 0.",
-                    nameof(id));
+                throw new ArgumentException("Branch Id must be greater than 0.", nameof(id));
             }
 
             return _repository.GetBranchById(id);
@@ -61,14 +66,11 @@ namespace ProductivityApi.Services
 
         #region GET BRANCH TRANSACTIONS
 
-        public List<ChecklistTransactionDto> GetBranchTransactions(
-            int tid)
+        public List<ChecklistTransactionDto> GetBranchTransactions(int tid)
         {
             if (tid <= 0)
             {
-                throw new ArgumentException(
-                    "Transaction Id must be greater than 0.",
-                    nameof(tid));
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
             }
 
             return _repository.GetBranchTransactions(tid);
@@ -79,14 +81,11 @@ namespace ProductivityApi.Services
 
         #region GET BRANCH DETAILS
 
-        public NewBranchDetailsResponseDto? GetBranchDetails(
-            int tid)
+        public NewBranchDetailsResponseDto? GetBranchDetails(int tid)
         {
             if (tid <= 0)
             {
-                throw new ArgumentException(
-                    "Transaction Id must be greater than 0.",
-                    nameof(tid));
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
             }
 
             var branch = _repository.GetBranchById(tid);
@@ -94,14 +93,9 @@ namespace ProductivityApi.Services
             if (branch == null)
                 return null;
 
-            var transactions =
-                _repository.GetBranchTransactions(tid);
+            var transactions = _repository.GetBranchTransactions(tid);
 
-            return new NewBranchDetailsResponseDto
-            {
-                Branch = branch,
-                Transactions = transactions
-            };
+            return new NewBranchDetailsResponseDto { Branch = branch, Transactions = transactions };
         }
 
         #endregion
@@ -109,7 +103,9 @@ namespace ProductivityApi.Services
 
         #region UPDATE TRANSACTIONS
 
-        public UpdateBranchTransactionsResponseDto UpdateTransactions(UpdateBranchTransactionsRequestDto model)
+        public UpdateBranchTransactionsResponseDto UpdateTransactions(
+            UpdateBranchTransactionsRequestDto model
+        )
         {
             if (model == null)
                 throw new ArgumentNullException(nameof(model));
@@ -119,7 +115,7 @@ namespace ProductivityApi.Services
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message = "Invalid Transaction Id. Must be greater than 0."
+                    Message = "Invalid Transaction Id. Must be greater than 0.",
                 };
             }
 
@@ -133,7 +129,7 @@ namespace ProductivityApi.Services
                     return new UpdateBranchTransactionsResponseDto
                     {
                         IsSuccess = false,
-                        Message = "Branch already completed. Update not allowed."
+                        Message = "Branch already completed. Update not allowed.",
                     };
                 }
 
@@ -143,7 +139,7 @@ namespace ProductivityApi.Services
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = true,
-                    Message = "Transactions updated successfully"
+                    Message = "Transactions updated successfully",
                 };
             }
             catch (SqlException ex)
@@ -153,7 +149,7 @@ namespace ProductivityApi.Services
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message = ex.Message
+                    Message = ex.Message,
                 };
             }
             catch (InvalidOperationException ex)
@@ -162,7 +158,7 @@ namespace ProductivityApi.Services
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message = ex.Message
+                    Message = ex.Message,
                 };
             }
             catch (Exception ex)
@@ -170,7 +166,7 @@ namespace ProductivityApi.Services
                 return new UpdateBranchTransactionsResponseDto
                 {
                     IsSuccess = false,
-                    Message = ex.InnerException?.Message ?? ex.Message
+                    Message = ex.InnerException?.Message ?? ex.Message,
                 };
             }
         }
@@ -184,9 +180,7 @@ namespace ProductivityApi.Services
         {
             if (tid <= 0)
             {
-                throw new ArgumentException(
-                    "Transaction Id must be greater than 0.",
-                    nameof(tid));
+                throw new ArgumentException("Transaction Id must be greater than 0.", nameof(tid));
             }
 
             return _repository.IsBranchCompleted(tid);
@@ -198,8 +192,7 @@ namespace ProductivityApi.Services
         {
             var (master, transactions) = await _repository.GetNewBranchReportAsync();
 
-            if ((master == null || !master.Any()) &&
-                (transactions == null || !transactions.Any()))
+            if ((master == null || !master.Any()) && (transactions == null || !transactions.Any()))
                 return null;
 
             return ExcelHelper.GenerateExcel(

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ProductivityApi.Models
 {
@@ -55,10 +56,6 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
-
-        // Navigation Property
-        public List<NewBranchTransactionModel> Transactions { get; set; }
-            = new List<NewBranchTransactionModel>();
     }
 
     public class NewBranchTransactionModel
@@ -112,8 +109,11 @@ namespace ProductivityApi.Models
         public string Megazone { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(50, MinimumLength = 1,
-            ErrorMessage = "CreatedBy must be between 1 and 50 characters.")]
+        [StringLength(
+            50,
+            MinimumLength = 1,
+            ErrorMessage = "CreatedBy must be between 1 and 50 characters."
+        )]
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -155,8 +155,7 @@ namespace ProductivityApi.Models
 
         public string? TeamStatus { get; set; }
 
-        public List<PendingTransactionDto> PendingTransactions { get; set; }
-            = new();
+        public List<PendingTransactionDto> PendingTransactions { get; set; } = new();
     }
 
     public class PendingTransactionDto
@@ -170,6 +169,9 @@ namespace ProductivityApi.Models
         public string CurrentStatus { get; set; } = string.Empty;
 
         public string? Remarks { get; set; }
+        [JsonIgnore]
+        public string ActionStatus { get; set; }
+        public List<string> PossibleActions { get; set; } = new();
     }
 
     #endregion
@@ -182,8 +184,7 @@ namespace ProductivityApi.Models
     {
         public NewBranchMasterModel? Branch { get; set; }
 
-        public List<ChecklistTransactionDto> Transactions { get; set; }
-            = new();
+        public List<ChecklistTransactionDto> Transactions { get; set; } = new();
     }
 
     public class ChecklistTransactionDto
@@ -224,8 +225,7 @@ namespace ProductivityApi.Models
 
         public string UpdatedBy { get; set; } = string.Empty;
 
-        public List<UpdateTransactionItemDto> Transactions { get; set; }
-            = new();
+        public List<UpdateTransactionItemDto> Transactions { get; set; } = new();
     }
 
     public class UpdateTransactionItemDto
@@ -247,4 +247,8 @@ namespace ProductivityApi.Models
     }
 
     #endregion
+    public class NewBranchIdDto
+    {
+        public int Id { get; set; }
+    }
 }
