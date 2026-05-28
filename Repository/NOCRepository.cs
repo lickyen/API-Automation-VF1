@@ -382,5 +382,33 @@ namespace ProductivityApi.Repository
 
             return result;
         }
+
+        public async Task<IEnumerable<dynamic>> GetOneilReportDataAsync(List<int> ids)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            string query = @"
+                SELECT
+                    Id,
+                    Lan,
+                    Cust_Name AS CustomerName,
+                    Branch_Name AS Branch,
+                    Loan_Status AS LoanStatus,
+                    Disb_Date AS DisbDate,
+                    Closure_Date AS ClosureDate,
+                    Status
+                FROM NOC_Transactions
+                WHERE Id IN @Ids
+                ORDER BY Id
+            ";
+
+            var result = await conn.QueryAsync(
+                query,
+                new { Ids = ids }
+            );
+            return result;
+        }
     }
 }

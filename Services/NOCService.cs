@@ -3,6 +3,7 @@ using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using ProductivityApi.Helpers;
 
 namespace ProductivityApi.Services
 {
@@ -465,81 +466,18 @@ namespace ProductivityApi.Services
             }
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateLanPdfAsync(int id)
+        public async Task<byte[]?> GenerateOneilReportAsync(List<int> ids)
         {
-            try
+            var data = await _repository.GetOneilReportDataAsync(ids);
+
+            if (data == null || !data.Any())
             {
-                var transaction = await _repository.GetById(id);
-
-                if (transaction == null)
-                {
-                    return (null, "", "Transaction not found.");
-                }
-
-                string lan = transaction.Lan;
-
-                string folderPath = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "GeneratedFiles",
-                    "LanPdf");
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                string fileName = $"{lan}_OneNeil.pdf";
-
-                string filePath = Path.Combine(folderPath, fileName);
-
-                if (!File.Exists(filePath))
-                {
-                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
-                    {
-                        Document document = new Document(PageSize.A4);
-
-                        PdfWriter.GetInstance(document, fs);
-
-                        document.Open();
-
-                        var titleFont = FontFactory.GetFont(
-                            FontFactory.HELVETICA_BOLD,
-                            18);
-
-                        var normalFont = FontFactory.GetFont(
-                            FontFactory.HELVETICA,
-                            14);
-
-                        Paragraph title = new Paragraph(
-                            "OneNeil",
-                            titleFont);
-
-                        title.Alignment = Element.ALIGN_CENTER;
-
-                        document.Add(title);
-
-                        document.Add(new Paragraph(" "));
-
-                        Paragraph lanText = new Paragraph(
-                            $"LAN Number : {lan}",
-                            normalFont);
-
-                        lanText.Alignment = Element.ALIGN_CENTER;
-
-                        document.Add(lanText);
-
-                        document.Close();
-                    }
-                }
-
-                var bytes = await File.ReadAllBytesAsync(filePath);
-
-                return (bytes, fileName, "Success");
+                return null;
             }
-            catch (Exception ex)
-            {
-                return (null, "", ex.Message);
-            }
+
+            return ExcelHelper.GenerateExcel(
+                (data, "OneilReport")
+            );
         }
 
         private Dictionary<string, string> BuildPlaceholders(
