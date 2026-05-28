@@ -144,6 +144,16 @@ namespace ProductivityApi.Repository
             )).ToList();
         }
 
+        public async Task MarkCompletedAsync(int reqId, string updatedBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.ExecuteAsync(
+                "sp_SARFAESI_MarkCompleted",
+                new { ReqId = reqId, UpdatedBy = updatedBy },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
         public async Task<IEnumerable<dynamic>> GetReportAsync(SARFAESIReportFilterDto dto)
         {
             using var conn = new SqlConnection(_conStr);

@@ -56,7 +56,7 @@ namespace ProductivityApi.Services
             return _repository.UpdateAsync(id, dto);
         }
 
-        public async Task<int> UploadFileAsync(PossessionFileUploadDto dto)
+        public async Task<int> UploadFileAsync(SARFAESIFileUploadDto dto)
         {
             if (dto.File == null || dto.File.Length == 0)
                 throw new ArgumentException("File is empty");
@@ -83,7 +83,7 @@ namespace ProductivityApi.Services
             if (record == null)
                 throw new InvalidOperationException("Record not found");
 
-            var fileName = $"{record.Lan}_{dto.ReqId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
+            var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
             var fullPath = Path.Combine(_filePath, fileName);
 
             if (!Directory.Exists(_filePath))
@@ -112,6 +112,19 @@ namespace ProductivityApi.Services
                 _filePath,
                 fileName
             );
+        }
+
+        public async Task SubmitAsync(SARFAESISubmitDto dto)
+        {
+            var record = await _repository.GetByIdAsync(dto.ReqId);
+            if (record == null)
+                throw new InvalidOperationException("Record not found");
+
+            var files = await _repository.GetFilesByReqIdAsync(dto.ReqId);
+            if (files == null || files.Count == 0)
+                throw new InvalidOperationException("Cannot submit — no files uploaded yet");
+
+            await _repository.MarkCompletedAsync(dto.ReqId, dto.UpdatedBy);
         }
 
         public async Task<IEnumerable<dynamic>> GetReportDataAsync(SARFAESIReportFilterDto dto)

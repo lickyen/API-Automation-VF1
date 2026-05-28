@@ -79,5 +79,22 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("getCollateralsByLan/{lan}")]
+        public async Task<IActionResult> GetCollateralsByLan(string lan)
+        {
+            var (data, message) = await _service.GetCollateralsByLanAsync(lan);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
+            return Ok(new Response(true, data, message));
+        }
+
+        [HttpGet("getApplicantsByLan/{lan}")]
+        public async Task<IActionResult> GetApplicantsByLan(string lan)
+        {
+            var (data, message) = await _service.GetApplicantsByLanAsync(lan);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
+            return Ok(new Response(true, data, message));
+        }
     }
 }

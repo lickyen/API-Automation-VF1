@@ -25,14 +25,15 @@ namespace ProductivityApi.Services
 
         public async Task<int> IntimationAsync(IntimationRequestDto dto)
         {
-            var result = await _repository.IntimationAsync(dto);
+            string status = "New";
+            var result = await _repository.IntimationAsync(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = result,
-                    Status = "New",
+                    Status = status,
                     CreatedBy = dto.CreatedBy
                 });
             }
@@ -42,14 +43,15 @@ namespace ProductivityApi.Services
 
         public async Task<int> UploadDocsAsync(UploadDocsRequestDto dto)
         {
-            var result = await _repository.UploadDocsAsync(dto);
+            string status = "BR_1";
+            var result = await _repository.UploadDocsAsync(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = "BR_1",
+                    Status = status,
                     CreatedBy = dto.UpdatedBy
                 });
             }
@@ -59,14 +61,16 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitBranch2Async(SubmitBranch2RequestDto dto)
         {
-            var result = await _repository.SubmitBranch2Async(dto);
+            string status = "BR_2";
+
+            var result = await _repository.SubmitBranch2Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -77,14 +81,15 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitBranch3Async(SubmitBranch3RequestDto dto)
         {
-            var result = await _repository.SubmitBranch3Async(dto);
+            string status = "BR_3";
+            var result = await _repository.SubmitBranch3Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     CreatedBy = dto.UpdatedBy
                 });
             }
@@ -94,14 +99,15 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitBranch5Async(SubmitBranch5RequestDto dto)
         {
-            var result = await _repository.SubmitBranch5Async(dto);
+            string status = "BR_5";
+            var result = await _repository.SubmitBranch5Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -132,12 +138,12 @@ namespace ProductivityApi.Services
         {
             var result = await _repository.SubmitCops2Async(dto);
 
-            if (result > 0)
+            if (result > 0 && !string.IsNullOrWhiteSpace(dto.Status))
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status ?? "CO_A_2",
+                    Status = dto.Status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -146,10 +152,10 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<int> SaveCops2Async(SaveCops2RequestDto dto)
-        {
-            return await _repository.SaveCops2Async(dto);
-        }
+        //public async Task<int> SaveCops2Async(SaveCops2RequestDto dto)
+        //{
+        //    return await _repository.SaveCops2Async(dto);
+        //}
 
         public async Task<int> SubmitCops3Async(SubmitCops3RequestDto dto)
         {

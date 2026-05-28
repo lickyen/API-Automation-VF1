@@ -45,7 +45,7 @@ namespace ProductivityApi.Controllers
 
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Created successfully")),
+                > 0 => Ok(new Response(true, result, "Created successfully")),
                 -1 => Conflict(new Response(false, null, "Record already exists")),
                 _ => StatusCode(500, new Response(false, null, "Error occurred"))
             };
@@ -65,7 +65,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("uploadFile")]
-        public async Task<IActionResult> UploadFile([FromForm] PossessionFileUploadDto dto)
+        public async Task<IActionResult> UploadFile([FromForm] SARFAESIFileUploadDto dto)
         {
             var result = await _service.UploadFileAsync(dto); 
             return Ok(new Response(true, null, "File uploaded successfully"));
@@ -82,6 +82,13 @@ namespace ProductivityApi.Controllers
             var contentType = FileHelper.GetContentType(fileName);
 
             return File(fileBytes, contentType, fileName);
+        }
+
+        [HttpPost("submit")]
+        public async Task<IActionResult> Submit([FromBody] SARFAESISubmitDto dto)
+        {
+            await _service.SubmitAsync(dto);
+            return Ok(new Response(true, null, "Submitted successfully"));
         }
 
         [HttpPost("report/excel")]

@@ -25,7 +25,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpPost("new")]
+        [HttpPost("intimation")]
         public async Task<IActionResult> Intimation([FromBody] IntimationRequestDto dto)
         {
             var result = await _service.IntimationAsync(dto);
@@ -61,7 +61,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("submitadditionalReq")]
+        [HttpPut("submitAdditionalReq")]
         public async Task<IActionResult> SubmitBranch3([FromBody] SubmitBranch3RequestDto dto)
         {
             var result = await _service.SubmitBranch3Async(dto);
@@ -73,7 +73,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("submitCollection")]
+        [HttpPut("updateCollection")]
         public async Task<IActionResult> SubmitBranch5([FromBody] SubmitBranch5RequestDto dto)
         {
             var result = await _service.SubmitBranch5Async(dto);
@@ -97,7 +97,7 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("additionalReq")]
+        [HttpPut("updateClaimInitiated")]
         public async Task<IActionResult> SubmitCops2([FromBody] SubmitCops2RequestDto dto)
         {
             var result = await _service.SubmitCops2Async(dto);
@@ -109,19 +109,19 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("SaveCops2")]
-        public async Task<IActionResult> SaveCops2([FromBody] SaveCops2RequestDto dto)
-        {
-            var result = await _service.SaveCops2Async(dto);
-            return result switch
-            {
-                > 0 => Ok(new Response(true, null, "COPS stage 2 saved successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
-        }
+        //[HttpPut("saveClaimInitiated")]
+        //public async Task<IActionResult> SaveCops2([FromBody] SaveCops2RequestDto dto)
+        //{
+        //    var result = await _service.SaveCops2Async(dto);
+        //    return result switch
+        //    {
+        //        > 0 => Ok(new Response(true, null, "COPS stage 2 saved successfully")),
+        //        -1 => NotFound(new Response(false, null, "Record not found")),
+        //        _ => StatusCode(500, new Response(false, null, "An error occurred"))
+        //    };
+        //}
 
-        [HttpPut("updateClaimInitiated")]
+        [HttpPut("additionalRequestSubmit")]
         public async Task<IActionResult> SubmitCops3([FromBody] SubmitCops3RequestDto dto)
         {
             var result = await _service.SubmitCops3Async(dto);
