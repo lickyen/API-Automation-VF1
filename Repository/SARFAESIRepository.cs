@@ -71,6 +71,7 @@ namespace ProductivityApi.Repository
                 dto.EstimatedPropertyValue,
                 dto.CustomerIntentCapability,
                 dto.NonPossessionReason,
+                dto.ResponseStatus,
                 dto.CreatedBy
             };
 

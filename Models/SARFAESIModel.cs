@@ -125,12 +125,11 @@ namespace ProductivityApi.Models
         [Phone]
         public string Mobile { get; set; } = string.Empty;
 
-        [Required]
         [Phone]
-        public string AlternateMobile { get; set; } = string.Empty;
+        public string? AlternateMobile { get; set; }
 
         [Required]
-        [Range(0, double.MaxValue)]
+        [Range(0, double.MaxValue)] 
         public decimal Pos { get; set; }
 
         [Required]
