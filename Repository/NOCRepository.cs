@@ -363,5 +363,24 @@ namespace ProductivityApi.Repository
 
             return await conn.QueryAsync<NocTransaction>(sql);
         }
+
+        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT DISTINCT Status
+                FROM NOC_RoleStatusMap
+                WHERE Role = @Role
+                ORDER BY Status
+            ";
+
+            var result = await conn.QueryAsync<string>(
+                sql,
+                new { Role = role }
+            );
+
+            return result;
+        }
     }
 }

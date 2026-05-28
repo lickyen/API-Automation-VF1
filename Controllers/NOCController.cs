@@ -42,9 +42,7 @@ namespace ProductivityApi.Controllers
 
             if (data == null)
             {
-                return NotFound(
-                    new Response(false, message: $"Transaction {id} not found.")
-                );
+                return NotFound(new Response(false, message: $"Transaction {id} not found."));
             }
 
             return Ok(new Response(true, data));
@@ -55,18 +53,14 @@ namespace ProductivityApi.Controllers
         {
             if (string.IsNullOrWhiteSpace(lan))
             {
-                return BadRequest(
-                    new Response(false, message: "LAN is required.")
-                );
+                return BadRequest(new Response(false, message: "LAN is required."));
             }
 
             var result = await _service.GetApplicantByLanAsync(lan);
 
             if (result == null)
             {
-                return NotFound(
-                    new Response(false, message: "Applicant not found.")
-                );
+                return NotFound(new Response(false, message: "Applicant not found."));
             }
 
             return Ok(new Response(true, result));
@@ -112,46 +106,37 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPut("updatePropertyOwner")]
-        public async Task<IActionResult> UpdatePropertyOwner(
-            [FromBody] UpdatePropertyOwnerDto dto)
+        public async Task<IActionResult> UpdatePropertyOwner([FromBody] UpdatePropertyOwnerDto dto)
         {
             if (dto.Id <= 0)
             {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
             }
 
             if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
             {
-                return BadRequest(
-                    new Response(false, message: "UpdatedBy is required.")
-                );
+                return BadRequest(new Response(false, message: "UpdatedBy is required."));
             }
 
             var result = await _service.UpdatePropertyOwnerAsync(dto);
 
             if (!result)
             {
-                return BadRequest(
-                    new Response(false, message: "Property owner update failed.")
-                );
+                return BadRequest(new Response(false, message: "Property owner update failed."));
             }
 
-            return Ok(
-                new Response(true, message: "Property owner updated successfully.")
-            );
+            return Ok(new Response(true, message: "Property owner updated successfully."));
         }
 
-        [HttpGet("customers/{lan}")]
-        public async Task<IActionResult> GetCustomersByLan(string lan)
+        [HttpGet("applicants/{lan}")]
+        public async Task<IActionResult> GetApplicantsByLan(string lan)
         {
             if (string.IsNullOrWhiteSpace(lan))
                 return BadRequest("LAN is required.");
 
-            var result = await _service.GetCustomersByLanAsync(lan);
+            var result = await _service.GetApplicantByLanAsync(lan);
 
-            if (result == null || !result.Any())
+            if (result == null)
                 return NotFound($"No customers found for LAN: {lan}");
 
             return Ok(result);
@@ -159,45 +144,40 @@ namespace ProductivityApi.Controllers
 
         [HttpPost("uploadAcknowledgementAndKyc")]
         public async Task<IActionResult> UploadAcknowledgementAndKyc(
-            [FromForm] UploadAcknowledgementKycDto dto)
+            [FromForm] UploadAcknowledgementKycDto dto
+        )
         {
             if (dto.Id <= 0)
             {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
             }
 
             if (dto.AcknowledgementFile == null && dto.KycFile == null)
             {
-                return BadRequest(
-                    new Response(false, message: "Please upload at least one file.")
-                );
+                return BadRequest(new Response(false, message: "Please upload at least one file."));
             }
 
             if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
             {
-                return BadRequest(
-                    new Response(false, message: "UpdatedBy is required.")
-                );
+                return BadRequest(new Response(false, message: "UpdatedBy is required."));
             }
 
             var result = await _service.UploadAcknowledgementAndKycAsync(dto, _env);
 
             if (!result)
             {
-                return BadRequest(
-                    new Response(false, message: "File upload failed.")
-                );
+                return BadRequest(new Response(false, message: "File upload failed."));
             }
 
-            return Ok(
-                new Response(true, message: "Files uploaded successfully.")
-            );
+            return Ok(new Response(true, message: "Files uploaded successfully."));
         }
 
         [HttpGet("downloadNoc/{id}")]
-        public async Task<IActionResult> DownloadNoc(int id, [FromQuery] string updatedBy, [FromQuery] string role)
+        public async Task<IActionResult> DownloadNoc(
+            int id,
+            [FromQuery] string updatedBy,
+            [FromQuery] string role
+        )
         {
             if (id <= 0)
                 return BadRequest(new Response(false, "Invalid transaction id"));
@@ -220,25 +200,17 @@ namespace ProductivityApi.Controllers
         {
             if (id <= 0)
             {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
             }
 
             var result = await _service.GenerateAcknowledgementAsync(id);
 
             if (result.FileBytes == null)
             {
-                return BadRequest(
-                    new Response(false, message: result.Message)
-                );
+                return BadRequest(new Response(false, message: result.Message));
             }
 
-            return File(
-                result.FileBytes,
-                "application/pdf",
-                result.FileName
-            );
+            return File(result.FileBytes, "application/pdf", result.FileName);
         }
 
         [HttpGet("downloadLanPdf/{id}")]
@@ -246,25 +218,30 @@ namespace ProductivityApi.Controllers
         {
             if (id <= 0)
             {
-                return BadRequest(
-                    new Response(false, message: "Invalid transaction id.")
-                );
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
             }
 
             var result = await _service.GenerateLanPdfAsync(id);
 
             if (result.FileBytes == null)
             {
-                return BadRequest(
-                    new Response(false, message: result.Message)
-                );
+                return BadRequest(new Response(false, message: result.Message));
             }
 
-            return File(
-                result.FileBytes,
-                "application/pdf",
-                result.FileName
-            );
+            return File(result.FileBytes, "application/pdf", result.FileName);
+        }
+
+        [HttpGet("getAllowedStatuses")]
+        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return BadRequest(new Response(false, message: "Role is required."));
+            }
+
+            var statuses = await _service.GetAllowedStatusesAsync(role);
+
+            return Ok(new Response(true, statuses));
         }
     }
 }

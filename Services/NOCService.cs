@@ -50,7 +50,7 @@ namespace ProductivityApi.Services
             var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
 
             // Step 2: Get all customers for the lan
-            var customers = await _plfRepository.GetCustomersByLanAsync(lan);
+            var customers = await _plfRepository.GetApplicantsByLanAsync(lan);
 
             var custList = customers
                 .Where(x => !string.IsNullOrEmpty(x.CustomerId))
@@ -273,9 +273,9 @@ namespace ProductivityApi.Services
             return await _repository.UpdatePropertyOwnerAsync(dto);
         }
 
-        public async Task<List<NeolotexDisb>> GetCustomersByLanAsync(string lan)
+        public async Task<List<NeolotexDisb>> GetApplicantsByLanAsync(string lan)
         {
-            return await _plfRepository.GetCustomersByLanAsync(lan);
+            return await _plfRepository.GetApplicantsByLanAsync(lan);
         }
 
         public async Task<bool> UploadAcknowledgementAndKycAsync(
@@ -578,6 +578,14 @@ namespace ProductivityApi.Services
             return to
                 .Distinct()
                 .ToList();
+        }
+
+        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return Enumerable.Empty<string>();
+
+            return await _repository.GetAllowedStatusesAsync(role);
         }
     }
 }

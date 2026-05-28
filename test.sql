@@ -10,11 +10,8 @@ GO
 SELECT TOP 20 * FROM NOC_RoleStatusMap;
 GO
 
-SELECT * FROM UserMaster;
+SELECT TOP 20 * FROM UserMaster;
 GO
 
 SELECT TOP 20 * FROM BranchEmail_Master;
-GO
-
-SELECT * FROM NewBranchChecklistMaster;
 GO

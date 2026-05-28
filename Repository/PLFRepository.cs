@@ -10,7 +10,8 @@ namespace ProductivityApi.Repository
         private readonly string _plfConStr;
         private readonly ILogger<PLFRepository> _logger;
 
-        private const string NeolotexDisbColumns = @"
+        private const string NeolotexDisbColumns =
+            @"
             SELECT
                 sz_loan_account_no   AS LoanAccountNo,
                 applicant_type       AS ApplicantType,
@@ -29,11 +30,13 @@ namespace ProductivityApi.Repository
             _plfConStr = configuration.GetConnectionString("PlfDBConn");
             _logger = logger;
         }
+
         public async Task<List<PLFPayment>> GetPaymentsByLan(string lan)
         {
             try
             {
-                var sql = @"SELECT 
+                var sql =
+                    @"SELECT 
                         HDR.RECEIPTID       AS ReceiptId,
                         HDR.RECEIPTMODE     AS ReceiptMode,
                         HDR.RECEIPTAMOUNT   AS ReceiptAmount,
@@ -55,11 +58,13 @@ namespace ProductivityApi.Repository
                 return new List<PLFPayment>();
             }
         }
+
         public async Task<List<NeolotexDisb>> GetClosedLansAsync()
         {
             try
             {
-                var sql = $@"{NeolotexDisbColumns}
+                var sql =
+                    $@"{NeolotexDisbColumns}
                 WHERE loan_status <> 'Active Loan'
                     AND loanclosure_date >= CURRENT_DATE - 1
                     AND loanclosure_date <  CURRENT_DATE;";
@@ -75,11 +80,13 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
+
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
             try
             {
-                var sql = $@"{NeolotexDisbColumns}
+                var sql =
+                    $@"{NeolotexDisbColumns}
                     WHERE sz_collateral_id = @collId;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
@@ -93,11 +100,13 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
+
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
             try
             {
-                var sql = $@"{NeolotexDisbColumns}
+                var sql =
+                    $@"{NeolotexDisbColumns}
                     WHERE customerid = @custId;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
@@ -111,29 +120,13 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
-        public async Task<List<NeolotexDisb>> GetCustomersByLanAsync(string lan)
-        {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
-                    WHERE sz_loan_account_no = @lan;";
 
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { lan });
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching customers for LAN: {Lan}", lan);
-                return new List<NeolotexDisb>();
-            }
-        }
         public async Task<List<NeolotexDisb>> GetLinkedLoansByLanAsync(string lan)
         {
             try
             {
-                var sql = $@"{NeolotexDisbColumns}
+                var sql =
+                    $@"{NeolotexDisbColumns}
             WHERE customerid IN (
                 SELECT customerid
                 FROM plf.neolotex_disb
@@ -152,9 +145,30 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
+
+        public async Task<List<NeolotexDisb>> GetApplicantsByLanAsync(string lan)
+        {
+            try
+            {
+                var sql =
+                    $@"{NeolotexDisbColumns}
+
+                    WHERE sz_loan_account_no = @lan;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { lan });
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching customers for LAN: {Lan}", lan);
+
+                return new List<NeolotexDisb>();
+            }
+        }
     }
 }
-
-
-
-
