@@ -207,6 +207,97 @@ namespace ProductivityApi.Services
 
             return await _repository.GetPolicyByLanAsync(lan);
         }
+        public async Task<(List<LanCollateralPlf>? Data, string Message)> GetCollateralsByLanAsync(string lan)
+        {
+            var loan = await _plfService.GetFinance(lan);
+            if (loan?.returnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+            if (loan.returnStatus.returnCode != "0000")
+                return (null, loan.returnStatus.returnText);
 
+            if (loan.collaterals == null || loan.collaterals.Count == 0)
+                return (null, "No collaterals found for this LAN");
+
+            var result = new List<LanCollateralPlf>();
+
+            foreach (var col in loan.collaterals)
+            {
+                if (string.IsNullOrWhiteSpace(col.collateralRef))
+                    continue;
+
+                var request = new CollateralApiRequest
+                {
+                    collateralRef = col.collateralRef
+                };
+
+                var collateral = await _plfService.GetCollateralsByRef(request);
+
+                if (collateral?.returnStatus == null || collateral.returnStatus.returnCode != "0000")
+                    continue;
+
+                var mapValues = collateral.extendedFieldRenderList?
+                    .FirstOrDefault()?.mapValues;
+
+                var item = new LanCollateralPlf
+                {
+                    CollateralRef = col.collateralRef,
+                    CollateralAddress = mapValues == null ? null :
+                        $"{mapValues.addresslineonecoll}, {mapValues.addresslinetwocoll}, {mapValues.citycollateral}, {mapValues.statecollateral} - {mapValues.postalcodecollater}"
+                };
+
+                result.Add(item);
+            }
+
+            return (result, "Success");
+        }
+        public async Task<(List<LanApplicantPlf>? Data, string Message)> GetApplicantsByLanAsync(string lan)
+        {
+            var loan = await _plfService.GetFinance(lan);
+            if (loan?.returnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+            if (loan.returnStatus.returnCode != "0000")
+                return (null, loan.returnStatus.returnText);
+
+            var result = new List<LanApplicantPlf>();
+
+            var applicants = new List<(string? cif, string? name, string type)>
+            {
+                (loan.customer?.cif, loan.customer?.personalInfo?.shortName, "B")
+            };
+
+            if (loan.coApplicants != null)
+                applicants.AddRange(loan.coApplicants.Select(a => (a.cif, a.shortName, "C")));
+
+            foreach (var (cif, name, type) in applicants)
+            {
+                if (string.IsNullOrWhiteSpace(cif))
+                    continue;
+
+                var customer = await _plfService.GetCustomerDetails(cif);
+                if (customer?.ReturnStatus == null || customer.ReturnStatus.returnCode != "0000")
+                    continue;
+
+                result.Add(new LanApplicantPlf
+                {
+                    CustId = cif,
+                    CustName = name,
+                    Mobile = customer.Phones?
+                                        .OrderByDescending(p => p.priority)
+                                        .Select(p => p.phoneNumber)
+                                        .FirstOrDefault(),
+                    Email = customer.Emails?
+                                        .OrderByDescending(p => p.custEMailPriority)
+                                        .Select(p => p.custEMail)
+                                        .FirstOrDefault(),
+                    Address = customer.Addresses?
+                                        .OrderByDescending(p => p.priority)
+                                        .Select(p => p.GetFullAddress())
+                                        .FirstOrDefault(),
+                    ApplicantType = type
+                });
+            }
+
+            return (result, "Success");
+        }
     }
 }
