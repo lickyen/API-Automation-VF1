@@ -11,6 +11,7 @@ namespace ProductivityApi.Services
         private readonly WabaRepository _repository;
         private readonly PLFService _plfService;
         private readonly AppSettings _appSettings;
+        private readonly IWebHostEnvironment _env;
 
         private static readonly Serilog.ILogger _logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -21,11 +22,12 @@ namespace ProductivityApi.Services
             )
             .CreateLogger();
 
-        public WabaService(WabaRepository repository, PLFService plfService, AppSettings appSettings)
+        public WabaService(WabaRepository repository, PLFService plfService, AppSettings appSettings, IWebHostEnvironment env)
         {
             _repository = repository;
             _plfService = plfService;
             _appSettings = appSettings;
+            _env = env;
         }
         public async Task<int> SaveWabaLogAsync(WabaModel dto)
         {
@@ -84,7 +86,8 @@ namespace ProductivityApi.Services
                 throw new Exception("Transfer Letter API returned empty document");
 
             // Step 4: Save PDF to disk
-            var basePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "WabaFiles");
+            //var basePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "WabaFiles");
+            var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
 
             var uniqueId = Guid.NewGuid().ToString("N")[..8]; // 8 char short guid
             var fileName = $"SOA_{lan}_{uniqueId}.pdf";     // e.g. SOA_LAN123456_a3f8c21d.pdf
@@ -97,12 +100,12 @@ namespace ProductivityApi.Services
                 Convert.FromBase64String(transferResult.DocContent)
             );
 
-            // Step 5: Update letter path in DB
-            await _repository.UpdateSOALetterIssuedAsync(requestId, fullPath);
-
-            // Step 6: Return URL
             var fileUrl = $"{_appSettings.BaseUrl}/WabaFiles/{fileName}";
 
+            // Step 5: Update letter path in DB
+            await _repository.UpdateSOALetterIssuedAsync(requestId, fileUrl);
+
+            // Step 6: Return URL
             return new WabaSOAResponse
             {
                 FileName = fileName,
