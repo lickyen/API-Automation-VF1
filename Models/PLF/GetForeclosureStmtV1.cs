@@ -82,16 +82,6 @@
         public string FirstInstDate { get; set; }
         public decimal LpiAccured { get; set; }
         public decimal LpiUnAccured { get; set; }
-
-
-        //Calculated properties
-        public decimal Pos => OutstandingPri + PrincipalAmt;
-        public decimal Charges => ChargesIncGST + LatePayInterestAmt;
-        public decimal ChargesIncFC => Charges + ForeClosFees;
-        public decimal Interest => InstForTheMonth + InterestAmt;
-        public decimal Excess => TotalRefunds;
-        public decimal TotalOutstanding => Pos + Charges + Interest - Excess;
-        public decimal TotalOutstandingIncFC => Pos + ChargesIncFC + Interest - Excess;
     }
 
     public class ForeclosureReportRequest

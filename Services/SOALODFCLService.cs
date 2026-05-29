@@ -701,16 +701,14 @@ namespace ProductivityApi.Services
             }
             else
             {
-                var (report, msg) = await _sharedservice.GetForeclosureReportAsync(soalod.Lan);
-                if (report == null)
+                var (data, msg) = await _sharedservice.GetForeclosureStatementAsync(soalod.Lan);
+                if (data == null)
                 {
                     return (null, msg);
 
                 }
                 else
                 {
-
-
                     var basePath = _appSettings.FilePaths.SOALODFilePath;
                     var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForeclosureLetter.pdf");
                     if (!File.Exists(TemplatePath))
@@ -728,57 +726,56 @@ namespace ProductivityApi.Services
                             {
                                 var fields = stamper.AcroFields;
 
-                                fields.SetField("Name", report.CustName);
+                                fields.SetField("Name", data.CustName);
                                 fields.SetFieldProperty("Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Loan Account No", report.FinReference);
+                                fields.SetField("Loan Account No", data.Lan);
                                 fields.SetFieldProperty("Loan Account No", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
                                 fields.SetField("Branch Name", soalod.Branch_Name);
                                 fields.SetFieldProperty("Branch Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("LAN Name", report.FinReference);
+                                fields.SetField("LAN Name", data.Lan);
                                 fields.SetFieldProperty("LAN", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
                                 fields.SetField("Date", today);
                                 fields.SetFieldProperty("Date", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Financed Amount", report.FinCurrAssetValue.ToString());
+                                fields.SetField("Financed Amount", data.DisbAmount.ToString());
                                 fields.SetFieldProperty("Financed Amount", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
 
-
-                                fields.SetField("Customer No/Name", report.CustName + "/" + report.CustCIF);
+                                fields.SetField("Customer No/Name", data.CustId + "/" + data.CustName);
                                 fields.SetFieldProperty("Customer No/Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Principal Outstanding", report.OutstandingPri.ToString());
+                                fields.SetField("Principal Outstanding", data.PrincipalOutstanding.ToString());
                                 fields.SetFieldProperty("Principal Outstanding", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Principal Due", report.PrincipalAmt.ToString());
+                                fields.SetField("Principal Due", data.PrincipalDue.ToString());
                                 fields.SetFieldProperty("Principal Due", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Interest Due", report.InterestAmt.ToString());
+                                fields.SetField("Interest Due", data.InterestDue.ToString());
                                 fields.SetFieldProperty("Interest Due", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("GST", report.ForeClosFees.ToString());
+                                fields.SetField("GST", data.FcCharges.ToString());
                                 fields.SetFieldProperty("GST", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("BPI", report.InstForTheMonth.ToString());
+                                fields.SetField("BPI", data.Bpi.ToString());
                                 fields.SetFieldProperty("BPI", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("LPI", report.LatePayInterestAmt.ToString());
+                                fields.SetField("LPI", data.Lpi.ToString());
                                 fields.SetFieldProperty("LPI", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Other Charges", report.ChargesIncGST.ToString());
+                                fields.SetField("Other Charges", data.OtherCharges.ToString());
                                 fields.SetFieldProperty("GST", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Excess Amount", report.TotalRefunds.ToString());
+                                fields.SetField("Excess Amount", data.Excess.ToString());
                                 fields.SetFieldProperty("Excess Amount", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Grand Total", report.NetReceivable.ToString());
+                                fields.SetField("Grand Total", data.NetReceivable.ToString());
                                 fields.SetFieldProperty("Grand Total", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("BPI Per Day", report.IntPerDay.ToString());
+                                fields.SetField("BPI Per Day", data.BpiPerDay.ToString());
                                 fields.SetFieldProperty("BPI Per Day", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
                                 stamper.FormFlattening = true; // Make fields read-only
