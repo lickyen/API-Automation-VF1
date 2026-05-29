@@ -19,7 +19,7 @@ namespace ProductivityApi.Services
         public static class SARFAESIFileSizeLimits
         {
             public const long Image = 2 * 1024 * 1024;   // 2 MB
-            public const long Pdf = 10 * 1024 * 1024;     // 10 MB
+            public const long Pdf = 5 * 1024 * 1024;     // 5 MB
             public const long Video = 50 * 1024 * 1024;   // 50 MB
         }
 
@@ -56,32 +56,77 @@ namespace ProductivityApi.Services
             return _repository.UpdateAsync(id, dto);
         }
 
-        public async Task<int> UploadFileAsync(SARFAESIFileUploadDto dto)
+        //public async Task<int> UploadFileAsync(SARFAESIFileUploadDto dto)
+        //{
+        //    if (dto.File == null || dto.File.Length == 0)
+        //        throw new ArgumentException("File is empty");
+
+        //    var extension = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
+
+        //    if (!AllowedExtensions.Contains(extension))
+        //        throw new InvalidOperationException($"Extension not allowed: {extension}");
+
+        //    var category = GetFileCategory(extension);
+
+        //    if (category == "UNKNOWN")
+        //        throw new InvalidOperationException("Unsupported file type");
+
+        //    var maxSize = GetMaxSize(category);
+
+        //    if (dto.File.Length > maxSize)
+        //        throw new InvalidOperationException(
+        //            $"File exceeds {category} limit of {maxSize / (1024 * 1024)} MB"
+        //        );
+
+        //    var record = await _repository.GetByIdAsync(dto.ReqId);
+
+        //    if (record == null)
+        //        throw new InvalidOperationException("Record not found");
+
+        //    var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
+        //    var fullPath = Path.Combine(_filePath, fileName);
+
+        //    if (!Directory.Exists(_filePath))
+        //        Directory.CreateDirectory(_filePath);
+
+        //    using (var stream = new FileStream(fullPath, FileMode.Create))
+        //    {
+        //        await dto.File.CopyToAsync(stream);
+        //    }
+
+        //    var dbResult = await _repository.AddFileAsync(
+        //        dto.ReqId,
+        //        dto.FileType,
+        //        fileName,
+        //        dto.CreatedBy
+        //    );
+
+        //    if (dbResult <= 0)
+        //        throw new InvalidOperationException("Failed to save file record in DB");
+
+        //    return dbResult;
+        //}
+
+        public async Task<(bool Success, string Message)> UploadFileAsync(SARFAESIFileUploadDto dto)
         {
             if (dto.File == null || dto.File.Length == 0)
-                throw new ArgumentException("File is empty");
+                return (false, "File is empty");
 
             var extension = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
-
             if (!AllowedExtensions.Contains(extension))
-                throw new InvalidOperationException($"Extension not allowed: {extension}");
+                return (false, $"Extension not allowed: {extension}");
 
             var category = GetFileCategory(extension);
-
             if (category == "UNKNOWN")
-                throw new InvalidOperationException("Unsupported file type");
+                return (false, "Unsupported file type");
 
             var maxSize = GetMaxSize(category);
-
             if (dto.File.Length > maxSize)
-                throw new InvalidOperationException(
-                    $"File exceeds {category} limit of {maxSize / (1024 * 1024)} MB"
-                );
+                return (false, $"File exceeds {category} limit of {maxSize / (1024 * 1024)} MB");
 
             var record = await _repository.GetByIdAsync(dto.ReqId);
-
             if (record == null)
-                throw new InvalidOperationException("Record not found");
+                return (false, "Record not found");
 
             var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
             var fullPath = Path.Combine(_filePath, fileName);
@@ -94,17 +139,11 @@ namespace ProductivityApi.Services
                 await dto.File.CopyToAsync(stream);
             }
 
-            var dbResult = await _repository.AddFileAsync(
-                dto.ReqId,
-                dto.FileType,
-                fileName,
-                dto.CreatedBy
-            );
-
+            var dbResult = await _repository.AddFileAsync(dto.ReqId, dto.FileType, fileName, dto.CreatedBy);
             if (dbResult <= 0)
-                throw new InvalidOperationException("Failed to save file record in DB");
+                return (false, "Failed to save file record in DB");
 
-            return dbResult;
+            return (true, "File uploaded successfully");
         }
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
