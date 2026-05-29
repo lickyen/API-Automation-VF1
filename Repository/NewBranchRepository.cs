@@ -75,228 +75,11 @@ namespace ProductivityApi.Repository
         #endregion
 
 
-        #region GET BRANCH LIST
+        #region GET BRANCH LIST USING SP
 
         public List<NewBranchListItemDto> GetBranches(GetNewBranchListRequestDto model)
         {
             using var connection = new SqlConnection(_conStr);
-
-            string roleColumn = model.Role switch
-            {
-                "Admin" or "Admin1" or "Admin2" => "nb.AdminStatus",
-
-                "HR" or "HR1" or "HR2" => "nb.HRStatus",
-
-                "IT" or "IT1" or "IT2" => "nb.ITStatus",
-
-                "Finance" or "Finance1" or "Finance2" => "nb.FinanceStatus",
-
-                "COPS" or "COPS1" or "COPS2" => "nb.COPSStatus",
-
-                "Marketing" or "Marketing1" or "Marketing2" => "nb.MarketingStatus",
-
-                "RCHRBH" => "nb.RCHRCBStatus",
-
-                // Checker-only role
-                "MZBH" => "NULL",
-
-                _ => "nb.Status",
-            };
-
-            string departmentGroupCase =
-                @"
-        CASE
-            WHEN @Role LIKE 'Admin%' THEN 'Admin'
-            WHEN @Role LIKE 'HR%' THEN 'HR'
-            WHEN @Role LIKE 'IT%' THEN 'IT'
-            WHEN @Role LIKE 'Finance%' THEN 'Finance'
-            WHEN @Role LIKE 'COPS%' THEN 'COPS'
-            WHEN @Role LIKE 'Marketing%' THEN 'Marketing'
-            ELSE @Role
-        END
-    ";
-
-            string query =
-                $@"
-        SELECT
-            nb.Id,
-            nb.Name,
-            nb.State,
-            nb.Zone,
-            nb.Region,
-            nb.Megazone,
-            nb.Status,
-
-            {roleColumn} AS TeamStatus,
-
-            nt.Id AS TransactionId,
-            nt.ChecklistId,
-            cm.ChecklistName,
-            nt.CurrentStatus,
-            nt.Remarks,
-            cm.ActionStatus
-
-        FROM NewBranchMaster nb
-
-        INNER JOIN NewBranchTransaction nt
-            ON nb.Id = nt.Tid
-
-        INNER JOIN NewBranchChecklistMaster cm
-            ON nt.ChecklistId = cm.Id
-
-        WHERE
-        (
-            @Status IS NULL
-            OR {roleColumn} IS NULL
-            OR {roleColumn} = @Status
-        )
-
-        AND
-        (
-            @Role IS NULL
-
-            OR
-
-            (
-                cm.DepartmentGroup = ({departmentGroupCase})
-            )
-
-            OR
-
-            (
-                cm.Team = @Role
-            )
-        )
-
-        AND
-        (
-            -- STAGE VIEW ROLES
-            (
-                cm.DepartmentGroup = ({departmentGroupCase})
-
-                AND {roleColumn} = 'Pending'
-
-                AND
-                (
-                    (
-                        cm.ParentChecklistId IS NULL
-
-                        AND
-                        (
-                            cm.PrereqStatus = 0
-
-                            OR
-
-                            (
-                                cm.PrereqStatus = 1
-
-                                AND NOT EXISTS
-                                (
-                                    SELECT 1
-                                    FROM NewBranchTransaction nt2
-
-                                    INNER JOIN NewBranchChecklistMaster cm2
-                                        ON nt2.ChecklistId = cm2.Id
-
-                                    WHERE
-                                        nt2.Tid = nt.Tid
-
-                                        AND cm2.Team = cm.PrereqName
-
-                                        AND nt2.CurrentStatus = 'Pending'
-                                )
-                            )
-                        )
-                    )
-
-                    OR
-
-                    (
-                        cm.ParentChecklistId IS NOT NULL
-
-                        AND EXISTS
-                        (
-                            SELECT 1
-                            FROM NewBranchTransaction ntParent
-
-                            WHERE
-                                ntParent.Tid = nt.Tid
-
-                                AND ntParent.ChecklistId = cm.ParentChecklistId
-
-                                AND ntParent.CurrentStatus <> 'Pending'
-                        )
-                    )
-                )
-            )
-
-            OR
-
-            -- INDIVIDUAL TEAM VIEW
-            (
-                cm.Team = @Role
-
-                AND nt.CurrentStatus = 'Pending'
-
-                AND
-                (
-                    (
-                        cm.ParentChecklistId IS NULL
-
-                        AND
-                        (
-                            cm.PrereqStatus = 0
-
-                            OR
-
-                            (
-                                cm.PrereqStatus = 1
-
-                                AND NOT EXISTS
-                                (
-                                    SELECT 1
-                                    FROM NewBranchTransaction nt2
-
-                                    INNER JOIN NewBranchChecklistMaster cm2
-                                        ON nt2.ChecklistId = cm2.Id
-
-                                    WHERE
-                                        nt2.Tid = nt.Tid
-
-                                        AND cm2.Team = cm.PrereqName
-
-                                        AND nt2.CurrentStatus = 'Pending'
-                                )
-                            )
-                        )
-                    )
-
-                    OR
-
-                    (
-                        cm.ParentChecklistId IS NOT NULL
-
-                        AND EXISTS
-                        (
-                            SELECT 1
-                            FROM NewBranchTransaction ntParent
-
-                            WHERE
-                                ntParent.Tid = nt.Tid
-
-                                AND ntParent.ChecklistId = cm.ParentChecklistId
-
-                                AND ntParent.CurrentStatus <> 'Pending'
-                        )
-                    )
-                )
-            )
-        )
-
-        ORDER BY
-            nb.Id,
-            nt.Id
-    ";
 
             var branchDictionary = new Dictionary<int, NewBranchListItemDto>();
 
@@ -305,15 +88,13 @@ namespace ProductivityApi.Repository
                 PendingTransactionDto,
                 NewBranchListItemDto
             >(
-                query,
+                "SP_NewBranchGetTransactionsByRole", // stored procedure name
                 (branch, transaction) =>
                 {
                     if (!branchDictionary.TryGetValue(branch.Id, out var existingBranch))
                     {
                         existingBranch = branch;
-
                         existingBranch.PendingTransactions = new List<PendingTransactionDto>();
-
                         branchDictionary.Add(existingBranch.Id, existingBranch);
                     }
 
@@ -331,7 +112,8 @@ namespace ProductivityApi.Repository
 
                     return existingBranch;
                 },
-                new { Status = model.Status, Role = model.Role },
+                param: new { Status = model.Status, Role = model.Role },
+                commandType: CommandType.StoredProcedure,
                 splitOn: "TransactionId"
             );
 
