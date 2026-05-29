@@ -18,9 +18,9 @@ namespace ProductivityApi.Services
 
         public static class SARFAESIFileSizeLimits
         {
-            public const long Image = 2 * 1024 * 1024;   // 2 MB
-            public const long Pdf = 5 * 1024 * 1024;     // 5 MB
-            public const long Video = 50 * 1024 * 1024;   // 50 MB
+            public const long Image = (long)(2.5 * 1024 * 1024);   // 2.5 MB
+            public const long Pdf = (long)(5 * 1024 * 1024);     // 5 MB
+            public const long Video = (long)(100 * 1024 * 1024);   // 100 MB
         }
 
         public SARFAESIService(SARFAESIRepository repository, AppSettings appSettings)
