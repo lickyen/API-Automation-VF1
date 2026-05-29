@@ -91,14 +91,14 @@ namespace ProductivityApi.Repository
 
                 "Finance" or "Finance1" or "Finance2" => "nb.FinanceStatus",
 
-                "Ops" or "Ops1" or "Ops2" => "nb.OPSStatus",
+                "COPS" or "COPS1" or "COPS2" => "nb.COPSStatus",
 
                 "Marketing" or "Marketing1" or "Marketing2" => "nb.MarketingStatus",
 
                 "RCHRBH" => "nb.RCHRCBStatus",
 
                 // Checker-only role
-                "BH" => "NULL",
+                "MZBH" => "NULL",
 
                 _ => "nb.Status",
             };
@@ -110,7 +110,7 @@ namespace ProductivityApi.Repository
             WHEN @Role LIKE 'HR%' THEN 'HR'
             WHEN @Role LIKE 'IT%' THEN 'IT'
             WHEN @Role LIKE 'Finance%' THEN 'Finance'
-            WHEN @Role LIKE 'Ops%' THEN 'Ops'
+            WHEN @Role LIKE 'COPS%' THEN 'COPS'
             WHEN @Role LIKE 'Marketing%' THEN 'Marketing'
             ELSE @Role
         END

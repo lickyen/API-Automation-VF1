@@ -45,9 +45,9 @@ namespace ProductivityApi.Models
 
         public DateTime? MarketingDate { get; set; }
 
-        public string? OPSStatus { get; set; }
+        public string? COPSStatus { get; set; }
 
-        public DateTime? OPSDate { get; set; }
+        public DateTime? COPSDate { get; set; }
 
         public string CreatedBy { get; set; } = string.Empty;
 
