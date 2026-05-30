@@ -42,5 +42,19 @@ namespace ProductivityApi.Controllers
                 return BadRequest(new Response(false, null, ex.Message));
             }
         }
+
+        [HttpPost("GenerateKotakDoc")]
+        public async Task<IActionResult> GenerateKotakDocument([FromBody] WabaGenerateKotakDto dto)
+        {
+            try
+            {
+                var result = await _service.GetKotakDocumentAsync(dto.LAN);
+                return Ok(new Response(true, result, "Kotak document generated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+        }
     }
 }

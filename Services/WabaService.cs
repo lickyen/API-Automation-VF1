@@ -10,6 +10,8 @@ namespace ProductivityApi.Services
     {
         private readonly WabaRepository _repository;
         private readonly PLFService _plfService;
+        private readonly SharedService _sharedService;
+        private readonly KotakService _kotakService;
         private readonly AppSettings _appSettings;
         private readonly IWebHostEnvironment _env;
 
@@ -22,10 +24,12 @@ namespace ProductivityApi.Services
             )
             .CreateLogger();
 
-        public WabaService(WabaRepository repository, PLFService plfService, AppSettings appSettings, IWebHostEnvironment env)
+        public WabaService(WabaRepository repository, PLFService plfService, SharedService sharedService, KotakService kotakService, AppSettings appSettings, IWebHostEnvironment env)
         {
             _repository = repository;
             _plfService = plfService;
+            _sharedService = sharedService;
+            _kotakService = kotakService;
             _appSettings = appSettings;
             _env = env;
         }
@@ -111,6 +115,74 @@ namespace ProductivityApi.Services
                 FileName = fileName,
                 FileUrl = fileUrl,
                 FinReference = transferResult.FinReference
+            };
+        }
+
+        public async Task<WabaKotakResponse> GetKotakDocumentAsync(string lan)
+        {
+            // Step 1: Pull Kotak master data for this LAN
+            var kotakData = await _sharedService.GetKotakByLanAsync(lan);
+            if (kotakData == null)
+                throw new Exception("Kotak data not found for the given LAN");
+
+            if (string.IsNullOrWhiteSpace(kotakData.LoanAcId))
+                throw new Exception("Loan Account ID is missing in Kotak data");
+
+            if (kotakData.Dob == null)
+                throw new Exception("Date of Birth is missing in Kotak data");
+
+            if (string.IsNullOrWhiteSpace(kotakData.ClientName))
+                throw new Exception("Client name is missing in Kotak data");
+
+            // Step 2: Save request to DB — status = CREATED
+            var requestId = await _repository.CreateKotakRequestAsync(lan);
+
+            // Step 3: Call Kotak ValidateCOICS API
+            var kotakRequest = new KotakValidateRequest
+            {
+                Request = new KotakRequestBody
+                {
+                    LoanAccountNo = kotakData.LoanAcId,
+                    DOB = kotakData.Dob.Value.ToString("dd/MM/yyyy"),
+                    PolicyHolderName = kotakData.ClientName
+                }
+            };
+
+            var kotakResult = await _kotakService.ValidateCOICSAsync(kotakRequest);
+
+            // Validate response structure
+            if (kotakResult?.Response == null)
+                throw new Exception("Kotak API returned no response");
+
+            if (!string.Equals(kotakResult.Response.StatusInfo?.Status, "Success", StringComparison.OrdinalIgnoreCase))
+                throw new Exception($"Kotak API error: {kotakResult.Response.StatusInfo?.StatusMessage ?? "Unknown error"}");
+
+            if (string.IsNullOrWhiteSpace(kotakResult.Response.PDFContent))
+                throw new Exception("Kotak API returned an empty PDF");
+
+            // Step 4: Save PDF to disk
+            var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
+            Directory.CreateDirectory(basePath);
+
+            var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            var fileName = $"{lan}_kotak_{uniqueId}.pdf";
+            var fullPath = Path.Combine(basePath, fileName);
+
+            await File.WriteAllBytesAsync(
+                fullPath,
+                Convert.FromBase64String(kotakResult.Response.PDFContent)  // ← PDFContent not DocContent
+            );
+
+            var fileUrl = $"{_appSettings.BaseUrl}/WabaFiles/{fileName}";
+
+            await _repository.UpdateKotakDocumentIssuedAsync(requestId, fileUrl);
+
+            return new WabaKotakResponse
+            {
+                FileName = fileName,
+                FileUrl = fileUrl,
+                LoanAccountNo = kotakData.LoanAcId,
+                PolicyNumber = kotakData.PolicyNumber ?? string.Empty
             };
         }
     }

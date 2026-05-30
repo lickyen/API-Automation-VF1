@@ -141,6 +141,43 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<int> CreateKotakRequestAsync(string lan)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+
+            // Required fields — always passed
+            parameters.Add("@Lan", lan);
+            parameters.Add("@ReqType", "Kotak");
+            parameters.Add("@Source", "Whatsapp Banking");
+            parameters.Add("@NewRequestId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_CreateRequest",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@NewRequestId");
+        }
+
+        public async Task UpdateKotakDocumentIssuedAsync(int reqId, string letterPath)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@ReqId", reqId);
+            parameters.Add("@LetterPath", letterPath);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_UpdateLetterIssued",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
 
     }
 }

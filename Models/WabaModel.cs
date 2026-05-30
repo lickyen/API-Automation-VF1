@@ -114,4 +114,17 @@ namespace ProductivityApi.Models
     {
         public string LAN { get; set; } = string.Empty;
     }
+
+    public class WabaKotakResponse
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public string LoanAccountNo { get; set; } = string.Empty;
+        public string PolicyNumber { get; set; } = string.Empty;
+    }
+
+    public class WabaGenerateKotakDto
+    {
+        public string LAN { get; set; } = string.Empty;
+    }
 }
