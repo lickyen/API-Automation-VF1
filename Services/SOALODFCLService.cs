@@ -484,8 +484,9 @@ namespace ProductivityApi.Services
                     if (!dto.ReceiptNo.IsNullOrWhiteSpace())
                     {
 
+                        //var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PaymentReceipt.pdf");
+                        var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "FCL", "PaymentReceipt.pdf");
 
-                        var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PaymentReceipt.pdf");
                         if (!File.Exists(TemplatePath))
                             return (null, "Receipt Template Not Found");
                         //throw new FileNotFoundException($"template file not found: {TemplatePath}");
@@ -710,7 +711,9 @@ namespace ProductivityApi.Services
                 else
                 {
                     var basePath = _appSettings.FilePaths.SOALODFilePath;
-                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForeclosureLetter.pdf");
+                    // var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForeclosureLetter.pdf");
+                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "FCL", "PaymentReceipt.pdf");
+
                     if (!File.Exists(TemplatePath))
                         throw new FileNotFoundException($"template file not found: {TemplatePath}");
 

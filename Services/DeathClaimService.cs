@@ -1,5 +1,6 @@
 ﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
+using ProductivityApi.Models.ProductivityApi.Models;
 using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
@@ -7,12 +8,10 @@ namespace ProductivityApi.Services
     public class DeathClaimService
     {
         private readonly DeathClaimRepository _repository;
-        private readonly ILogger<DeathClaimService> _logger;
 
-        public DeathClaimService(DeathClaimRepository repository, ILogger<DeathClaimService> logger)
+        public DeathClaimService(DeathClaimRepository repository)
         {
             _repository = repository;
-            _logger = logger;
         }
 
         public async Task<DeathClaimResponseDto?> GetByIdAsync(int id)
@@ -209,6 +208,119 @@ namespace ProductivityApi.Services
             }
 
             return result;
+        }
+
+        public async Task<(byte[]? bytes, string? lan)> GetClaimFormAsync(int id)
+        {
+            var data = await _repository.GetClaimFormDataAsync(id);
+            if (data == null) return (null, null);
+
+            string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "KotakClaimForm.pdf");
+
+            var bytes = FillClaimForm(templatePath, data);
+            return (bytes, data.LAN);
+        }
+
+        public async Task<(byte[]? bytes, string? lan)> GetDischargeFormAsync(int id)
+        {
+            var data = await _repository.GetClaimFormDataAsync(id);
+            if (data == null) return (null, null);
+
+            string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "DischargeForm.pdf");
+
+            var bytes = FillDischargeForm(templatePath, data);
+            return (bytes, data.LAN);
+        }
+
+        private static string S(object? val) =>
+            val == null || val is DBNull ? "" : val.ToString()!;
+
+        private static string D(DateTime? val, string format = "dd-MM-yyyy") =>
+            val.HasValue ? val.Value.ToString(format) : "";
+
+        private static byte[] FillClaimForm(string templatePath, ClaimFormDataDto d)
+        {
+            using var ms = new MemoryStream();
+            using (var reader = new iTextSharp.text.pdf.PdfReader(templatePath))
+            using (var stamper = new iTextSharp.text.pdf.PdfStamper(reader, ms))
+            {
+
+                var f = stamper.AcroFields;
+                void Set(string name, string value)
+                {
+                    f.SetField(name, value);
+                    f.SetFieldProperty(name, "setfflags", iTextSharp.text.pdf.PdfFormField.FF_READ_ONLY, null);
+                }
+
+                Set("Policy No", S(d.Policy_Number));
+                Set("Loan ID", S(d.Loan_A_C_ID));
+                Set("System_Generated", S(d.System_generated_No));
+                Set("Policyholders Name & Company Address", "Vistaar Financial Services Pvt Ltd");
+                Set("Date of Risk Commencement", D(d.Disb_Date));
+                Set("Original Sum Assured A", S(d.BLC_cover));
+                Set("Original Loan Amt B", S(d.Loan_Amount));
+                Set("Outstanding Loan Amount as on the Date of Death D", S(d.Claim_amount_DOD));
+                Set("Recoveries made till Date of Death C", "NA");
+                Set("Name of Insured Member", S(d.Full_Name));
+                Set("Date of Birth", D(d.Date_of_Birth));
+                Set("Address of Member with Pin Code", S(d.Address));
+                Set("Contact No", S(d.Mobile));
+                Set("Date of Death", D(d.Death_Date));
+                Set("Cause of Death mention complete details", "Natural");
+                Set("Place of Death hospital home any other place", "Home");
+                Set("Name of Nominee", S(d.Nominee_Name));
+                Set("Address of Nominee with pin code", S(d.Nominee_Address));
+                Set("Date of Birth_2", D(d.Nominee_DOB));
+                Set("Relation with Member", S(d.Nominee_Relationship));
+                Set("Mobile No", S(d.Nominee_Mobile));
+                Set("Name of the Account Holder", S(d.Nominee_Ac_Name));
+                Set("Bank Name", S(d.Nominee_BankName));
+                Set("Account No", S(d.Nominee_Ac_No));
+                Set("IFSC", S(d.Nominee_IFSC));
+                Set("I", S(d.Nominee_Name));
+                Set("Policy No_2", S(d.Policy_Number));
+                Set("Policyholders Name  Company Address_2", "Vistaar finance services pvt ltd");
+                Set("Loan ID_2", S(d.Loan_A_C_ID));
+                Set("System Generated No as Provided by KLI in Premium Summary to Policyholder", S(d.System_generated_No));
+                Set("Name of Insured Member_2", S(d.Full_Name));
+                Set("of its offices orin any court of law I", S(d.Nominee_Name));
+
+                stamper.FormFlattening = true;
+            }
+            return ms.ToArray();
+        }
+
+        private static byte[] FillDischargeForm(string templatePath, ClaimFormDataDto d)
+        {
+            using var ms = new MemoryStream();
+            using (var reader = new iTextSharp.text.pdf.PdfReader(templatePath))
+            using (var stamper = new iTextSharp.text.pdf.PdfStamper(reader, ms))
+            {
+
+                var f = stamper.AcroFields;
+                void Set(string name, string value)
+                {
+                    f.SetField(name, value);
+                    f.SetFieldProperty(name, "setfflags", iTextSharp.text.pdf.PdfFormField.FF_READ_ONLY, null);
+                }
+
+                Set("Mr  Ms", S(d.Full_Name));
+                Set("member name who was insured under credit policy no", S(d.Policy_Number));
+                Set("nos", S(d.Loan_A_C_ID));
+                Set("with", "Vistaar finance services pvt ltd");
+                Set("I", S(d.Nominee_Name));
+                Set("2 Over and above amount of", "0");
+                Set("This is with reference to the death claim of our above mentioned customer who was covered under the Credit Policy No", S(d.Policy_Number));
+                Set("MrMs", S(d.Full_Name));
+                Set("residing at", S(d.Address));
+                Set("Tel Nos", S(d.Mobile));
+                Set("We hereby certify that the Nominee  beneficiary mentioned above who has submitted the Claim Discharge Form is registered with us as the Nominee", S(d.Loan_A_C_ID));
+                Set("Dated", D(d.Disb_Date));
+                Set("We hereby confirm receipt of", S(d.Claim_amount_DOD));
+
+                stamper.FormFlattening = true;
+            }
+            return ms.ToArray();
         }
 
         public async Task<byte[]?> GetReportExcelAsync()

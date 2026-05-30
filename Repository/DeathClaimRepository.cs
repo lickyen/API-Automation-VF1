@@ -1,7 +1,8 @@
 ﻿using Dapper;
-using ProductivityApi.Models;
-using System.Data;
 using Microsoft.Data.SqlClient;
+using ProductivityApi.Models;
+using ProductivityApi.Models.ProductivityApi.Models;
+using System.Data;
 
 namespace ProductivityApi.Repository
 {
@@ -9,9 +10,9 @@ namespace ProductivityApi.Repository
     {
         private readonly string _conStr;
 
-        public DeathClaimRepository(string conStr)
+        public DeathClaimRepository(IConfiguration configuration)
         {
-            _conStr = conStr;
+            _conStr = configuration.GetConnectionString("DBConn")!;
         }
 
         public async Task<DeathClaimMaster> GetByIdAsync(int id)
@@ -353,6 +354,17 @@ namespace ProductivityApi.Repository
             );
 
             return parameters.Get<int>("@Output");
+        }
+
+        public async Task<ClaimFormDataDto?> GetClaimFormDataAsync(int id)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            return await connection.QueryFirstOrDefaultAsync<ClaimFormDataDto>(
+                "dbo.sp_newDeathClaim_GetClaimFormData",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure
+            );
         }
         public async Task<IEnumerable<dynamic>> GetReportAsync()
         {

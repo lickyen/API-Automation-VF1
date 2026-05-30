@@ -156,6 +156,37 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
+        [HttpGet("getClaimForm/{id}")]
+        public async Task<IActionResult> GetClaimForm(int id)
+        {
+            var (bytes, lan) = await _service.GetClaimFormAsync(id);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No record found for the given Id"));
+
+            return File(
+                bytes,
+                "application/pdf",
+                $"{lan}_KotakClaimForm.pdf"
+            );
+        }
+
+        [HttpGet("getDischargeForm/{id}")]
+        public async Task<IActionResult> GetDischargeForm(int id)
+        {
+            var (bytes, lan) = await _service.GetDischargeFormAsync(id);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No record found for the given Id"));
+
+            return File(
+                bytes,
+                "application/pdf",
+                $"{lan}_DischargeForm.pdf"
+            );
+        }
+
         [HttpGet("report")]
         public async Task<IActionResult> DownloadReport([FromQuery] string month)
         {
