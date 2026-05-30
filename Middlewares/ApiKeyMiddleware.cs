@@ -11,7 +11,8 @@ namespace ProductivityApi.Middlewares
         private static readonly string[] ExcludedPaths = new[]
         {
             "/swagger",
-            "/hangfire"
+            "/hangfire",
+            "/WabaFiles"
         };
 
         public ApiKeyMiddleware(RequestDelegate next, AppSettings appSettings)

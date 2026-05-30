@@ -101,6 +101,7 @@ builder.Services.AddScoped<GoldLoanLeadService>();
 builder.Services.AddScoped<GoldLoanVendorService>();
 builder.Services.AddScoped<SARFAESIService>();
 builder.Services.AddScoped<NewBranchServices>();
+builder.Services.AddScoped<KotakService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -185,6 +186,8 @@ app.UseSerilogRequestLogging(options =>
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
+
+app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
 {

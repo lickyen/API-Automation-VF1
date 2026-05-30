@@ -15,19 +15,11 @@
         public string AccountStatus { get; set; } = string.Empty;
         public string AdditionalStatus { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
-
         public bool KotakMailTrigger { get; set; }
-        public DateTime? KotakMailTriggerDate { get; set; }
-
         public bool ICICIMailTrigger { get; set; }
-        public DateTime? ICICIMailTriggerDate { get; set; }
-
         public bool NivaBupaMailTrigger { get; set; }
-        public DateTime? NivaBupaMailTriggerDate { get; set; }
-
         public bool GoDigitMailTrigger { get; set; }
-        public DateTime? GoDigitMailTriggerDate { get; set; }
-
+        public DateTime? MailTriggerDate { get; set; }
         public DateTime CreatedDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime? UpdatedDate { get; set; }

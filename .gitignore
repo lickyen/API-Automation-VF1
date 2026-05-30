@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 #logs folder
 [Ll]ogs/
+
+# Static files
+wwwroot/

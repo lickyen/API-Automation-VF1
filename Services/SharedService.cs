@@ -119,7 +119,7 @@ namespace ProductivityApi.Services
 
             return (data, "Success");
         }
-        public async Task<(ForeclosureReport Report, string Message)> GetForeclosureReportAsync(string lan)
+        public async Task<(ForeclosureStatement Statement, string Message)> GetForeclosureStatementAsync(string lan)
         {
             var request = new ForeclosureReportRequest
             {
@@ -135,7 +135,40 @@ namespace ProductivityApi.Services
             if (response.ReturnStatus.returnCode != "0000")
                 return (null, response.ReturnStatus.returnText);
 
-            return (response.ForeclosureReport, response.ReturnStatus.returnText);
+            var r = response.ForeclosureReport;
+
+            decimal Pos = r.OutstandingPri + r.PrincipalAmt;
+            decimal Interest = r.InterestAmt + r.InstForTheMonth;
+            decimal Charges = r.ChargesIncGST + r.LatePayInterestAmt;
+            decimal ChargesInFc = Charges + r.ForeClosFees;
+
+            var statement = new ForeclosureStatement
+            {
+                Lan = r.FinReference,
+                CustId = r.CustCIF,
+                CustName = r.CustName,
+                SanctionedAmount = r.FinAssetValue,
+                DisbAmount = r.FinCurrAssetValue,
+                PrincipalOutstanding = r.OutstandingPri,
+                PrincipalDue = r.PrincipalAmt,
+                InterestDue = r.InterestAmt,
+                Bpi = r.InstForTheMonth,
+                FcCharges = r.ForeClosFees,
+                OtherCharges = r.ChargesIncGST,
+                Lpp = r.LatePayCharges,
+                Lpi = r.LatePayInterestAmt,
+                BpiPerDay = r.IntPerDay,
+                Excess = r.TotalRefunds,
+                NetReceivable = r.NetReceivable,
+                Pos = Pos,
+                Interest = Interest,
+                Charges = Charges,
+                TotalChargesIncFc = ChargesInFc,
+                TotalOutstanding = Pos + Interest + Charges,
+                TotalOutstandingIncFC = Pos + Interest + ChargesInFc
+            };
+
+            return (statement, response.ReturnStatus.returnText);
         }
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);

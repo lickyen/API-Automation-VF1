@@ -5,6 +5,7 @@ namespace ProductivityApi.Models
     public class AppSettings
     {
         public string ApiKey { get; set; } = string.Empty;
+        public string BaseUrl { get; set; } = string.Empty;
         public EmailSettings EmailSettings { get; set; } = new EmailSettings();
         public SmsSettings SmsSettings { get; set; } = new SmsSettings();
         public PlfApiSettings PlfApiSettings { get; set; } = new PlfApiSettings();

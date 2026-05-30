@@ -57,15 +57,15 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, msg));
         }
 
-        [HttpGet("getForeclosureReport/{lan}")]
-        public async Task<IActionResult> GetForeclosureReport(string lan)
+        [HttpGet("getForeclosureStatement/{lan}")]
+        public async Task<IActionResult> GetForeclosureStatement(string lan)
         {
-            var (report, msg) = await _service.GetForeclosureReportAsync(lan);
+            var (statement, msg) = await _service.GetForeclosureStatementAsync(lan);
 
-            if (report == null)
+            if (statement == null)
                 return NotFound(new Response(false, null, msg));
 
-            return Ok(new Response(true, report, msg));
+            return Ok(new Response(true, statement, msg));
         }
 
         [HttpGet("getPolicyByLan/{lan}")]

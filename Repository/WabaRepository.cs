@@ -10,10 +10,12 @@ namespace ProductivityApi.Repository
     public class WabaRepository
     {
         private readonly string _conStr;
+        private readonly string _custConStr;
 
         public WabaRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
+            _custConStr = configuration.GetConnectionString("CustDBConn")!;
         }
 
         public async Task<int> SavaWabaLogAsync(WabaModel dto)
@@ -100,6 +102,82 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<int> CreateSOARequestAsync(string lan, DateTime disbDate)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+
+            // Required fields — always passed
+            parameters.Add("@Lan", lan);
+            parameters.Add("@DisbDate", disbDate.Date);
+            parameters.Add("@ReqType", "SOA");
+            parameters.Add("@Source", "Whatsapp Banking");
+            parameters.Add("@NewRequestId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_CreateRequest",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@NewRequestId");
+        }
+
+        public async Task UpdateSOALetterIssuedAsync(int reqId, string letterPath)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@ReqId", reqId);
+            parameters.Add("@LetterPath", letterPath);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_UpdateLetterIssued",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<int> CreateKotakRequestAsync(string lan)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+
+            // Required fields — always passed
+            parameters.Add("@Lan", lan);
+            parameters.Add("@ReqType", "Kotak");
+            parameters.Add("@Source", "Whatsapp Banking");
+            parameters.Add("@NewRequestId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_CreateRequest",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@NewRequestId");
+        }
+
+        public async Task UpdateKotakDocumentIssuedAsync(int reqId, string letterPath)
+        {
+            using var connection = new SqlConnection(_custConStr);
+            await connection.OpenAsync();
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@ReqId", reqId);
+            parameters.Add("@LetterPath", letterPath);
+
+            await connection.ExecuteAsync(
+                "sp_Customer_SOA_UpdateLetterIssued",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
 
     }
 }

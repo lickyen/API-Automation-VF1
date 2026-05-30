@@ -64,11 +64,22 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        //[HttpPost("uploadFile")]
+        //public async Task<IActionResult> UploadFile([FromForm] SARFAESIFileUploadDto dto)
+        //{
+        //    var result = await _service.UploadFileAsync(dto); 
+        //    return Ok(new Response(true, null, "File uploaded successfully"));
+        //}
+
         [HttpPost("uploadFile")]
         public async Task<IActionResult> UploadFile([FromForm] SARFAESIFileUploadDto dto)
         {
-            var result = await _service.UploadFileAsync(dto); 
-            return Ok(new Response(true, null, "File uploaded successfully"));
+            var (success, message) = await _service.UploadFileAsync(dto);
+
+            if (!success)
+                return BadRequest(new Response(false, null, message));
+
+            return Ok(new Response(true, null, message));
         }
 
         [HttpGet("downloadFile")]

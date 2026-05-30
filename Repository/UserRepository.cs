@@ -214,9 +214,10 @@ namespace ProductivityApi.Repository
                 return result;
             }
         }
-        //public List<string> GetModulesByUser(string UserId)
+
+        //public List<ModuleDto> GetModulesByUser(string UserId)
         //{
-        //    List<string> modules = new List<string>();
+        //    List<ModuleDto> modules = new List<ModuleDto>();
 
         //    using (var connection = new SqlConnection(_conStr))
         //    {
@@ -224,22 +225,32 @@ namespace ProductivityApi.Repository
         //        {
         //            command.CommandType = CommandType.StoredProcedure;
         //            command.Parameters.AddWithValue("@UserId", UserId);
+
         //            connection.Open();
+
         //            using (var reader = command.ExecuteReader())
         //            {
         //                if (reader.HasRows)
         //                {
+        //                    int moduleCodeOrdinal = reader.GetOrdinal("ModuleCode");
+        //                    int moduleNameOrdinal = reader.GetOrdinal("ModuleName");
+
         //                    while (reader.Read())
         //                    {
-        //                        string? module = reader.IsDBNull(reader.GetOrdinal("Module")) ? null : reader.GetString(reader.GetOrdinal("Module"));
-        //                        if (module != null)
+        //                        var moduleDto = new ModuleDto
         //                        {
-        //                            modules.Add(module);
-        //                        }
+        //                            ModuleCode = reader.IsDBNull(moduleCodeOrdinal)
+        //                                ? string.Empty
+        //                                : reader.GetString(moduleCodeOrdinal),
 
+        //                            ModuleName = reader.IsDBNull(moduleNameOrdinal)
+        //                                ? string.Empty
+        //                                : reader.GetString(moduleNameOrdinal)
+        //                        };
+
+        //                        modules.Add(moduleDto);
         //                    }
         //                }
-
         //            }
         //        }
         //    }
@@ -266,6 +277,8 @@ namespace ProductivityApi.Repository
                         {
                             int moduleCodeOrdinal = reader.GetOrdinal("ModuleCode");
                             int moduleNameOrdinal = reader.GetOrdinal("ModuleName");
+                            int roleOrdinal = reader.GetOrdinal("Role");
+                            int accessOrdinal = reader.GetOrdinal("Access");
 
                             while (reader.Read())
                             {
@@ -277,7 +290,15 @@ namespace ProductivityApi.Repository
 
                                     ModuleName = reader.IsDBNull(moduleNameOrdinal)
                                         ? string.Empty
-                                        : reader.GetString(moduleNameOrdinal)
+                                        : reader.GetString(moduleNameOrdinal),
+
+                                    Role = reader.IsDBNull(roleOrdinal)
+                                        ? string.Empty
+                                        : reader.GetString(roleOrdinal),
+
+                                    Access = reader.IsDBNull(accessOrdinal)
+                                        ? string.Empty
+                                        : reader.GetString(accessOrdinal)
                                 };
 
                                 modules.Add(moduleDto);
