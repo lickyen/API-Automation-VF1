@@ -1,47 +1,5 @@
-CREATE PROCEDURE [dbo].[SP_GetAllNewBranches]
-AS
-BEGIN
-    SET NOCOUNT ON;
+SELECT * FROM NOC_RoleStatusMap;
+GO
 
-    SELECT
-        Id,
-        Name,
-        State,
-        Zone,
-        Region,
-        Megazone,
-
-        Status,
-
-        AdminStatus,
-        AdminDate,
-
-        HRStatus,
-        HRDate,
-
-        ITStatus,
-        ITDate,
-
-        RCHRCBStatus,
-        RCHRCBDate,
-
-        FinanceStatus,
-        FinanceDate,
-
-        MarketingStatus,
-        MarketingDate,
-
-        OPSStatus,
-        OPSDate,
-
-        CreatedBy,
-        CreatedDate,
-
-        UpdatedBy,
-        UpdatedDate
-
-    FROM NewBranchMaster
-
-    ORDER BY Id DESC
-END
+SELECT * FROM NOC_Transactions;
 GO

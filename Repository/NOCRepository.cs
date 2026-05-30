@@ -326,7 +326,7 @@ namespace ProductivityApi.Repository
                 WHERE Status IN
                 (
                     'Generate NOC',
-                    'File Indented',
+                    'File Requested',
                     'File at NOC',
                     'Ready for dispatch'
                 )

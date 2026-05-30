@@ -466,7 +466,7 @@ namespace ProductivityApi.Services
             //----------------------------------------------------
             var hasEditAccess = await _repository.ValidateRoleStatusPermissionAsync(
                 role,
-                "File Indented",
+                "File Requested",
                 "EDIT"
             );
 
@@ -499,7 +499,7 @@ namespace ProductivityApi.Services
                     new UpdateNocStatusDto
                     {
                         Id = id,
-                        Status = "File Indented",
+                        Status = "File Requested",
                         Remarks = "Oneil Report Downloaded",
                         CreatedBy = updatedBy,
                         Role = role,
