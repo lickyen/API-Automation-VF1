@@ -33,9 +33,9 @@ namespace ProductivityApi.Models
 
         public DateTime? ITDate { get; set; }
 
-        public string? RCHRCBStatus { get; set; }
+        public string? RCHRBHStatus { get; set; }
 
-        public DateTime? RCHRCBDate { get; set; }
+        public DateTime? RCHRBHDate { get; set; }
 
         public string? FinanceStatus { get; set; }
 
