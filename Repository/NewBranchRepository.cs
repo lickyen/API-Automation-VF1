@@ -51,25 +51,17 @@ namespace ProductivityApi.Repository
 
         #region GET ALL BRANCHES
 
-        public List<NewBranchMasterModel> GetAllBranches()
+        public List<NewBranchMasterModel> GetAllBranches(string? role)
         {
-            try
-            {
-                using IDbConnection connection = new SqlConnection(_conStr);
+            using IDbConnection connection = new SqlConnection(_conStr);
 
-                var branches = connection
-                    .Query<NewBranchMasterModel>(
-                        "SP_GetAllNewBranches",
-                        commandType: CommandType.StoredProcedure
-                    )
-                    .ToList();
-
-                return branches;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("DB Error.", ex);
-            }
+            return connection
+                .Query<NewBranchMasterModel>(
+                    "SP_GetAllNewBranches",
+                    new { Role = role },
+                    commandType: CommandType.StoredProcedure
+                )
+                .ToList();
         }
 
         #endregion

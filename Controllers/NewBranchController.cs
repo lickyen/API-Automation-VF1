@@ -46,11 +46,11 @@ namespace ProductivityApi.Controllers
 
         // GET : api/NewBranch/all
         [HttpGet("all")]
-        public IActionResult GetAllBranches()
+        public IActionResult GetAllBranches(string? role)
         {
             try
             {
-                var branches = _services.GetAllBranches();
+                var branches = _services.GetAllBranches(role);
 
                 if (branches == null || !branches.Any())
                 {

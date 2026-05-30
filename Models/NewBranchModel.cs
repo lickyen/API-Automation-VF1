@@ -56,6 +56,7 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
+        public bool HasPendingActionsForRole { get; set; }
     }
 
     public class NewBranchTransactionModel
