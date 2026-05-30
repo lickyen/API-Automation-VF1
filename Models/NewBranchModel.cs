@@ -33,9 +33,9 @@ namespace ProductivityApi.Models
 
         public DateTime? ITDate { get; set; }
 
-        public string? RCHRCBStatus { get; set; }
+        public string? RCHRBHStatus { get; set; }
 
-        public DateTime? RCHRCBDate { get; set; }
+        public DateTime? RCHRBHDate { get; set; }
 
         public string? FinanceStatus { get; set; }
 
@@ -45,9 +45,9 @@ namespace ProductivityApi.Models
 
         public DateTime? MarketingDate { get; set; }
 
-        public string? OPSStatus { get; set; }
+        public string? COPSStatus { get; set; }
 
-        public DateTime? OPSDate { get; set; }
+        public DateTime? COPSDate { get; set; }
 
         public string CreatedBy { get; set; } = string.Empty;
 
@@ -56,6 +56,7 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
 
         public DateTime? UpdatedDate { get; set; }
+        public bool HasPendingActionsForRole { get; set; }
     }
 
     public class NewBranchTransactionModel
