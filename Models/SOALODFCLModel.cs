@@ -419,7 +419,7 @@ namespace ProductivityApi.Models
         public string? Payment_Id { get; set; }
         public string? Order_Id { get; set; }
         public string? Payment_Status { get; set; }
-        public string? Payment_Link_Status { get; set; }
+        public string? Payment_link_Status { get; set; }
         public string? User_Id { get; set; }
         public DateTime? Updated_At { get; set; }
         public string? UpdatedBy { get; set; }
