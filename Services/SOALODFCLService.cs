@@ -372,7 +372,7 @@ namespace ProductivityApi.Services
                 var pl = (await _repository.GetPaylinkdetails(dto.Id)).FirstOrDefault();
                 if (pl is not null)
                 {
-                    if (pl.Payment_Link_Status == "paid")
+                    if (pl.Payment_link_Status == "paid")
                     {
                         if (string.IsNullOrEmpty(pl.Pennant_Response) || pl.Pennant_Response != "success")
                         {
