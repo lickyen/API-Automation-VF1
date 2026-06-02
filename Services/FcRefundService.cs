@@ -18,16 +18,18 @@ namespace ProductivityApi.Services
         private readonly TemplateService _templateService;
         private readonly AppSettings _appSettings;
         private readonly UserService _userService;
+        private readonly SharedService _sharedService;
 
         private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService)
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService )
         {
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
             _appSettings = appSettings;
             _userService = userService;
+            _sharedService = sharedService;
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
@@ -314,11 +316,13 @@ namespace ProductivityApi.Services
 
             foreach (var r in records)
             {
+                var kotak = _sharedService.GetKotakByLanAsync(r.Lan);
+
                 table.Append("<tr>");
                 table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
                 table.Append($"<td style='text-align:center;'>Vistaar Financial Services Pvt. Ltd.</td>");
                 table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
-                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
+                table.Append($"<td style='text-align:center;'>{kotak?.Result?.LoanAcId}</td>");
                 table.Append($"<td style='text-align:center;'>{r.SgNo}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
@@ -386,6 +390,7 @@ namespace ProductivityApi.Services
 
             foreach (var r in records)
             {
+                var kotak = _sharedService.GetKotakByLanAsync(r.Lan);
                 var payout = r.RefundAmount.HasValue ? r.RefundAmount.Value.ToString("0.00") : (r.PayoutLevel ?? string.Empty);
                 var queryRemarks = string.IsNullOrWhiteSpace(r.AdditionalRequest) ? "" : r.AdditionalRequest;
 
@@ -394,7 +399,7 @@ namespace ProductivityApi.Services
                 table.Append($"<td style='text-align:center;'>{queryRemarks}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ClientName ?? "Vistaar Financial Services Pvt. Ltd."}</td>");
                 table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
-                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
+                table.Append($"<td style='text-align:center;'>{kotak?.Result?.LoanAcId}</td>");
                 table.Append($"<td style='text-align:center;'>{r.SgNo}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");

@@ -57,16 +57,44 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, msg));
         }
 
-        [HttpGet("getForeclosureReport/{lan}")]
-        public async Task<IActionResult> GetForeclosureReport(string lan)
+        [HttpGet("getForeclosureStatement/{lan}")]
+        public async Task<IActionResult> GetForeclosureStatement(string lan)
         {
-            var (report, msg) = await _service.GetForeclosureReportAsync(lan);
+            var (statement, msg) = await _service.GetForeclosureStatementAsync(lan);
 
-            if (report == null)
+            if (statement == null)
                 return NotFound(new Response(false, null, msg));
 
-            return Ok(new Response(true, report, msg));
+            return Ok(new Response(true, statement, msg));
         }
 
+        [HttpGet("getPolicyByLan/{lan}")]
+        public async Task<IActionResult> GetPolicyByLan(string lan)
+        {
+            var data = await _service.GetPolicyByLanAsync(lan);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getCollateralsByLan/{lan}")]
+        public async Task<IActionResult> GetCollateralsByLan(string lan)
+        {
+            var (data, message) = await _service.GetCollateralsByLanAsync(lan);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
+            return Ok(new Response(true, data, message));
+        }
+
+        [HttpGet("getApplicantsByLan/{lan}")]
+        public async Task<IActionResult> GetApplicantsByLan(string lan)
+        {
+            var (data, message) = await _service.GetApplicantsByLanAsync(lan);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
+            return Ok(new Response(true, data, message));
+        }
     }
 }

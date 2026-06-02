@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using ProductivityApi.Services;
 using Serilog;
 
 namespace ProductivityApi.Jobs
@@ -14,12 +15,12 @@ namespace ProductivityApi.Jobs
 
         private readonly Serilog.ILogger _logger;
         private readonly PLFRepository _plfRepository;
-        private readonly NOCRepository _nocRepository;
+        private readonly NOCService _nocService;
 
-        public NOCJob(PLFRepository plfRepository, NOCRepository nocRepository)
+        public NOCJob(PLFRepository plfRepository, NOCService NOCService)
         {
             _plfRepository = plfRepository;
-            _nocRepository = nocRepository;
+            _nocService = NOCService;
             _logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.Console()
@@ -109,7 +110,7 @@ namespace ProductivityApi.Jobs
                         Remarks = remarks
                     };
 
-                    var affected = await _nocRepository.InsertClosedLansAsync(new[] { masterDto });
+                    var affected = await _nocService.InsertClosedLansAsync(new[] { masterDto });
                     if (affected > 0)
                         masterInserted++;
 
@@ -128,6 +129,7 @@ namespace ProductivityApi.Jobs
                 _logger.Error(ex, "Failed to insert LANs");
             }
         }
+
         //private async Task InsertLansAsync(CancellationToken ct)
         //{
         //    ct.ThrowIfCancellationRequested();
@@ -194,7 +196,7 @@ namespace ProductivityApi.Jobs
         //                Remarks = remarks
         //            };
 
-        //            var affected = await _nocRepository.InsertClosedLansAsync(new[] { masterDto });
+        //            var affected = await _nocService.InsertClosedLansAsync(new[] { masterDto });
         //            if (affected > 0)
         //                masterInserted++;
 
@@ -216,16 +218,17 @@ namespace ProductivityApi.Jobs
         //            var transactionDto = new NocTransactionInsertDto
         //            {
         //                Lan = lan.LoanAccountNo,
-        //                BranchCode = lan.BranchCode ?? string.Empty,
+        //                BranchCode = lan.BranchCode ?? string.Empty,    
         //                CustId = lan.CustomerId ?? string.Empty,
-        //                CollId = lan.CollateralId,
-        //                LoanStatus = lan.LoanStatus,
+        //                CustName = lan.CustomerName ?? string.Empty,
+        //                CollId = lan.CollateralId ?? string.Empty,
+        //                LoanStatus = lan.LoanStatus ?? string.Empty,
         //                DisbDate = lan.DisbursementDate,
         //                ClosureDate = lan.LoanClosureDate,
         //                NocStatus = lan.NocStatus
         //            };
 
-        //            await _nocRepository.InsertTransactionAsync(transactionDto);
+        //            await _nocService.InsertTransactionAsync(transactionDto);
         //            transInserted++;
 
         //            _logger.Information("LAN {Lan} eligible — inserted into NOC_Transactions.", lan.LoanAccountNo);

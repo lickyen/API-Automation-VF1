@@ -6,6 +6,8 @@
         public Customer customer { get; set; }
         public FinanceSchedule financeSchedule { get; set; }
         public List<Disbursement> disbursement { get; set; }
+        public List<Collaterals> collaterals { get; set; }
+        public List<CoApplicants> coApplicants { get; set; }
         public ReturnStatus returnStatus { get; set; }
     }
 
@@ -211,5 +213,23 @@
 
     }
 
+    public class Collaterals
+    {
+        public string collateralRef { get; set; } = string.Empty;
+        public decimal assignPerc { get; set; }
+        public int version { get; set; }
+        public int seq { get; set; }
+    }
+
+    public class CoApplicants
+    {
+        public string cif { get; set; } = string.Empty;
+        public string shortName { get; set; } = string.Empty;
+        public bool includeRepay { get; set; }
+        public bool authoritySignatory { get; set; }
+        public int sequence { get; set; }
+        public int version { get; set; }
+        public bool includeIncome { get; set; }
+    }
 
 }

@@ -95,9 +95,21 @@ namespace ProductivityApi.Services
                 .OrderByDescending(p => p.priority)
                 .Select(p => p.phoneNumber)
                 .FirstOrDefault();
+
+            data.AlternateMobile = customer.Phones?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.phoneNumber)
+                .Skip(1)
+                .FirstOrDefault();
+
             data.Email = customer.Emails?
                 .OrderByDescending(p => p.custEMailPriority)
                 .Select(p => p.custEMail)
+                .FirstOrDefault();
+
+            data.ResidentialAddress = customer.Addresses?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.GetFullAddress())
                 .FirstOrDefault();
 
             var lanCategory = await _repository.GetLanCategoryAsync(lan, data.Dpd);
@@ -107,7 +119,7 @@ namespace ProductivityApi.Services
 
             return (data, "Success");
         }
-        public async Task<(ForeclosureReport Report, string Message)> GetForeclosureReportAsync(string lan)
+        public async Task<(ForeclosureStatement Statement, string Message)> GetForeclosureStatementAsync(string lan)
         {
             var request = new ForeclosureReportRequest
             {
@@ -123,7 +135,40 @@ namespace ProductivityApi.Services
             if (response.ReturnStatus.returnCode != "0000")
                 return (null, response.ReturnStatus.returnText);
 
-            return (response.ForeclosureReport, response.ReturnStatus.returnText);
+            var r = response.ForeclosureReport;
+
+            decimal Pos = r.OutstandingPri + r.PrincipalAmt;
+            decimal Interest = r.InterestAmt + r.InstForTheMonth;
+            decimal Charges = r.ChargesIncGST + r.LatePayInterestAmt;
+            decimal ChargesInFc = Charges + r.ForeClosFees;
+
+            var statement = new ForeclosureStatement
+            {
+                Lan = r.FinReference,
+                CustId = r.CustCIF,
+                CustName = r.CustName,
+                SanctionedAmount = r.FinAssetValue,
+                DisbAmount = r.FinCurrAssetValue,
+                PrincipalOutstanding = r.OutstandingPri,
+                PrincipalDue = r.PrincipalAmt,
+                InterestDue = r.InterestAmt,
+                Bpi = r.InstForTheMonth,
+                FcCharges = r.ForeClosFees,
+                OtherCharges = r.ChargesIncGST,
+                Lpp = r.LatePayCharges,
+                Lpi = r.LatePayInterestAmt,
+                BpiPerDay = r.IntPerDay,
+                Excess = r.TotalRefunds,
+                NetReceivable = r.NetReceivable,
+                Pos = Pos,
+                Interest = Interest,
+                Charges = Charges,
+                TotalChargesIncFc = ChargesInFc,
+                TotalOutstanding = Pos + Interest + Charges,
+                TotalOutstandingIncFC = Pos + Interest + ChargesInFc
+            };
+
+            return (statement, response.ReturnStatus.returnText);
         }
         public async Task<KotakData?> GetKotakByLanAsync(string lan)
             => await _repository.GetKotakByLanAsync(lan);
@@ -131,9 +176,7 @@ namespace ProductivityApi.Services
         {
             return await _repository.GenerateReferenceNoAsync(prefix);
         }
-
-        public async Task<PaymentLinkResponseDto> PaymentLink(
-        PaymentLinkRequestDto chargeRequest)
+        public async Task<PaymentLinkResponseDto> PaymentLink(PaymentLinkRequestDto chargeRequest)
         {
             var responseObj = new PaymentLinkResponseDto();
 
@@ -190,6 +233,104 @@ namespace ProductivityApi.Services
 
             return responseObj;
         }
-    
+        public async Task<PolicyDetails?> GetPolicyByLanAsync(string lan)
+        {
+            if (string.IsNullOrEmpty(lan))
+                return null;
+
+            return await _repository.GetPolicyByLanAsync(lan);
+        }
+        public async Task<(List<LanCollateralPlf>? Data, string Message)> GetCollateralsByLanAsync(string lan)
+        {
+            var loan = await _plfService.GetFinance(lan);
+            if (loan?.returnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+            if (loan.returnStatus.returnCode != "0000")
+                return (null, loan.returnStatus.returnText);
+
+            if (loan.collaterals == null || loan.collaterals.Count == 0)
+                return (null, "No collaterals found for this LAN");
+
+            var result = new List<LanCollateralPlf>();
+
+            foreach (var col in loan.collaterals)
+            {
+                if (string.IsNullOrWhiteSpace(col.collateralRef))
+                    continue;
+
+                var request = new CollateralApiRequest
+                {
+                    collateralRef = col.collateralRef
+                };
+
+                var collateral = await _plfService.GetCollateralsByRef(request);
+
+                if (collateral?.returnStatus == null || collateral.returnStatus.returnCode != "0000")
+                    continue;
+
+                var mapValues = collateral.extendedFieldRenderList?
+                    .FirstOrDefault()?.mapValues;
+
+                var item = new LanCollateralPlf
+                {
+                    CollateralRef = col.collateralRef,
+                    CollateralAddress = mapValues == null ? null :
+                        $"{mapValues.addresslineonecoll}, {mapValues.addresslinetwocoll}, {mapValues.citycollateral}, {mapValues.statecollateral} - {mapValues.postalcodecollater}"
+                };
+
+                result.Add(item);
+            }
+
+            return (result, "Success");
+        }
+        public async Task<(List<LanApplicantPlf>? Data, string Message)> GetApplicantsByLanAsync(string lan)
+        {
+            var loan = await _plfService.GetFinance(lan);
+            if (loan?.returnStatus == null)
+                return (null, "Failed to retrieve data from PLF");
+            if (loan.returnStatus.returnCode != "0000")
+                return (null, loan.returnStatus.returnText);
+
+            var result = new List<LanApplicantPlf>();
+
+            var applicants = new List<(string? cif, string? name, string type)>
+            {
+                (loan.customer?.cif, loan.customer?.personalInfo?.shortName, "B")
+            };
+
+            if (loan.coApplicants != null)
+                applicants.AddRange(loan.coApplicants.Select(a => (a.cif, a.shortName, "C")));
+
+            foreach (var (cif, name, type) in applicants)
+            {
+                if (string.IsNullOrWhiteSpace(cif))
+                    continue;
+
+                var customer = await _plfService.GetCustomerDetails(cif);
+                if (customer?.ReturnStatus == null || customer.ReturnStatus.returnCode != "0000")
+                    continue;
+
+                result.Add(new LanApplicantPlf
+                {
+                    CustId = cif,
+                    CustName = name,
+                    Mobile = customer.Phones?
+                                        .OrderByDescending(p => p.priority)
+                                        .Select(p => p.phoneNumber)
+                                        .FirstOrDefault(),
+                    Email = customer.Emails?
+                                        .OrderByDescending(p => p.custEMailPriority)
+                                        .Select(p => p.custEMail)
+                                        .FirstOrDefault(),
+                    Address = customer.Addresses?
+                                        .OrderByDescending(p => p.priority)
+                                        .Select(p => p.GetFullAddress())
+                                        .FirstOrDefault(),
+                    ApplicantType = type
+                });
+            }
+
+            return (result, "Success");
+        }
     }
 }

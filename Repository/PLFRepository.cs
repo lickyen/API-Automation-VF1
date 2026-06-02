@@ -66,7 +66,7 @@ namespace ProductivityApi.Repository
                 var sql =
                     $@"{NeolotexDisbColumns}
                 WHERE loan_status <> 'Active Loan'
-                    AND loanclosure_date >= CURRENT_DATE - 1
+                    AND loanclosure_date >= CURRENT_DATE - 2
                     AND loanclosure_date <  CURRENT_DATE;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);

@@ -98,13 +98,33 @@ namespace ProductivityApi.Models
         public string Text { get; set; }
     }
 
-    //public class FailureResponseDto
-    //{
-    //}
-
     public class ContextDto
     {
         public string From { get; set; }
         public string Id { get; set; }
+    }
+    public class WabaSOAResponse
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public string FinReference { get; set; } = string.Empty;
+    }
+
+    public class WabaGenerateSOADto
+    {
+        public string LAN { get; set; } = string.Empty;
+    }
+
+    public class WabaKotakResponse
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public string LoanAccountNo { get; set; } = string.Empty;
+        public string PolicyNumber { get; set; } = string.Empty;
+    }
+
+    public class WabaGenerateKotakDto
+    {
+        public string LAN { get; set; } = string.Empty;
     }
 }

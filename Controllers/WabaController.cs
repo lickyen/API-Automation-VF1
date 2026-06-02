@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
@@ -26,6 +27,34 @@ namespace ProductivityApi.Controllers
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
+        }
+
+        [HttpPost("GenerateSOA")]
+        public async Task<IActionResult> GenerateSOA([FromBody] WabaGenerateSOADto dto)
+        {
+            try
+            {
+                var result = await _service.GetSOAAsync(dto.LAN);
+                return Ok(new Response(true, result, "SOA generated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+        }
+
+        [HttpPost("GenerateKotakDoc")]
+        public async Task<IActionResult> GenerateKotakDocument([FromBody] WabaGenerateKotakDto dto)
+        {
+            try
+            {
+                var result = await _service.GetKotakDocumentAsync(dto.LAN);
+                return Ok(new Response(true, result, "Kotak document generated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
         }
     }
 }

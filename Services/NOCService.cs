@@ -11,6 +11,7 @@ namespace ProductivityApi.Services
     {
         private readonly NOCRepository _repository;
         private readonly PLFRepository _plfRepository;
+        private readonly BranchServices _branchService;
 
         private readonly EmailService _emailService;
         private readonly SmsService _smsService;

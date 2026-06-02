@@ -69,6 +69,16 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+        public async Task<PolicyDetails?> GetPolicyByLanAsync(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<PolicyDetails>(
+                "sp_getPolicy_ByLan",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure
+            );
+        }
 
 
     }
