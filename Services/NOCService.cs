@@ -324,18 +324,6 @@ namespace ProductivityApi.Services
                     return (null, "", "Transaction not found.");
 
                 //----------------------------------------------------
-                // 1. RBAC CHECK BEFORE ANY ACTION
-                //----------------------------------------------------
-                var hasEditAccess = await _repository.ValidateRoleStatusPermissionAsync(
-                    role,
-                    "Document Collected",
-                    "EDIT"
-                );
-
-                if (!hasEditAccess)
-                    return (null, "", "You are not authorized to generate NOC.");
-
-                //----------------------------------------------------
                 // 2. File generation
                 //----------------------------------------------------
                 string folderPath = Path.Combine(AppContext.BaseDirectory, "GeneratedFiles", "NOC");
@@ -461,20 +449,6 @@ namespace ProductivityApi.Services
             string Message
         )> GenerateOneilReportAsync(List<int> ids, string updatedBy, string role)
         {
-            //----------------------------------------------------
-            // VALIDATE PERMISSION FIRST
-            //----------------------------------------------------
-            var hasEditAccess = await _repository.ValidateRoleStatusPermissionAsync(
-                role,
-                "File Requested",
-                "EDIT"
-            );
-
-            if (!hasEditAccess)
-            {
-                return (false, null, "You are not authorized to download Oneil Report.");
-            }
-
             //----------------------------------------------------
             // FETCH DATA
             //----------------------------------------------------

@@ -182,7 +182,7 @@ namespace ProductivityApi.Repository
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Status", dto.Status);
-            parameters.Add("@Role", dto.Role); // IMPORTANT
+            parameters.Add("@Role", dto.Role);
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@CreatedBy", dto.CreatedBy);
 
@@ -262,37 +262,6 @@ namespace ProductivityApi.Repository
             );
 
             return rows > 0;
-        }
-
-        public async Task<bool> ValidateRoleStatusPermissionAsync(
-            string role,
-            string status,
-            string permission
-        )
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            var sql =
-                @"
-                SELECT COUNT(1)
-                FROM NOC_RoleStatusMap
-                WHERE Role = @Role
-                AND Status = @Status
-                AND Permissions = @Permission
-            ";
-
-            var count = await conn.ExecuteScalarAsync<int>(
-                sql,
-                new
-                {
-                    Role = role,
-                    Status = status,
-                    Permission = permission,
-                }
-            );
-
-            return count > 0;
         }
 
         public async Task<BranchEmailMaster?> GetBranchEmailsAsync(string branchCode)
@@ -396,10 +365,10 @@ namespace ProductivityApi.Repository
 
             string sql =
                 @"
-                SELECT DISTINCT Status
+                SELECT Status
                 FROM NOC_RoleStatusMap
                 WHERE Role = @Role
-                ORDER BY Status
+                ORDER BY Id
             ";
 
             var result = await conn.QueryAsync<string>(sql, new { Role = role });

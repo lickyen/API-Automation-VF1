@@ -1,5 +1,12 @@
+SELECT * FROM NOC_Transactions;
+GO
+
 SELECT * FROM NOC_RoleStatusMap;
 GO
 
-SELECT * FROM NOC_Transactions;
+UPDATE NOC_Transactions
+SET Status = 'File at NOC';
 GO
+
+-- Next: File not Received
+--       Or property owner is selected 
