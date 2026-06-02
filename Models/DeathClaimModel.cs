@@ -153,35 +153,6 @@
         public string CreatedBy { get; set; } = null!;
     }
 
-    public class UploadDocsRequestDto
-    {
-        public int Id { get; set; }
-
-        public string? NomineeAcNo { get; set; }
-        public string? NomineeAcName { get; set; }
-        public string? NomineeIfsc { get; set; }
-        public string? NomineeBankName { get; set; }
-
-        public string? BmVisitFormPath { get; set; }
-        public string? KycPath { get; set; }
-        public string? PanchayatLetterPath { get; set; }
-        public string? DeathSummaryPath { get; set; }
-        public string? MedicalQuestPath { get; set; }
-        public string? FirPath { get; set; }
-        public string? PostMortemPath { get; set; }
-        public string? NomineeBankProofPath { get; set; }
-        public string? DoghPath { get; set; }
-        public string? DeathCertificatePath { get; set; }
-        public string? NomineeDeathCertificatePath { get; set; }
-        public string? NewNomineeKycPath { get; set; }
-        public string? NewNomineeBankProofPath { get; set; }
-        public string? FamilyTreeDeclarationPath { get; set; }
-        public string? AffidavitCumIndemnityPath { get; set; }
-        public string? NocFromLegalHeirsPath { get; set; }
-
-        public string UpdatedBy { get; set; } = null!;
-    }
-
     public class SubmitBranch2RequestDto
     {
         public int Id { get; set; }
@@ -322,6 +293,42 @@
             public string? Nominee_Ac_No { get; set; }
             public string? Nominee_IFSC { get; set; }
             public string? Nominee_BankName { get; set; }
+        }
+
+        public class UploadDocRequestDto
+        {
+            public int ReqId { get; set; }
+            public string FileType { get; set; } = null!;  // "Kyc", "Fir", "PostMortem", etc.
+            public string CreatedBy { get; set; } = null!;
+            public IFormFile File { get; set; } = null!;
+        }
+
+        public class SubmitDocsRequestDto
+        {
+            public int Id { get; set; }
+            public string? NomineeAcNo { get; set; }
+            public string? NomineeAcName { get; set; }
+            public string? NomineeIfsc { get; set; }
+            public string? NomineeBankName { get; set; }
+
+            public string? BmVisitFormPath { get; set; }
+            public string? KycPath { get; set; }
+            public string? PanchayatLetterPath { get; set; }
+            public string? DeathSummaryPath { get; set; }
+            public string? MedicalQuestPath { get; set; }
+            public string? FirPath { get; set; }
+            public string? PostMortemPath { get; set; }
+            public string? NomineeBankProofPath { get; set; }
+            public string? DoghPath { get; set; }
+            public string? DeathCertificatePath { get; set; }
+            public string? NomineeDeathCertificatePath { get; set; }
+            public string? NewNomineeKycPath { get; set; }
+            public string? NewNomineeBankProofPath { get; set; }
+            public string? FamilyTreeDeclarationPath { get; set; }
+            public string? AffidavitCumIndemnityPath { get; set; }
+            public string? NocFromLegalHeirsPath { get; set; }
+
+            public string UpdatedBy { get; set; } = null!;
         }
     }
 }

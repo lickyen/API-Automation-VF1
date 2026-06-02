@@ -8,10 +8,12 @@ namespace ProductivityApi.Services
     public class DeathClaimService
     {
         private readonly DeathClaimRepository _repository;
+        private readonly string _basePath;
 
-        public DeathClaimService(DeathClaimRepository repository)
+        public DeathClaimService(DeathClaimRepository repository, AppSettings appSettings)
         {
             _repository = repository;
+            _basePath = appSettings.FilePaths.DeathClaimFilePath;
         }
 
         public async Task<DeathClaimResponseDto?> GetByIdAsync(int id)
@@ -40,10 +42,30 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<int> UploadDocsAsync(UploadDocsRequestDto dto)
+        public async Task<(bool Success, string? FilePath, string? Error)> UploadDocAsync(UploadDocRequestDto dto)
+        {
+            if (dto.File == null || dto.File.Length == 0)
+                return (false, null, "File is empty");
+
+            var record = await _repository.GetByIdAsync(dto.ReqId);
+
+            if (record == null)
+                return (false, null, "Record not found");
+
+            var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
+            var fileName = $"{record.Lan}_{dto.FileType}{ext}";
+            var fullPath = Path.Combine(_basePath, fileName);
+
+            Directory.CreateDirectory(_basePath);
+            await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await dto.File.CopyToAsync(stream);
+
+            return (true, fileName, null);
+        }
+        public async Task<int> SubmitDocsAsync(SubmitDocsRequestDto dto)
         {
             string status = "BR_1";
-            var result = await _repository.UploadDocsAsync(dto, status);
+            var result = await _repository.SubmitDocsAsync(dto, status);
 
             if (result > 0)
             {
@@ -57,7 +79,6 @@ namespace ProductivityApi.Services
 
             return result;
         }
-
         public async Task<int> SubmitBranch2Async(SubmitBranch2RequestDto dto)
         {
             string status = "BR_2";

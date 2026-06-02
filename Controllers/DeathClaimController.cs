@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
+using ProductivityApi.Models.ProductivityApi.Models;
 using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
@@ -37,13 +38,22 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPut("submitDocs")]
-        public async Task<IActionResult> UploadDocs([FromBody] UploadDocsRequestDto dto)
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadDoc([FromForm] UploadDocRequestDto dto)
         {
-            var result = await _service.UploadDocsAsync(dto);
+            var result = await _service.UploadDocAsync(dto);
+            return result.Success
+                ? Ok(new Response(true, result.FilePath, "File uploaded successfully"))
+                : BadRequest(new Response(false, null, result.Error));
+        }
+
+        [HttpPut("submitDocs")]
+        public async Task<IActionResult> SubmitDocs([FromBody] SubmitDocsRequestDto dto)
+        {
+            var result = await _service.SubmitDocsAsync(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Documents uploaded successfully")),
+                > 0 => Ok(new Response(true, null, "Documents submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };

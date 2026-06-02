@@ -101,7 +101,7 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> UploadDocsAsync(UploadDocsRequestDto dto, string status)
+        public async Task<int> SubmitDocsAsync(SubmitDocsRequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
