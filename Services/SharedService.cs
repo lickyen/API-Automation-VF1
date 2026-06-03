@@ -13,14 +13,16 @@ namespace ProductivityApi.Services
     {
         private readonly SharedRepository _repository;
         private readonly PLFService _plfService;
+        private readonly PLFRepository _plfRepository;
         private readonly BranchServices _branchService;
         private readonly AppSettings _appSettings;
 
 
-        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService, AppSettings appSettings)
+        public SharedService(SharedRepository repository, PLFService plfService, PLFRepository plfRepository, BranchServices branchService, AppSettings appSettings)
         {
             _repository = repository;
             _plfService = plfService;
+            _plfRepository = plfRepository;
             _branchService = branchService;
             _appSettings = appSettings;
         }
@@ -70,8 +72,17 @@ namespace ProductivityApi.Services
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
-            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+            var (statement, msg) = await GetForeclosureStatementAsync(lan);
+
+            if (msg != "Success")
+                return (null, msg);
+
+            data.TotalOutstanding = statement.TotalOutstandingExclFc;
+            data.PrincipalOutstanding = statement.Pos;
+
+           // data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
+           // data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
             if (!string.IsNullOrEmpty(data.BranchCode))
@@ -139,8 +150,9 @@ namespace ProductivityApi.Services
 
             decimal Pos = r.OutstandingPri + r.PrincipalAmt;
             decimal Interest = r.InterestAmt + r.InstForTheMonth;
-            decimal Charges = r.ChargesIncGST + r.LatePayInterestAmt;
-            decimal ChargesInFc = Charges + r.ForeClosFees;
+            decimal Charges = r.ChargesIncGST + r.LatePayInterestAmt + r.ForeClosFees;
+            decimal ChargesExclFc = Charges - r.ForeClosFees;
+            decimal InterestExclBpi = Interest - r.InstForTheMonth;
 
             var statement = new ForeclosureStatement
             {
@@ -163,9 +175,8 @@ namespace ProductivityApi.Services
                 Pos = Pos,
                 Interest = Interest,
                 Charges = Charges,
-                TotalChargesIncFc = ChargesInFc,
                 TotalOutstanding = Pos + Interest + Charges,
-                TotalOutstandingIncFC = Pos + Interest + ChargesInFc
+                TotalOutstandingExclFc = Pos + InterestExclBpi + ChargesExclFc  
             };
 
             return (statement, response.ReturnStatus.returnText);
@@ -331,6 +342,14 @@ namespace ProductivityApi.Services
             }
 
             return (result, "Success");
+        }
+
+        public async Task<PlfBankDetails?> GetBankDetailsByIfscAsync(string ifsc)
+        {
+            if (string.IsNullOrEmpty(ifsc))
+                return null;
+
+            return await _plfRepository.GetBankDetailsByIfscAsync(ifsc);
         }
     }
 }
