@@ -42,25 +42,11 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<(bool Success, string? FilePath, string? Error)> UploadDocAsync(UploadDocRequestDto dto)
+        public async Task<int> UpdateIntimationAsync(UpdateIntimationRequestDto dto)
         {
-            if (dto.File == null || dto.File.Length == 0)
-                return (false, null, "File is empty");
+            var result = await _repository.UpdateIntimationAsync(dto);
 
-            var record = await _repository.GetByIdAsync(dto.ReqId);
-
-            if (record == null)
-                return (false, null, "Record not found");
-
-            var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
-            var fileName = $"{record.Lan}_{dto.FileType}{ext}";
-            var fullPath = Path.Combine(_basePath, fileName);
-
-            Directory.CreateDirectory(_basePath);
-            await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await dto.File.CopyToAsync(stream);
-
-            return (true, fileName, null);
+            return result;
         }
         public async Task<int> SubmitDocsAsync(SubmitDocsRequestDto dto)
         {
@@ -138,14 +124,22 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitCops1Async(SubmitCops1RequestDto dto)
         {
-            var result = await _repository.SubmitCops1Async(dto);
+            string status = "";
+            if (dto.Action == "Approved")
+                status = "CO_A_1";
+            else if (dto.Action == "Rejected")
+                status = "CO_R_1";
+            else if (dto.Action == "SentBack")
+                status = "CO_SB_1";
+
+            var result = await _repository.SubmitCops1Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -156,14 +150,26 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitCops2Async(SubmitCops2RequestDto dto)
         {
-            var result = await _repository.SubmitCops2Async(dto);
+            string status = "";
 
-            if (result > 0 && !string.IsNullOrWhiteSpace(dto.Status))
+            if (dto.Action == "Save")
+                status = "";
+            else if (dto.Action == "Submit")
+                if (dto.AdditionalReq == "Y")
+                    status = "CO_A_2";
+                else if (dto.AdditionalReq == "N")
+                    status = "CO_A_3";
+                else if (dto.Action == "SentBack")
+                    status = "CO_SB_2";
+
+            var result = await _repository.SubmitCops2Async(dto, status);
+
+            if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -172,21 +178,23 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        //public async Task<int> SaveCops2Async(SaveCops2RequestDto dto)
-        //{
-        //    return await _repository.SaveCops2Async(dto);
-        //}
-
         public async Task<int> SubmitCops3Async(SubmitCops3RequestDto dto)
         {
-            var result = await _repository.SubmitCops3Async(dto);
+            string status = "";
+
+            if (dto.Action == "Approved")
+                status = "CO_A_3";
+            else if (dto.Action == "SentBack")
+                status = "CO_SB_3";
+            
+            var result = await _repository.SubmitCops3Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -197,14 +205,23 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitCops4Async(SubmitCops4RequestDto dto)
         {
-            var result = await _repository.SubmitCops4Async(dto);
+            string status = "";
+
+            if (dto.ClaimStatus == "Rejected")
+                status = "CO_R_4";
+            else if (dto.ClaimStatus == "Received" && dto.Deficit <= 0)
+                status = "CO_A_5";
+            else if (dto.ClaimStatus == "Received" && dto.Deficit > 0)
+                status = "CO_A_4";
+
+            var result = await _repository.SubmitCops4Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -215,14 +232,21 @@ namespace ProductivityApi.Services
 
         public async Task<int> SubmitCops5Async(SubmitCops5RequestDto dto)
         {
-            var result = await _repository.SubmitCops5Async(dto);
+            string status = "";
+
+            if (dto.Action == "Approved")
+                status = "CO_A_5";
+            else if (dto.Action == "SentBack")
+                status = "CO_SB_5";
+
+            var result = await _repository.SubmitCops5Async(dto, status);
 
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
                 {
                     ReqId = dto.Id,
-                    Status = dto.Status,
+                    Status = status,
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
@@ -344,10 +368,49 @@ namespace ProductivityApi.Services
             return ms.ToArray();
         }
 
+        public async Task<(bool Success, string? FilePath, string? Error)> UploadFileAsync(UploadFileRequestDto dto)
+        {
+            if (dto.File == null || dto.File.Length == 0)
+                return (false, null, "File is empty");
+
+            var record = await _repository.GetByIdAsync(dto.ReqId);
+
+            if (record == null)
+                return (false, null, "Record not found");
+
+            var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
+            var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}{ext}";
+            var fullPath = Path.Combine(_basePath, fileName);
+
+            Directory.CreateDirectory(_basePath);
+            await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await dto.File.CopyToAsync(stream);
+
+            // update filename in DB
+            var updateResult = await _repository.UpdateFileNameAsync(dto.ReqId, dto.FileType, fileName, dto.CreatedBy);
+            if (updateResult <= 0)
+                return (false, null, "Failed to update file name in database");
+
+            return (true, fileName, null);
+        }
+
+
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
+        {
+            return await FileHelper.ReadFileAsync(
+                _basePath,
+                fileName
+            );
+        }
+
         public async Task<byte[]?> GetReportExcelAsync()
         {
             var data = await _repository.GetReportAsync();
             return ExcelHelper.GenerateExcel(data);
+        }
+        public async Task<IEnumerable<DeathClaimMaster>> GetByUserAsync(GetByUserRequestDto dto)
+        {
+            return await _repository.GetByUserAsync(dto);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace ProductivityApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProductivityApi.Models
 {
     // -------------------------------------------------------------------------
     // Master record — maps to DeathClaim_Master
@@ -153,24 +155,53 @@
         public string CreatedBy { get; set; } = null!;
     }
 
+    // DTO — same as IntimationRequestDto but with Id and UpdatedBy instead of CreatedBy
+    public class UpdateIntimationRequestDto
+    {
+        public int Id { get; set; }
+        public string? Lan { get; set; }
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? State { get; set; }
+        public string? FullName { get; set; }
+        public string? Mobile { get; set; }
+        public string? Address { get; set; }
+        public string? NomineeName { get; set; }
+        public DateTime? NomineeDob { get; set; }
+        public string? NomineeMobile { get; set; }
+        public string? NomineeRelationship { get; set; }
+        public string? NomineeDeath { get; set; }
+        public DateTime? DisbDate { get; set; }
+        public DateTime? DeathDate { get; set; }
+        public string? DeathCause { get; set; }
+        public string? DeathPlace { get; set; }
+        public int? Dpd { get; set; }
+        public decimal? TotalOutstanding { get; set; }
+        public decimal? LoanAmnt { get; set; }
+        public string? PolicyNo { get; set; }
+        public string? MemberId { get; set; }
+        public string? SystemGeneratedNo { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
     public class SubmitBranch2RequestDto
     {
         public int Id { get; set; }
         public string? Remarks { get; set; }
-        public string? ClaimFormatPath { get; set; }
-        public string? KotakClaimFormPath { get; set; }
-        public string? DischargeFormPath { get; set; }
+        //public string? ClaimFormatPath { get; set; }
+        //public string? KotakClaimFormPath { get; set; }
+        //public string? DischargeFormPath { get; set; }
         public string UpdatedBy { get; set; } = null!;
     }
 
     public class SubmitBranch3RequestDto
     {
         public int Id { get; set; }
-        public string? AdditionalDoc1 { get; set; }
-        public string? AdditionalDoc2 { get; set; }
-        public string? AdditionalDoc3 { get; set; }
-        public string? AdditionalDoc4 { get; set; }
-        public string? AdditionalDoc5 { get; set; }
+        //public string? AdditionalDoc1 { get; set; }
+        //public string? AdditionalDoc2 { get; set; }
+        //public string? AdditionalDoc3 { get; set; }
+        //public string? AdditionalDoc4 { get; set; }
+        //public string? AdditionalDoc5 { get; set; }
         public string UpdatedBy { get; set; } = null!;
     }
 
@@ -181,7 +212,7 @@
         public decimal? Deficit { get; set; }
         public string? DeficitCollectedRemarks { get; set; }
         public decimal? DeficitCollectedAmount { get; set; }
-        public string? DeficitReceiptPath { get; set; }
+        //public string? DeficitReceiptPath { get; set; }
         public string? Remarks { get; set; }
         public string UpdatedBy { get; set; } = null!;
     }
@@ -189,7 +220,7 @@
     public class SubmitCops1RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
+        public string Action { get; set; } = null!;
         public string? Remarks { get; set; }
         public decimal? ClaimAmountDod { get; set; }
         public string UpdatedBy { get; set; } = null!;
@@ -203,24 +234,14 @@
         public string? ClaimNo { get; set; }
         public string? AdditionalReq { get; set; }
         public string? Remarks { get; set; }
-        public string Status { get; set; } = null!;
+        public string Action { get; set; } = null!;
         public string UpdatedBy { get; set; } = null!;
     }
-
-    //public class SaveCops2RequestDto
-    //{
-    //    public int Id { get; set; }
-    //    public string? PortalUploadStatus { get; set; }
-    //    public DateTime? ClaimSubmittedDt { get; set; }
-    //    public string? ClaimNo { get; set; }
-    //    public string? Remarks { get; set; }
-    //    public string UpdatedBy { get; set; } = null!;
-    //}
 
     public class SubmitCops3RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
+        public string Action { get; set; } = null!;
         public string? Remarks { get; set; }
         public string UpdatedBy { get; set; } = null!;
     }
@@ -236,14 +257,13 @@
         public int? Dpd { get; set; }
         public decimal? TotalOutstanding { get; set; }
         public decimal? Deficit { get; set; }
-        public string Status { get; set; } = null!;
         public string UpdatedBy { get; set; } = null!;
     }
 
     public class SubmitCops5RequestDto
     {
         public int Id { get; set; }
-        public string Status { get; set; } = null!;
+        public string Action { get; set; } = null!;
         public string? Remarks { get; set; }
         public string UpdatedBy { get; set; } = null!;
     }
@@ -295,7 +315,7 @@
             public string? Nominee_BankName { get; set; }
         }
 
-        public class UploadDocRequestDto
+        public class UploadFileRequestDto
         {
             public int ReqId { get; set; }
             public string FileType { get; set; } = null!;  // "Kyc", "Fir", "PostMortem", etc.
@@ -311,24 +331,33 @@
             public string? NomineeIfsc { get; set; }
             public string? NomineeBankName { get; set; }
 
-            public string? BmVisitFormPath { get; set; }
-            public string? KycPath { get; set; }
-            public string? PanchayatLetterPath { get; set; }
-            public string? DeathSummaryPath { get; set; }
-            public string? MedicalQuestPath { get; set; }
-            public string? FirPath { get; set; }
-            public string? PostMortemPath { get; set; }
-            public string? NomineeBankProofPath { get; set; }
-            public string? DoghPath { get; set; }
-            public string? DeathCertificatePath { get; set; }
-            public string? NomineeDeathCertificatePath { get; set; }
-            public string? NewNomineeKycPath { get; set; }
-            public string? NewNomineeBankProofPath { get; set; }
-            public string? FamilyTreeDeclarationPath { get; set; }
-            public string? AffidavitCumIndemnityPath { get; set; }
-            public string? NocFromLegalHeirsPath { get; set; }
+            //public string? BmVisitFormPath { get; set; }
+            //public string? KycPath { get; set; }
+            //public string? PanchayatLetterPath { get; set; }
+            //public string? DeathSummaryPath { get; set; }
+            //public string? MedicalQuestPath { get; set; }
+            //public string? FirPath { get; set; }
+            //public string? PostMortemPath { get; set; }
+            //public string? NomineeBankProofPath { get; set; }
+            //public string? DoghPath { get; set; }
+            //public string? DeathCertificatePath { get; set; }
+            //public string? NomineeDeathCertificatePath { get; set; }
+            //public string? NewNomineeKycPath { get; set; }
+            //public string? NewNomineeBankProofPath { get; set; }
+            //public string? FamilyTreeDeclarationPath { get; set; }
+            //public string? AffidavitCumIndemnityPath { get; set; }
+            //public string? NocFromLegalHeirsPath { get; set; }
 
             public string UpdatedBy { get; set; } = null!;
+        }
+
+        public class GetByUserRequestDto
+        {
+            [Required]
+            public string UserId { get; set; } = string.Empty;
+            [Required]
+            public string Role { get; set; } = string.Empty;
+            public string? Status { get; set; }
         }
     }
 }
