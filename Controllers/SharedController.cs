@@ -96,5 +96,14 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, message));
             return Ok(new Response(true, data, message));
         }
+
+        [HttpGet("getBankDetailsByIfsc/{ifsc}")]
+        public async Task<IActionResult> GetBankDetailsByIfsc(string ifsc)
+        {
+            var data = await _service.GetBankDetailsByIfscAsync(ifsc);
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }

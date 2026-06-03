@@ -152,6 +152,33 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
+        public async Task<PlfBankDetails?> GetBankDetailsByIfscAsync(string ifsc)
+        {
+            try
+            {
+                var sql = @"
+            SELECT
+                bb.bankcode    AS BankCode,
+                bd.bankname    AS BankName,
+                bb.branchcode  AS BankBranchCode,
+                bb.branchdesc  AS BranchName,
+                bb.micr        AS MicrCode,
+                bb.ifsc        AS IfscCode
+            FROM plf.bankbranches bb
+            JOIN plf.bmtbankdetail bd ON bb.bankcode = bd.bankcode
+            WHERE bb.active = 1
+              AND bb.ifsc = @ifsc;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<PlfBankDetails>(sql, new { ifsc });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching bank details for IFSC: {Ifsc}", ifsc);
+                return null;
+            }
+        }
     }
 }
 
