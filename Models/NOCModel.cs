@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProductivityApi.Models
 {
@@ -45,6 +45,12 @@ namespace ProductivityApi.Models
         public string? PropertyOwnerCustId { get; set; }
         public string? PropertyOwnerName { get; set; }
         public string? PropertyOwnerMobile { get; set; }
+        public int? SignUserId { get; set; }
+
+        public string? LeegalityDocumentId { get; set; }
+        public string? LeegalitySignUrl { get; set; }
+        public string? LeegalityStatus { get; set; }
+        public DateTime? LeegalityCompletedDt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -213,5 +219,41 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; } = string.Empty;
 
         public string Role { get; set; } = string.Empty;
+    }
+
+    public class SignUser
+    {
+        public int Id { get; set; }
+
+        public string EmpId { get; set; } = string.Empty;
+
+        public string Name { get; set; } = string.Empty;
+
+        public string SignPath { get; set; } = string.Empty;
+    }
+
+    public class LeegalityDocument
+    {
+        public int TransactionId { get; set; }
+
+        public string? DocumentId { get; set; }
+
+        public string? SignUrl { get; set; }
+
+        public string? Status { get; set; }
+
+        public DateTime? CompletedDt { get; set; }
+    }
+
+    public class CreateLeegalityRequestDto
+    {
+        public int TransactionId { get; set; }
+
+        public string CreatedBy { get; set; } = string.Empty;
+    }
+
+    public class RefreshLeegalityStatusDto
+    {
+        public int TransactionId { get; set; }
     }
 }

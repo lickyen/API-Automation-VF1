@@ -401,5 +401,102 @@ namespace ProductivityApi.Repository
             var result = await conn.QueryAsync(query, new { Ids = ids });
             return result;
         }
+
+        public async Task<List<SignUser>> GetSignUsersAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT
+            Id,
+            EmpId,
+            Name,
+            SignPath
+        FROM NOC_SignMaster
+        ORDER BY Name";
+
+            var result = await conn.QueryAsync<SignUser>(sql);
+
+            return result.ToList();
+        }
+
+        public async Task SaveLeegalityDocumentAsync(
+            int transactionId,
+            string documentId,
+            string signUrl
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            LeegalityDocumentId=@DocumentId,
+            LeegalitySignUrl=@SignUrl,
+            LeegalityStatus='PENDING',
+            Updated_Dt=GETDATE()
+        WHERE Id=@TransactionId";
+
+            await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    DocumentId = documentId,
+                    SignUrl = signUrl,
+                }
+            );
+        }
+
+        public async Task<LeegalityDocument?> GetLeegalityDocumentAsync(int transactionId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT
+            Id AS TransactionId,
+            LeegalityDocumentId AS DocumentId,
+            LeegalitySignUrl AS SignUrl,
+            LeegalityStatus AS Status,
+            LeegalityCompletedDt AS CompletedDt
+        FROM NOC_Transactions
+        WHERE Id=@TransactionId";
+
+            return await conn.QueryFirstOrDefaultAsync<LeegalityDocument>(
+                sql,
+                new { TransactionId = transactionId }
+            );
+        }
+
+        public async Task UpdateLeegalityStatusAsync(
+            int transactionId,
+            string status,
+            DateTime? completedDt
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            LeegalityStatus=@Status,
+            LeegalityCompletedDt=@CompletedDt,
+            Updated_Dt=GETDATE()
+        WHERE Id=@TransactionId";
+
+            await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    Status = status,
+                    CompletedDt = completedDt,
+                }
+            );
+        }
     }
 }

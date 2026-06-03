@@ -124,6 +124,8 @@ builder.Services.AddScoped<SOALODFCLRepository>();
 builder.Services.AddScoped<ClosureRepository>();
 builder.Services.AddScoped<GoldLoanLeadRepository>();
 builder.Services.AddScoped<GoldLoanVendorRepository>();
+builder.Services.AddScoped<SARFAESIRepository>();
+builder.Services.AddScoped<DeathClaimRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();

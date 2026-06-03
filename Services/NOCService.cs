@@ -1,4 +1,5 @@
-﻿using iTextSharp.text;
+﻿using System.Text.Json;
+using iTextSharp.text;
 using iTextSharp.text.pdf;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
@@ -17,6 +18,7 @@ namespace ProductivityApi.Services
         private readonly SmsService _smsService;
         private readonly IConfiguration _configuration;
         private readonly TemplateService _templateService;
+        private readonly HttpClient _httpClient;
 
         public NOCService(
             NOCRepository repository,
@@ -24,7 +26,8 @@ namespace ProductivityApi.Services
             EmailService emailService,
             SmsService smsService,
             IConfiguration configuration,
-            TemplateService templateService
+            TemplateService templateService,
+            HttpClient httpClient
         )
         {
             _repository = repository;
@@ -33,6 +36,7 @@ namespace ProductivityApi.Services
             _smsService = smsService;
             _configuration = configuration;
             _templateService = templateService;
+            _httpClient = httpClient;
         }
 
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
@@ -524,6 +528,158 @@ namespace ProductivityApi.Services
                 return Enumerable.Empty<string>();
 
             return await _repository.GetAllowedStatusesAsync(role);
+        }
+
+        public async Task<List<SignUser>> GetSignUsersAsync()
+        {
+            return await _repository.GetSignUsersAsync();
+        }
+
+        public async Task<object> CreateLeegalityRequestAsync(CreateLeegalityRequestDto dto)
+        {
+            var txn = await _repository.GetById(dto.TransactionId);
+
+            if (txn == null)
+                throw new Exception("Transaction not found");
+
+            var profileId = _configuration["Leegality:ProfileId"];
+            var token = _configuration["Leegality:AuthToken"];
+            var baseUrl = _configuration["Leegality:BaseUrl"];
+
+            var pdfBytes = await GenerateAcknowledgementAsync(dto.TransactionId);
+
+            string base64File = Convert.ToBase64String(pdfBytes.FileBytes!);
+
+            var payload = new
+            {
+                profileId = profileId,
+
+                file = new { name = $"NOC_ACK_{txn.Lan}", file = base64File },
+
+                invitees = new[]
+                {
+                    new
+                    {
+                        name = txn.PropertyOwnerName ?? txn.CustName,
+                        phone = txn.PropertyOwnerMobile ?? txn.CustMobile,
+                        email = "",
+                        groupId = "1",
+                        groupName = "Borrower",
+                    },
+                },
+
+                irn = txn.Lan,
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/v3.0/sign/request");
+
+            request.Headers.Add("X-Auth-Token", token);
+
+            request.Content = new StringContent(
+                System.Text.Json.JsonSerializer.Serialize(payload),
+                System.Text.Encoding.UTF8,
+                "application/json"
+            );
+
+            var response = await _httpClient.SendAsync(request);
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"Status Code: {(int)response.StatusCode}");
+            Console.WriteLine($"Response Body: {responseBody}");
+
+            response.EnsureSuccessStatusCode();
+
+            response.EnsureSuccessStatusCode();
+
+            using var doc = JsonDocument.Parse(json);
+
+            var documentId = doc
+                .RootElement.GetProperty("data")
+                .GetProperty("documentId")
+                .GetString();
+
+            var signUrl = doc
+                .RootElement.GetProperty("data")
+                .GetProperty("invitees")[0]
+                .GetProperty("signUrl")
+                .GetString();
+
+            await _repository.SaveLeegalityDocumentAsync(dto.TransactionId, documentId!, signUrl!);
+
+            return new { DocumentId = documentId, SignUrl = signUrl };
+        }
+
+        public async Task<string> RefreshLeegalityStatusAsync(RefreshLeegalityStatusDto dto)
+        {
+            var document = await _repository.GetLeegalityDocumentAsync(dto.TransactionId);
+
+            if (document == null || string.IsNullOrWhiteSpace(document.DocumentId))
+                throw new Exception("Leegality document not found");
+
+            var token = _configuration["Leegality:AuthToken"];
+            var baseUrl = _configuration["Leegality:BaseUrl"];
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{baseUrl}/v3.2/sign/request?documentId={document.DocumentId}"
+            );
+
+            request.Headers.Add("X-Auth-Token", token);
+
+            var response = await _httpClient.SendAsync(request);
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            response.EnsureSuccessStatusCode();
+
+            using var doc = JsonDocument.Parse(json);
+
+            bool signed = doc
+                .RootElement.GetProperty("data")
+                .GetProperty("requests")[0]
+                .GetProperty("signed")
+                .GetBoolean();
+
+            var status = signed ? "SIGNED" : "PENDING";
+
+            await _repository.UpdateLeegalityStatusAsync(
+                dto.TransactionId,
+                status,
+                signed ? DateTime.Now : null
+            );
+
+            return status;
+        }
+
+        public async Task<string> GetSignedDocumentUrlAsync(int transactionId)
+        {
+            var document = await _repository.GetLeegalityDocumentAsync(transactionId);
+
+            if (document == null)
+                throw new Exception("Document not found");
+
+            var token = _configuration["Leegality:AuthToken"];
+            var baseUrl = _configuration["Leegality:BaseUrl"];
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{baseUrl}/v3.0/document/fetchDocument?documentId={document.DocumentId}&documentDownloadType=SIGNED"
+            );
+
+            request.Headers.Add("X-Auth-Token", token);
+
+            var response = await _httpClient.SendAsync(request);
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            response.EnsureSuccessStatusCode();
+
+            using var doc = JsonDocument.Parse(json);
+
+            return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
         }
     }
 }

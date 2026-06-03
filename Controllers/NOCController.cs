@@ -242,5 +242,41 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, statuses));
         }
+
+        [HttpGet("signusers")]
+        public async Task<IActionResult> GetSignUsers()
+        {
+            var result = await _service.GetSignUsersAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpPost("createLeegalityRequest")]
+        public async Task<IActionResult> CreateLeegalityRequest(
+            [FromBody] CreateLeegalityRequestDto dto
+        )
+        {
+            var result = await _service.CreateLeegalityRequestAsync(dto);
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpPost("refreshLeegalityStatus")]
+        public async Task<IActionResult> RefreshLeegalityStatus(
+            [FromBody] RefreshLeegalityStatusDto dto
+        )
+        {
+            var result = await _service.RefreshLeegalityStatusAsync(dto);
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("downloadSignedDocument/{transactionId}")]
+        public async Task<IActionResult> DownloadSignedDocument(int transactionId)
+        {
+            var url = await _service.GetSignedDocumentUrlAsync(transactionId);
+
+            return Ok(new Response(true, url));
+        }
     }
 }

@@ -1,12 +1,16 @@
 SELECT * FROM NOC_Transactions;
 GO
 
+SELECT * FROM NOC_TransactionLogs;
+GO
+
 SELECT * FROM NOC_RoleStatusMap;
 GO
 
-UPDATE NOC_Transactions
-SET Status = 'File at NOC';
+SELECT * FROM NOC_SignMaster;
 GO
 
--- Next: File not Received
---       Or property owner is selected 
+UPDATE NOC_Transactions
+SET Status = 'Labels Generated';
+GO
+
