@@ -1,7 +1,6 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
-using ProductivityApi.Models.ProductivityApi.Models;
 using System.Data;
 using System.Data.SqlTypes;
 

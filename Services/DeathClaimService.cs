@@ -1,6 +1,5 @@
 ﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
-using ProductivityApi.Models.ProductivityApi.Models;
 using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
@@ -277,6 +276,14 @@ namespace ProductivityApi.Services
             return (bytes, data.LAN);
         }
 
+        public async Task<(byte[]? bytes, string? lan)> GetClaimFormatAsync(int id)
+        {
+            var data = await _repository.GetClaimFormDataAsync(id);
+            if (data == null) return (null, null);
+            string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "ClaimFormat.xlsx");
+            var bytes = FillClaimFormat(templatePath, data);
+            return (bytes, data.LAN);
+        }
         private static string S(object? val) =>
             val == null || val is DBNull ? "" : val.ToString()!;
 
@@ -367,6 +374,44 @@ namespace ProductivityApi.Services
             }
             return ms.ToArray();
         }
+
+        private static byte[] FillClaimFormat(string templatePath, ClaimFormDataDto d)
+        {
+            using var ms = new MemoryStream();
+            using (var wb = new ClosedXML.Excel.XLWorkbook(templatePath))
+            {
+                var ws = wb.Worksheet(1);
+
+                ws.Cell("A6").Value = 1;
+                ws.Cell("B6").Value = S(d.Policy_Number);
+                ws.Cell("C6").Value = S(d.Full_Name);
+                ws.Cell("D6").Value = S(d.Member_Id);
+                ws.Cell("E6").Value = S(d.Loan_A_C_ID);
+                ws.Cell("F6").Value = S(d.System_generated_No);
+                ws.Cell("G6").Value = D(d.Disb_Date);
+                ws.Cell("H6").Value = d.Date_of_Birth.HasValue
+                    ? (int)(DateTime.Today - d.Date_of_Birth.Value).TotalDays / 365
+                    : 0;
+                ws.Cell("I6").Value = D(d.Death_Date);
+                ws.Cell("J6").Value = S(d.Death_Cause);
+                ws.Cell("K6").Value = S(d.Death_Place);
+                ws.Cell("L6").Value = S(d.Nominee_Name);
+                ws.Cell("M6").Value = S(d.Nominee_Relationship);
+                ws.Cell("N6").Value = S(d.Loan_Amount);
+                ws.Cell("O6").Value = S(d.Loan_Amount);
+                ws.Cell("Q6").Value = S(d.Claim_amount_DOD);
+                ws.Cell("S6").Value = S(d.Branch_Name);
+                ws.Cell("Y6").Value = S(d.Nominee_Ac_Name);
+                ws.Cell("Z6").Value = S(d.Nominee_BankName);
+                ws.Cell("AA6").Value = S(d.Nominee_Ac_Name);
+                ws.Cell("AB6").Value = S(d.Nominee_Ac_No);
+                ws.Cell("AC6").Value = S(d.Nominee_IFSC);
+
+                wb.SaveAs(ms);
+            }
+            return ms.ToArray();
+        }
+
 
         public async Task<(bool Success, string? FilePath, string? Error)> UploadFileAsync(UploadFileRequestDto dto)
         {
