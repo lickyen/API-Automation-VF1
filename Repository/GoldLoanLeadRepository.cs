@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
@@ -14,16 +14,17 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-      
-
-
+        // =========================================
+        // GET ALL GOLD LOAN LEADS
+        // =========================================
         public List<GoldLoanLeadModel> GetAllGoldLoanLeads()
         {
             using var connection = new SqlConnection(_conStr);
 
-            var leads = connection.Query<GoldLoanLeadModel,
-                                        GoldLoanVendorModel,
-                                        GoldLoanLeadModel>(
+            var leads = connection.Query<
+                GoldLoanLeadModel,
+                GoldLoanVendorModel,
+                GoldLoanLeadModel>(
                 "sp_getGoldLoanLeadsList",
                 (goldLoanLead, vendor) =>
                 {
@@ -36,11 +37,18 @@ namespace ProductivityApi.Repository
 
             return leads;
         }
+
+        // =========================================
+        // GET SINGLE GOLD LOAN LEAD
+        // =========================================
         public GoldLoanLeadModel? GetGoldLoanLead(int id)
         {
             using var connection = new SqlConnection(_conStr);
 
-            var lead = connection.Query<GoldLoanLeadModel, GoldLoanVendorModel, GoldLoanLeadModel>(
+            var lead = connection.Query<
+                GoldLoanLeadModel,
+                GoldLoanVendorModel,
+                GoldLoanLeadModel>(
                 "sp_getGoldLoanLead",
                 (goldLoanLead, vendor) =>
                 {
@@ -55,8 +63,9 @@ namespace ProductivityApi.Repository
             return lead;
         }
 
-
-
+        // =========================================
+        // ADD GOLD LOAN LEAD
+        // =========================================
         public int AddGoldLoanLead(AddGoldLoanLeadDTO addGoldLoanLeadDTO)
         {
             using var connection = new SqlConnection(_conStr);
@@ -71,7 +80,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@GoldLoanRequiredFor", addGoldLoanLeadDTO.GoldLoanRequiredFor);
             parameters.Add("@CreatedBy", addGoldLoanLeadDTO.CreatedBy);
 
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add(
+                "@Output",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output
+            );
 
             connection.Execute(
                 "sp_insertGoldLoanLead",
@@ -80,6 +93,37 @@ namespace ProductivityApi.Repository
             );
 
             return parameters.Get<int>("@Output");
+        }
+
+        // =========================================
+        // UPDATE GOLD LOAN LEAD
+        // =========================================
+        public bool UpdateGoldLoanLead(
+            int id,
+            UpdateGoldLoanLeadDTO dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+
+            string query = @"
+                UPDATE GoldLoanLeadMaster
+                SET
+                    CallingStatus = @CallingStatus,
+                    Status = @Status,
+                    Remarks = @Remarks,
+                    UpdatedBy = @UpdatedBy,
+                    UpdatedDate = GETDATE()
+                WHERE Id = @Id";
+
+            int rows = connection.Execute(query, new
+            {
+                Id = id,
+                CallingStatus = dto.CallingStatus,
+                Status = dto.Status,
+                Remarks = dto.Remarks,
+                UpdatedBy = dto.UpdatedBy
+            });
+
+            return rows > 0;
         }
     }
 }

@@ -63,6 +63,7 @@ namespace ProductivityApi.Models
         public string SOALODFilePath { get; set; } = string.Empty;
         public string ClosureFilePath { get; set; } = string.Empty;
         public string SARFAESIFilePath { get; set; } = string.Empty;
+        public string GoldLoanFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {

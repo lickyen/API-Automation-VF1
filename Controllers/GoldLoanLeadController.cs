@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -48,6 +48,21 @@ namespace ProductivityApi.Controllers
                 -1 => Conflict(new Response(false, null, "Vendor not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult UpdateGoldLoanLead(
+            int id,
+            [FromBody] UpdateGoldLoanLeadDTO dto)
+        {
+            bool updated = _goldLoanLeadService.UpdateGoldLoanLead(id, dto);
+
+            if (!updated)
+            {
+                return NotFound(new Response(false, null, "Lead not found"));
+            }
+
+            return Ok(new Response(true, null, "Gold loan lead updated successfully"));
         }
     }
 }
