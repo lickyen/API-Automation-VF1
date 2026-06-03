@@ -192,7 +192,7 @@ namespace ProductivityApi.Services
                 {
                     sb.Append("<tr>");
                     sb.Append($"<td>{r.Lan}</td>");
-                    sb.Append($"<td>{r.GoDigitPolicyNumber}</td>");
+                    sb.Append($"<td>{r.PolicyNumber}</td>");
                     sb.Append("</tr>");
                 }
             }

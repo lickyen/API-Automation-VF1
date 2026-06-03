@@ -21,8 +21,7 @@
         public decimal Pos { get; set; }
         public decimal Interest { get; set; }
         public decimal Charges { get; set; }
-        public decimal TotalChargesIncFc { get; set; }
         public decimal TotalOutstanding { get; set; }
-        public decimal TotalOutstandingIncFC { get; set; }
+        public decimal TotalOutstandingExclFc { get; set; }
     }
 }

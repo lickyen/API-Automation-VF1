@@ -1,7 +1,8 @@
 ﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
-using Microsoft.Data.SqlClient;
+using System.Data.SqlTypes;
 
 namespace ProductivityApi.Repository
 {
@@ -9,9 +10,9 @@ namespace ProductivityApi.Repository
     {
         private readonly string _conStr;
 
-        public DeathClaimRepository(string conStr)
+        public DeathClaimRepository(IConfiguration configuration)
         {
-            _conStr = conStr;
+            _conStr = configuration.GetConnectionString("DBConn")!;
         }
 
         public async Task<DeathClaimMaster> GetByIdAsync(int id)
@@ -100,7 +101,62 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> UploadDocsAsync(UploadDocsRequestDto dto, string status)
+
+        public async Task<int> UpdateIntimationAsync(UpdateIntimationRequestDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", dto.Id);
+            parameters.Add("@LAN", dto.Lan);
+            parameters.Add("@Branch_Code", dto.BranchCode);
+            parameters.Add("@Branch_Name", dto.BranchName);
+            parameters.Add("@State", dto.State);
+            parameters.Add("@Full_Name", dto.FullName);
+            parameters.Add("@Mobile", dto.Mobile);
+            parameters.Add("@Address", dto.Address);
+            parameters.Add("@Nominee_Name", dto.NomineeName);
+            parameters.Add("@Nominee_DOB", dto.NomineeDob);
+            parameters.Add("@Nominee_Mobile", dto.NomineeMobile);
+            parameters.Add("@Nominee_Relationship", dto.NomineeRelationship);
+            parameters.Add("@Nominee_Death", dto.NomineeDeath);
+            parameters.Add("@Disb_Date", dto.DisbDate);
+            parameters.Add("@Death_Date", dto.DeathDate);
+            parameters.Add("@Death_Cause", dto.DeathCause);
+            parameters.Add("@Death_Place", dto.DeathPlace);
+            parameters.Add("@DPD", dto.Dpd);
+            parameters.Add("@Total_Outstanding", dto.TotalOutstanding);
+            parameters.Add("@Loan_Amnt", dto.LoanAmnt);
+            parameters.Add("@Policy_No", dto.PolicyNo);
+            parameters.Add("@System_Generated_No", dto.SystemGeneratedNo);
+            parameters.Add("@Member_Id", dto.MemberId);
+            parameters.Add("@UpdatedBy", dto.UpdatedBy);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            await connection.ExecuteAsync(
+                "dbo.sp_newDeathClaim_UpdateIntimation",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+            return parameters.Get<int>("@Output");
+        }
+        public async Task<int> UpdateFileNameAsync(int reqId, string fileType, string fileName, string updatedBy)
+        {
+            using var connection = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", reqId);
+            parameters.Add("@FileName", fileName);
+            parameters.Add("@FileType", fileType);
+            parameters.Add("@UpdatedBy", updatedBy);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "dbo.sp_newDeathClaim_UpdateFileName",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<int>("@Output");
+        }
+        public async Task<int> SubmitDocsAsync(SubmitDocsRequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -111,22 +167,22 @@ namespace ProductivityApi.Repository
             parameters.Add("@NomineeAcName", dto.NomineeAcName);
             parameters.Add("@NomineeIfsc", dto.NomineeIfsc);
             parameters.Add("@NomineeBankName", dto.NomineeBankName);
-            parameters.Add("@BmVisitFormPath", dto.BmVisitFormPath);
-            parameters.Add("@KycPath", dto.KycPath);
-            parameters.Add("@PanchayatLetterPath", dto.PanchayatLetterPath);
-            parameters.Add("@DeathSummaryPath", dto.DeathSummaryPath);
-            parameters.Add("@MedicalQuestPath", dto.MedicalQuestPath);
-            parameters.Add("@FirPath", dto.FirPath);
-            parameters.Add("@PostMortemPath", dto.PostMortemPath);
-            parameters.Add("@NomineeBankProofPath", dto.NomineeBankProofPath);
-            parameters.Add("@DoghPath", dto.DoghPath);
-            parameters.Add("@DeathCertificatePath", dto.DeathCertificatePath);
-            parameters.Add("@NomineeDeathCertificatePath", dto.NomineeDeathCertificatePath);
-            parameters.Add("@NewNomineeKycPath", dto.NewNomineeKycPath);
-            parameters.Add("@NewNomineeBankProofPath", dto.NewNomineeBankProofPath);
-            parameters.Add("@FamilyTreeDeclarationPath", dto.FamilyTreeDeclarationPath);
-            parameters.Add("@AffidavitCumIndemnityPath", dto.AffidavitCumIndemnityPath);
-            parameters.Add("@NocFromLegalHeirsPath", dto.NocFromLegalHeirsPath);
+            //parameters.Add("@BmVisitFormPath", dto.BmVisitFormPath);
+            //parameters.Add("@KycPath", dto.KycPath);
+            //parameters.Add("@PanchayatLetterPath", dto.PanchayatLetterPath);
+            //parameters.Add("@DeathSummaryPath", dto.DeathSummaryPath);
+            //parameters.Add("@MedicalQuestPath", dto.MedicalQuestPath);
+            //parameters.Add("@FirPath", dto.FirPath);
+            //parameters.Add("@PostMortemPath", dto.PostMortemPath);
+            //parameters.Add("@NomineeBankProofPath", dto.NomineeBankProofPath);
+            //parameters.Add("@DoghPath", dto.DoghPath);
+            //parameters.Add("@DeathCertificatePath", dto.DeathCertificatePath);
+            //parameters.Add("@NomineeDeathCertificatePath", dto.NomineeDeathCertificatePath);
+            //parameters.Add("@NewNomineeKycPath", dto.NewNomineeKycPath);
+            //parameters.Add("@NewNomineeBankProofPath", dto.NewNomineeBankProofPath);
+            //parameters.Add("@FamilyTreeDeclarationPath", dto.FamilyTreeDeclarationPath);
+            //parameters.Add("@AffidavitCumIndemnityPath", dto.AffidavitCumIndemnityPath);
+            //parameters.Add("@NocFromLegalHeirsPath", dto.NocFromLegalHeirsPath);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
             parameters.Add("@Status", status);
 
@@ -148,9 +204,9 @@ namespace ProductivityApi.Repository
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Remarks", dto.Remarks);
-            parameters.Add("@ClaimFormatPath", dto.ClaimFormatPath);
-            parameters.Add("@KotakClaimFormPath", dto.KotakClaimFormPath);
-            parameters.Add("@DischargeFormPath", dto.DischargeFormPath);
+            //parameters.Add("@ClaimFormatPath", dto.ClaimFormatPath);
+            //parameters.Add("@KotakClaimFormPath", dto.KotakClaimFormPath);
+            //parameters.Add("@DischargeFormPath", dto.DischargeFormPath);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
             parameters.Add("@Status", status);
 
@@ -171,11 +227,11 @@ namespace ProductivityApi.Repository
             var parameters = new DynamicParameters();
 
             parameters.Add("@Id", dto.Id);
-            parameters.Add("@AdditionalDoc1", dto.AdditionalDoc1);
-            parameters.Add("@AdditionalDoc2", dto.AdditionalDoc2);
-            parameters.Add("@AdditionalDoc3", dto.AdditionalDoc3);
-            parameters.Add("@AdditionalDoc4", dto.AdditionalDoc4);
-            parameters.Add("@AdditionalDoc5", dto.AdditionalDoc5);
+            //parameters.Add("@AdditionalDoc1", dto.AdditionalDoc1);
+            //parameters.Add("@AdditionalDoc2", dto.AdditionalDoc2);
+            //parameters.Add("@AdditionalDoc3", dto.AdditionalDoc3);
+            //parameters.Add("@AdditionalDoc4", dto.AdditionalDoc4);
+            //parameters.Add("@AdditionalDoc5", dto.AdditionalDoc5);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
             parameters.Add("@Status", status);
 
@@ -200,7 +256,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@Deficit", dto.Deficit);
             parameters.Add("@DeficitCollectedRemarks", dto.DeficitCollectedRemarks);
             parameters.Add("@DeficitCollectedAmount", dto.DeficitCollectedAmount);
-            parameters.Add("@DeficitReceiptPath", dto.DeficitReceiptPath);
+            //parameters.Add("@DeficitReceiptPath", dto.DeficitReceiptPath);
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
             parameters.Add("@Status", status);
@@ -215,14 +271,14 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> SubmitCops1Async(SubmitCops1RequestDto dto)
+        public async Task<int> SubmitCops1Async(SubmitCops1RequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
             var parameters = new DynamicParameters();
 
             parameters.Add("@Id", dto.Id);
-            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Status", status);
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@ClaimAmountDod", dto.ClaimAmountDod);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
@@ -237,7 +293,7 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> SubmitCops2Async(SubmitCops2RequestDto dto)
+        public async Task<int> SubmitCops2Async(SubmitCops2RequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -249,7 +305,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@ClaimNo", dto.ClaimNo);
             parameters.Add("@AdditionalReq", dto.AdditionalReq);
             parameters.Add("@Remarks", dto.Remarks);
-            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Status", status);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -262,27 +318,8 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        //public async Task<int> SaveCops2Async(SaveCops2RequestDto dto)
-        //{
-        //    using var connection = new SqlConnection(_conStr);
-        //    await connection.OpenAsync();
-        //    var parameters = new
-        //    {
-        //        dto.Id,
-        //        dto.PortalUploadStatus,
-        //        dto.ClaimSubmittedDt,
-        //        dto.ClaimNo,
-        //        dto.Remarks,
-        //        dto.UpdatedBy
-        //    };
-        //    return await connection.ExecuteAsync(
-        //        "dbo.sp_newDeathClaim_Save_Cops2",
-        //        parameters,
-        //        commandType: CommandType.StoredProcedure
-        //    );
-        //}
 
-        public async Task<int> SubmitCops3Async(SubmitCops3RequestDto dto)
+        public async Task<int> SubmitCops3Async(SubmitCops3RequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -290,7 +327,7 @@ namespace ProductivityApi.Repository
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Remarks", dto.Remarks);
-            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Status", status);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -304,7 +341,7 @@ namespace ProductivityApi.Repository
             return parameters.Get<int>("@Output");
         }
 
-        public async Task<int> SubmitCops4Async(SubmitCops4RequestDto dto)
+        public async Task<int> SubmitCops4Async(SubmitCops4RequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -319,7 +356,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@Dpd", dto.Dpd);
             parameters.Add("@TotalOutstanding", dto.TotalOutstanding);
             parameters.Add("@Deficit", dto.Deficit);
-            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Status", status);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -333,7 +370,7 @@ namespace ProductivityApi.Repository
             return parameters.Get<int>("@Output");
         }
 
-        public async Task<int> SubmitCops5Async(SubmitCops5RequestDto dto)
+        public async Task<int> SubmitCops5Async(SubmitCops5RequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
 
@@ -341,7 +378,7 @@ namespace ProductivityApi.Repository
 
             parameters.Add("@Id", dto.Id);
             parameters.Add("@Remarks", dto.Remarks);
-            parameters.Add("@Status", dto.Status);
+            parameters.Add("@Status", status);
             parameters.Add("@UpdatedBy", dto.UpdatedBy);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -354,6 +391,17 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
+
+        public async Task<ClaimFormDataDto?> GetClaimFormDataAsync(int id)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            return await connection.QueryFirstOrDefaultAsync<ClaimFormDataDto>(
+                "dbo.sp_newDeathClaim_GetClaimFormData",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure
+            );
+        }
         public async Task<IEnumerable<dynamic>> GetReportAsync()
         {
             using var connection = new SqlConnection(_conStr);
@@ -361,6 +409,17 @@ namespace ProductivityApi.Repository
 
             return await connection.QueryAsync<dynamic>(
                 "dbo.sp_newDeathClaim_GetReport",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<IEnumerable<DeathClaimMaster>> GetByUserAsync(GetByUserRequestDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            return await connection.QueryAsync<DeathClaimMaster>(
+                "dbo.sp_newDeathClaim_GetByUser",
+                new { dto.UserId, dto.Role, dto.Status },
                 commandType: CommandType.StoredProcedure
             );
         }

@@ -39,7 +39,7 @@
         public string? Pa { get; set; }
         public string? Opd { get; set; }
         // GoDigit
-        public string? GoDigitPolicyNumber { get; set; }
+        //public string? GoDigitPolicyNumber { get; set; }
     }
     public class LcUtrModel
     {

@@ -25,139 +25,214 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("getByUser")]
+        public async Task<IActionResult> GetByUser([FromQuery] GetByUserRequestDto dto)
+        {
+            var data = await _service.GetByUserAsync(dto);
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("intimation")]
         public async Task<IActionResult> Intimation([FromBody] IntimationRequestDto dto)
         {
             var result = await _service.IntimationAsync(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, new { id = result }, "Claim intimation submitted successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
+                > 0 => Ok(new Response(true, new { id = result }, "Submitted successfully")),
+                -1 => NotFound(new Response(false, null, "An active request already exists for the same LAN")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("submitDocs")]
-        public async Task<IActionResult> UploadDocs([FromBody] UploadDocsRequestDto dto)
+        [HttpPost("updateIntimation")]
+        public async Task<IActionResult> UpdateIntimation([FromBody] UpdateIntimationRequestDto dto)
         {
-            var result = await _service.UploadDocsAsync(dto);
+            var result = await _service.UpdateIntimationAsync(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Documents uploaded successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("submitClaimForm")]
+        [HttpPost("submitDocs")]
+        public async Task<IActionResult> SubmitDocs([FromBody] SubmitDocsRequestDto dto)
+        {
+            var result = await _service.SubmitDocsAsync(dto);
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("submitClaimForm")]
         public async Task<IActionResult> SubmitBranch2([FromBody] SubmitBranch2RequestDto dto)
         {
             var result = await _service.SubmitBranch2Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Branch stage 2 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("submitAdditionalReq")]
+        [HttpPost("submitAdditionalDocs")]
         public async Task<IActionResult> SubmitBranch3([FromBody] SubmitBranch3RequestDto dto)
         {
             var result = await _service.SubmitBranch3Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Additional documents submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("updateCollection")]
+        [HttpPost("deficitCollection")]
         public async Task<IActionResult> SubmitBranch5([FromBody] SubmitBranch5RequestDto dto)
         {
             var result = await _service.SubmitBranch5Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "Branch stage 5 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("copsVerification")]
+        [HttpPost("copsVerification")]
         public async Task<IActionResult> SubmitCops1([FromBody] SubmitCops1RequestDto dto)
         {
             var result = await _service.SubmitCops1Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "COPS stage 1 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("updateClaimInitiated")]
+        [HttpPost("updateClaimInitiated")]
         public async Task<IActionResult> SubmitCops2([FromBody] SubmitCops2RequestDto dto)
         {
             var result = await _service.SubmitCops2Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "COPS stage 2 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        //[HttpPut("saveClaimInitiated")]
-        //public async Task<IActionResult> SaveCops2([FromBody] SaveCops2RequestDto dto)
-        //{
-        //    var result = await _service.SaveCops2Async(dto);
-        //    return result switch
-        //    {
-        //        > 0 => Ok(new Response(true, null, "COPS stage 2 saved successfully")),
-        //        -1 => NotFound(new Response(false, null, "Record not found")),
-        //        _ => StatusCode(500, new Response(false, null, "An error occurred"))
-        //    };
-        //}
-
-        [HttpPut("additionalRequestSubmit")]
+        [HttpPost("verifyAdditionalDocs")]
         public async Task<IActionResult> SubmitCops3([FromBody] SubmitCops3RequestDto dto)
         {
             var result = await _service.SubmitCops3Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "COPS stage 3 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("updateClaimStatus")]
+        [HttpPost("updateClaimStatus")]
         public async Task<IActionResult> SubmitCops4([FromBody] SubmitCops4RequestDto dto)
         {
             var result = await _service.SubmitCops4Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "COPS stage 4 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
 
-        [HttpPut("finalClosure")]
+        [HttpPost("finalClosure")]
         public async Task<IActionResult> SubmitCops5([FromBody] SubmitCops5RequestDto dto)
         {
             var result = await _service.SubmitCops5Async(dto);
             return result switch
             {
-                > 0 => Ok(new Response(true, null, "COPS stage 5 submitted successfully")),
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
+        [HttpGet("getClaimForm/{id}")]
+        public async Task<IActionResult> GetClaimForm(int id)
+        {
+            var (bytes, lan) = await _service.GetClaimFormAsync(id);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No record found for the given Id"));
+
+            return File(
+                bytes,
+                "application/pdf",
+                $"{lan}_KotakClaimForm.pdf"
+            );
+        }
+
+        [HttpGet("getDischargeForm/{id}")]
+        public async Task<IActionResult> GetDischargeForm(int id)
+        {
+            var (bytes, lan) = await _service.GetDischargeFormAsync(id);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No record found for the given Id"));
+
+            return File(
+                bytes,
+                "application/pdf",
+                $"{lan}_DischargeForm.pdf"
+            );
+        }
+
+        [HttpGet("getClaimFormat/{id}")]
+        public async Task<IActionResult> GetClaimFormat(int id)
+        {
+            var (bytes, lan) = await _service.GetClaimFormatAsync(id);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No record found for the given Id"));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"{lan}_ClaimFormat.xlsx"
+            );
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadDoc([FromForm] UploadFileRequestDto dto)
+        {
+            var result = await _service.UploadFileAsync(dto);
+            return result.Success
+                ? Ok(new Response(true, result.FilePath, "File uploaded successfully"))
+                : BadRequest(new Response(false, null, result.Error));
+        }
+
+        [HttpGet("download")]
+        public async Task<IActionResult> DownloadFile([FromQuery] string fileName)
+        {
+            var fileBytes = await _service.DownloadFileAsync(fileName);
+
+            if (fileBytes == null)
+                return NotFound("File not found");
+
+            var contentType = FileHelper.GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
+        }
+
         [HttpGet("report")]
-        public async Task<IActionResult> DownloadReport([FromQuery] string month)
+        public async Task<IActionResult> DownloadReport()
         {
             var bytes = await _service.GetReportExcelAsync();
 
