@@ -172,47 +172,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, message: "Files uploaded successfully."));
         }
 
-        [HttpGet("downloadNoc/{id}")]
-        public async Task<IActionResult> DownloadNoc(
-            int id,
-            [FromQuery] string updatedBy,
-            [FromQuery] string role
-        )
-        {
-            if (id <= 0)
-                return BadRequest(new Response(false, "Invalid transaction id"));
-
-            var result = await _service.GenerateNocAsync(id, updatedBy, role);
-
-            if (result.FileBytes == null)
-            {
-                if (result.Message.Contains("not authorized"))
-                    return StatusCode(403, new Response(false, result.Message));
-
-                return BadRequest(new Response(false, result.Message));
-            }
-
-            return File(result.FileBytes, "application/pdf", result.FileName);
-        }
-
-        [HttpGet("downloadAcknowledgement/{id}")]
-        public async Task<IActionResult> DownloadAcknowledgement(int id)
-        {
-            if (id <= 0)
-            {
-                return BadRequest(new Response(false, message: "Invalid transaction id."));
-            }
-
-            var result = await _service.GenerateAcknowledgementAsync(id);
-
-            if (result.FileBytes == null)
-            {
-                return BadRequest(new Response(false, message: result.Message));
-            }
-
-            return File(result.FileBytes, "application/pdf", result.FileName);
-        }
-
         [HttpPost("downloadOneilReport")]
         public async Task<IActionResult> DownloadOneilReport([FromBody] OneilReportRequestDto dto)
         {
@@ -277,6 +236,54 @@ namespace ProductivityApi.Controllers
             var url = await _service.GetSignedDocumentUrlAsync(transactionId);
 
             return Ok(new Response(true, url));
+        }
+
+        [HttpPost("uploadNocPdf")]
+        public async Task<IActionResult> UploadNocPdf([FromForm] UploadPdfDto dto)
+        {
+            var result = await _service.UploadNocPdfAsync(dto);
+
+            return Ok(new Response(result));
+        }
+
+        [HttpPost("uploadAckPdf")]
+        public async Task<IActionResult> UploadAckPdf([FromForm] UploadPdfDto dto)
+        {
+            var result = await _service.UploadAckPdfAsync(dto);
+
+            return Ok(new Response(result));
+        }
+
+        [HttpPost("signNocPdf")]
+        public async Task<IActionResult> SignNocPdf([FromBody] SignNocPdfDto dto)
+        {
+            var result = await _service.SignNocPdfAsync(dto);
+
+            return Ok(new Response(result));
+        }
+
+        [HttpPost("signAckPdf")]
+        public async Task<IActionResult> SignAckPdf([FromBody] SignAckPdfDto dto)
+        {
+            var result = await _service.SignAckPdfAsync(dto);
+
+            return Ok(new Response(result));
+        }
+
+        [HttpGet("downloadSignedNoc/{transactionId}")]
+        public async Task<IActionResult> DownloadSignedNoc(int transactionId)
+        {
+            var pdfBytes = await _service.DownloadSignedNocPdfAsync(transactionId);
+
+            return File(pdfBytes, "application/pdf", $"NOC_{transactionId}_Signed.pdf");
+        }
+
+        [HttpGet("downloadSignedAck/{transactionId}")]
+        public async Task<IActionResult> DownloadSignedAck(int transactionId)
+        {
+            var pdfBytes = await _service.DownloadSignedAckPdfAsync(transactionId);
+
+            return File(pdfBytes, "application/pdf", $"ACK_{transactionId}_Signed.pdf");
         }
     }
 }

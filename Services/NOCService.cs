@@ -315,76 +315,6 @@ namespace ProductivityApi.Services
             );
         }
 
-        public async Task<(byte[]? FileBytes, string FileName, string Message)> GenerateNocAsync(
-            int id,
-            string updatedBy,
-            string role
-        )
-        {
-            try
-            {
-                var transaction = await _repository.GetById(id);
-
-                if (transaction == null)
-                    return (null, "", "Transaction not found.");
-
-                //----------------------------------------------------
-                // 2. File generation
-                //----------------------------------------------------
-                string folderPath = Path.Combine(AppContext.BaseDirectory, "GeneratedFiles", "NOC");
-
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
-
-                string fileName = $"{transaction.Lan}_{id}_NOC.pdf";
-                string filePath = Path.Combine(folderPath, fileName);
-
-                if (!File.Exists(filePath))
-                {
-                    using (FileStream fs = new FileStream(filePath, FileMode.Create))
-                    {
-                        Document document = new Document(PageSize.A4);
-                        PdfWriter.GetInstance(document, fs);
-
-                        document.Open();
-
-                        document.Add(new Paragraph("NO OBJECTION CERTIFICATE"));
-                        document.Add(new Paragraph(" "));
-                        document.Add(new Paragraph($"LAN : {transaction.Lan}"));
-                        document.Add(new Paragraph($"Customer : {transaction.CustName}"));
-                        document.Add(new Paragraph($"Date : {DateTime.Now:dd-MMM-yyyy}"));
-
-                        document.Close();
-                    }
-                }
-
-                //----------------------------------------------------
-                // 3. Update status ONLY AFTER SUCCESS
-                //----------------------------------------------------
-                var statusUpdated = await _repository.UpdateTransactionStatusAsync(
-                    new UpdateNocStatusDto
-                    {
-                        Id = id,
-                        Status = "Document Collected",
-                        Remarks = "NOC Downloaded",
-                        CreatedBy = updatedBy,
-                        Role = role, // IMPORTANT
-                    }
-                );
-
-                if (statusUpdated != 1)
-                    return (null, "", "Failed to update status.");
-
-                var bytes = await File.ReadAllBytesAsync(filePath);
-
-                return (bytes, fileName, "Success");
-            }
-            catch (Exception ex)
-            {
-                return (null, "", ex.Message);
-            }
-        }
-
         public async Task<(
             byte[]? FileBytes,
             string FileName,
@@ -680,6 +610,142 @@ namespace ProductivityApi.Services
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
+        }
+
+        public async Task<bool> UploadNocPdfAsync(UploadPdfDto dto)
+        {
+            using var ms = new MemoryStream();
+
+            await dto.PdfFile.CopyToAsync(ms);
+
+            string base64 = Convert.ToBase64String(ms.ToArray());
+
+            return await _repository.UploadNocPdfAsync(dto.TransactionId, base64, dto.UpdatedBy);
+        }
+
+        public async Task<bool> UploadAckPdfAsync(UploadPdfDto dto)
+        {
+            using var ms = new MemoryStream();
+
+            await dto.PdfFile.CopyToAsync(ms);
+
+            string base64 = Convert.ToBase64String(ms.ToArray());
+
+            return await _repository.UploadAckPdfAsync(dto.TransactionId, base64, dto.UpdatedBy);
+        }
+
+        public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
+        {
+            var data = await _repository.GetNocPdfForSigningAsync(
+                dto.TransactionId,
+                dto.SignUserId
+            );
+
+            if (string.IsNullOrWhiteSpace(data.Pdf))
+                throw new Exception("NOC PDF not found.");
+
+            if (data.SignImage == null || data.SignImage.Length == 0)
+                throw new Exception("Signature image not found.");
+
+            byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
+            byte[] signBytes = data.SignImage;
+
+            using var output = new MemoryStream();
+
+            using (var reader = new PdfReader(pdfBytes))
+            {
+                using (var stamper = new PdfStamper(reader, output))
+                {
+                    var image = Image.GetInstance(signBytes);
+
+                    image.ScaleToFit(120f, 60f);
+
+                    int pageNumber = reader.NumberOfPages;
+
+                    var pageSize = reader.GetPageSize(pageNumber);
+
+                    float x = pageSize.Right - 140;
+                    float y = 40;
+
+                    image.SetAbsolutePosition(x, y);
+
+                    stamper.GetOverContent(pageNumber).AddImage(image);
+                }
+            }
+
+            string signedBase64 = Convert.ToBase64String(output.ToArray());
+
+            return await _repository.SaveSignedNocAsync(
+                dto.TransactionId,
+                dto.SignUserId,
+                signedBase64,
+                dto.UpdatedBy
+            );
+        }
+
+        public async Task<bool> SignAckPdfAsync(SignAckPdfDto dto)
+        {
+            var data = await _repository.GetAckPdfForSigningAsync(dto.TransactionId);
+
+            byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
+
+            using var output = new MemoryStream();
+
+            PdfReader reader = new PdfReader(pdfBytes);
+
+            PdfStamper stamper = new PdfStamper(reader, output);
+
+            var page = reader.NumberOfPages;
+
+            var content = stamper.GetOverContent(page);
+
+            ColumnText.ShowTextAligned(
+                content,
+                Element.ALIGN_LEFT,
+                new Phrase("Property Owner:", FontFactory.GetFont(FontFactory.HELVETICA, 10)),
+                420,
+                55,
+                0
+            );
+
+            ColumnText.ShowTextAligned(
+                content,
+                Element.ALIGN_LEFT,
+                new Phrase(data.PropertyOwnerName, FontFactory.GetFont(FontFactory.HELVETICA, 10)),
+                420,
+                40,
+                0
+            );
+
+            stamper.Close();
+
+            string signedBase64 = Convert.ToBase64String(output.ToArray());
+
+            return await _repository.SaveSignedAckAsync(
+                dto.TransactionId,
+                signedBase64,
+                dto.UpdatedBy
+            );
+        }
+
+        public async Task<byte[]> DownloadSignedNocPdfAsync(int transactionId)
+        {
+            var base64 = await _repository.GetSignedNocPdfAsync(transactionId);
+
+            if (string.IsNullOrWhiteSpace(base64))
+                throw new Exception("Signed NOC PDF not found.");
+
+            return Convert.FromBase64String(base64);
+        }
+
+        public async Task<byte[]> DownloadSignedAckPdfAsync(int transactionId)
+        {
+            var base64 = await _repository.GetSignedAckPdfAsync(transactionId);
+
+            if (string.IsNullOrWhiteSpace(base64))
+                throw new Exception("Signed ACK PDF not found.");
+
+            return Convert.FromBase64String(base64);
         }
     }
 }

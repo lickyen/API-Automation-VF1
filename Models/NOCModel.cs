@@ -255,4 +255,29 @@ namespace ProductivityApi.Models
     {
         public int TransactionId { get; set; }
     }
+
+    public class UploadPdfDto
+    {
+        public int TransactionId { get; set; }
+
+        public IFormFile PdfFile { get; set; } = null!;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class SignNocPdfDto
+    {
+        public int TransactionId { get; set; }
+
+        public int SignUserId { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class SignAckPdfDto
+    {
+        public int TransactionId { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
 }

@@ -497,5 +497,226 @@ namespace ProductivityApi.Repository
                 }
             );
         }
+
+        public async Task<bool> UploadNocPdfAsync(
+            int transactionId,
+            string pdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+    UPDATE NOC_Transactions
+    SET
+        NOC_PDF = @Pdf,
+        Updated_By = @UpdatedBy,
+        Updated_Dt = GETDATE()
+    WHERE Id = @TransactionId";
+
+            return await conn.ExecuteAsync(
+                    sql,
+                    new
+                    {
+                        TransactionId = transactionId,
+                        Pdf = pdfBase64,
+                        UpdatedBy = updatedBy,
+                    }
+                ) > 0;
+        }
+
+        public async Task<bool> UploadAckPdfAsync(
+            int transactionId,
+            string pdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+    UPDATE NOC_Transactions
+    SET
+        Ack_PDF = @Pdf,
+        Updated_By = @UpdatedBy,
+        Updated_Dt = GETDATE()
+    WHERE Id = @TransactionId";
+
+            return await conn.ExecuteAsync(
+                    sql,
+                    new
+                    {
+                        TransactionId = transactionId,
+                        Pdf = pdfBase64,
+                        UpdatedBy = updatedBy,
+                    }
+                ) > 0;
+        }
+
+        public async Task<(string Pdf, byte[] SignImage)> GetNocPdfForSigningAsync(
+            int transactionId,
+            int signUserId
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT
+    t.NOC_PDF,
+    s.SignImage
+FROM NOC_Transactions t
+CROSS JOIN NOC_SignMaster s
+WHERE t.Id = @TransactionId
+  AND s.EmpId = @SignUserId";
+
+            var row = await conn.QueryFirstOrDefaultAsync(
+                sql,
+                new { TransactionId = transactionId, SignUserId = signUserId }
+            );
+
+            if (row == null)
+            {
+                throw new Exception(
+                    $"Transaction {transactionId} or SignUser {signUserId} not found"
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace((string?)row.NOC_PDF))
+            {
+                throw new Exception($"NOC_PDF is empty for transaction {transactionId}");
+            }
+
+            if (row.SignImage == null)
+            {
+                throw new Exception($"Signature image not found for SignUserId {signUserId}");
+            }
+
+            return ((string)row.NOC_PDF, (byte[])row.SignImage);
+        }
+
+        public async Task<bool> SaveSignedNocAsync(
+            int transactionId,
+            int signUserId,
+            string signedPdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            NOC_PDF_Signed = @Pdf,
+            SignUserId = @SignUserId,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @TransactionId";
+
+            return await conn.ExecuteAsync(
+                    sql,
+                    new
+                    {
+                        TransactionId = transactionId,
+                        SignUserId = signUserId,
+                        Pdf = signedPdfBase64,
+                        UpdatedBy = updatedBy,
+                    }
+                ) > 0;
+        }
+
+        public async Task<(string Pdf, string PropertyOwnerName)> GetAckPdfForSigningAsync(
+            int transactionId
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT
+            Ack_PDF,
+            PropertyOwner_Name
+        FROM NOC_Transactions
+        WHERE Id = @TransactionId";
+
+            var row = await conn.QueryFirstOrDefaultAsync(
+                sql,
+                new { TransactionId = transactionId }
+            );
+
+            if (row == null)
+            {
+                throw new Exception($"Transaction {transactionId} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace((string?)row.Ack_PDF))
+            {
+                throw new Exception($"Ack_PDF is empty for transaction {transactionId}");
+            }
+
+            return ((string)row.Ack_PDF, row.PropertyOwner_Name.ToString());
+        }
+
+        public async Task<bool> SaveSignedAckAsync(
+            int transactionId,
+            string signedPdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+    UPDATE NOC_Transactions
+    SET
+        Ack_PDF_Signed=@Pdf,
+        Updated_By=@UpdatedBy,
+        Updated_Dt=GETDATE()
+    WHERE Id=@TransactionId";
+
+            return await conn.ExecuteAsync(
+                    sql,
+                    new
+                    {
+                        TransactionId = transactionId,
+                        Pdf = signedPdfBase64,
+                        UpdatedBy = updatedBy,
+                    }
+                ) > 0;
+        }
+
+        public async Task<string?> GetSignedNocPdfAsync(int transactionId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT NOC_PDF_Signed
+        FROM NOC_Transactions
+        WHERE Id = @TransactionId";
+
+            return await conn.ExecuteScalarAsync<string?>(
+                sql,
+                new { TransactionId = transactionId }
+            );
+        }
+
+        public async Task<string?> GetSignedAckPdfAsync(int transactionId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT Ack_PDF_Signed
+        FROM NOC_Transactions
+        WHERE Id = @TransactionId";
+
+            return await conn.ExecuteScalarAsync<string?>(
+                sql,
+                new { TransactionId = transactionId }
+            );
+        }
     }
 }
