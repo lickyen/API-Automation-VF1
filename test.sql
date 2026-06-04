@@ -1,4 +1,4 @@
-SELECT * FROM NOC_Transactions;
+SELECT TOP 1 * FROM NOC_Transactions;
 GO
 
 SELECT * FROM NOC_TransactionLogs;

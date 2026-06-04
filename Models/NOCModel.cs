@@ -38,19 +38,18 @@ namespace ProductivityApi.Models
         public DateTime? ClosureDate { get; set; }
         public string? NocStatus { get; set; }
         public string? Status { get; set; }
-        public string? EsignerId { get; set; }
-        public string? RmuFilePath { get; set; }
-        public string? KYCFilePath { get; set; }
-        public string? AcknowledgementFilePath { get; set; }
         public string? PropertyOwnerCustId { get; set; }
         public string? PropertyOwnerName { get; set; }
         public string? PropertyOwnerMobile { get; set; }
         public int? SignUserId { get; set; }
-
         public string? LeegalityDocumentId { get; set; }
         public string? LeegalitySignUrl { get; set; }
         public string? LeegalityStatus { get; set; }
         public DateTime? LeegalityCompletedDt { get; set; }
+        public string? NOC_PDF { get; set; }
+        public string? NOC_PDF_Signed { get; set; }
+        public string? Ack_PDF { get; set; }
+        public string? Ack_PDF_Signed { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }

@@ -411,8 +411,7 @@ namespace ProductivityApi.Repository
         SELECT
             Id,
             EmpId,
-            Name,
-            SignPath
+            Name
         FROM NOC_SignMaster
         ORDER BY Name";
 
