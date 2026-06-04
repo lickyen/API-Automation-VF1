@@ -53,6 +53,7 @@ namespace ProductivityApi.Services
         //    return SendRequest<StatementResponse>(HttpMethod.Get,endPoint,request, serviceName: "getStatement", "3");
         //}
 
+        // SOA Download step -1
         public Task<GenerateStatementResponse> GenerateStatement(GenerateStatementRequest request)
         {
             var endPoint = "pff-api/services/loanLetterRest/loanLetter/generateStatement";
@@ -60,6 +61,7 @@ namespace ProductivityApi.Services
             return SendRequest<GenerateStatementResponse>(HttpMethod.Post, endPoint, request, serviceName: "generateStatement", "3");
         }
 
+        //SOA Download step -1
         public Task<TransferLetterResponse> TransferLetter(TransferLetterRequest request)
         {
             var endPoint = "pff-api/services/loanLetterRest/loanLetter/transferLetter";
@@ -67,11 +69,18 @@ namespace ProductivityApi.Services
             return SendRequest<TransferLetterResponse>(HttpMethod.Post, endPoint, request, serviceName: "transferLetter", "3");
         }
 
-        public Task<ForeclosureReportModel> GetForeclosureReport(ForeclosureReportRequest request)
+        public Task<GetForeclosureStmtV1> GetForeclosureStmtV1(ForeclosureReportRequest request)
         {
             var endPoint = "pff-api/services/statementRest/statementService/getForeclosureStmtV1";
 
-            return SendRequest<ForeclosureReportModel>(HttpMethod.Post, endPoint, request, serviceName: "getForeclosureStmtV1", "3");
+            return SendRequest<GetForeclosureStmtV1>(HttpMethod.Post, endPoint, request, serviceName: "getForeclosureStmtV1", "3");
+        }
+
+        public Task<LODResponse> GetLOD(LODRequest request)
+        {
+            var endPoint = "pff-api/services/statementRest/statementService/getLOD";
+
+            return SendRequest<LODResponse>(HttpMethod.Post, endPoint, request, serviceName: "getLOD", "3");
         }
 
         public Task<ReturnStatus> UpdateCustomerEmail(CustomerEmailRequest request)
@@ -88,11 +97,18 @@ namespace ProductivityApi.Services
             return SendRequest<ReturnStatus>(HttpMethod.Post, endPoint, request, serviceName: "addCustomerEmail", "3");
         }
 
-        public Task<ReturnStatus> CancelLoan(CancelLoanRequest request)
+        public Task<CancelLoanResponse> CancelLoan(CancelLoanRequest request)
         {
             var endPoint = "pff-api/services/createFinanceRest/finance/cancelLoan";
 
-            return SendRequest<ReturnStatus>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
+            return SendRequest<CancelLoanResponse>(HttpMethod.Post,endPoint,request,serviceName: "cancelLoan",serviceVersion: "3");
+        }
+
+        public Task<CollateralApiResponse> GetCollateralsByRef(CollateralApiRequest request)
+        {
+            var endPoint = "pff-api/services/collateralRest/collateralService/getCollateralsByRef";
+
+            return SendRequest<CollateralApiResponse>(HttpMethod.Post, endPoint, request, serviceName: "getCollateralsByRef", serviceVersion: "1");
         }
 
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")

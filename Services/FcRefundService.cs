@@ -1,5 +1,4 @@
-﻿// Services/FcRefundService.cs
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualBasic;
 using ProductivityApi.Constants;
@@ -18,14 +17,19 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly AppSettings _appSettings;
+        private readonly UserService _userService;
+        private readonly SharedService _sharedService;
+
         private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings)
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService )
         {
             _repository = repository;
             _emailService = emailService;
             _templateService = templateService;
             _appSettings = appSettings;
+            _userService = userService;
+            _sharedService = sharedService;
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
@@ -44,33 +48,44 @@ namespace ProductivityApi.Services
             var record = await _repository.GetByLanAsync(dto.Lan);
             if (record == null) return -1;
 
-            string? bankProofFilePath = record.BankProofFilePath;
-            string? requestLetterFilePath = record.RequestLetterFilePath;
+            string? bankProofFilePath = "";
+            string? requestLetterFilePath = "";
 
             if (!string.IsNullOrWhiteSpace(basePath))
             {
                 Directory.CreateDirectory(basePath);
 
-                var bankProofExt = Path.GetExtension(dto.BankProofFileName);
-                var bankProofName = $"{record.Lan}_BankProof{bankProofExt}";
-                await File.WriteAllBytesAsync(
-                    Path.Combine(basePath, bankProofName),
-                    Convert.FromBase64String(dto.BankProofBase64)
-                );
-                bankProofFilePath = bankProofName;
+                // Bank Proof
+                if (dto.BankProof != null && !string.IsNullOrEmpty(dto.BankProof.Base64))
+                {
+                    var bankProofExt = Path.GetExtension(dto.BankProof.FileName);
+                    var bankProofName = $"{record.Lan}_BankProof{bankProofExt}";
 
-                var requestLetterExt = Path.GetExtension(dto.RequestLetterFileName);
-                var requestLetterName = $"{record.Lan}_ReqLetter{requestLetterExt}";
-                await File.WriteAllBytesAsync(
-                    Path.Combine(basePath, requestLetterName),
-                    Convert.FromBase64String(dto.RequestLetterBase64)
-                );
-                requestLetterFilePath = requestLetterName;
+                    await File.WriteAllBytesAsync(
+                        Path.Combine(basePath, bankProofName),
+                        Convert.FromBase64String(dto.BankProof.Base64)
+                    );
+
+                    bankProofFilePath = bankProofName;
+                }
+
+                // Request Letter
+                if (dto.RequestLetter != null && !string.IsNullOrEmpty(dto.RequestLetter.Base64))
+                {
+                    var requestLetterExt = Path.GetExtension(dto.RequestLetter.FileName);
+                    var requestLetterName = $"{record.Lan}_ReqLetter{requestLetterExt}";
+
+                    await File.WriteAllBytesAsync(
+                        Path.Combine(basePath, requestLetterName),
+                        Convert.FromBase64String(dto.RequestLetter.Base64)
+                    );
+
+                    requestLetterFilePath = requestLetterName;
+                }
             }
 
             return await _repository.BranchSubmitAsync(dto, bankProofFilePath, requestLetterFilePath);
         }
-
         private bool IsAttachmentSizeValid(List<FcRefundModel> records, string basePath, out long totalSize)
         {
             totalSize = 0;
@@ -102,7 +117,7 @@ namespace ProductivityApi.Services
 
             var distinctLans = dto.Lans.Distinct().ToList();
 
-            // Step 1: Fetch records
+            // Fetch records
             var records = new List<FcRefundModel>();
             foreach (var lan in distinctLans)
             {
@@ -114,28 +129,28 @@ namespace ProductivityApi.Services
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            var kotakRecords = records;
+            // Determine mode based on status of records
+            var firstStatus = records.First().Status ?? string.Empty;
+            var isQuery = string.Equals(firstStatus, FcRefundStatus.ReSubmitted, StringComparison.OrdinalIgnoreCase);
 
-            var goDigitRecords = records
-                .Where(r => !string.IsNullOrWhiteSpace(r.GoDigitPolicyNo))
-                .ToList();
+            // Split by insurer
+            var kotakRecords = records.Where(r => r.InsurerName == "Kotak").ToList();
+            var goDigitRecords = records.Where(r => r.InsurerName == "GoDigit").ToList();
 
             int totalUpdated = 0;
 
-            // Kotak (always)
             if (kotakRecords.Any())
             {
-                var (sent, msg) = await SendKotakMailAsync(kotakRecords);
+                var (sent, msg) = isQuery ? await SendKotakQueryMailAsync(kotakRecords) : await SendKotakMailAsync(kotakRecords);
                 if (!sent) throw new Exception("Kotak: " + msg);
 
                 var lans = kotakRecords.Select(x => x.Lan).ToList();
                 totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "Kotak");
             }
 
-            // GoDigit (optional)
             if (goDigitRecords.Any())
             {
-                var (sent, msg) = await SendGoDigitMailAsync(goDigitRecords);
+                var (sent, msg) = isQuery ? await SendGoDigitQueryMailAsync(goDigitRecords) : await SendGoDigitMailAsync(goDigitRecords);
                 if (!sent) throw new Exception("GoDigit: " + msg);
 
                 var lans = goDigitRecords.Select(x => x.Lan).ToList();
@@ -144,15 +159,14 @@ namespace ProductivityApi.Services
 
             return totalUpdated;
         }
+
         public async Task<(bool Success, string Message)> SendKotakMailAsync(List<FcRefundModel> records)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
 
-            // Size check
             if (!IsAttachmentSizeValid(records, basePath, out _))
                 return (false, "Mail size exceeds 10MB. Please select fewer cases.");
 
-            // Fetch To/Cc from DB
             var emailDetails = await _repository.GetBankEmailDetailsAsync("Kotak");
             if (!emailDetails.Any())
                 return (false, "No recipient email IDs configured for Kotak");
@@ -163,7 +177,6 @@ namespace ProductivityApi.Services
             if (!to.Any())
                 return (false, "No recipients");
 
-            // Load template
             var template = _templateService.GetEmailTemplate("FcRefundMailTriggerEmail");
             var placeholders = new Dictionary<string, string>
             {
@@ -180,11 +193,11 @@ namespace ProductivityApi.Services
             var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
             return result == "Success" ? (true, "Mail sent successfully") : (false, result);
         }
+
         public async Task<(bool Success, string Message)> SendGoDigitMailAsync(List<FcRefundModel> records)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
 
-            // Size check
             if (!IsAttachmentSizeValid(records, basePath, out _))
                 return (false, "Mail size exceeds 10MB. Please select fewer cases.");
 
@@ -199,11 +212,10 @@ namespace ProductivityApi.Services
                 return (false, "No recipients");
 
             var template = _templateService.GetEmailTemplate("FcRefundMailTriggerEmail");
-
             var placeholders = new Dictionary<string, string>
             {
                 { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
-                { "Table", BuildGoDigitTableHtml(records) }
+                { "Table",    BuildGoDigitTableHtml(records) }
             };
 
             var subject = "Loan Foreclosure Premium refund | " + DateTime.Now;
@@ -215,6 +227,75 @@ namespace ProductivityApi.Services
             var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
             return result == "Success" ? (true, "Mail sent successfully") : (false, result);
         }
+
+        public async Task<(bool Success, string Message)> SendKotakQueryMailAsync(List<FcRefundModel> records)
+        {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            if (!IsAttachmentSizeValid(records, basePath, out _))
+                return (false, "Mail size exceeds 10MB. Please select fewer cases.");
+
+            var emailDetails = await _repository.GetBankEmailDetailsAsync("Kotak");
+            if (!emailDetails.Any())
+                return (false, "No recipient email IDs configured for Kotak");
+
+            var to = emailDetails.Where(e => e.EmailType == "1").Select(e => e.EmailId).ToList();
+            var cc = emailDetails.Where(e => e.EmailType == "2").Select(e => e.EmailId).ToList();
+
+            if (!to.Any())
+                return (false, "No recipients");
+
+            var template = _templateService.GetEmailTemplate("FcRefundQueryMailTriggerEmail");
+            var placeholders = new Dictionary<string, string>
+            {
+                { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
+                { "Table",    BuildKotakQueryTableHtml(records) }
+            };
+
+            var subject = "QUERY - Loan Foreclosure Premium refund | " + DateTime.Now;
+
+            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+            var attachments = BuildAttachments(records, basePath);
+
+            var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
+            return result == "Success" ? (true, "Mail sent successfully") : (false, result);
+        }
+
+        public async Task<(bool Success, string Message)> SendGoDigitQueryMailAsync(List<FcRefundModel> records)
+        {
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            if (!IsAttachmentSizeValid(records, basePath, out _))
+                return (false, "Mail size exceeds 10MB. Please select fewer cases.");
+
+            var emailDetails = await _repository.GetBankEmailDetailsAsync("GoDigit");
+            if (!emailDetails.Any())
+                return (false, "No recipient email IDs configured for GoDigit");
+
+            var to = emailDetails.Where(e => e.EmailType == "1").Select(e => e.EmailId).ToList();
+            var cc = emailDetails.Where(e => e.EmailType == "2").Select(e => e.EmailId).ToList();
+
+            if (!to.Any())
+                return (false, "No recipients");
+
+            var template = _templateService.GetEmailTemplate("FcRefundQueryMailTriggerEmail");
+            var placeholders = new Dictionary<string, string>
+            {
+                { "DateTime", DateTime.Now.ToString("dd-MMM-yyyy HH:mm") },
+                { "Table",    BuildGoDigitQueryTableHtml(records) }
+            };
+
+            var subject = "QUERY - Loan Foreclosure Premium refund | " + DateTime.Now;
+
+            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+            var attachments = BuildAttachments(records, basePath);
+
+            var result = await _emailService.SendEmail(subject, body, to, cc, attachments);
+            return result == "Success" ? (true, "Mail sent successfully") : (false, result);
+        }
+
         private string BuildKotakTableHtml(List<FcRefundModel> records)
         {
             var table = new StringBuilder();
@@ -235,11 +316,13 @@ namespace ProductivityApi.Services
 
             foreach (var r in records)
             {
+                var kotak = _sharedService.GetKotakByLanAsync(r.Lan);
+
                 table.Append("<tr>");
                 table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
                 table.Append($"<td style='text-align:center;'>Vistaar Financial Services Pvt. Ltd.</td>");
                 table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
-                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
+                table.Append($"<td style='text-align:center;'>{kotak?.Result?.LoanAcId}</td>");
                 table.Append($"<td style='text-align:center;'>{r.SgNo}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
@@ -252,6 +335,7 @@ namespace ProductivityApi.Services
             table.Append("</table>");
             return table.ToString();
         }
+
         private string BuildGoDigitTableHtml(List<FcRefundModel> records)
         {
             var table = new StringBuilder();
@@ -271,8 +355,8 @@ namespace ProductivityApi.Services
             {
                 table.Append("<tr>");
                 table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
-                table.Append($"<td style='text-align:center;'>{r.GoDigitPolicyNo}</td>");
-                table.Append($"<td style='text-align:center;'>{r.FullName}</td>");
+                table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
                 table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
                 table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
                 table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
@@ -283,6 +367,94 @@ namespace ProductivityApi.Services
             table.Append("</table>");
             return table.ToString();
         }
+
+        private string BuildKotakQueryTableHtml(List<FcRefundModel> records)
+        {
+            var table = new StringBuilder();
+
+            table.Append("<table border='1' cellpadding='3' style='border-collapse: collapse;'>");
+            table.Append("<tr style='background-color: #f2f2f2;'>");
+            table.Append("<th>Policy Number</th>");
+            table.Append("<th>QUERY REMARKS</th>");
+            table.Append("<th>Client Name</th>");
+            table.Append("<th>Member Name</th>");
+            table.Append("<th>Loan A/C ID</th>");
+            table.Append("<th>System Generated No.</th>");
+            table.Append("<th>Foreclosure Date</th>");
+            table.Append("<th>Member Name as per NEFT COPY</th>");
+            table.Append("<th>Account No</th>");
+            table.Append("<th>IFSC code</th>");
+            table.Append("<th>Payout</th>");
+            table.Append("<th>Member Level</th>");
+            table.Append("</tr>");
+
+            foreach (var r in records)
+            {
+                var kotak = _sharedService.GetKotakByLanAsync(r.Lan);
+                var payout = r.RefundAmount.HasValue ? r.RefundAmount.Value.ToString("0.00") : (r.PayoutLevel ?? string.Empty);
+                var queryRemarks = string.IsNullOrWhiteSpace(r.AdditionalRequest) ? "" : r.AdditionalRequest;
+
+                table.Append("<tr>");
+                table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
+                table.Append($"<td style='text-align:center;'>{queryRemarks}</td>");
+                table.Append($"<td style='text-align:center;'>{r.ClientName ?? "Vistaar Financial Services Pvt. Ltd."}</td>");
+                table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
+                table.Append($"<td style='text-align:center;'>{kotak?.Result?.LoanAcId}</td>");
+                table.Append($"<td style='text-align:center;'>{r.SgNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
+                table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
+                table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.Ifsc}</td>");
+                table.Append($"<td style='text-align:center;'>{payout}</td>");
+                table.Append($"<td style='text-align:center;'>{r.PayoutLevel}</td>");
+                table.Append("</tr>");
+            }
+
+            table.Append("</table>");
+            return table.ToString();
+        }
+
+        private string BuildGoDigitQueryTableHtml(List<FcRefundModel> records)
+        {
+            var table = new StringBuilder();
+
+            table.Append("<table border='1' cellpadding='3' style='border-collapse: collapse;'>");
+            table.Append("<tr style='background-color: #f2f2f2;'>");
+            table.Append("<th>LAN</th>");
+            table.Append("<th>Policy Number</th>");
+            table.Append("<th>QUERY REMARKS</th>");
+            table.Append("<th>Customer Name</th>");
+            table.Append("<th>Foreclosure Date</th>");
+            table.Append("<th>Customer Name as per NEFT COPY</th>");
+            table.Append("<th>Account No</th>");
+            table.Append("<th>IFSC code</th>");
+            table.Append("<th>Payout</th>");
+            table.Append("<th>Member Level</th>");
+            table.Append("</tr>");
+
+            foreach (var r in records)
+            {
+                var payout = r.RefundAmount.HasValue ? r.RefundAmount.Value.ToString("0.00") : (r.PayoutLevel ?? string.Empty);
+                var queryRemarks = string.IsNullOrWhiteSpace(r.AdditionalRequest) ? "" : r.AdditionalRequest;
+
+                table.Append("<tr>");
+                table.Append($"<td style='text-align:center;'>{r.Lan}</td>");
+                table.Append($"<td style='text-align:center;'>{r.PolicyNo}</td>");
+                table.Append($"<td style='text-align:center;'>{queryRemarks}</td>");
+                table.Append($"<td style='text-align:center;'>{r.MemberName}</td>");
+                table.Append($"<td style='text-align:center;'>{r.ForeclosedDate:dd-MMM-yyyy}</td>");
+                table.Append($"<td style='text-align:center;'>{r.FullNameAsPerBankProof}</td>");
+                table.Append($"<td style='text-align:center;'>{r.AccountNo}</td>");
+                table.Append($"<td style='text-align:center;'>{r.Ifsc}</td>");
+                table.Append($"<td style='text-align:center;'>{payout}</td>");
+                table.Append($"<td style='text-align:center;'>{r.PayoutLevel}</td>");
+                table.Append("</tr>");
+            }
+
+            table.Append("</table>");
+            return table.ToString();
+        }
+
         private List<Attachment> BuildAttachments(List<FcRefundModel> records, string basePath)
         {
             var attachments = new List<Attachment>();
@@ -306,10 +478,8 @@ namespace ProductivityApi.Services
 
             return attachments;
         }
-
         public async Task<int> UpdateRefundAsync(List<FcRefundUpdateRefundDto> dtos)
             => await _repository.UpdateRefundAsync(dtos);
-
         public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
             => await _repository.UpdateAdditionalRequestAsync(dtos);
 
@@ -333,13 +503,10 @@ namespace ProductivityApi.Services
         }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {
-            var completed = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.Completed);
-            var mailsent = await _repository.GetReportAsync(fromDate, toDate, FcRefundStatus.MailSentToInsurer);
+            var data = await _repository.GetReportAsync(fromDate, toDate);
 
             return ExcelHelper.GenerateExcel(
-                (completed, "Completed"),
-                (mailsent, "Mail Sent To Insurer")
-            );
+                (data, "Data"));
         }
     }
 

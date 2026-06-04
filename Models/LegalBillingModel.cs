@@ -23,6 +23,10 @@ namespace ProductivityApi.Models
         public int? AdvocateId { get; set; }
         public int? LegalCategoryId { get; set; }
         public decimal? PaymentAmount { get; set; }
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
         public string? Remarks { get; set; }
         public string? Status { get; set; }
         public string? PendingRole { get; set; }
@@ -30,13 +34,20 @@ namespace ProductivityApi.Models
         public string? PaymentStatus { get; set; }
         public string? PaymentRemarks { get; set; }
         public string? Utr { get; set; }
+        public decimal? UtrAmount { get; set; }
+        public decimal? InvoiceAmount { get; set; }
+        public DateTime? PaymentDate { get; set; }
         public DateTime CreatedDate { get; set; }
         public string? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
         public string? ModifiedBy { get; set; }
         public bool IsApproved { get; set; }
+        public bool IsRepeatRequest { get; set; }
         public DateTime? ApprovedDate { get; set; }
-        public int? TurnaroundTime { get; set; } 
+        public int? TurnaroundTime { get; set; }
+        public string? CancelledChequeFilePath { get; set; }
+        public string? InvoiceFilePath { get; set; }
+
     }
 
     public class LegalBillingLog
@@ -96,6 +107,8 @@ namespace ProductivityApi.Models
         public string? AdvocateName { get; set; }
         public string? LegalCategory { get; set; }
         public string? Status { get; set; }
+        public string? PaymentType { get; set; }
+        public decimal PaymentAmount { get; set; }
         public string? PendingRole { get; set; }
         public string? PendingUser { get; set; }
         public DateTime CreatedDate { get; set; }
@@ -126,6 +139,13 @@ namespace ProductivityApi.Models
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
         public string? Remarks { get; set; }
+        [Required]
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
+        public FileUploadBase64? CancelledChequeFile { get; set; }
+        public bool IsRepeatRequest { get; set; } = false;
 
     }
 
@@ -145,6 +165,11 @@ namespace ProductivityApi.Models
         public int? LegalCategoryId { get; set; }
         public decimal? PaymentAmount { get; set; }
         public string? Remarks { get; set; }
+        public string? PaymentType { get; set; }
+        public string? BankAcNo { get; set; }
+        public string? BankName { get; set; }
+        public string? Ifsc { get; set; }
+        public FileUploadBase64? CancelledChequeFile { get; set; }
     }
 
     public class LegalBillingActionDto
@@ -152,7 +177,6 @@ namespace ProductivityApi.Models
         [Required]
         public int Id { get; set; }
         [Required]
-        [AllowedValues("approved", "rejected", "sentback")]
         public string Action { get; set; } = string.Empty;
         [Required]
         public string Role { get; set; } = string.Empty;
@@ -166,13 +190,30 @@ namespace ProductivityApi.Models
         [Required]
         public int Id { get; set; }
         [Required]
-        public decimal PaymentAmount { get; set; }
-        [Required]
         public string PaymentStatus { get; set; } = string.Empty;
+        public string? PaymentRemarks { get; set; }
+        public DateOnly? PaymentDate { get; set; }
+        public string? Utr { get; set; }
+        public decimal? UtrAmount { get; set; }
+        public decimal? InvoiceAmount { get; set; }
+        public FileUploadBase64? InvoiceFile { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
-        public string? PaymentRemarks { get; set; }
-        public string? Utr { get; set; }
+    }
+
+    public class LegalBillingUpdateFinanceDto
+    {
+        [Required]
+        public int Id { get; set; }
+        [Required]
+        public string Utr { get; set; } = string.Empty;
+        public string UtrAmount { get; set; } = string.Empty;
+        [Required]
+        public DateOnly? PaymentDate { get; set; }
+        [Required]
+        public string ModifiedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
+
     }
 
     public class LegalBillingGetByUserDto
@@ -237,6 +278,25 @@ namespace ProductivityApi.Models
         public string? Status { get; set; }
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
+    }
+
+    public class CollectionUserMappingDto
+    {
+        public string BranchId { get; set; } = string.Empty;
+        public string CdsmId { get; set; } = string.Empty;
+        public string ZdshId { get; set; } = string.Empty;
+        public string MzdshId { get; set; } = string.Empty;
+    }
+
+    public class CollectionUserMappingUpdateDto
+    {
+        [Required]
+        public string BranchId { get; set; } = string.Empty;
+        public string CdsmId { get; set; } = string.Empty;
+        public string ZdshId { get; set; } = string.Empty;
+        public string MzdshId { get; set; } = string.Empty;
+        [Required]
+        public string ModifiedBy { get; set; } = string.Empty;
     }
 
 }

@@ -23,16 +23,22 @@
   "FcRefundMailTriggerEmail": {
     "Body": "<p>Hi Team,</p><p>Loan foreclosure for the below cases. Kindly refund the premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
   },
+  "FcRefundQueryMailTriggerEmail": {
+    "Body": "<p>Hi Team,</p><p>Query proof attached for Loan foreclosure for the below cases. Kindly refund the premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
+  },
   "LcRefundMailTriggerEmail": {
     "Body": "<p>Hi Team,</p><p>Disbursement cancelled for the below cases. Kindly refund premium for the same.</p><br/><<Table>><br/><p>Regards,<br/>Vistaar Finance</p>"
   },
   "LoanCancelApprovedEmail": {
-    "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been approved for Loan Account No: <b><<LAN>></b>.</p><p>Please dispatch DD at the earliest.</p><p>Regards,<br/>Vistaar Finance</p>"
+    "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been Approved for Loan Account No: <b><<LAN>></b>.</p><p>Please dispatch DD at the earliest.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "LoanCancelRejectedEmail": {
-    "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been rejected for Loan Account No: <b><<LAN>></b>.</p><p>Regards,<br/>Vistaar Finance</p>"
+    "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been Rejected for Loan Account No: <b><<LAN>></b>.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
-  "LoanCancelCompletedEmail": {
-    "Body": "<p>Dear Branch Team,</p><p>Loan Account No: <b><<LAN>></b> is successfully cancelled.</p><p>Regards,<br/>Vistaar Finance</p>"
+  "LoanCancelProcessedEmail": {
+    "Body": "<p>Dear Branch Team,</p><p>Loan cancellation request has been Processed for Loan Account No: <b><<LAN>></b>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "LegalBillingReminderEmail": {
+    "Body": "<p>Hi <b><<Name>></b>,</p><p>There are <b>open requests pending</b> for your action on the <b>Vistaar Field Assist – Legal Billing</b> mobile application.</p><p>Kindly review the pending requests and provide the necessary action at the earliest to avoid any delays in processing.</p><br/><<RecordsTable>><br/><p>Regards,<br/>Vistaar Finance.</p>"
   }
 }

@@ -5,11 +5,13 @@ namespace ProductivityApi.Models
     public class AppSettings
     {
         public string ApiKey { get; set; } = string.Empty;
+        public string BaseUrl { get; set; } = string.Empty;
         public EmailSettings EmailSettings { get; set; } = new EmailSettings();
         public SmsSettings SmsSettings { get; set; } = new SmsSettings();
         public PlfApiSettings PlfApiSettings { get; set; } = new PlfApiSettings();
         public ADSettings ADSettings { get; set; } = new ADSettings();
         public FilePaths FilePaths { get; set; } = new FilePaths();
+        public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
     }
 
     public class EmailSettings
@@ -57,5 +59,16 @@ namespace ProductivityApi.Models
         public string ModLettersFilePath { get; set; } = string.Empty;
         public string FcRefundFilePath { get; set; } = string.Empty;
         public string LoanCancelFilePath { get; set; } = string.Empty;
+        public string LegalBillingFilePath { get; set; } = string.Empty;
+        public string SOALODFilePath { get; set; } = string.Empty;
+        public string ClosureFilePath { get; set; } = string.Empty;
+        public string DeathClaimFilePath { get; set; } = string.Empty;
+        public string SARFAESIFilePath { get; set; } = string.Empty;
+        public string GoldLoanFilePath { get; set; } = string.Empty;
+    }
+    public class RazorPaySettings
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

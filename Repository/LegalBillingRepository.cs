@@ -1,4 +1,4 @@
-﻿using Dapper;
+﻿    using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Constants;
 using ProductivityApi.Models;
@@ -190,6 +190,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@Remarks", dto.Remarks);
             parameters.Add("@Status", LegalBillingStatus.Initiated);
             parameters.Add("@CreatedBy", dto.CreatedBy);
+            parameters.Add("@PaymentType", dto.PaymentType);
+            parameters.Add("@BankAcNo", dto.BankAcNo);
+            parameters.Add("@BankName", dto.BankName);
+            parameters.Add("@IFSC", dto.Ifsc);
+            parameters.Add("@IsRepeatRequest", dto.IsRepeatRequest);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
@@ -223,6 +228,10 @@ namespace ProductivityApi.Repository
                     dto.LegalCategoryId,
                     dto.PaymentAmount,
                     dto.Remarks,
+                    dto.PaymentType,
+                    dto.BankAcNo,
+                    dto.BankName,
+                    dto.Ifsc,
                     Status = LegalBillingStatus.Initiated,
                     UpdatedBy = dto.ModifiedBy
                 },
@@ -257,12 +266,36 @@ namespace ProductivityApi.Repository
                 new
                 {
                     dto.Id,
-                    dto.PaymentAmount,
                     dto.PaymentStatus,
                     dto.PaymentRemarks,
                     dto.Utr,
+                    dto.UtrAmount,
+                    PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
+                    dto.InvoiceAmount,
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+
+        public async Task<int> UpdateLegalBillingFinanceAsync(LegalBillingUpdateFinanceDto dto, string nextStatus)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_LegalBilling_UpdateFinance",
+                new
+                {
+                    dto.Id,
+                    dto.Utr,
+                    dto.UtrAmount,
+                    PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
+                    Status = nextStatus,
+                    ModifiedBy = dto.ModifiedBy,
+                    Remarks  = dto.Remarks
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -315,6 +348,19 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
+        public async Task<List<LegalBillingListDto>> GetPendingApprovalAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<LegalBillingListDto>(
+                "sp_LegalBilling_PendingApproval",
+                commandType: CommandType.StoredProcedure        
+            );
+
+            return result.ToList();
+        }
+
         public async Task<IEnumerable<dynamic>> GetLegalBillingReportAsync(LegalBillingReportFilterDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -336,5 +382,85 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string fileName)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var param = new DynamicParameters();
+            param.Add("@ReqID", reqId);
+            param.Add("@FileType", fileType);
+            param.Add("@FileName", fileName);
+            param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "sp_LegalBilling_UpdateFilePath",
+                param,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return param.Get<int>("@Output");
+        }
+
+        // ─────────────────────────────────────────────
+        //  CDSM-ZDSH Allocation
+        // ─────────────────────────────────────────────
+
+        public async Task<IEnumerable<dynamic>> GetAllocationForExcelAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<dynamic>(
+                "sp_Get_CDSM_ZDSH_Allocation",
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
+
+        public async Task<IEnumerable<CollectionUserMappingDto>> GetAllocationAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<CollectionUserMappingDto>(
+                "sp_Get_CDSM_ZDSH_Allocation",
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
+
+        public async Task<int> UpdateAllocationAsync(List<CollectionUserMappingUpdateDto> dtos)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var table = new DataTable();
+            table.Columns.Add("BranchID", typeof(string));
+            table.Columns.Add("CDSM_ID", typeof(string));
+            table.Columns.Add("ZDSH_ID", typeof(string));
+            table.Columns.Add("MZDSH_ID", typeof(string));
+            table.Columns.Add("ModifiedBy", typeof(string));
+
+            foreach (var dto in dtos)
+            {
+                table.Rows.Add(dto.BranchId, dto.CdsmId, dto.ZdshId, dto.MzdshId, dto.ModifiedBy);
+            }
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Allocations", table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
+
+            // ✅ Use returnValue: true — Dapper handles RETURN without passing it as an SP argument
+            parameters.Add("@ReturnVal", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+
+            await connection.ExecuteAsync(
+                "sp_Update_CDSM_ZDSH_Allocation",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return parameters.Get<int>("@ReturnVal");
+        }
     }
 }

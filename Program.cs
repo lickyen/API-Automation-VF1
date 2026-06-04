@@ -95,6 +95,15 @@ builder.Services.AddScoped<LegalBillingService>();
 builder.Services.AddScoped<CustEmailUpdateService>();
 builder.Services.AddScoped<WabaService>();
 builder.Services.AddScoped<LoanCancellationService>();
+builder.Services.AddScoped<SOALODFCLService>();
+builder.Services.AddScoped<ClosureService>();
+builder.Services.AddScoped<GoldLoanLeadService>();
+builder.Services.AddScoped<GoldLoanVendorService>();
+builder.Services.AddScoped<SARFAESIService>();
+builder.Services.AddScoped<NewBranchServices>();
+builder.Services.AddScoped<KotakService>();
+builder.Services.AddScoped<DeathClaimService>();
+builder.Services.AddScoped<GurukulUserService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -115,13 +124,21 @@ builder.Services.AddScoped<WabaRepository>();
 builder.Services.AddScoped<UserLogRepository>();
 builder.Services.AddScoped<LoanCancellationRepository>();
 builder.Services.AddScoped<PLFRepository>();
-
+builder.Services.AddScoped<SOALODFCLRepository>();
+builder.Services.AddScoped<ClosureRepository>();
+builder.Services.AddScoped<GoldLoanLeadRepository>();
+builder.Services.AddScoped<GoldLoanVendorRepository>();
+builder.Services.AddScoped<SARFAESIRepository>();
+builder.Services.AddScoped<NewBranchRepository>();
+builder.Services.AddScoped<DeathClaimRepository>();
+builder.Services.AddScoped<GurukulUserRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
+builder.Services.AddScoped<IJob, LegalBillingJob>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -173,6 +190,8 @@ app.UseSerilogRequestLogging(options =>
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
+
+app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
 {

@@ -156,6 +156,7 @@ namespace ProductivityApi.Repository
             param.Add("@Plf_Status", dto.PlfStatus);
             param.Add("@Plf_Response", dto.PlfResponse);
             param.Add("@Plf_Remarks", dto.PlfRemarks);
+            param.Add("@PaymentDetails", dto.PaymentDetails);
 
             param.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
@@ -180,11 +181,11 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<LoanCancelListDto>> GetByUserAsync(LoanCancelGetByUserDto dto)
+        public async Task<List<LoanCancelRequest>> GetByUserAsync(LoanCancelGetByUserDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
-            var data = await conn.QueryAsync<LoanCancelListDto>(
+            var data = await conn.QueryAsync<LoanCancelRequest>(
                 "SP_LoanCancel_GetLansByUserID",
                 new { dto.UserId, dto.Status, dto.Role },
                 commandType: CommandType.StoredProcedure

@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using ProductivityApi.Services;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
+using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
 {
@@ -10,58 +9,37 @@ namespace ProductivityApi.Controllers
     public class NOCController : ControllerBase
     {
         private readonly NOCService _service;
+
         public NOCController(NOCService service)
         {
             _service = service;
         }
 
-        [HttpGet("getPendingLans")]
-        public async Task<IActionResult> GetPendingLoans() 
+        [HttpGet("getEligibleLans")]
+        public async Task<IActionResult> GetEligibleLans()
         {
-
-            var loans = await _service.GetPendingLoans();
-
-            if (loans == null || !loans.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, loans, "Success"));
+            var data = await _service.GetEligibleLansAsync();
+            return Ok(new Response(true, data));
         }
 
         [HttpGet("getLinkedLans")]
-        public async Task<IActionResult> GetLinkedLoans(string lan)
+        public async Task<IActionResult> GetLinkedLans([FromQuery] string lan)
         {
+            if (string.IsNullOrEmpty(lan))
+                return BadRequest(new Response(false, message: "LAN is required."));
 
-            var loans = await _service.GetLinkedLoans(lan);
-
-            if (loans == null || !loans.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, loans, "Success"));
+            var result = await _service.GetLinkedLoansByLanAsync(lan);
+            return Ok(new Response(true, result));
         }
 
-        [HttpGet("requests")]
-        public async Task<IActionResult> GetRequests(string userId, string status)
+        [HttpGet("getById/{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
+            var data = await _service.GetByIdAsync(id);
+            if (data == null)
+                return NotFound(new Response(false, message: $"Transaction {id} not found."));
 
-            var requests = await _service.GetRequests(userId, status);
-
-            if (requests == null || !requests.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, requests, "Success"));
+            return Ok(new Response(true, data));
         }
-
-        [HttpGet("requests/{id}")]
-        public async Task<IActionResult> GetRequestById(int id)
-        {
-
-            var request = await _service.GetRequestById(id);
-
-            if (request == null)
-                return Ok(new Response(true, null, "No records found"));
-
-            return Ok(new Response(true, request, "Success"));
-        }
-
     }
 }

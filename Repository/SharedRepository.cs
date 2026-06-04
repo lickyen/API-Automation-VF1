@@ -24,6 +24,62 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<KotakData?> GetKotakByLanAsync(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<KotakData>(
+                "sp_GetKotakByLan",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<LanCategoryDto?> GetLanCategoryAsync(string lan, double? dpd)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "sp_Closure_GetLanCategory",
+                new
+                {
+                    lan = lan,
+                    dpd = dpd
+
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var soa = await multi.ReadFirstOrDefaultAsync<LanCategoryDto>();
+
+            return soa;
+        }
+
+        public async Task<string?> GenerateReferenceNoAsync(string prefix)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<string>(
+                "sp_generateReferenceNo",
+                new
+                {
+                    Prefix = prefix
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<PolicyDetails?> GetPolicyByLanAsync(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<PolicyDetails>(
+                "sp_getPolicy_ByLan",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
 
     }
 }

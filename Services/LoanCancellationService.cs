@@ -1,4 +1,6 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
@@ -12,11 +14,9 @@ namespace ProductivityApi.Services
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
-        private readonly AppSettings _appSettings;
         private readonly PLFRepository _plfRepository;
         private readonly PLFService _plfService;
-
-
+        private readonly string _filePath;
 
         public LoanCancellationService(LoanCancellationRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFRepository plfRepository, PLFService plfService)
         {
@@ -24,9 +24,9 @@ namespace ProductivityApi.Services
             _emailService = emailService;
             _templateService = templateService;
             _userService = userService;
-            _appSettings = appSettings;
             _plfRepository = plfRepository;
             _plfService = plfService;
+            _filePath = appSettings.FilePaths.LoanCancelFilePath;
         }
 
         public async Task<LoanCancelDetailsDto?> GetByIdAsync(int id)
@@ -46,7 +46,7 @@ namespace ProductivityApi.Services
             };
         }
 
-        public async Task<List<LoanCancelListDto>> GetByUserAsync(LoanCancelGetByUserDto dto)
+        public async Task<List<LoanCancelRequest>> GetByUserAsync(LoanCancelGetByUserDto dto)
         {
             return await _repository.GetByUserAsync(dto);
         }
@@ -146,23 +146,127 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        //public async Task<(int result, string message)> CopsActionAsync(LoanCancelCopsDto dto)
+        //{
+        //    var result = await _repository.CopsActionAsync(dto);
+        //    if (result < 1)
+        //        return (result, "Error");
+
+        //    var record = await GetByIdAsync(dto.Id);
+
+        //    if (record == null)
+        //        return (result, "Response submitted successfully");
+
+        //    var cashPayments = record.Payments?
+        //        .Where(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase))
+        //        .ToList();
+
+        //    string cashPaymentsString = cashPayments != null && cashPayments.Any()
+        //        ? string.Join(" | ", cashPayments.Select(p =>
+        //            $"ReceiptId: {p.ReceiptId}, Mode: {p.ReceiptMode}, Amount: {p.ReceiptAmount}, Date: {p.ReceiptDate:yyyy-MM-dd}"))
+        //        : string.Empty;
+
+        //    bool hasCashPayment = cashPayments?.Any() == true;
+
+        //    var plfStatus = new PlfStatusUpdateDto
+        //    {
+        //        Id = dto.Id,
+        //        PaymentDetails = cashPaymentsString
+        //    };
+
+        //    string message;
+
+        //    if (string.Equals(dto.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        if (!hasCashPayment)
+        //        {
+        //            try
+        //            {
+        //                var cancelRequest = BuildCancelLoanRequest(record);
+        //                var response = await _plfService.CancelLoan(cancelRequest);
+
+        //                if (response.returnStatus.returnCode == "0000")
+        //                {
+        //                    plfStatus.PlfStatus = "Success";
+        //                    plfStatus.PlfResponse = response.returnStatus.returnText;
+
+        //                    message = "Loan cancelled successfully in Pennant";
+        //                    plfStatus.PlfRemarks = message;
+
+        //                }
+        //                else
+        //                {
+        //                    plfStatus.PlfStatus = "Failed";
+        //                    plfStatus.PlfResponse = response.returnStatus.returnText;
+
+        //                    message = "Loan cancellation failed in Pennant";
+        //                    plfStatus.PlfRemarks = message;
+
+        //                }
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                plfStatus.PlfStatus = "Failed";
+        //                plfStatus.PlfResponse = ex.Message;
+
+        //                message = "Response submitted, but Pennant cancellation failed.";
+        //                plfStatus.PlfRemarks = message;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            plfStatus.PlfStatus = "Skipped";
+        //            message = "Cash payment found. Manual cancellation required.";
+
+        //            plfStatus.PlfRemarks = message;
+        //        }
+
+        //        await _repository.UpdatePlfStatusAsync(plfStatus);
+
+        //        await NotifyBranchAsync(record, dto.Status);
+
+        //        return (result, message);
+        //    }
+        //    else if (string.Equals(dto.Status, "SentBack", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        await NotifyPendingUserAsync(record);
+        //        message = "Request sent back successfully";
+        //    }
+        //    else if (string.Equals(dto.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        await NotifyBranchAsync(record, dto.Status);
+        //        message = "Request rejected successfully";
+        //    }
+        //    else
+        //    {
+        //        message = "Response submitted successfully";
+        //    }
+
+        //    return (result, message);
+        //}
+
+
         public async Task<(int result, string message)> CopsActionAsync(LoanCancelCopsDto dto)
         {
-            var result = await _repository.CopsActionAsync(dto);
-            if (result < 1)
-                return (result, "Error");
-
             var record = await GetByIdAsync(dto.Id);
-
             if (record == null)
-                return (result, "Response submitted successfully");
+                return (0, "Record not found");
 
-            var hasCashPayment = record.Payments?
-                .Any(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase)) == true;
+            var cashPayments = record.Payments?
+                .Where(p => string.Equals(p.ReceiptMode, "Cash", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            bool hasCashPayment = cashPayments?.Any() == true;
+
+            string cashPaymentsString = hasCashPayment
+                ? string.Join(" | ", cashPayments.Select(p =>
+                    $"ReceiptId: {p.ReceiptId}, Mode: {p.ReceiptMode}, Amount: {p.ReceiptAmount}, Date: {p.ReceiptDate:yyyy-MM-dd}"))
+                : string.Empty;
 
             var plfStatus = new PlfStatusUpdateDto
             {
-                Id = dto.Id
+                Id = dto.Id,
+                PaymentDetails = cashPaymentsString
             };
 
             string message;
@@ -175,60 +279,70 @@ namespace ProductivityApi.Services
                     {
                         var cancelRequest = BuildCancelLoanRequest(record);
                         var response = await _plfService.CancelLoan(cancelRequest);
+                        var responseStr = response != null ? JsonConvert.SerializeObject(response) : string.Empty;
+                        var returnText = response?.returnStatus?.returnText ?? string.Empty;
 
-                        if (response.returnCode == "0000")
+                        if (response?.returnStatus?.returnCode == "0000")
                         {
                             plfStatus.PlfStatus = "Success";
-                            plfStatus.PlfResponse = response.returnText;
-
-                            message = "Loan cancelled successfully in Pennant";
+                            plfStatus.PlfResponse = responseStr;
+                            plfStatus.PlfRemarks = returnText;
+                            message = returnText;
                         }
                         else
                         {
                             plfStatus.PlfStatus = "Failed";
-                            plfStatus.PlfResponse = response.returnText;
-
-                            message = "Loan cancellation failed in Pennant";
+                            plfStatus.PlfResponse = responseStr;
+                            plfStatus.PlfRemarks = returnText;
+                            message = returnText;
+                            await _repository.UpdatePlfStatusAsync(plfStatus);
+                            return (0, message);
                         }
                     }
                     catch (Exception ex)
                     {
                         plfStatus.PlfStatus = "Failed";
                         plfStatus.PlfResponse = ex.Message;
-
-                        message = "Response submitted, but Pennant cancellation failed.";
+                        message = "Pennant cancellation failed.";
+                        plfStatus.PlfRemarks = message;
+                        await _repository.UpdatePlfStatusAsync(plfStatus);
+                        return (0, message);
                     }
                 }
                 else
                 {
                     plfStatus.PlfStatus = "Skipped";
-                    plfStatus.PlfRemarks = "Cash payment found. Manual cancellation required.";
-
-                    message = plfStatus.PlfRemarks;
+                    message = "Cash payment found. Manual cancellation required.";
+                    plfStatus.PlfRemarks = message;
                 }
 
-                await _repository.UpdatePlfStatusAsync(plfStatus);
+                // ✅ Only reaches here if PLF succeeded or was skipped (cash)
+                var result = await _repository.CopsActionAsync(dto); // 👈 DB update AFTER PLF
+                if (result < 1)
+                    return (result, "DB update failed");
 
+                await _repository.UpdatePlfStatusAsync(plfStatus);
                 await NotifyBranchAsync(record, dto.Status);
 
                 return (result, message);
             }
             else if (string.Equals(dto.Status, "SentBack", StringComparison.OrdinalIgnoreCase))
             {
+                var result = await _repository.CopsActionAsync(dto);
                 await NotifyPendingUserAsync(record);
-                message = "Request sent back successfully";
+                return (result, "Request sent back successfully");
             }
             else if (string.Equals(dto.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
+                var result = await _repository.CopsActionAsync(dto);
                 await NotifyBranchAsync(record, dto.Status);
-                message = "Request rejected successfully";
+                return (result, "Request rejected successfully");
             }
             else
             {
-                message = "Response submitted successfully";
+                var result = await _repository.CopsActionAsync(dto);
+                return (result, "Response submitted successfully");
             }
-
-            return (result, message);
         }
         private CancelLoanRequest BuildCancelLoanRequest(LoanCancelDetailsDto record)
         {
@@ -355,11 +469,11 @@ namespace ProductivityApi.Services
 
                 if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
-                    var template = _templateService.GetEmailTemplate("LoanCancelCompletedEmail");
+                    var template = _templateService.GetEmailTemplate("LoanCancelProcessedEmail");
                     var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
                     await _emailService.SendEmail(
-                        "Loan Cancellation Completed",
+                        "Loan Cancellation Processed",
                         body,
                         new List<string> { user.Email },
                         new List<string>()
@@ -367,54 +481,42 @@ namespace ProductivityApi.Services
                 }
             }
         }
-
-        public async Task<int> UploadBase64FileAsync(int reqId, LoanCancelFileUploadDto fileDto, string fileType)
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
-            if (fileDto == null || string.IsNullOrEmpty(fileDto.Base64))
-                throw new Exception("File is empty");
+            return await FileHelper.ReadFileAsync(
+                _filePath,
+                fileName
+            );
+        }
 
-            var folderPath = _appSettings.FilePaths.LoanCancelFilePath;
-
-            if (!Directory.Exists(folderPath))
-                Directory.CreateDirectory(folderPath);
-
-            var extension = Path.GetExtension(fileDto.FileName);
-            if (string.IsNullOrEmpty(extension))
-                throw new Exception("Invalid file extension");
+        public async Task<int> UploadBase64FileAsync(int reqId, FileUploadBase64 fileDto, string fileType)
+        {
+            if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
+                throw new ArgumentException("File is empty");
 
             var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".zip" };
-            
-            if (!allowedExtensions.Contains(extension.ToLower()))
-                throw new Exception("Invalid file format");
+
+            var extension = Path.GetExtension(fileDto.FileName);
 
             var fileName = $"{reqId}_{fileType}{extension}";
-            var fullPath = Path.Combine(folderPath, fileName);
+            var fullPathFileName = fileName;
 
-            var base64Data = fileDto.Base64.Contains(",")
-                ? fileDto.Base64.Split(',')[1]
-                : fileDto.Base64;
+            var result = await FileHelper.SaveBase64FileAsync(
+                _filePath,
+                fullPathFileName,
+                fileDto.Base64,
+                allowedExtensions
+            );
 
-            byte[] fileBytes;
-            try
-            {
-                fileBytes = Convert.FromBase64String(base64Data);
-            }
-            catch
-            {
-                throw new Exception("Invalid Base64 string");
-            }
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
 
-            if (File.Exists(fullPath))
-                File.Delete(fullPath);
+            var dbResult = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
 
-            await File.WriteAllBytesAsync(fullPath, fileBytes);
+            if (dbResult <= 0)
+                throw new InvalidOperationException("Failed to update file path in DB");
 
-            var result = await _repository.UpdateFilePathAsync(reqId, fileType, fileName);
-
-            if (result <= 0)
-                throw new Exception("Failed to update file path in DB");
-
-            return result;
+            return dbResult;
         }
     }
 }

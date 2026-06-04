@@ -1,6 +1,6 @@
 ﻿namespace ProductivityApi.Models.PLF
 {
-    public class ForeclosureReportModel
+    public class GetForeclosureStmtV1
     {
         public ForeclosureReport ForeclosureReport { get; set; }
         public ReturnStatus ReturnStatus { get; set; }
@@ -86,10 +86,12 @@
 
     public class ForeclosureReportRequest
     {
-        public string FinReference { get; set; }
+        public string finReference { get; set; }
 
         public int days { get; set; }
     }
+
+  
 }
 
 
