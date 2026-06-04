@@ -17,9 +17,9 @@ namespace ProductivityApi.Services
             return _userRepository.GetUser(userId);
         }
 
-        public List<UserModel> GetAllUsers()
+        public List<UserModel> GetAllUsers(string? status)
         {
-            return _userRepository.GetAllUsers();
+            return _userRepository.GetAllUsers(status);
         }
 
         public int AddUser(AddUserDTO addUserDTO)
