@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Humanizer;
+using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
+using QRCoder;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace ProductivityApi.Controllers
 {
@@ -88,5 +92,41 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
             };
         }
+
+        [HttpGet("GetQRCode/{vendorId}")]
+        public async Task<IActionResult> GetQRCode(int vendorId)
+        {
+            var (data, message) = await  _vendorService.GetQRCode(vendorId);
+            if (data == null)
+                return NotFound(new Response(false, null, message));
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        //    [HttpGet("{vendorId}/QRCode")]
+        //public IActionResult GenerateVendorQRCode(int vendorId)
+        //{
+        //    var vendor = _vendorService.GetVendor(vendorId);
+
+        //    if (vendor == null)
+        //    {
+        //        return NotFound(
+        //            new Response(false, null, "Vendor not found")
+        //        );
+        //    }
+
+        //    string qrUrl =
+        //        $"https://uatproductivity.vistaarfinance.com/gold-loan-enquiry?vendorCode={vendorId}";
+
+        //    using var qrGenerator = new QRCodeGenerator();
+
+        //    using var qrCodeData =
+        //        qrGenerator.CreateQrCode(qrUrl, QRCodeGenerator.ECCLevel.Q);
+
+        //    var pngQrCode = new PngByteQRCode(qrCodeData);
+
+        //    byte[] qrCodeBytes = pngQrCode.GetGraphic(20);
+
+        //    return File(qrCodeBytes, "image/png");
+        //}
     }
 }
