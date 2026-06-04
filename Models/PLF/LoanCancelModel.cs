@@ -22,4 +22,10 @@
     {
         public string reasonCode { get; set; }
     }
+
+    public class CancelLoanResponse
+    {
+        public ReturnStatus returnStatus { get; set; }
+        public int version { get; set; }
+    }
 }

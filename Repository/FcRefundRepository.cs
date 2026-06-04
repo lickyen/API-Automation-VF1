@@ -113,10 +113,10 @@ namespace ProductivityApi.Repository
                     dto.SgNo,
                     dto.ClientName,
                     dto.PayoutLevel,
+                    dto.InsurerName,
                     dto.UpdatedBy,
                     BankProofFilePath = bankProofFilePath,
-                    RequestLetterFilePath = requestLetterFilePath,
-                    Status = FcRefundStatus.PendingForAction
+                    RequestLetterFilePath = requestLetterFilePath                
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -136,7 +136,7 @@ namespace ProductivityApi.Repository
 
             var parameters = new DynamicParameters();
             parameters.Add("@Lans", lanTable.AsTableValuedParameter("dbo.LanList"));
-            parameters.Add("@Insurer", FcRefundStatus.MailSentToInsurer);
+            parameters.Add("@Insurer", insurer);
             parameters.Add("@Status", FcRefundStatus.MailSentToInsurer);
             parameters.Add("@UpdatedBy", updatedBy);
 
@@ -214,14 +214,14 @@ namespace ProductivityApi.Repository
             );
             return result.ToList();
         }
-        public async Task<IEnumerable<dynamic>> GetReportAsync(DateTime? fromDate, DateTime? toDate, string status = null)
+        public async Task<IEnumerable<dynamic>> GetReportAsync(DateTime? fromDate, DateTime? toDate)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
             return await connection.QueryAsync<dynamic>(
                 "sp_FcRefund_GetReport",
-                new { FromDate = fromDate, ToDate = toDate, Status = status },
+                new { FromDate = fromDate, ToDate = toDate },
                 commandType: CommandType.StoredProcedure
             );
         }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -102,8 +103,21 @@ namespace ProductivityApi.Controllers
             {
                 > 0 => Ok(new Response(true, null, message ?? "Processed successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "Error occurred"))
+                _ => StatusCode(500, new Response(false, null, message ?? "Error occurred"))
             };
+        }
+
+        [HttpGet("downloadFile")]
+        public async Task<IActionResult> DownloadFile([FromQuery] string fileName)
+        {
+            var fileBytes = await _service.DownloadFileAsync(fileName);
+
+            if (fileBytes == null)
+                return NotFound("File not found");
+
+            var contentType = FileHelper.GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
         }
 
         [HttpPost("report")]

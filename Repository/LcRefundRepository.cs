@@ -122,37 +122,45 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<(int success, int duplicates)> AddUtrAsync( string lan, List<LcUtrEntryDto> entries, string updatedBy)
+        public async Task<(int success, int duplicates, int total)> AddUtrAsync(
+            List<LcLanUtrDto> lanDetails,
+            string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
             int success = 0;
             int duplicates = 0;
+            int total = 0;
 
-            foreach (var entry in entries)
+            foreach (var lanDetail in lanDetails)
             {
-                var result = await conn.ExecuteScalarAsync<int>(
-                    "sp_LcRefund_AddUtr",
-                    new
-                    {
-                        Lan = lan,
-                        entry.Insurer,
-                        entry.Utr,
-                        entry.PaymentDate,
-                        entry.Amount,
-                        CreatedBy = updatedBy
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
+                foreach (var entry in lanDetail.UtrList)
+                {
+                    total++;
 
-                if (result == -1)
-                    duplicates++;
-                else
-                    success++;
+                    var result = await conn.ExecuteScalarAsync<int>(
+                        "sp_LcRefund_AddUtr",
+                        new
+                        {
+                            Lan = lanDetail.Lan,
+                            entry.Insurer,
+                            entry.Utr,
+                            entry.PaymentDate,
+                            entry.Amount,
+                            CreatedBy = updatedBy
+                        },
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    if (result == -1)
+                        duplicates++;
+                    else
+                        success++;
+                }
             }
 
-            return (success, duplicates);
+            return (success, duplicates, total);
         }
         public async Task<List<FcRefundBankEmails>> GetInsurerEmailsAsync(string insurer)
         {

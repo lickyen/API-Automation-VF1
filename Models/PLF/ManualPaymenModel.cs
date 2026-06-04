@@ -6,7 +6,7 @@ namespace ProductivityApi.Models.PLF
     public class PaymentRequest
     {
         public string finReference { get; set; }
-        public decimal amount { get; set; }
+        public int amount { get; set; }
         public string paymentMode { get; set; }
         public string subReceiptMode { get; set; }
         public string allocationType { get; set; }
@@ -42,6 +42,8 @@ namespace ProductivityApi.Models.PLF
         public bool stp { get; set; }
         public ReturnStatus returnStatus { get; set; }
         public int version { get; set; }
-        public string receiptId { get; set; }
+        public string? receiptId { get; set; }
+        public string? acknowledgmentId { get; set; }
+
     }
 }

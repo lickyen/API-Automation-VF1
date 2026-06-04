@@ -1,6 +1,6 @@
 ﻿using Hangfire;
-using Npgsql;
 using ProductivityApi.Models;
+using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
 
@@ -9,17 +9,18 @@ namespace ProductivityApi.Jobs
     public class NOCJob : IJob
     {
         public string JobId => "noc-job";
+
         public void Register(string cron) =>
-        RecurringJob.AddOrUpdate<LcRefundJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
+            RecurringJob.AddOrUpdate<NOCJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
         private readonly Serilog.ILogger _logger;
-        private readonly NOCService _service;
-        private readonly string _plfConStr;
-        public NOCJob(NOCService service, IConfiguration configuration)
-        {
-            _service = service;
-            _plfConStr = configuration.GetConnectionString("PlfDBConn")!;
+        private readonly PLFRepository _plfRepository;
+        private readonly NOCService _nocService;
 
+        public NOCJob(PLFRepository plfRepository, NOCService NOCService)
+        {
+            _plfRepository = plfRepository;
+            _nocService = NOCService;
             _logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.Console()
@@ -33,7 +34,6 @@ namespace ProductivityApi.Jobs
         public async Task ExecuteAsync(CancellationToken ct)
         {
             _logger.Information("NOCJob started at {Time}", DateTimeOffset.Now);
-
             try
             {
                 await InsertLansAsync(ct);
@@ -48,110 +48,201 @@ namespace ProductivityApi.Jobs
         private async Task InsertLansAsync(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-
             try
             {
-                var dtos = await FetchLansFromPlfAsync(ct);
-
-                if (!dtos.Any())
+                // Step 1: Fetch yesterday's closed loans from PLF
+                var closedLans = await _plfRepository.GetClosedLansAsync();
+                if (!closedLans.Any())
                 {
-                    _logger.Information("No  LANs found for yesterday");
+                    _logger.Information("No closed loans found for yesterday. Skipping.");
                     return;
                 }
+                _logger.Information("Fetched {Count} closed loan(s) from PLF.", closedLans.Count);
 
-                _logger.Information("Fetched {Count} LAN(s) from PLF", dtos.Count);
+                int masterInserted = 0;
+                int notEligible = 0;
+                int noCollId = 0;
 
-                var result = await _service.AddLanAsync(dtos);
+                foreach (var lan in closedLans)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    bool isEligible = true;
+                    string? remarks = null;
+
+                    // Step 2: No collateral ID — not eligible
+                    if (string.IsNullOrEmpty(lan.CollateralId))
+                    {
+                        isEligible = false;
+                        remarks = "No collateral ID.";
+                        noCollId++;
+                        _logger.Warning("LAN {Lan} not eligible — no collateral ID.", lan.LoanAccountNo);
+                    }
+                    else
+                    {
+                        // Step 3: Check for active loans on same collateral ID
+                        var collLoans = await _plfRepository.GetLoansByCollIdAsync(lan.CollateralId);
+                        var hasActiveLoan = collLoans.Any(x => x.LoanStatus == "Active Loan");
+
+                        if (hasActiveLoan)
+                        {
+                            isEligible = false;
+                            remarks = $"Active loan exists on CollId {lan.CollateralId}.";
+                            notEligible++;
+                            _logger.Information(
+                                "LAN {Lan} not eligible — active loan exists on CollId {CollId}.",
+                                lan.LoanAccountNo, lan.CollateralId);
+                        }
+                    }
+
+                    // Step 4: Insert into NOC_ClosedLans_Master with eligibility
+                    var masterDto = new NocClosedLanInsertDto
+                    {
+                        Lan = lan.LoanAccountNo,
+                        BranchCode = lan.BranchCode ?? string.Empty,
+                        CustId = lan.CustomerId ?? string.Empty,
+                        CollId = lan.CollateralId,
+                        DisbDate = lan.DisbursementDate,
+                        LoanStatus = lan.LoanStatus ?? string.Empty,
+                        ClosureDate = lan.LoanClosureDate,
+                        NocStatus = lan.NocStatus,
+                        IsEligible = isEligible,
+                        Remarks = remarks
+                    };
+
+                    var affected = await _nocService.InsertClosedLansAsync(new[] { masterDto });
+                    if (affected > 0)
+                        masterInserted++;
+
+                    _logger.Information(
+                        "LAN {Lan} inserted — Eligible: {IsEligible}, Remarks: {Remarks}.",
+                        lan.LoanAccountNo, isEligible, remarks ?? "N/A");
+                }
 
                 _logger.Information(
-                    "LAN insert complete — Added: {Added}, Skipped: {Skipped}",
-                    result.Added, result.Skipped
-                );
-
-                if (result.AddedLans.Any())
-                    _logger.Information("Added LANs: {Lans}", string.Join(", ", result.AddedLans));
-
-                if (result.SkippedLans.Any())
-                    _logger.Information("Skipped LANs (already exist): {Lans}", string.Join(", ", result.SkippedLans));
+                    "NOCJob summary — Fetched: {Total} | Master Inserted: {Master} | " +
+                    "Not Eligible: {NotEligible} | No CollId: {NoCollId}",
+                    closedLans.Count, masterInserted, notEligible, noCollId);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to insert LANs");
             }
         }
-        private async Task<List<NeolotexDisb>> FetchLansFromPlfAsync(CancellationToken ct)
-        {
-            
 
-            const string query = @"SELECT * FROM PLF.neolotex_disb";
+        //private async Task InsertLansAsync(CancellationToken ct)
+        //{
+        //    ct.ThrowIfCancellationRequested();
+        //    try
+        //    {
+        //        // Step 1: Fetch yesterday's closed loans from PLF
+        //        var closedLans = await _plfRepository.GetClosedLansAsync();
+        //        if (!closedLans.Any())
+        //        {
+        //            _logger.Information("No closed loans found for yesterday. Skipping.");
+        //            return;
+        //        }
+        //        _logger.Information("Fetched {Count} closed loan(s) from PLF.", closedLans.Count);
 
-            var dtos = new List<NeolotexDisb>();
+        //        int masterInserted = 0;
+        //        int transInserted = 0;
+        //        int notEligible = 0;
+        //        int noCollId = 0;
 
-            try
-            {
-                using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync(ct);
+        //        foreach (var lan in closedLans)
+        //        {
+        //            ct.ThrowIfCancellationRequested();
 
-                using var cmd = new NpgsqlCommand(query, connection);
-                using var reader = await cmd.ExecuteReaderAsync(ct);
+        //            bool isEligible = true;
+        //            string? remarks = null;
 
-                while (await reader.ReadAsync(ct))
-                {
-                    dtos.Add(new NeolotexDisb
-                    {
-                        //sz_loan_account_no = reader.GetString(0),
-                        //applicant_type = reader.GetString(1),
-                        //branch_code = reader.GetString(2),
-                        //branchname = reader.GetString(3),
-                        //cluster_name = reader.GetString(4),
-                        //state_name = reader.GetString(5),
+        //            // Step 2: No collateral ID — not eligible
+        //            if (string.IsNullOrEmpty(lan.CollateralId))
+        //            {
+        //                isEligible = false;
+        //                remarks = "No collateral ID.";
+        //                noCollId++;
+        //                _logger.Warning("LAN {Lan} not eligible — no collateral ID.", lan.LoanAccountNo);
+        //            }
+        //            else
+        //            {
+        //                // Step 3: Check for active loans on same collateral ID
+        //                var collLoans = await _plfRepository.GetLoansByCollIdAsync(lan.CollateralId);
+        //                var hasActiveLoan = collLoans.Any(x => x.LoanStatus == "Active Loan");
 
-                        //customerid = reader.GetString(6),
-                        //customer_name = reader.GetString(7),
-                        //sz_collateral_id = reader.GetString(8),
+        //                if (hasActiveLoan)
+        //                {
+        //                    isEligible = false;
+        //                    remarks = $"Active loan exists on CollId {lan.CollateralId}.";
+        //                    notEligible++;
+        //                    _logger.Information(
+        //                        "LAN {Lan} not eligible — active loan exists on CollId {CollId}.",
+        //                        lan.LoanAccountNo, lan.CollateralId);
+        //                }
+        //            }
 
-                        //loan_status = reader.GetString(9),
-                        //loanclosure_date = reader.GetDateTime(10),
-                        //disbursement_date = reader.GetDateTime(11),
-                        //dt_correction = reader.GetDateTime(12),
-                        //noc_status = reader.GetString(13),
+        //            // Step 4: Insert into NOC_ClosedLans_Master with eligibility
+        //            var masterDto = new NocClosedLanInsertDto
+        //            {
+        //                Lan = lan.LoanAccountNo,
+        //                BranchCode = lan.BranchCode ?? string.Empty,
+        //                CustId = lan.CustomerId ?? string.Empty,
+        //                CollId = lan.CollateralId,
+        //                DisbDate = lan.DisbursementDate,
+        //                LoanStatus = lan.LoanStatus ?? string.Empty,
+        //                ClosureDate = lan.LoanClosureDate,
+        //                NocStatus = lan.NocStatus,
+        //                IsEligible = isEligible,
+        //                Remarks = remarks
+        //            };
 
-                        //extraction_dt = reader.GetDateTime(14),
-                        //external_reference = reader.GetString(15)
-                        //  CreatedBy = "SYSTEM"
-                        sz_loan_account_no = reader.IsDBNull(0) ? null : reader.GetString(0),
-                        applicant_type = reader.IsDBNull(1) ? null : reader.GetString(1),
-                        branch_code = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        branchname = reader.IsDBNull(3) ? null : reader.GetString(3),
-                        cluster_name = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        state_name = reader.IsDBNull(5) ? null : reader.GetString(5),
+        //            var affected = await _nocService.InsertClosedLansAsync(new[] { masterDto });
+        //            if (affected > 0)
+        //                masterInserted++;
 
-                        customerid = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        customer_name = reader.IsDBNull(7) ? null : reader.GetString(7),
-                        sz_collateral_id = reader.IsDBNull(8) ? null : reader.GetString(8),
+        //            _logger.Information(
+        //                "LAN {Lan} inserted — Eligible: {IsEligible}, Remarks: {Remarks}.",
+        //                lan.LoanAccountNo, isEligible, remarks ?? "N/A");
 
-                        loan_status = reader.IsDBNull(9) ? null : reader.GetString(9),
-                        loanclosure_date = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
-                        disbursement_date = reader.IsDBNull(11) ? (DateTime?)null : reader.GetDateTime(11),
-                        dt_correction = reader.IsDBNull(12) ? (DateTime?)null : reader.GetDateTime(12),
-                        noc_status = reader.IsDBNull(13) ? null : reader.GetString(13),
+        //            // Step 5: Skip transaction insert if not eligible
+        //            if (!isEligible)
+        //                continue;
 
-                        extraction_dt = reader.IsDBNull(14) ? (DateTime?)null : reader.GetDateTime(14),
-                        external_reference = reader.IsDBNull(15) ? null : reader.GetString(15)
-                    });
-                }
+        //            // Step 6: Fetch all loans for same customer (audit)
+        //            var custLoans = await _plfRepository.GetLoansByCustIdAsync(lan.CustomerId);
+        //            _logger.Information(
+        //                "LAN {Lan} — {Count} related loan(s) found for CustId {CustId}.",
+        //                lan.LoanAccountNo, custLoans.Count, lan.CustomerId);
 
-            }
+        //            // Step 7: Eligible — insert into NOC_Transactions
+        //            var transactionDto = new NocTransactionInsertDto
+        //            {
+        //                Lan = lan.LoanAccountNo,
+        //                BranchCode = lan.BranchCode ?? string.Empty,    
+        //                CustId = lan.CustomerId ?? string.Empty,
+        //                CustName = lan.CustomerName ?? string.Empty,
+        //                CollId = lan.CollateralId ?? string.Empty,
+        //                LoanStatus = lan.LoanStatus ?? string.Empty,
+        //                DisbDate = lan.DisbursementDate,
+        //                ClosureDate = lan.LoanClosureDate,
+        //                NocStatus = lan.NocStatus
+        //            };
 
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+        //            await _nocService.InsertTransactionAsync(transactionDto);
+        //            transInserted++;
 
-            return dtos;
+        //            _logger.Information("LAN {Lan} eligible — inserted into NOC_Transactions.", lan.LoanAccountNo);
+        //        }
 
-        }
-
-
+        //        _logger.Information(
+        //            "NOCJob summary — Fetched: {Total} | Master Inserted: {Master} | " +
+        //            "Transactions Inserted: {Trans} | Not Eligible: {NotEligible} | No CollId: {NoCollId}",
+        //            closedLans.Count, masterInserted, transInserted, notEligible, noCollId);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.Error(ex, "Failed to insert LANs");
+        //    }
+        //}
     }
 }

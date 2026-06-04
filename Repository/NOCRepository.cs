@@ -1,7 +1,9 @@
 ﻿using Dapper;
-using System.Data;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
+using System.Data;
 
 namespace ProductivityApi.Repository
 {
@@ -14,116 +16,67 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public async Task<IEnumerable<object>> GetPendingLoans()
+        public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
         {
+            int affected = 0;
             using var conn = new SqlConnection(_conStr);
-            conn.Open();
+            await conn.OpenAsync();
 
-            var loans = await conn.QueryAsync<object>(
-                "sp_NOC_GetPendingLoans",
-                commandType: CommandType.StoredProcedure
-            );
+            foreach (var lan in lans)
+            {
+                affected += await conn.ExecuteAsync(
+                    "sp_NOC_InsertClosedLan",
+                    new
+                    {
+                        Lan = lan.Lan,
+                        BranchCode = lan.BranchCode,
+                        CustId = lan.CustId,
+                        CollId = lan.CollId,
+                        DisbDate = lan.DisbDate,
+                        LoanStatus = lan.LoanStatus,
+                        ClosureDate = lan.ClosureDate,
+                        NocStatus = lan.NocStatus,
+                        IsEligible = lan.IsEligible,
+                        Remarks = lan.Remarks
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+            }
 
-            return loans;
+            return affected;
         }
 
-        public async Task<IEnumerable<object>> GetLinkedLoans(string lan)
+        public async Task<IEnumerable<NocClosedLan>> GetEligibleLansAsync()
         {
             using var conn = new SqlConnection(_conStr);
             conn.Open();
-
-            var loans = await conn.QueryAsync<object>(
-                "sp_NOC_GetLinkedLoans",
-                new { LanId = lan },
+            return await conn.QueryAsync<NocClosedLan>(
+                "sp_NOC_GetEligibleLans",
                 commandType: CommandType.StoredProcedure
             );
-
-            return loans;
         }
 
-        public async Task<IEnumerable<object>> GetRequests(string userId, string status)
+        public async Task InsertTransactionAsync(NocTransactionInsertDto dto)
         {
             using var conn = new SqlConnection(_conStr);
-            conn.Open();
-
-            var requests = await conn.QueryAsync<object>(
-                "sp_NOC_GetNOCRequests",
-                new { UserId = userId, Status = status },
+            await conn.OpenAsync();
+            await conn.ExecuteAsync(
+                "sp_NOC_InsertTransaction",
+                dto,
                 commandType: CommandType.StoredProcedure
             );
-
-            return requests;
         }
-
-        public async Task<object> GetRequestById(int id)
+        public async Task<NocTransaction> GetById(int id)
         {
             using var conn = new SqlConnection(_conStr);
             conn.Open();
-
-            var request = await conn.QueryFirstOrDefaultAsync<object>(
-                "sp_NOC_GetNOCRequestById",
+            var data = await conn.QueryFirstOrDefaultAsync<NocTransaction>(
+                "sp_NOC_GetById",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure
             );
 
-            return request;
+            return data;
         }
-
-        public async Task<FcRefundBulkUploadResult> AddLanAsync(List<NeolotexDisb> dtos)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            var added = new List<string>();
-            var skipped = new List<string>();
-            try
-            {
-
-            foreach (var dto in dtos)
-            {
-                var status = await connection.ExecuteScalarAsync<int>(
-                    "sp_insert_neolotex_disb",
-                    new
-                    {
-                        dto.sz_loan_account_no,
-                        dto.applicant_type,
-                        dto.branch_code,
-                        dto.branchname,
-                        dto.cluster_name,
-                        dto.state_name,
-                        dto.customerid,
-                        dto.customer_name,
-                        dto.sz_collateral_id,
-                        dto.loan_status,
-                        dto.loanclosure_date,
-                        dto.disbursement_date,
-                        dto.dt_correction,
-                        dto.noc_status,
-                        dto.extraction_dt,
-                        dto.external_reference
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
-
-                if (status == 1)
-                    added.Add(dto.sz_loan_account_no);
-                else
-                    skipped.Add(dto.sz_loan_account_no);
-            }
-            }
-            catch(Exception EX)
-            {
-
-            }
-
-            return new FcRefundBulkUploadResult
-            {
-                Added = added.Count,
-                Skipped = skipped.Count,
-                AddedLans = added,
-                SkippedLans = skipped
-            };
-        }
-
     }
 }

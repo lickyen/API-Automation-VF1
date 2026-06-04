@@ -192,7 +192,7 @@ namespace ProductivityApi.Services
                 {
                     sb.Append("<tr>");
                     sb.Append($"<td>{r.Lan}</td>");
-                    sb.Append($"<td>{r.GoDigitPolicyNumber}</td>");
+                    sb.Append($"<td>{r.PolicyNumber}</td>");
                     sb.Append("</tr>");
                 }
             }
@@ -210,9 +210,9 @@ namespace ProductivityApi.Services
             return await _repository.MarkCompletedAsync(dto.Lans.Distinct().ToList(), dto.UpdatedBy);
 
         }
-        public async Task<(int success, int duplicates)> AddUtrAsync(LcRefundAddUtrDto dto)
+        public async Task<(int success, int duplicates, int total)> AddUtrAsync(LcRefundAddUtrDto dto)
         {
-            return await _repository.AddUtrAsync(dto.Lan, dto.UtrList, dto.UpdatedBy);
+            return await _repository.AddUtrAsync(dto.lans, dto.UpdatedBy);
         }
         public async Task<byte[]?> GetReportExcelAsync(DateTime? fromDate, DateTime? toDate)
         {

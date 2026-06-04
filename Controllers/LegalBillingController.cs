@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
@@ -179,9 +180,13 @@ namespace ProductivityApi.Controllers
         {
             var newId = await _service.CreateLegalBillingAsync(dto);
 
-            return newId > 0
-                ? Ok(new Response(true, new { newId = newId }, "Legal billing created successfully"))
-                : StatusCode(500, new Response(false, null, "Failed to create legal billing"));
+            return newId switch
+            {
+                > 0 => Ok(new Response(true, new { newId = newId }, "Legal billing created successfully")),
+                - 1 => Conflict(new Response(false, new { newId = newId }, "A request with the same LAN, Advocate and Legal Category already exists")),
+                - 2 => Conflict(new Response(true, new { newId = newId }, "The same LAN was considered under the same category in the current month. Do you still wish to proceed?")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
 
         [HttpPost("resubmit")]
@@ -229,6 +234,20 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        [HttpPost("updateFinance")]
+        public async Task<IActionResult> UpdateLegalBillingFinance([FromBody] LegalBillingUpdateFinanceDto dto)
+        {
+            var result = await _service.UpdateLegalBillingFinanceAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Payment updated successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Action not allowed")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
         [HttpPost("report")]
         public async Task<IActionResult> GetReportExcel([FromBody] LegalBillingReportFilterDto dto)
         {
@@ -255,6 +274,61 @@ namespace ProductivityApi.Controllers
             return Ok(data);
         }
 
+        [HttpGet("downloadFile")]
+        public async Task<IActionResult> DownloadFile([FromQuery] string fileName)
+        {
+            var fileBytes = await _service.DownloadFileAsync(fileName);
+
+            if (fileBytes == null)
+                return NotFound("File not found");
+
+            var contentType = FileHelper.GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
+        }
+
+
+        [HttpGet("getUserAllocation")]
+        public async Task<IActionResult> GetAllocationExcel()
+        {
+            var data = await _service.GetAllocationAsync();
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "No data found"));
+
+            return Ok(data);
+        }
+
+        [HttpGet("downloadUserAllocation")]
+        public async Task<IActionResult> DownloadAllocationExcel()
+        {
+            var bytes = await _service.GetAllocationExcelAsync();
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No data found"));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"CDSM_ZDSH_Allocation_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+
+
+        [HttpPost("updateUserAllocation")]
+        public async Task<IActionResult> UpdateAllocation([FromBody] List<CollectionUserMappingUpdateDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+                return BadRequest(new Response(false, null, "No records provided"));
+
+            var result = await _service.UpdateAllocationBulkAsync(dtos);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, new { updatedCount = result }, "Updated successfully")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
 
     }
 }
