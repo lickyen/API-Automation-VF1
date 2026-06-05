@@ -103,7 +103,6 @@ builder.Services.AddScoped<SARFAESIService>();
 builder.Services.AddScoped<NewBranchServices>();
 builder.Services.AddScoped<KotakService>();
 builder.Services.AddScoped<DeathClaimService>();
-builder.Services.AddScoped<AxisService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -131,7 +130,6 @@ builder.Services.AddScoped<GoldLoanVendorRepository>();
 builder.Services.AddScoped<SARFAESIRepository>();
 builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<DeathClaimRepository>();
-builder.Services.AddScoped<AxisRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();

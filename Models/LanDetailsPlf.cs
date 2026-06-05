@@ -10,6 +10,7 @@
         public string? Region { get; set; }
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
+        public string? State { get; set; }
         public string? Email { get; set; }
         public string? Mobile { get; set; }
         public string? AlternateMobile { get; set; }

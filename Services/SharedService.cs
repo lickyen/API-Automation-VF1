@@ -123,6 +123,11 @@ namespace ProductivityApi.Services
                 .Select(p => p.GetFullAddress())
                 .FirstOrDefault();
 
+            data.State = customer.Addresses?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.stateName)
+                .FirstOrDefault();
+
             var lanCategory = await _repository.GetLanCategoryAsync(lan, data.Dpd);
             data.Action = lanCategory?.Criticality;
             data.Allocation = lanCategory?.Category;

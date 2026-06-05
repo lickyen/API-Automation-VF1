@@ -30,9 +30,9 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetAllUsers()
+        public IActionResult GetAllUsers([FromQuery] string? status)
         {
-            var users = _userService.GetAllUsers() ?? new List<UserModel>();
+            var users = _userService.GetAllUsers(status) ?? new List<UserModel>();
 
             return Ok(new Response(true, users, "Success"));
         }

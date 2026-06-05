@@ -65,6 +65,7 @@ namespace ProductivityApi.Models
         public string DeathClaimFilePath { get; set; } = string.Empty;
         public string SARFAESIFilePath { get; set; } = string.Empty;
         public string GoldLoanFilePath { get; set; } = string.Empty;
+        public string VCPFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {

@@ -12,7 +12,7 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
-        public List<UserModel> GetAllUsers()
+        public List<UserModel> GetAllUsers(string? status)
         {
             var users = new List<UserModel>();
 
@@ -20,6 +20,14 @@ namespace ProductivityApi.Repository
             using (var command = new SqlCommand("sp_getUsersList", connection))
             {
                 command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.AddWithValue(
+                    "@Status",
+                    string.IsNullOrWhiteSpace(status)
+                        ? DBNull.Value
+                        : status
+                );
+
                 connection.Open();
 
                 using (var reader = command.ExecuteReader())
