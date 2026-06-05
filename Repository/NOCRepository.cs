@@ -91,34 +91,6 @@ namespace ProductivityApi.Repository
             return transaction;
         }
 
-        public async Task<NocApplicantDetails?> GetApplicantByLanAsync(string lan)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            await conn.OpenAsync();
-
-            var result = await conn.QueryFirstOrDefaultAsync<NocApplicantDetails>(
-                @"SELECT 
-                        Lan,
-                        Cust_Id AS CustId,
-                        Cust_Name AS CustName,
-                        Cust_Mobile AS CustMobile,
-                        PropertyOwner_CustId AS PropertyOwnerCustId,
-                        PropertyOwner_Name AS PropertyOwnerName,
-                        PropertyOwner_Mobile AS PropertyOwnerMobile,
-                        Branch_Code AS BranchCode,
-                        Branch_Name AS BranchName,
-                        Loan_Status AS LoanStatus,
-                        Noc_Status AS NocStatus
-                FROM NOC_Transactions
-                WHERE Lan = @Lan
-                    AND GenerateNOC = 1",
-                new { Lan = lan }
-            );
-
-            return result;
-        }
-
         public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
             string userId,
             string role,
@@ -214,54 +186,6 @@ namespace ProductivityApi.Repository
             );
 
             return result > 0;
-        }
-
-        public async Task<bool> UploadAcknowledgementAndKycAsync(
-            int id,
-            string? acknowledgementPath,
-            string? kycPath,
-            string updatedBy
-        )
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            await conn.OpenAsync();
-
-            var sql =
-                @"
-                UPDATE NOC_Transactions
-                SET
-                    Acknowledgement_FilePath = 
-                        CASE 
-                            WHEN @AcknowledgementFilePath IS NOT NULL 
-                            THEN @AcknowledgementFilePath
-                            ELSE Acknowledgement_FilePath
-                        END,
-
-                    KYC_FilePath =
-                        CASE
-                            WHEN @KycFilePath IS NOT NULL
-                            THEN @KycFilePath
-                            ELSE KYC_FilePath
-                        END,
-
-                    Updated_By = @UpdatedBy,
-                    Updated_Dt = GETDATE()
-                WHERE Id = @Id
-            ";
-
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
-                {
-                    Id = id,
-                    AcknowledgementFilePath = acknowledgementPath,
-                    KycFilePath = kycPath,
-                    UpdatedBy = updatedBy,
-                }
-            );
-
-            return rows > 0;
         }
 
         public async Task<BranchEmailMaster?> GetBranchEmailsAsync(string branchCode)
@@ -498,9 +422,10 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<bool> UploadNocPdfAsync(
+        public async Task<bool> UploadNOCAndAckPdfAsync(
             int transactionId,
-            string pdfBase64,
+            string nocPdfBase64,
+            string ackPdfBase64,
             string updatedBy
         )
         {
@@ -508,47 +433,21 @@ namespace ProductivityApi.Repository
 
             string sql =
                 @"
-    UPDATE NOC_Transactions
-    SET
-        NOC_PDF = @Pdf,
-        Updated_By = @UpdatedBy,
-        Updated_Dt = GETDATE()
-    WHERE Id = @TransactionId";
+        UPDATE NOC_Transactions
+        SET
+            NOC_PDF = @NocPdf,
+            Ack_PDF = @AckPdf,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @TransactionId";
 
             return await conn.ExecuteAsync(
                     sql,
                     new
                     {
                         TransactionId = transactionId,
-                        Pdf = pdfBase64,
-                        UpdatedBy = updatedBy,
-                    }
-                ) > 0;
-        }
-
-        public async Task<bool> UploadAckPdfAsync(
-            int transactionId,
-            string pdfBase64,
-            string updatedBy
-        )
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql =
-                @"
-    UPDATE NOC_Transactions
-    SET
-        Ack_PDF = @Pdf,
-        Updated_By = @UpdatedBy,
-        Updated_Dt = GETDATE()
-    WHERE Id = @TransactionId";
-
-            return await conn.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        TransactionId = transactionId,
-                        Pdf = pdfBase64,
+                        NocPdf = nocPdfBase64,
+                        AckPdf = ackPdfBase64,
                         UpdatedBy = updatedBy,
                     }
                 ) > 0;
@@ -712,6 +611,83 @@ WHERE t.Id = @TransactionId
         SELECT Ack_PDF_Signed
         FROM NOC_Transactions
         WHERE Id = @TransactionId";
+
+            return await conn.ExecuteScalarAsync<string?>(
+                sql,
+                new { TransactionId = transactionId }
+            );
+        }
+
+        public async Task<bool> UpdateMobileNumberAsync(UpdateMobileNumberDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            UpdatedMobileNo = @UpdatedMobileNo,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @Id
+    ";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    dto.Id,
+                    dto.UpdatedMobileNo,
+                    dto.UpdatedBy,
+                }
+            );
+
+            return rows > 0;
+        }
+
+        public async Task<bool> UpdateKycPdfAsync(
+            int transactionId,
+            string pdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            KYC_PDF = @PdfBase64,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @TransactionId
+    ";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    PdfBase64 = pdfBase64,
+                    UpdatedBy = updatedBy,
+                }
+            );
+
+            return rows > 0;
+        }
+
+        public async Task<string?> GetKycPdfAsync(int transactionId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        SELECT KYC_PDF
+        FROM NOC_Transactions
+        WHERE Id = @TransactionId
+    ";
 
             return await conn.ExecuteScalarAsync<string?>(
                 sql,

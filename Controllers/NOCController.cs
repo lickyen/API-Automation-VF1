@@ -48,24 +48,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
-        [HttpGet("getApplicantByLan")]
-        public async Task<IActionResult> GetApplicantByLan([FromQuery] string lan)
-        {
-            if (string.IsNullOrWhiteSpace(lan))
-            {
-                return BadRequest(new Response(false, message: "LAN is required."));
-            }
-
-            var result = await _service.GetApplicantByLanAsync(lan);
-
-            if (result == null)
-            {
-                return NotFound(new Response(false, message: "Applicant not found."));
-            }
-
-            return Ok(new Response(true, result));
-        }
-
         [HttpGet("getLansByUser")]
         public async Task<IActionResult> GetLansByUser([FromQuery] GetLanByUserRequestDto dto)
         {
@@ -126,50 +108,6 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, message: "Property owner updated successfully."));
-        }
-
-        [HttpGet("applicants/{lan}")]
-        public async Task<IActionResult> GetApplicantsByLan(string lan)
-        {
-            if (string.IsNullOrWhiteSpace(lan))
-                return BadRequest("LAN is required.");
-
-            var result = await _service.GetApplicantByLanAsync(lan);
-
-            if (result == null)
-                return NotFound($"No customers found for LAN: {lan}");
-
-            return Ok(result);
-        }
-
-        [HttpPost("uploadAcknowledgementAndKyc")]
-        public async Task<IActionResult> UploadAcknowledgementAndKyc(
-            [FromForm] UploadAcknowledgementKycDto dto
-        )
-        {
-            if (dto.Id <= 0)
-            {
-                return BadRequest(new Response(false, message: "Invalid transaction id."));
-            }
-
-            if (dto.AcknowledgementFile == null && dto.KycFile == null)
-            {
-                return BadRequest(new Response(false, message: "Please upload at least one file."));
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
-            {
-                return BadRequest(new Response(false, message: "UpdatedBy is required."));
-            }
-
-            var result = await _service.UploadAcknowledgementAndKycAsync(dto, _env);
-
-            if (!result)
-            {
-                return BadRequest(new Response(false, message: "File upload failed."));
-            }
-
-            return Ok(new Response(true, message: "Files uploaded successfully."));
         }
 
         [HttpPost("downloadOneilReport")]
@@ -238,18 +176,10 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, url));
         }
 
-        [HttpPost("uploadNocPdf")]
-        public async Task<IActionResult> UploadNocPdf([FromForm] UploadPdfDto dto)
+        [HttpPost("uploadNOCandAck")]
+        public async Task<IActionResult> UploadNOCandAck([FromForm] UploadPdfDto dto)
         {
-            var result = await _service.UploadNocPdfAsync(dto);
-
-            return Ok(new Response(result));
-        }
-
-        [HttpPost("uploadAckPdf")]
-        public async Task<IActionResult> UploadAckPdf([FromForm] UploadPdfDto dto)
-        {
-            var result = await _service.UploadAckPdfAsync(dto);
+            var result = await _service.UploadNOCandAckAsync(dto);
 
             return Ok(new Response(result));
         }
@@ -284,6 +214,83 @@ namespace ProductivityApi.Controllers
             var pdfBytes = await _service.DownloadSignedAckPdfAsync(transactionId);
 
             return File(pdfBytes, "application/pdf", $"ACK_{transactionId}_Signed.pdf");
+        }
+
+        [HttpPut("updateMobileNumber")]
+        public async Task<IActionResult> UpdateMobileNumber([FromBody] UpdateMobileNumberDto dto)
+        {
+            if (dto.Id <= 0)
+            {
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedMobileNo))
+            {
+                return BadRequest(new Response(false, message: "Mobile number is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(new Response(false, message: "UpdatedBy is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Role))
+            {
+                return BadRequest(new Response(false, message: "Role is required."));
+            }
+
+            var result = await _service.UpdateMobileNumberAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, message: result.Message));
+            }
+
+            return Ok(new Response(true, message: result.Message));
+        }
+
+        [HttpPost("uploadKycPdf")]
+        public async Task<IActionResult> UploadKycPdf([FromForm] UploadKycPdfDto dto)
+        {
+            if (dto.TransactionId <= 0)
+            {
+                return BadRequest(new Response(false, "Invalid transaction id."));
+            }
+
+            if (dto.PdfFile == null)
+            {
+                return BadRequest(new Response(false, "PDF file is required."));
+            }
+
+            var result = await _service.UploadKycPdfAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, result.Message));
+            }
+
+            return Ok(new Response(true, result.Message));
+        }
+
+        [HttpGet("downloadKycPdf/{transactionId}")]
+        public async Task<IActionResult> DownloadKycPdf(int transactionId)
+        {
+            var pdfBytes = await _service.DownloadKycPdfAsync(transactionId);
+
+            if (pdfBytes == null)
+            {
+                return NotFound(new Response(false, "KYC PDF not found."));
+            }
+
+            return File(pdfBytes, "application/pdf", $"KYC_{transactionId}.pdf");
+        }
+
+        [HttpPost("bulkUpdateStatus")]
+        public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateNocStatusDto dto)
+        {
+            var result = await _service.UpdateTransactionStatusesAsync(dto);
+
+            return Ok(new { success = result.Success, message = result.Message });
         }
     }
 }

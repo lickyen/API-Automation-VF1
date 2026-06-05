@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using ProductivityApi.Helpers;
@@ -97,11 +98,6 @@ namespace ProductivityApi.Services
             return await _repository.GetById(id);
         }
 
-        public async Task<NocApplicantDetails?> GetApplicantByLanAsync(string lan)
-        {
-            return await _repository.GetApplicantByLanAsync(lan);
-        }
-
         public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
             GetLanByUserRequestDto dto
         )
@@ -148,15 +144,9 @@ namespace ProductivityApi.Services
 
         private async Task HandleStatusTriggersAsync(NocTransaction transaction, string status)
         {
-            switch (status.Trim().ToUpper())
+            if (status.Trim().Equals("DISPATCHED", StringComparison.OrdinalIgnoreCase))
             {
-                case "DISPATCHED":
-                    await SendDispatchedNotifications(transaction);
-                    break;
-
-                case "RECEIVED WITH DISCREPANCY":
-                    await SendDiscrepancyNotifications(transaction);
-                    break;
+                await SendDispatchedNotifications(transaction);
             }
         }
 
@@ -213,14 +203,16 @@ namespace ProductivityApi.Services
             }
         }
 
-        private async Task SendDiscrepancyNotifications(NocTransaction transaction)
+        private async Task SendDiscrepancyNotifications(List<NocTransaction> transactions)
         {
             try
             {
+                if (transactions == null || !transactions.Any())
+                    return;
+
                 var to = new List<string>();
 
                 var nocEmail = _configuration["NocSettings:NocEmail"];
-
                 var supervisorEmail = _configuration["NocSettings:SupervisorEmail"];
 
                 if (!string.IsNullOrWhiteSpace(nocEmail))
@@ -236,17 +228,11 @@ namespace ProductivityApi.Services
 
                 var template = _templateService.GetEmailTemplate("NocDiscrepancyEmail");
 
-                var body = _templateService.ReplacePlaceholders(
-                    template.Body,
-                    BuildPlaceholders(transaction)
-                );
+                var placeholders = BuildPlaceholders(transactions);
 
-                var subject = _templateService.ReplacePlaceholders(
-                    template.Subject,
-                    BuildPlaceholders(transaction)
-                );
+                var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
 
-                await _emailService.SendEmail(subject, body, to, new List<string>());
+                await _emailService.SendEmail(template.Subject, body, to, new List<string>());
             }
             catch (Exception ex)
             {
@@ -257,62 +243,6 @@ namespace ProductivityApi.Services
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
         {
             return await _repository.UpdatePropertyOwnerAsync(dto);
-        }
-
-        public async Task<List<NeolotexDisb>> GetApplicantsByLanAsync(string lan)
-        {
-            return await _plfRepository.GetApplicantsByLanAsync(lan);
-        }
-
-        public async Task<bool> UploadAcknowledgementAndKycAsync(
-            UploadAcknowledgementKycDto dto,
-            IWebHostEnvironment env
-        )
-        {
-            string uploadRoot = Path.Combine(env.WebRootPath, "uploads", "noc");
-
-            if (!Directory.Exists(uploadRoot))
-                Directory.CreateDirectory(uploadRoot);
-
-            string? acknowledgementPath = null;
-            string? kycPath = null;
-
-            if (dto.AcknowledgementFile != null)
-            {
-                var ackFileName =
-                    $"ACK_{dto.Id}_{DateTime.Now.Ticks}{Path.GetExtension(dto.AcknowledgementFile.FileName)}";
-
-                var ackFullPath = Path.Combine(uploadRoot, ackFileName);
-
-                using (var stream = new FileStream(ackFullPath, FileMode.Create))
-                {
-                    await dto.AcknowledgementFile.CopyToAsync(stream);
-                }
-
-                acknowledgementPath = $"/uploads/noc/{ackFileName}";
-            }
-
-            if (dto.KycFile != null)
-            {
-                var kycFileName =
-                    $"KYC_{dto.Id}_{DateTime.Now.Ticks}{Path.GetExtension(dto.KycFile.FileName)}";
-
-                var kycFullPath = Path.Combine(uploadRoot, kycFileName);
-
-                using (var stream = new FileStream(kycFullPath, FileMode.Create))
-                {
-                    await dto.KycFile.CopyToAsync(stream);
-                }
-
-                kycPath = $"/uploads/noc/{kycFileName}";
-            }
-
-            return await _repository.UploadAcknowledgementAndKycAsync(
-                dto.Id,
-                acknowledgementPath,
-                kycPath,
-                dto.UpdatedBy
-            );
         }
 
         public async Task<(
@@ -428,6 +358,44 @@ namespace ProductivityApi.Services
                 { "CustomerName", txn.CustName ?? "" },
                 { "BranchName", txn.BranchName ?? "" },
                 { "Status", txn.Status ?? "" },
+            };
+        }
+
+        private string BuildDiscrepancyTableHtml(List<NocTransaction> transactions)
+        {
+            var table = new StringBuilder();
+
+            table.Append(
+                "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width:100%;'>"
+            );
+
+            table.Append("<tr style='background-color:#f2f2f2;'>");
+            table.Append("<th>LAN</th>");
+            table.Append("<th>Customer Name</th>");
+            table.Append("<th>Branch</th>");
+            table.Append("<th>Status</th>");
+            table.Append("</tr>");
+
+            foreach (var txn in transactions)
+            {
+                table.Append("<tr>");
+                table.Append($"<td style='text-align:center;'>{txn.Lan}</td>");
+                table.Append($"<td>{txn.CustName}</td>");
+                table.Append($"<td>{txn.BranchName}</td>");
+                table.Append($"<td style='text-align:center;'>{txn.Status}</td>");
+                table.Append("</tr>");
+            }
+
+            table.Append("</table>");
+
+            return table.ToString();
+        }
+
+        private Dictionary<string, string> BuildPlaceholders(List<NocTransaction> transactions)
+        {
+            return new Dictionary<string, string>
+            {
+                { "Table", BuildDiscrepancyTableHtml(transactions) },
             };
         }
 
@@ -612,26 +580,51 @@ namespace ProductivityApi.Services
             return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
         }
 
-        public async Task<bool> UploadNocPdfAsync(UploadPdfDto dto)
+        public async Task<bool> UploadNOCandAckAsync(UploadPdfDto dto)
         {
             using var ms = new MemoryStream();
-
             await dto.PdfFile.CopyToAsync(ms);
 
-            string base64 = Convert.ToBase64String(ms.ToArray());
+            byte[] uploadedPdf = ms.ToArray();
 
-            return await _repository.UploadNocPdfAsync(dto.TransactionId, base64, dto.UpdatedBy);
+            using var reader = new PdfReader(uploadedPdf);
+
+            if (reader.NumberOfPages < 2)
+            {
+                throw new Exception("Uploaded PDF must contain at least 2 pages.");
+            }
+
+            // First page = NOC
+            string nocBase64 = Convert.ToBase64String(ExtractPage(reader, 1));
+
+            // Second page = ACK
+            string ackBase64 = Convert.ToBase64String(ExtractPage(reader, 2));
+
+            return await _repository.UploadNOCAndAckPdfAsync(
+                dto.TransactionId,
+                nocBase64,
+                ackBase64,
+                dto.UpdatedBy
+            );
         }
 
-        public async Task<bool> UploadAckPdfAsync(UploadPdfDto dto)
+        private byte[] ExtractPage(PdfReader reader, int pageNumber)
         {
             using var ms = new MemoryStream();
 
-            await dto.PdfFile.CopyToAsync(ms);
+            using (var document = new Document())
+            {
+                using (var copy = new PdfCopy(document, ms))
+                {
+                    document.Open();
 
-            string base64 = Convert.ToBase64String(ms.ToArray());
+                    copy.AddPage(copy.GetImportedPage(reader, pageNumber));
 
-            return await _repository.UploadAckPdfAsync(dto.TransactionId, base64, dto.UpdatedBy);
+                    document.Close();
+                }
+            }
+
+            return ms.ToArray();
         }
 
         public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
@@ -746,6 +739,176 @@ namespace ProductivityApi.Services
                 throw new Exception("Signed ACK PDF not found.");
 
             return Convert.FromBase64String(base64);
+        }
+
+        public async Task<(bool Success, string Message)> UpdateMobileNumberAsync(
+            UpdateMobileNumberDto dto
+        )
+        {
+            //----------------------------------------------------
+            // UPDATE MOBILE NUMBER
+            //----------------------------------------------------
+            var updated = await _repository.UpdateMobileNumberAsync(dto);
+
+            if (!updated)
+            {
+                return (false, "Mobile number update failed.");
+            }
+
+            //----------------------------------------------------
+            // UPDATE STATUS THROUGH WORKFLOW
+            //----------------------------------------------------
+            var statusResult = await _repository.UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.Id,
+                    Status = "Mobile Update Pending",
+                    Remarks = "Property owner mobile number updated by customer",
+                    CreatedBy = dto.UpdatedBy,
+                    Role = dto.Role,
+                }
+            );
+
+            if (statusResult != 1)
+            {
+                return (false, "Mobile updated but status update failed.");
+            }
+
+            return (true, "Mobile number updated successfully.");
+        }
+
+        public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
+        {
+            if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+            {
+                return (false, "PDF file is required.");
+            }
+
+            //--------------------------------------------------
+            // Convert PDF to Base64
+            //--------------------------------------------------
+
+            string pdfBase64;
+
+            using (var ms = new MemoryStream())
+            {
+                await dto.PdfFile.CopyToAsync(ms);
+
+                pdfBase64 = Convert.ToBase64String(ms.ToArray());
+            }
+
+            //--------------------------------------------------
+            // Save PDF
+            //--------------------------------------------------
+
+            var saved = await _repository.UpdateKycPdfAsync(
+                dto.TransactionId,
+                pdfBase64,
+                dto.UpdatedBy
+            );
+
+            if (!saved)
+            {
+                return (false, "Failed to save KYC PDF.");
+            }
+
+            //--------------------------------------------------
+            // Update workflow status
+            //--------------------------------------------------
+
+            var statusResult = await _repository.UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.TransactionId,
+                    Status = "KYC Verification Pending",
+                    Remarks = "KYC document uploaded",
+                    CreatedBy = dto.UpdatedBy,
+                    Role = dto.Role,
+                }
+            );
+
+            if (statusResult != 1)
+            {
+                return (false, "KYC uploaded but status update failed.");
+            }
+
+            return (true, "KYC uploaded successfully.");
+        }
+
+        public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
+        {
+            var base64 = await _repository.GetKycPdfAsync(transactionId);
+
+            if (string.IsNullOrWhiteSpace(base64))
+                return null;
+
+            try
+            {
+                return Convert.FromBase64String(base64);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<(bool Success, string Message)> UpdateTransactionStatusesAsync(
+            BulkUpdateNocStatusDto dto
+        )
+        {
+            var updatedTransactions = new List<NocTransaction>();
+            var failedIds = new List<int>();
+
+            foreach (var id in dto.Ids)
+            {
+                try
+                {
+                    var result = await _repository.UpdateTransactionStatusAsync(
+                        new UpdateNocStatusDto
+                        {
+                            Id = id,
+                            Status = dto.Status,
+                            Remarks = dto.Remarks,
+                            CreatedBy = dto.CreatedBy,
+                            Role = dto.Role,
+                        }
+                    );
+
+                    if (result == 1)
+                    {
+                        var txn = await _repository.GetById(id);
+
+                        if (txn != null)
+                            updatedTransactions.Add(txn);
+                    }
+                    else
+                    {
+                        failedIds.Add(id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failedIds.Add(id);
+
+                    // IMPORTANT: log this
+                    Console.WriteLine($"Failed for ID {id}: {ex.Message}");
+                }
+            }
+
+            if (
+                dto.Status.Equals("Received with Discrepancy", StringComparison.OrdinalIgnoreCase)
+                && updatedTransactions.Any()
+            )
+            {
+                await SendDiscrepancyNotifications(updatedTransactions);
+            }
+
+            if (failedIds.Any())
+            {
+                return (false, $"Partial failure. Failed IDs: {string.Join(",", failedIds)}");
+            }
+
+            return (true, "Status updated successfully.");
         }
     }
 }

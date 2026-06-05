@@ -41,7 +41,7 @@
   "LegalBillingReminderEmail": {
     "Body": "<p>Hi <b><<Name>></b>,</p><p>There are <b>open requests pending</b> for your action on the <b>Vistaar Field Assist – Legal Billing</b> mobile application.</p><p>Kindly review the pending requests and provide the necessary action at the earliest to avoid any delays in processing.</p><br/><<RecordsTable>><br/><p>Regards,<br/>Vistaar Finance.</p>"
   },
-    "NocDeliveredEscalationEmail": {
+  "NocDeliveredEscalationEmail": {
     "Body": "<p>Dear Team,</p><p>Below NOC is pending collection for more than <b><<Days>></b> days.</p><ul><li>LAN: <<LAN>></li><li>Customer: <<CustomerName>></li><li>Branch: <<BranchName>></li><li>Closure Date: <<ClosureDate>></li></ul><p>Please take necessary action.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocReturnedToHOEmail": {
@@ -57,8 +57,40 @@
     "Subject": "NOC Dispatched - LAN <<LAN>>",
     "Body": "<p>Dear Team,</p><br/><p>NOC for below LAN has been dispatched.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><br/><p>Regards,<br/>NOC Team</p>"
   },
-  "NocDiscrepancyEmail": {
-    "Subject": "NOC Discrepancy - LAN <<LAN>>",
-    "Body": "<p>Dear Team,</p><br/><p>NOC has been marked as <b>Received with discrepancy</b>.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><p><b>Status:</b> <<Status>></p><br/><p>Please review the discrepancy.</p><br/><p>Regards,<br/>NOC System</p>"
+"NocDiscrepancyEmail": {
+  "Subject": "NOC Discrepancy Notification",
+  "Body": "<p>Dear Team,</p><br/><p>The following NOCs have been marked as <b>Received with Discrepancy</b>.</p><br/><<Table>><br/><p>Please review the discrepancies.</p><br/><p>Regards,<br/>NOC System</p>"
+},
+  "NocNotDispatchedEmail": {
+    "Subject": "Alert: NOC Not Dispatched – Loan #<<LAN>>",
+    "Body": "<p>Dear Team,</p><p>This is to inform you that 15 days have crossed since loan closure, but the NOC for the below Loan Account has not yet been dispatched.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Closure Date: <<ClosureDate>></li><li>Current TAT: <<Days>> days</li><li>Date of Email Trigger: <<TodayDate>></li></ul><p>Kindly review the case and take necessary action to dispatch the NOC at the earliest.</p><p>Please treat this as urgent to ensure timely delivery as per TAT.</p><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocCourierDelayEmail": {
+    "Subject": "Alert: Courier Delay – Documents Not Delivered for Loan #<<LAN>>",
+    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days and are yet to be delivered.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly follow up with the courier partner and ensure timely delivery to the branch.</p><p>Please update the status in the system accordingly.</p><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocManualStatusUpdateEmail": {
+    "Subject": "Alert: Status Update Required – Loan #<<LAN>> (Dispatched > 7 Days)",
+    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days, and the delivery status is not updated in the system.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly verify and update the delivery status manually, if already delivered.</p><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocKycVerificationEmail": {
+    "Subject": "Action Required: KYC Verification for NOC Download",
+    "Body": "<p>Dear Central NOC Team,</p><p>A signed acknowledgment letter has been uploaded by the branch.</p><ul><li>Branch Code & Name: <<BranchName>></li><li>Loan Account Number: <<LAN>></li><li>Branch User ID & Name: <<UploadedBy>></li><li>Date of Upload: <<UploadDate>></li></ul><p>Kindly verify the KYC documents. NOC download will be enabled only after successful verification.</p><p>Regards,<br/>System Notification</p>"
+  },
+  "NocReturnDocumentsEmail": {
+    "Subject": "Request to Return Documents – Loan #<<LAN>>",
+    "Body": "<p>Dear Branch Team,</p><p>Documents for Loan #<<LAN>> are pending at the branch beyond the defined timeline.</p><p>Kindly return the documents to the NOC team at the earliest.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocRetrieveFileEmail": {
+    "Subject": "Alert: TAT Exceeded – Retrieve File – Loan #<<LAN>>",
+    "Body": "<p>Dear Team,</p><p>The TAT of 35 days has been exceeded, and documents are not yet collected.</p><p>Kindly arrange to retrieve the file from the branch and update the system status.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocReturnedReminderEmail": {
+    "Subject": "Reminder: Documents Not Received – Loan #<<LAN>>",
+    "Body": "<p>Dear Team,</p><p>The file has been marked as returned by the branch, but documents are not yet received at NOC.</p><p>This is an automated reminder triggered every 3 days until status is updated.</p><p>Kindly take necessary action.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NocReturnedDailyAlertEmail": {
+    "Subject": "Urgent: Returned File Not Received – Loan #<<LAN>>",
+    "Body": "<p>Dear Team,</p><p>The file is marked as returned, but documents are not received at NOC.</p><p>This is a daily alert and will continue until status is updated.</p><p>Kindly trace and update immediately.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
   }
 }

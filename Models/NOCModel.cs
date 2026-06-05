@@ -33,9 +33,11 @@ namespace ProductivityApi.Models
         public string? CollId { get; set; }
         public string? CustName { get; set; }
         public string? CustMobile { get; set; }
+        public string? UpdatedMobile { get; set; }
         public string LoanStatus { get; set; } = string.Empty;
         public DateTime? DisbDate { get; set; }
         public DateTime? ClosureDate { get; set; }
+        public DateTime? DeliveryDate { get; set; }
         public string? NocStatus { get; set; }
         public string? Status { get; set; }
         public string? PropertyOwnerCustId { get; set; }
@@ -279,5 +281,41 @@ namespace ProductivityApi.Models
         public int TransactionId { get; set; }
 
         public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class UpdateMobileNumberDto
+    {
+        public int Id { get; set; }
+
+        [Phone]
+        public string UpdatedMobileNo { get; set; } = string.Empty;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class UploadKycPdfDto
+    {
+        public int TransactionId { get; set; }
+
+        public IFormFile PdfFile { get; set; } = null!;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class BulkUpdateNocStatusDto
+    {
+        public List<int> Ids { get; set; } = new();
+
+        public string Status { get; set; } = "";
+
+        public string Remarks { get; set; } = "";
+
+        public string CreatedBy { get; set; } = "";
+
+        public string Role { get; set; } = "";
     }
 }

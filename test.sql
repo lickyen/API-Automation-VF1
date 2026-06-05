@@ -1,6 +1,10 @@
 SELECT * FROM NOC_Transactions;
 GO
 
+SELECT * FROM NOC_Transactions
+WHERE Id = 2;
+GO
+
 SELECT * FROM NOC_RoleStatusMap;
 GO
 
@@ -11,5 +15,5 @@ SELECT * FROM NOC_SignMaster;
 GO
 
 UPDATE NOC_Transactions
-SET Status = 'Labels Generated';
+SET Status = 'Returned to HO'
 GO

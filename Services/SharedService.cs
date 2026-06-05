@@ -1,11 +1,11 @@
-﻿using ProductivityApi.Models;
+﻿using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
-using System.Net.Http.Headers;
-using System.Net.Http;
-using System.Text.Json;
-using System.Text;
 
 namespace ProductivityApi.Services
 {
@@ -16,8 +16,12 @@ namespace ProductivityApi.Services
         private readonly BranchServices _branchService;
         private readonly AppSettings _appSettings;
 
-
-        public SharedService(SharedRepository repository, PLFService plfService, BranchServices branchService, AppSettings appSettings)
+        public SharedService(
+            SharedRepository repository,
+            PLFService plfService,
+            BranchServices branchService,
+            AppSettings appSettings
+        )
         {
             _repository = repository;
             _plfService = plfService;
@@ -53,25 +57,34 @@ namespace ProductivityApi.Services
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;
-            data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);
-            data.DisbAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finCurrAssetValue / 100);
+            data.LoanAmount = Convert.ToDecimal(
+                loan.financeSchedule?.financeDetail?.finAssetValue / 100
+            );
+            data.DisbAmount = Convert.ToDecimal(
+                loan.financeSchedule?.financeDetail?.finCurrAssetValue / 100
+            );
 
-            decimal totalNetDisbAmount = loan.disbursement != null
-                ? loan.disbursement.Sum(d => d.NetDisbursementAmount)
-                : 0m;
+            decimal totalNetDisbAmount =
+                loan.disbursement != null
+                    ? loan.disbursement.Sum(d => d.NetDisbursementAmount)
+                    : 0m;
             data.NetDisbAmount = Convert.ToDecimal(totalNetDisbAmount / 100);
             data.PendingAmount = data.LoanAmount - data.DisbAmount;
 
-            var disbModes = loan.disbursement?
-                .Where(d => !string.IsNullOrEmpty(d.disbType))
-                .OrderBy(d => d.disbDate)
-                .Select(d => d.disbType)
-                .ToList()
+            var disbModes =
+                loan.disbursement?.Where(d => !string.IsNullOrEmpty(d.disbType))
+                    .OrderBy(d => d.disbDate)
+                    .Select(d => d.disbType)
+                    .ToList()
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
-            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+            data.TotalOutstanding = Convert.ToDecimal(
+                loan.financeSchedule?.summary?.outstandingTotal / 100
+            );
+            data.PrincipalOutstanding = Convert.ToDecimal(
+                loan.financeSchedule?.summary?.outstandingPri / 100
+            );
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
             if (!string.IsNullOrEmpty(data.BranchCode))
@@ -91,24 +104,24 @@ namespace ProductivityApi.Services
             if (customer.ReturnStatus.returnCode != "0000")
                 return (null, customer.ReturnStatus.returnText);
 
-            data.Mobile = customer.Phones?
-                .OrderByDescending(p => p.priority)
+            data.Mobile = customer
+                .Phones?.OrderByDescending(p => p.priority)
                 .Select(p => p.phoneNumber)
                 .FirstOrDefault();
 
-            data.AlternateMobile = customer.Phones?
-                .OrderByDescending(p => p.priority)
+            data.AlternateMobile = customer
+                .Phones?.OrderByDescending(p => p.priority)
                 .Select(p => p.phoneNumber)
                 .Skip(1)
                 .FirstOrDefault();
 
-            data.Email = customer.Emails?
-                .OrderByDescending(p => p.custEMailPriority)
+            data.Email = customer
+                .Emails?.OrderByDescending(p => p.custEMailPriority)
                 .Select(p => p.custEMail)
                 .FirstOrDefault();
 
-            data.ResidentialAddress = customer.Addresses?
-                .OrderByDescending(p => p.priority)
+            data.ResidentialAddress = customer
+                .Addresses?.OrderByDescending(p => p.priority)
                 .Select(p => p.GetFullAddress())
                 .FirstOrDefault();
 
@@ -119,13 +132,13 @@ namespace ProductivityApi.Services
 
             return (data, "Success");
         }
-        public async Task<(ForeclosureStatement Statement, string Message)> GetForeclosureStatementAsync(string lan)
+
+        public async Task<(
+            ForeclosureStatement Statement,
+            string Message
+        )> GetForeclosureStatementAsync(string lan)
         {
-            var request = new ForeclosureReportRequest
-            {
-                finReference = lan,
-                days = 1
-            };
+            var request = new ForeclosureReportRequest { finReference = lan, days = 1 };
 
             var response = await _plfService.GetForeclosureStmtV1(request);
 
@@ -165,17 +178,20 @@ namespace ProductivityApi.Services
                 Charges = Charges,
                 TotalChargesIncFc = ChargesInFc,
                 TotalOutstanding = Pos + Interest + Charges,
-                TotalOutstandingIncFC = Pos + Interest + ChargesInFc
+                TotalOutstandingIncFC = Pos + Interest + ChargesInFc,
             };
 
             return (statement, response.ReturnStatus.returnText);
         }
-        public async Task<KotakData?> GetKotakByLanAsync(string lan)
-            => await _repository.GetKotakByLanAsync(lan);
+
+        public async Task<KotakData?> GetKotakByLanAsync(string lan) =>
+            await _repository.GetKotakByLanAsync(lan);
+
         public async Task<string?> GenerateReferenceNoAsync(string prefix)
         {
             return await _repository.GenerateReferenceNoAsync(prefix);
         }
+
         public async Task<PaymentLinkResponseDto> PaymentLink(PaymentLinkRequestDto chargeRequest)
         {
             var responseObj = new PaymentLinkResponseDto();
@@ -195,15 +211,16 @@ namespace ProductivityApi.Services
                     Encoding.ASCII.GetBytes($"{username}:{password}")
                 );
 
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Basic", authToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Basic",
+                    authToken
+                );
 
                 client.Timeout = TimeSpan.FromSeconds(30);
 
                 try
                 {
-                    string jsonRequest =
-                        JsonSerializer.Serialize(chargeRequest);
+                    string jsonRequest = JsonSerializer.Serialize(chargeRequest);
 
                     var requestContent = new StringContent(
                         jsonRequest,
@@ -211,19 +228,14 @@ namespace ProductivityApi.Services
                         "application/json"
                     );
 
-                    HttpResponseMessage response =
-                        await client.PostAsync(apiUrl, requestContent);
+                    HttpResponseMessage response = await client.PostAsync(apiUrl, requestContent);
 
-                    string content =
-                        await response.Content.ReadAsStringAsync();
+                    string content = await response.Content.ReadAsStringAsync();
 
-                    responseObj =
-                        JsonSerializer.Deserialize<PaymentLinkResponseDto>(
-                            content,
-                            new JsonSerializerOptions
-                            {
-                                PropertyNameCaseInsensitive = true
-                            });
+                    responseObj = JsonSerializer.Deserialize<PaymentLinkResponseDto>(
+                        content,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
                 }
                 catch (Exception ex)
                 {
@@ -233,6 +245,7 @@ namespace ProductivityApi.Services
 
             return responseObj;
         }
+
         public async Task<PolicyDetails?> GetPolicyByLanAsync(string lan)
         {
             if (string.IsNullOrEmpty(lan))
@@ -240,7 +253,10 @@ namespace ProductivityApi.Services
 
             return await _repository.GetPolicyByLanAsync(lan);
         }
-        public async Task<(List<LanCollateralPlf>? Data, string Message)> GetCollateralsByLanAsync(string lan)
+
+        public async Task<(List<LanCollateralPlf>? Data, string Message)> GetCollateralsByLanAsync(
+            string lan
+        )
         {
             var loan = await _plfService.GetFinance(lan);
             if (loan?.returnStatus == null)
@@ -258,24 +274,25 @@ namespace ProductivityApi.Services
                 if (string.IsNullOrWhiteSpace(col.collateralRef))
                     continue;
 
-                var request = new CollateralApiRequest
-                {
-                    collateralRef = col.collateralRef
-                };
+                var request = new CollateralApiRequest { collateralRef = col.collateralRef };
 
                 var collateral = await _plfService.GetCollateralsByRef(request);
 
-                if (collateral?.returnStatus == null || collateral.returnStatus.returnCode != "0000")
+                if (
+                    collateral?.returnStatus == null
+                    || collateral.returnStatus.returnCode != "0000"
+                )
                     continue;
 
-                var mapValues = collateral.extendedFieldRenderList?
-                    .FirstOrDefault()?.mapValues;
+                var mapValues = collateral.extendedFieldRenderList?.FirstOrDefault()?.mapValues;
 
                 var item = new LanCollateralPlf
                 {
                     CollateralRef = col.collateralRef,
-                    CollateralAddress = mapValues == null ? null :
-                        $"{mapValues.addresslineonecoll}, {mapValues.addresslinetwocoll}, {mapValues.citycollateral}, {mapValues.statecollateral} - {mapValues.postalcodecollater}"
+                    CollateralAddress =
+                        mapValues == null
+                            ? null
+                            : $"{mapValues.addresslineonecoll}, {mapValues.addresslinetwocoll}, {mapValues.citycollateral}, {mapValues.statecollateral} - {mapValues.postalcodecollater}",
                 };
 
                 result.Add(item);
@@ -283,7 +300,10 @@ namespace ProductivityApi.Services
 
             return (result, "Success");
         }
-        public async Task<(List<LanApplicantPlf>? Data, string Message)> GetApplicantsByLanAsync(string lan)
+
+        public async Task<(List<LanApplicantPlf>? Data, string Message)> GetApplicantsByLanAsync(
+            string lan
+        )
         {
             var loan = await _plfService.GetFinance(lan);
             if (loan?.returnStatus == null)
@@ -295,7 +315,7 @@ namespace ProductivityApi.Services
 
             var applicants = new List<(string? cif, string? name, string type)>
             {
-                (loan.customer?.cif, loan.customer?.personalInfo?.shortName, "B")
+                (loan.customer?.cif, loan.customer?.personalInfo?.shortName, "B"),
             };
 
             if (loan.coApplicants != null)
@@ -310,24 +330,26 @@ namespace ProductivityApi.Services
                 if (customer?.ReturnStatus == null || customer.ReturnStatus.returnCode != "0000")
                     continue;
 
-                result.Add(new LanApplicantPlf
-                {
-                    CustId = cif,
-                    CustName = name,
-                    Mobile = customer.Phones?
-                                        .OrderByDescending(p => p.priority)
-                                        .Select(p => p.phoneNumber)
-                                        .FirstOrDefault(),
-                    Email = customer.Emails?
-                                        .OrderByDescending(p => p.custEMailPriority)
-                                        .Select(p => p.custEMail)
-                                        .FirstOrDefault(),
-                    Address = customer.Addresses?
-                                        .OrderByDescending(p => p.priority)
-                                        .Select(p => p.GetFullAddress())
-                                        .FirstOrDefault(),
-                    ApplicantType = type
-                });
+                result.Add(
+                    new LanApplicantPlf
+                    {
+                        CustId = cif,
+                        CustName = name,
+                        Mobile = customer
+                            .Phones?.OrderByDescending(p => p.priority)
+                            .Select(p => p.phoneNumber)
+                            .FirstOrDefault(),
+                        Email = customer
+                            .Emails?.OrderByDescending(p => p.custEMailPriority)
+                            .Select(p => p.custEMail)
+                            .FirstOrDefault(),
+                        Address = customer
+                            .Addresses?.OrderByDescending(p => p.priority)
+                            .Select(p => p.GetFullAddress())
+                            .FirstOrDefault(),
+                        ApplicantType = type,
+                    }
+                );
             }
 
             return (result, "Success");
