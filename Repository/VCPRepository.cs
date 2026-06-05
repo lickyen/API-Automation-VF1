@@ -9,9 +9,9 @@ namespace ProductivityApi.Repository
     {
         private readonly string _connectionString;
 
-        public VCPRepository(string connectionString)
+        public VCPRepository(IConfiguration configuration)
         {
-            _connectionString = connectionString;
+            _connectionString = configuration.GetConnectionString("VCPDBConn");
         }
 
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
@@ -27,7 +27,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<VCPListItem>> GetByUserAsync(GetByUserRequestDto dto)
+        public async Task<List<VCPListItem>> GetByUserAsync(VCPGetByUserRequestDto dto)
         {
             var spName = dto.Status == "Pending"
                 ? "SP_HL_GetVCP_ByUser"
@@ -55,7 +55,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> AddLogAsync(AddVCPLogRequest request)
+        public async Task<int> AddLogAsync(VCPAddLogRequest request)
         {
             using var conn = CreateConnection();
 
@@ -66,23 +66,19 @@ namespace ProductivityApi.Repository
             parameters.Add("@CreatedBy", request.CreatedBy);
             parameters.Add("@NewId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            await conn.ExecuteAsync(
-                "SP_HL_VCP_AddLog",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+            await conn.ExecuteAsync("SP_HL_VCP_AddLog", parameters, commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@NewId");
         }
 
-        public async Task<int> SubmitRCUAsync(SubmitRCURequest request, string status, string? filePath)
+        public async Task<int> SubmitRCUAsync(VCPSubmitRCURequest request, string finalStatus, string? filePath)
         {
             using var conn = CreateConnection();
 
             var parameters = new DynamicParameters();
             parameters.Add("@ID", request.Id);
             parameters.Add("@Status", request.Status);
-            parameters.Add("@FinalStatus", status);
+            parameters.Add("@FinalStatus", finalStatus);
             parameters.Add("@Remarks", request.Remarks);
             parameters.Add("@FilePath", filePath);
             parameters.Add("@UpdatedBy", request.UpdatedBy);
@@ -92,7 +88,8 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> SubmitRBHAsync(SubmitBHRequest request, string finalStatus)
+
+        public async Task<int> SubmitBHAsync(VCPSubmitBHRequest request, string finalStatus)
         {
             using var conn = CreateConnection();
 
@@ -101,62 +98,16 @@ namespace ProductivityApi.Repository
             parameters.Add("@Status", request.Status);
             parameters.Add("@FinalStatus", finalStatus);
             parameters.Add("@Remarks", request.Remarks);
-            parameters.Add("@Role", "RBH");
+            parameters.Add("@Role", request.Role.ToUpper());
             parameters.Add("@UpdatedBy", request.UpdatedBy);
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            await conn.ExecuteAsync(
-                "SP_HL_UpdateVCPStatus_RBH_ZBH_MZBH",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+            await conn.ExecuteAsync("SP_HL_UpdateVCPStatus_RBH_ZBH_MZBH", parameters, commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> SubmitZBHAsync(SubmitBHRequest request, string finalStatus)
-        {
-            using var conn = CreateConnection();
 
-            var parameters = new DynamicParameters();
-            parameters.Add("@ID", request.Id);
-            parameters.Add("@Status", request.Status);
-            parameters.Add("@FinalStatus", finalStatus);
-            parameters.Add("@Remarks", request.Remarks);
-            parameters.Add("@Role", "ZBH");
-            parameters.Add("@UpdatedBy", request.UpdatedBy);
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
-            await conn.ExecuteAsync(
-                "SP_HL_UpdateVCPStatus_RBH_ZBH_MZBH",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
-
-            return parameters.Get<int>("@Output");
-        }
-        public async Task<int> SubmitMZBHAsync(SubmitBHRequest request, string finalStatus)
-        {
-
-            using var conn = CreateConnection();
-
-            var parameters = new DynamicParameters();
-            parameters.Add("@ID", request.Id);
-            parameters.Add("@Status", request.Status);
-            parameters.Add("@FinalStatus", finalStatus);
-            parameters.Add("@Remarks", request.Remarks);
-            parameters.Add("@Role", "MZBH");
-            parameters.Add("@UpdatedBy", request.UpdatedBy);
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
-            await conn.ExecuteAsync(
-                "SP_HL_UpdateVCPStatus_RBH_ZBH_MZBH",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
-
-            return parameters.Get<int>("@Output");
-        }
-        public async Task<int> SubmitCOPSAsync(SubmitCOPSRequest request, string finalStatus)
+        public async Task<int> SubmitCOPSAsync(VCPSubmitCOPSRequest request, string finalStatus)
         {
             using var conn = CreateConnection();
 
@@ -166,29 +117,23 @@ namespace ProductivityApi.Repository
             parameters.Add("@FinalStatus", finalStatus);
             parameters.Add("@Remarks", request.Remarks);
             parameters.Add("@UpdatedBy", request.UpdatedBy);
-
             parameters.Add("@PanCopyAvailable", request.PANCopyAvailable);
             parameters.Add("@AddressProofAvailable", request.AddressProofAvailable);
             parameters.Add("@AddressMatching", request.AddressMatching);
             parameters.Add("@BankAccountMatchingWithPennyPing", request.BankAccountMatchingWithPennyPing);
-           // parameters.Add("@BioDataAvailable", request.BioDataAvailable);
             parameters.Add("@DsAProof", request.DSAProof);
             parameters.Add("@VcpAgreement", request.VCPAgreement);
             parameters.Add("@UrcCertificate", request.URCCertificate);
             parameters.Add("@AdhaarMasked", request.AadhaarMasked);
             parameters.Add("@PanFirm", request.PANFirm);
-
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            await conn.ExecuteAsync(
-                "SP_HL_UpdateVCPStatus_COPS",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+            await conn.ExecuteAsync("SP_HL_UpdateVCPStatus_COPS", parameters, commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> SubmitChannelSPOCAsync(SubmitChannelSPOCRequest request, string finalStatus)
+
+        public async Task<int> SubmitChannelSPOCAsync(VCPSubmitChannelSPOCRequest request, string finalStatus)
         {
             using var conn = CreateConnection();
 
@@ -200,14 +145,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@UpdatedBy", request.UpdatedBy);
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            await conn.ExecuteAsync(
-                "SP_HL_UpdateVCPStatus_ChannelSpoc",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+            await conn.ExecuteAsync("SP_HL_UpdateVCPStatus_ChannelSpoc", parameters, commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@Output");
         }
+
         public async Task<VCPCheckList?> GetCheckListAsync(int vcpId)
         {
             using var conn = CreateConnection();

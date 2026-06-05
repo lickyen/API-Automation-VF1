@@ -26,7 +26,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getByUser")]
-        public async Task<IActionResult> GetByUser([FromQuery] GetByUserRequestDto dto)
+        public async Task<IActionResult> GetByUser([FromQuery] VCPGetByUserRequestDto dto)
         {
             var data = await _service.GetByUserAsync(dto);
 
@@ -35,7 +35,7 @@ namespace ProductivityApi.Controllers
 
 
         [HttpPost("submitRCU")]
-        public async Task<IActionResult> RCU([FromBody] SubmitRCURequest dto)
+        public async Task<IActionResult> RCU([FromBody] VCPSubmitRCURequest dto)
         {
             var result = await _service.SubmitRCUAsync(dto);
 
@@ -48,7 +48,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("submitBH")]
-        public async Task<IActionResult> SubmitBH([FromBody] SubmitBHRequest dto)
+        public async Task<IActionResult> SubmitBH([FromBody] VCPSubmitBHRequest dto)
         {
             var result = await _service.SubmitBHAsync(dto);
 
@@ -61,7 +61,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("submitCops")]
-        public async Task<IActionResult> COPS([FromBody] SubmitCOPSRequest dto)
+        public async Task<IActionResult> COPS([FromBody] VCPSubmitCOPSRequest dto)
         {
             var result = await _service.SubmitCOPSAsync(dto);
 
@@ -74,7 +74,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("submitChannelSpoc")]
-        public async Task<IActionResult> ChannelSPOC([FromBody] SubmitChannelSPOCRequest dto)
+        public async Task<IActionResult> ChannelSPOC([FromBody] VCPSubmitChannelSPOCRequest dto)
         {
             var result = await _service.SubmitChannelSPOCAsync(dto);
 
