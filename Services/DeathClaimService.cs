@@ -1,6 +1,7 @@
 ﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.IO.Compression;
 
 namespace ProductivityApi.Services
 {
@@ -67,9 +68,7 @@ namespace ProductivityApi.Services
         public async Task<int> SubmitBranch2Async(SubmitBranch2RequestDto dto)
         {
             string status = "BR_2";
-
             var result = await _repository.SubmitBranch2Async(dto, status);
-
             if (result > 0)
             {
                 await _repository.InsertLogAsync(new InsertLogRequestDto
@@ -79,9 +78,25 @@ namespace ProductivityApi.Services
                     Remarks = dto.Remarks,
                     CreatedBy = dto.UpdatedBy
                 });
-            }
 
+                await GenerateClaimFormatAsync(dto.Id, dto.UpdatedBy);
+            }
             return result;
+        }
+
+        private async Task GenerateClaimFormatAsync(int id, string updatedBy)
+        {
+            var data = await _repository.GetClaimFormDataAsync(id);
+            if (data == null) return;
+
+            string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "ClaimFormat.xlsx");
+            var bytes = FillClaimFormat(templatePath, data);
+            var fileName = $"{data.LAN}_ClaimFormat.xlsx";
+            var fullPath = Path.Combine(_basePath, fileName);
+
+            Directory.CreateDirectory(_basePath);
+            await File.WriteAllBytesAsync(fullPath, bytes);
+            await _repository.UpdateFileNameAsync(id, "ClaimFormat", fileName, updatedBy);
         }
 
         public async Task<int> SubmitBranch3Async(SubmitBranch3RequestDto dto)
@@ -275,15 +290,6 @@ namespace ProductivityApi.Services
             var bytes = FillDischargeForm(templatePath, data);
             return (bytes, data.LAN);
         }
-
-        public async Task<(byte[]? bytes, string? lan)> GetClaimFormatAsync(int id)
-        {
-            var data = await _repository.GetClaimFormDataAsync(id);
-            if (data == null) return (null, null);
-            string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "ClaimFormat.xlsx");
-            var bytes = FillClaimFormat(templatePath, data);
-            return (bytes, data.LAN);
-        }
         private static string S(object? val) =>
             val == null || val is DBNull ? "" : val.ToString()!;
 
@@ -412,34 +418,6 @@ namespace ProductivityApi.Services
             return ms.ToArray();
         }
 
-
-        public async Task<(bool Success, string? FilePath, string? Error)> UploadFileAsync(UploadFileRequestDto dto)
-        {
-            if (dto.File == null || dto.File.Length == 0)
-                return (false, null, "File is empty");
-
-            var record = await _repository.GetByIdAsync(dto.ReqId);
-
-            if (record == null)
-                return (false, null, "Record not found");
-
-            var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
-            var fileName = $"{record.Lan}_{dto.ReqId}_{dto.FileType}{ext}";
-            var fullPath = Path.Combine(_basePath, fileName);
-
-            Directory.CreateDirectory(_basePath);
-            await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await dto.File.CopyToAsync(stream);
-
-            // update filename in DB
-            var updateResult = await _repository.UpdateFileNameAsync(dto.ReqId, dto.FileType, fileName, dto.CreatedBy);
-            if (updateResult <= 0)
-                return (false, null, "Failed to update file name in database");
-
-            return (true, fileName, null);
-        }
-
-
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
             return await FileHelper.ReadFileAsync(
@@ -448,6 +426,88 @@ namespace ProductivityApi.Services
             );
         }
 
+        public async Task<(bool Success, string? FilePath, string? Error)> UploadFileAsync(UploadFileRequestDto dto)
+        {
+            if (dto.File == null || dto.File.Length == 0)
+                return (false, null, "File is empty");
+
+            var record = await _repository.GetByIdAsync(dto.ReqId);
+            if (record == null)
+                return (false, null, "Record not found");
+
+            var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
+            var fileName = $"{record.Lan}_{dto.FileType}{ext}";
+            var fullPath = Path.Combine(_basePath, fileName);
+
+            Directory.CreateDirectory(_basePath);
+            await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await dto.File.CopyToAsync(stream);
+
+            var updateResult = await _repository.UpdateFileNameAsync(dto.ReqId, dto.FileType, fileName, dto.CreatedBy);
+            if (updateResult <= 0)
+                return (false, null, "Failed to update file name in database");
+
+            return (true, fileName, null);
+        }
+
+        public async Task<(bool Success, byte[]? ZipBytes, string? Error)> DownloadAllFilesAsZipAsync(int reqId)
+        {
+            var record = await _repository.GetByIdAsync(reqId);
+            if (record == null)
+                return (false, null, "Record not found");
+
+            var fileNames = new[]
+            {
+                record.BmVisitFormPath,
+                record.KycPath,
+                record.PanchayatLetterPath,
+                record.DeathSummaryPath,
+                record.MedicalQuestPath,
+                record.FirPath,
+                record.PostMortemPath,
+                record.NomineeBankProofPath,
+                record.DoghPath,
+                record.DeathCertificatePath,
+                record.NomineeDeathCertificatePath,
+                record.NewNomineeKycPath,
+                record.NewNomineeBankProofPath,
+                record.FamilyTreeDeclarationPath,
+                record.AffidavitCumIndemnityPath,
+                record.NocFromLegalHeirsPath,
+                record.KotakClaimFormPath,
+                record.DischargeFormPath,
+                record.ClaimFormatPath
+
+            }
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+            .ToList();
+
+            if (!fileNames.Any())
+                return (false, null, "No files found for this record");
+
+            await using var memoryStream = new MemoryStream();
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var fileName in fileNames)
+                {
+                    var fullPath = Path.Combine(_basePath, fileName!);
+                    if (!File.Exists(fullPath))
+                        continue;
+
+                    var entry = archive.CreateEntry(fileName!, CompressionLevel.Fastest);
+                    await using var entryStream = entry.Open();
+                    await using var fileStream = new FileStream(
+                        fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                    await fileStream.CopyToAsync(entryStream);
+                }
+            }
+
+            if (memoryStream.Length == 0)
+                return (false, null, "None of the referenced files exist on disk");
+
+            return (true, memoryStream.ToArray(), null);
+        }
         public async Task<byte[]?> GetReportExcelAsync()
         {
             var data = await _repository.GetReportAsync();
