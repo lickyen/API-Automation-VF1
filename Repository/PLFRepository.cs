@@ -179,6 +179,24 @@ namespace ProductivityApi.Repository
                 return null;
             }
         }
+        public async Task<PlFLoanStatusModel?> GetLoanStatusByLanAsync(string lan)
+        {
+            try
+            {
+                var sql = @"
+            select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
+group by sz_loan_account_no,loan_status";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { lan });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Lan status by lan: {Lan}", lan);
+                return null;
+            }
+        }
     }
 }
 
