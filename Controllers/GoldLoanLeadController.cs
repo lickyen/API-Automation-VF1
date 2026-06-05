@@ -64,5 +64,32 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, null, "Gold loan lead updated successfully"));
         }
+
+        [HttpPost("report")]
+        public async Task<IActionResult> GetReportExcel([FromBody] GoldLeadReportFilterDto dto)
+        {
+            var bytes = await _goldLoanLeadService.GetReportExcelAsync(dto);
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No data found for report"));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"GoldLoanLead_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+
+        [HttpPost("report/data")]
+        public async Task<IActionResult> GetReportData([FromBody] GoldLeadReportFilterDto dto)
+        {
+            var data = await _goldLoanLeadService.GetReportDataAsync(dto);
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "No data found"));
+
+            return Ok(data);
+        }
+
     }
 }

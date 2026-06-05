@@ -1,3 +1,4 @@
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
@@ -128,6 +129,15 @@ namespace ProductivityApi.Services
 
            
         }
+        public async Task<byte[]?> GetReportExcelAsync(GoldLeadReportFilterDto dto)
+        {
+            var data = await _vendorRepository.GetLegalBillingReportAsync(dto);
 
+            return ExcelHelper.GenerateExcel(data, "Data");
+        }
+        public async Task<IEnumerable<dynamic>> GetReportDataAsync(GoldLeadReportFilterDto dto)
+        {
+            return await _vendorRepository.GetLegalBillingReportAsync(dto);
+        }
     }
 }
