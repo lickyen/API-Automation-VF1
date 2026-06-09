@@ -57,10 +57,10 @@
     "Subject": "NOC Dispatched - LAN <<LAN>>",
     "Body": "<p>Dear Team,</p><br/><p>NOC for below LAN has been dispatched.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><br/><p>Regards,<br/>NOC Team</p>"
   },
-"NocDiscrepancyEmail": {
-  "Subject": "NOC Discrepancy Notification",
-  "Body": "<p>Dear Team,</p><br/><p>The following NOCs have been marked as <b>Received with Discrepancy</b>.</p><br/><<Table>><br/><p>Please review the discrepancies.</p><br/><p>Regards,<br/>NOC System</p>"
-},
+  "NocDiscrepancyEmail": {
+    "Subject": "NOC Discrepancy Notification",
+    "Body": "<p>Dear Team,</p><br/><p>The following NOCs have been marked as <b>Received with Discrepancy</b>.</p><br/><<Table>><br/><p>Please review the discrepancies.</p><br/><p>Regards,<br/>NOC System</p>"
+  },
   "NocNotDispatchedEmail": {
     "Subject": "Alert: NOC Not Dispatched – Loan #<<LAN>>",
     "Body": "<p>Dear Team,</p><p>This is to inform you that 15 days have crossed since loan closure, but the NOC for the below Loan Account has not yet been dispatched.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Closure Date: <<ClosureDate>></li><li>Current TAT: <<Days>> days</li><li>Date of Email Trigger: <<TodayDate>></li></ul><p>Kindly review the case and take necessary action to dispatch the NOC at the earliest.</p><p>Please treat this as urgent to ensure timely delivery as per TAT.</p><p>Regards,<br/>COPS NOC Team</p>"

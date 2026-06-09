@@ -283,6 +283,46 @@ namespace ProductivityApi.Repository
             return await conn.QueryAsync<NocTransaction>(sql);
         }
 
+        //--------------------------------------------------------
+        // Dispatched but not delivered (Courier delay)
+        //--------------------------------------------------------
+        public async Task<
+            IEnumerable<NocTransaction>
+        > GetDispatchedPendingDeliveryTransactionsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status = 'Dispatched'
+                AND POD IS NOT NULL
+                AND POD <> ''
+                AND Delivery_Date IS NULL
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+
+        //--------------------------------------------------------
+        // Courier delivered but system status not updated
+        //--------------------------------------------------------
+        public async Task<IEnumerable<NocTransaction>> GetCourierDeliveredButStatusNotUpdatedAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+                SELECT *
+                FROM NOC_Transactions
+                WHERE Status = 'Dispatched'
+                AND Delivery_Date IS NOT NULL
+            ";
+
+            return await conn.QueryAsync<NocTransaction>(sql);
+        }
+
         public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
         {
             using var conn = new SqlConnection(_conStr);

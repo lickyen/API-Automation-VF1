@@ -43,6 +43,8 @@ namespace ProductivityApi.Models
         public string? PropertyOwnerCustId { get; set; }
         public string? PropertyOwnerName { get; set; }
         public string? PropertyOwnerMobile { get; set; }
+        public string? POD { get; set; }
+        public string? CourierPartner { get; set; }
         public int? SignUserId { get; set; }
         public string? LeegalityDocumentId { get; set; }
         public string? LeegalitySignUrl { get; set; }

@@ -151,6 +151,39 @@ namespace ProductivityApi.Services
             {
                 await SendDispatchedNotifications(transaction);
             }
+
+            if (
+                status.Trim().Equals("DOCUMENT COLLECTED", StringComparison.OrdinalIgnoreCase)
+                || status.Trim().Equals("Document Collected", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                // Send OTP confirmation SMS to customer after collection
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
+                    {
+                        var smsTemplate = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
+
+                        var smsContent = _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            BuildPlaceholders(transaction)
+                        );
+
+                        await _smsService.SendSms(
+                            transaction.CustMobile,
+                            smsContent,
+                            smsTemplate.DltContentId
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // swallow but log
+                    Console.WriteLine(
+                        $"Error sending collection OTP confirmation SMS: {ex.Message}"
+                    );
+                }
+            }
         }
 
         private async Task SendDispatchedNotifications(NocTransaction transaction)
@@ -158,12 +191,12 @@ namespace ProductivityApi.Services
             try
             {
                 //---------------------------------------------------
-                // CUSTOMER SMS
+                // CUSTOMER SMS - detailed dispatched message
                 //---------------------------------------------------
 
                 if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
                 {
-                    var smsTemplate = _templateService.GetSmsTemplate("NocDispatchedSms");
+                    var smsTemplate = _templateService.GetSmsTemplate("NocDispatchedCustomerSms");
 
                     var smsContent = _templateService.ReplacePlaceholders(
                         smsTemplate.Content,
@@ -174,6 +207,20 @@ namespace ProductivityApi.Services
                         transaction.CustMobile,
                         smsContent,
                         smsTemplate.DltContentId
+                    );
+
+                    // Also send OTP required sms to customer (informational)
+                    var otpTemplate = _templateService.GetSmsTemplate("NocOtpRequiredSms");
+
+                    var otpContent = _templateService.ReplacePlaceholders(
+                        otpTemplate.Content,
+                        BuildPlaceholders(transaction)
+                    );
+
+                    await _smsService.SendSms(
+                        transaction.CustMobile,
+                        otpContent,
+                        otpTemplate.DltContentId
                     );
                 }
 
@@ -361,6 +408,10 @@ namespace ProductivityApi.Services
                 { "CustomerName", txn.CustName ?? "" },
                 { "BranchName", txn.BranchName ?? "" },
                 { "Status", txn.Status ?? "" },
+                { "POD", txn.POD ?? "" },
+                { "CourierPartner", txn.CourierPartner ?? "" },
+                { "ClosureDate", txn.ClosureDate?.ToString("dd-MMM-yyyy") ?? "" },
+                { "TodayDate", DateTime.Now.ToString("dd-MMM-yyyy") },
             };
         }
 
@@ -913,6 +964,54 @@ namespace ProductivityApi.Services
             if (!saved)
             {
                 return (false, "Failed to save Acknowledgement PDF.");
+            }
+
+            // Trigger KYC verification email to central NOC team and branch
+            try
+            {
+                var txn = await _repository.GetById(dto.TransactionId);
+
+                if (txn != null)
+                {
+                    var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
+
+                    var placeholders = new Dictionary<string, string>
+                    {
+                        { "BranchName", txn.BranchName ?? "" },
+                        { "LAN", txn.Lan ?? "" },
+                        { "UploadedBy", dto.UpdatedBy ?? "" },
+                        { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
+                    };
+
+                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+                    // Send to central NOC email + branch recipients
+                    var to = new List<string>();
+
+                    var nocEmail = _configuration["NocSettings:NocEmail"];
+                    if (!string.IsNullOrWhiteSpace(nocEmail))
+                        to.Add(nocEmail);
+
+                    var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+
+                    to.AddRange(branchRecipients);
+
+                    to = to.Distinct().ToList();
+
+                    if (to.Any())
+                    {
+                        await _emailService.SendEmail(
+                            template.Subject,
+                            body,
+                            to,
+                            new List<string>()
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
             }
 
             return (true, "Acknowledgement uploaded successfully.");
