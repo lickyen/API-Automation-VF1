@@ -291,7 +291,7 @@ namespace ProductivityApi.Repository
                 @"
                 SELECT Status
                 FROM NOC_RoleStatusMap
-                WHERE Role = @Role
+                WHERE Role = @Role AND ActiveStatus = 'Active'
                 ORDER BY Id
             ";
 
@@ -678,6 +678,37 @@ WHERE t.Id = @TransactionId
             return rows > 0;
         }
 
+        public async Task<bool> UpdateAckPdfAsync(
+            int transactionId,
+            string pdfBase64,
+            string updatedBy
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            Ack_PDF = @PdfBase64,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @TransactionId
+    ";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    PdfBase64 = pdfBase64,
+                    UpdatedBy = updatedBy,
+                }
+            );
+
+            return rows > 0;
+        }
+
         public async Task<string?> GetKycPdfAsync(int transactionId)
         {
             using var conn = new SqlConnection(_conStr);
@@ -693,6 +724,67 @@ WHERE t.Id = @TransactionId
                 sql,
                 new { TransactionId = transactionId }
             );
+        }
+
+        public async Task<bool> UpdatePodAsync(int transactionId, string pod, string updatedBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            POD = @POD,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @TransactionId
+    ";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    TransactionId = transactionId,
+                    POD = pod,
+                    UpdatedBy = updatedBy,
+                }
+            );
+
+            return rows > 0;
+        }
+
+        public async Task UpdateOtpStatus(int transactionId, string otpType, string status)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = otpType.ToUpper() switch
+            {
+                "KYC" => @"
+            UPDATE NOC_Transactions
+            SET OTP_Status_KYC = @Status,
+                OTP_Status_KYC_Date =
+                    CASE
+                        WHEN @Status = 'Verified'
+                        THEN GETDATE()
+                        ELSE OTP_Status_KYC_Date
+                    END
+            WHERE Id = @TransactionId",
+
+                "NOC" => @"
+            UPDATE NOC_Transactions
+            SET OTP_Status_NOC = @Status,
+                OTP_Status_NOC_Date =
+                    CASE
+                        WHEN @Status = 'Verified'
+                        THEN GETDATE()
+                        ELSE OTP_Status_NOC_Date
+                    END
+            WHERE Id = @TransactionId",
+
+                _ => throw new Exception("Invalid OTP type"),
+            };
+
+            await conn.ExecuteAsync(sql, new { TransactionId = transactionId, Status = status });
         }
     }
 }

@@ -177,7 +177,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("uploadNOCandAck")]
-        public async Task<IActionResult> UploadNOCandAck([FromForm] UploadPdfDto dto)
+        public async Task<IActionResult> UploadNOCandAck([FromBody] FetchNocAckDto dto)
         {
             var result = await _service.UploadNOCandAckAsync(dto);
 
@@ -272,6 +272,29 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result.Message));
         }
 
+        [HttpPost("uploadAckPdf")]
+        public async Task<IActionResult> UploadAckPdf([FromForm] UploadAckPdfDto dto)
+        {
+            if (dto.TransactionId <= 0)
+            {
+                return BadRequest(new Response(false, "Invalid transaction id."));
+            }
+
+            if (dto.PdfFile == null)
+            {
+                return BadRequest(new Response(false, "PDF file is required."));
+            }
+
+            var result = await _service.UploadAckPdfAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, result.Message));
+            }
+
+            return Ok(new Response(true, result.Message));
+        }
+
         [HttpGet("downloadKycPdf/{transactionId}")]
         public async Task<IActionResult> DownloadKycPdf(int transactionId)
         {
@@ -291,6 +314,118 @@ namespace ProductivityApi.Controllers
             var result = await _service.UpdateTransactionStatusesAsync(dto);
 
             return Ok(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost("sendCustomerOtp")]
+        public async Task<IActionResult> SendCustomerOtp([FromBody] SendNocOtpRequest request)
+        {
+            try
+            {
+                await _service.SendCustomerOtpAsync(request.TransactionId);
+
+                return Ok(new Response(true, null, "Customer OTP sent successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+        }
+
+        [HttpPost("sendOwnerOtp")]
+        public async Task<IActionResult> SendOwnerOtp([FromBody] SendNocOtpRequest request)
+        {
+            try
+            {
+                await _service.SendOwnerOtpAsync(request.TransactionId);
+
+                return Ok(new Response(true, null, "Owner OTP sent successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+        }
+
+        [HttpPost("verifyCustomerOtp")]
+        public async Task<IActionResult> VerifyCustomerOtp([FromBody] VerifyNocOtpRequest request)
+        {
+            bool result = await _service.VerifyCustomerOtpAsync(request.TransactionId, request.Otp);
+
+            if (!result)
+            {
+                return BadRequest(new Response(false, null, "Invalid OTP"));
+            }
+
+            return Ok(new Response(true, null, "OTP verified successfully"));
+        }
+
+        [HttpPost("verifyOwnerOtp")]
+        public async Task<IActionResult> VerifyOwnerOtp([FromBody] VerifyNocOtpRequest request)
+        {
+            bool result = await _service.VerifyOwnerOtpAsync(request.TransactionId, request.Otp);
+
+            if (!result)
+            {
+                return BadRequest(new Response(false, null, "Invalid OTP"));
+            }
+
+            return Ok(new Response(true, null, "OTP verified successfully"));
+        }
+
+        [HttpPost("sentForDispatch")]
+        public async Task<IActionResult> SentForDispatch([FromBody] SentForDispatchDto dto)
+        {
+            if (dto.TransactionId <= 0)
+            {
+                return BadRequest(new Response(false, "Invalid transaction id."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.POD))
+            {
+                return BadRequest(new Response(false, "POD is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(new Response(false, "UpdatedBy is required."));
+            }
+
+            var result = await _service.SentForDispatchAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, result.Message));
+            }
+
+            return Ok(new Response(true, result.Message));
+        }
+
+        [HttpPost("returnToHo")]
+        public async Task<IActionResult> ReturnToHo([FromBody] ReturnToHoDto dto)
+        {
+            if (dto.TransactionId <= 0)
+            {
+                return BadRequest(new Response(false, "Invalid transaction id."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.POD))
+            {
+                return BadRequest(new Response(false, "POD is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(new Response(false, "UpdatedBy is required."));
+            }
+
+            var result = await _service.ReturnToHoAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, result.Message));
+            }
+
+            return Ok(new Response(true, result.Message));
         }
     }
 }

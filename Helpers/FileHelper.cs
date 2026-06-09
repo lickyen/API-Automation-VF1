@@ -2,8 +2,17 @@
 {
     public static class FileHelper
     {
-
-        public static async Task<(bool Success, string? FileName, string? Error)> SaveBase64FileAsync(string basePath, string fileName,string base64, string[] allowedExtensions, int maxSizeInMb = 5)
+        public static async Task<(
+            bool Success,
+            string? FileName,
+            string? Error
+        )> SaveBase64FileAsync(
+            string basePath,
+            string fileName,
+            string base64,
+            string[] allowedExtensions,
+            int maxSizeInMb = 5
+        )
         {
             if (string.IsNullOrWhiteSpace(base64) || string.IsNullOrWhiteSpace(fileName))
                 return (false, null, "File is empty");
@@ -15,9 +24,7 @@
 
             try
             {
-                var base64Data = base64.Contains(",")
-                    ? base64.Split(',')[1]
-                    : base64;
+                var base64Data = base64.Contains(",") ? base64.Split(',')[1] : base64;
 
                 var bytes = Convert.FromBase64String(base64Data);
 
@@ -37,6 +44,7 @@
                 return (false, null, "Invalid Base64 string");
             }
         }
+
         public static async Task<byte[]?> ReadFileAsync(string basePath, string fileName)
         {
             var fullPath = Path.Combine(basePath, fileName);
@@ -62,7 +70,7 @@
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".png" => "image/png",
                 ".zip" => "application/zip",
-                _ => "application/octet-stream"
+                _ => "application/octet-stream",
             };
         }
     }

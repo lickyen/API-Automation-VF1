@@ -52,6 +52,10 @@ namespace ProductivityApi.Models
         public string? NOC_PDF_Signed { get; set; }
         public string? Ack_PDF { get; set; }
         public string? Ack_PDF_Signed { get; set; }
+        public string? OTPStatusKYC { get; set; }
+        public string? OTPStatusNOC { get; set; }
+        public DateTime? OTPStatusKYCDate { get; set; }
+        public DateTime? OTPStatusNOCDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -258,13 +262,49 @@ namespace ProductivityApi.Models
         public int TransactionId { get; set; }
     }
 
-    public class UploadPdfDto
+    public class FetchNocAckDto
     {
         public int TransactionId { get; set; }
 
-        public IFormFile PdfFile { get; set; } = null!;
+        public string LanNumber { get; set; }
 
-        public string UpdatedBy { get; set; } = string.Empty;
+        public string UpdatedBy { get; set; }
+    }
+
+    public class AgreementRequest
+    {
+        public string finReference { get; set; }
+
+        public string agreementType { get; set; }
+    }
+
+    public class AgreementResponse
+    {
+        public List<AgreementItem> agreementsList { get; set; }
+
+        public AgreementReturnStatus returnStatus { get; set; }
+    }
+
+    public class AgreementItem
+    {
+        public string cif { get; set; }
+
+        public string finReference { get; set; }
+
+        public string agreementName { get; set; }
+
+        public string agreementType { get; set; }
+
+        public string reportName { get; set; }
+
+        public string docContent { get; set; }
+    }
+
+    public class AgreementReturnStatus
+    {
+        public string returnCode { get; set; }
+
+        public string returnText { get; set; }
     }
 
     public class SignNocPdfDto
@@ -306,6 +346,17 @@ namespace ProductivityApi.Models
         public string Role { get; set; } = string.Empty;
     }
 
+    public class UploadAckPdfDto
+    {
+        public int TransactionId { get; set; }
+
+        public IFormFile PdfFile { get; set; } = null!;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
+
     public class BulkUpdateNocStatusDto
     {
         public List<int> Ids { get; set; } = new();
@@ -317,5 +368,38 @@ namespace ProductivityApi.Models
         public string CreatedBy { get; set; } = "";
 
         public string Role { get; set; } = "";
+    }
+
+    public class SendNocOtpRequest
+    {
+        public int TransactionId { get; set; }
+    }
+
+    public class VerifyNocOtpRequest
+    {
+        public int TransactionId { get; set; }
+        public string Otp { get; set; } = null!;
+    }
+
+    public class SentForDispatchDto
+    {
+        public int TransactionId { get; set; }
+
+        public string POD { get; set; } = string.Empty;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class ReturnToHoDto
+    {
+        public int TransactionId { get; set; }
+
+        public string POD { get; set; } = string.Empty;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
     }
 }

@@ -20,6 +20,7 @@ namespace ProductivityApi.Services
         private readonly IConfiguration _configuration;
         private readonly TemplateService _templateService;
         private readonly HttpClient _httpClient;
+        private readonly OtpService _otpService;
 
         public NOCService(
             NOCRepository repository,
@@ -28,7 +29,8 @@ namespace ProductivityApi.Services
             SmsService smsService,
             IConfiguration configuration,
             TemplateService templateService,
-            HttpClient httpClient
+            HttpClient httpClient,
+            OtpService otpService
         )
         {
             _repository = repository;
@@ -38,6 +40,7 @@ namespace ProductivityApi.Services
             _configuration = configuration;
             _templateService = templateService;
             _httpClient = httpClient;
+            _otpService = otpService;
         }
 
         public async Task<int> InsertClosedLansAsync(IEnumerable<NocClosedLanInsertDto> lans)
@@ -580,24 +583,66 @@ namespace ProductivityApi.Services
             return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
         }
 
-        public async Task<bool> UploadNOCandAckAsync(UploadPdfDto dto)
+        public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
         {
-            using var ms = new MemoryStream();
-            await dto.PdfFile.CopyToAsync(ms);
+            _httpClient.DefaultRequestHeaders.Clear();
 
-            byte[] uploadedPdf = ms.ToArray();
+            _httpClient.DefaultRequestHeaders.Add("authorization", "dXNlcjpBRE1JTjp0ZXN0");
+
+            _httpClient.DefaultRequestHeaders.Add("entityid", "Auxilo");
+
+            _httpClient.DefaultRequestHeaders.Add("language", "ENG");
+
+            _httpClient.DefaultRequestHeaders.Add("messageid", Guid.NewGuid().ToString());
+
+            _httpClient.DefaultRequestHeaders.Add(
+                "requesttime",
+                DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
+            );
+
+            _httpClient.DefaultRequestHeaders.Add("servicename", "getAgreements");
+
+            _httpClient.DefaultRequestHeaders.Add("serviceversion", "2");
+
+            var request = new { finReference = dto.LanNumber, agreementType = "NOC" };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                "https://uatlms.vistaarfinance.net.in/pff-api/services/createFinanceRest/finance/getAgreements",
+                request
+            );
+
+            response.EnsureSuccessStatusCode();
+
+            var agreementResponse = await response.Content.ReadFromJsonAsync<AgreementResponse>();
+
+            if (agreementResponse == null || agreementResponse.returnStatus?.returnCode != "0000")
+            {
+                throw new Exception(
+                    agreementResponse?.returnStatus?.returnText
+                        ?? "Unable to fetch agreement document."
+                );
+            }
+
+            var agreement = agreementResponse.agreementsList?.FirstOrDefault();
+
+            if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
+            {
+                throw new Exception("Document content not found.");
+            }
+
+            byte[] uploadedPdf = Convert.FromBase64String(
+                agreement.docContent.Replace("\r", "").Replace("\n", "")
+            );
 
             using var reader = new PdfReader(uploadedPdf);
 
             if (reader.NumberOfPages < 2)
             {
-                throw new Exception("Uploaded PDF must contain at least 2 pages.");
+                throw new Exception("Agreement PDF must contain at least 2 pages.");
             }
 
-            // First page = NOC
             string nocBase64 = Convert.ToBase64String(ExtractPage(reader, 1));
 
-            // Second page = ACK
             string ackBase64 = Convert.ToBase64String(ExtractPage(reader, 2));
 
             return await _repository.UploadNOCAndAckPdfAsync(
@@ -697,7 +742,7 @@ namespace ProductivityApi.Services
                 Element.ALIGN_LEFT,
                 new Phrase("Property Owner:", FontFactory.GetFont(FontFactory.HELVETICA, 10)),
                 420,
-                55,
+                255,
                 0
             );
 
@@ -706,7 +751,7 @@ namespace ProductivityApi.Services
                 Element.ALIGN_LEFT,
                 new Phrase(data.PropertyOwnerName, FontFactory.GetFont(FontFactory.HELVETICA, 10)),
                 420,
-                40,
+                240,
                 0
             );
 
@@ -835,6 +880,44 @@ namespace ProductivityApi.Services
             return (true, "KYC uploaded successfully.");
         }
 
+        public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
+        {
+            if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+            {
+                return (false, "PDF file is required.");
+            }
+
+            //--------------------------------------------------
+            // Convert PDF to Base64
+            //--------------------------------------------------
+
+            string pdfBase64;
+
+            using (var ms = new MemoryStream())
+            {
+                await dto.PdfFile.CopyToAsync(ms);
+
+                pdfBase64 = Convert.ToBase64String(ms.ToArray());
+            }
+
+            //--------------------------------------------------
+            // Save PDF
+            //--------------------------------------------------
+
+            var saved = await _repository.UpdateAckPdfAsync(
+                dto.TransactionId,
+                pdfBase64,
+                dto.UpdatedBy
+            );
+
+            if (!saved)
+            {
+                return (false, "Failed to save Acknowledgement PDF.");
+            }
+
+            return (true, "Acknowledgement uploaded successfully.");
+        }
+
         public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
         {
             var base64 = await _repository.GetKycPdfAsync(transactionId);
@@ -909,6 +992,146 @@ namespace ProductivityApi.Services
             }
 
             return (true, "Status updated successfully.");
+        }
+
+        public async Task SendCustomerOtpAsync(int transactionId)
+        {
+            var transaction = await _repository.GetById(transactionId);
+
+            if (transaction == null)
+                throw new Exception("Transaction not found");
+
+            if (string.IsNullOrWhiteSpace(transaction.CustMobile))
+                throw new Exception("Customer mobile number not available");
+
+            string referenceId = $"NOC_{transactionId}_CUSTOMER";
+
+            await _otpService.SendOtpToMobile(referenceId, transaction.CustMobile);
+
+            await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
+        }
+
+        public async Task SendOwnerOtpAsync(int transactionId)
+        {
+            var transaction = await _repository.GetById(transactionId);
+
+            if (transaction == null)
+                throw new Exception("Transaction not found");
+
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedMobile)
+                ? transaction.UpdatedMobile
+                : transaction.PropertyOwnerMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
+                throw new Exception("Property owner mobile number not available");
+
+            string referenceId = $"NOC_{transactionId}_OWNER";
+
+            await _otpService.SendOtpToMobile(referenceId, mobile);
+
+            await _repository.UpdateOtpStatus(transactionId, "KYC", "Sent");
+        }
+
+        public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
+        {
+#if DEBUG
+            bool result = otp == "123456";
+#else
+            string referenceId = $"NOC_{transactionId}_CUSTOMER";
+            bool result = await _otpService.VerifyOtp(referenceId, otp);
+#endif
+
+            if (result)
+            {
+                await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
+            }
+
+            return result;
+        }
+
+        public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
+        {
+#if DEBUG
+            bool result = otp == "123456";
+#else
+            string referenceId = $"NOC_{transactionId}_OWNER";
+            bool result = await _otpService.VerifyOtp(referenceId, otp);
+#endif
+
+            if (result)
+            {
+                await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
+            }
+
+            return result;
+        }
+
+        public async Task<(bool Success, string Message)> SentForDispatchAsync(
+            SentForDispatchDto dto
+        )
+        {
+            //--------------------------------------------------
+            // UPDATE POD
+            //--------------------------------------------------
+            var podUpdated = await _repository.UpdatePodAsync(
+                dto.TransactionId,
+                dto.POD,
+                dto.UpdatedBy
+            );
+
+            if (!podUpdated)
+            {
+                return (false, "Failed to update POD.");
+            }
+
+            //--------------------------------------------------
+            // UPDATE STATUS TO DISPATCHED
+            //--------------------------------------------------
+            var statusResult = await UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.TransactionId,
+                    Status = "Dispatched",
+                    Remarks = $"POD Updated : {dto.POD}",
+                    CreatedBy = dto.UpdatedBy,
+                    Role = dto.Role,
+                }
+            );
+
+            return statusResult;
+        }
+
+        public async Task<(bool Success, string Message)> ReturnToHoAsync(ReturnToHoDto dto)
+        {
+            //--------------------------------------------------
+            // UPDATE POD
+            //--------------------------------------------------
+            var podUpdated = await _repository.UpdatePodAsync(
+                dto.TransactionId,
+                dto.POD,
+                dto.UpdatedBy
+            );
+
+            if (!podUpdated)
+            {
+                return (false, "Failed to update POD.");
+            }
+
+            //--------------------------------------------------
+            // UPDATE STATUS TO RETURNED TO HO
+            //--------------------------------------------------
+            var statusResult = await UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.TransactionId,
+                    Status = "Returned to HO",
+                    Remarks = $"Returned to HO. POD : {dto.POD}",
+                    CreatedBy = dto.UpdatedBy,
+                    Role = dto.Role,
+                }
+            );
+
+            return statusResult;
         }
     }
 }
