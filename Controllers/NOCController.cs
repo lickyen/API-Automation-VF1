@@ -216,15 +216,17 @@ namespace ProductivityApi.Controllers
             return File(pdfBytes, "application/pdf", $"ACK_{transactionId}_Signed.pdf");
         }
 
-        [HttpPut("updateMobileNumber")]
-        public async Task<IActionResult> UpdateMobileNumber([FromBody] UpdateMobileNumberDto dto)
+        [HttpPut("updateOwnerMobileNumber")]
+        public async Task<IActionResult> UpdateOwnerMobileNumber(
+            [FromBody] UpdateOwnerMobileNumberDto dto
+        )
         {
             if (dto.Id <= 0)
             {
                 return BadRequest(new Response(false, message: "Invalid transaction id."));
             }
 
-            if (string.IsNullOrWhiteSpace(dto.UpdatedMobileNo))
+            if (string.IsNullOrWhiteSpace(dto.UpdatedOwnerMobileNo))
             {
                 return BadRequest(new Response(false, message: "Mobile number is required."));
             }
@@ -239,7 +241,42 @@ namespace ProductivityApi.Controllers
                 return BadRequest(new Response(false, message: "Role is required."));
             }
 
-            var result = await _service.UpdateMobileNumberAsync(dto);
+            var result = await _service.UpdateOwnerMobileNumberAsync(dto);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, message: result.Message));
+            }
+
+            return Ok(new Response(true, message: result.Message));
+        }
+
+        [HttpPut("updateCustMobileNumber")]
+        public async Task<IActionResult> UpdateCustMobileNumber(
+            [FromBody] UpdateCustMobileNumberDto dto
+        )
+        {
+            if (dto.Id <= 0)
+            {
+                return BadRequest(new Response(false, message: "Invalid transaction id."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedCustMobileNo))
+            {
+                return BadRequest(new Response(false, message: "Mobile number is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                return BadRequest(new Response(false, message: "UpdatedBy is required."));
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Role))
+            {
+                return BadRequest(new Response(false, message: "Role is required."));
+            }
+
+            var result = await _service.UpdateCustMobileNumberAsync(dto);
 
             if (!result.Success)
             {

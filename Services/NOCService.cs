@@ -837,14 +837,14 @@ namespace ProductivityApi.Services
             return Convert.FromBase64String(base64);
         }
 
-        public async Task<(bool Success, string Message)> UpdateMobileNumberAsync(
-            UpdateMobileNumberDto dto
+        public async Task<(bool Success, string Message)> UpdateOwnerMobileNumberAsync(
+            UpdateOwnerMobileNumberDto dto
         )
         {
             //----------------------------------------------------
             // UPDATE MOBILE NUMBER
             //----------------------------------------------------
-            var updated = await _repository.UpdateMobileNumberAsync(dto);
+            var updated = await _repository.UpdateOwnerMobileNumberAsync(dto);
 
             if (!updated)
             {
@@ -858,8 +858,44 @@ namespace ProductivityApi.Services
                 new UpdateNocStatusDto
                 {
                     Id = dto.Id,
-                    Status = "Mobile Update Pending",
+                    Status = "Owner Mobile Update Pending",
                     Remarks = "Property owner mobile number updated by customer",
+                    CreatedBy = dto.UpdatedBy,
+                    Role = dto.Role,
+                }
+            );
+
+            if (statusResult != 1)
+            {
+                return (false, "Mobile updated but status update failed.");
+            }
+
+            return (true, "Mobile number updated successfully.");
+        }
+
+        public async Task<(bool Success, string Message)> UpdateCustMobileNumberAsync(
+            UpdateCustMobileNumberDto dto
+        )
+        {
+            //----------------------------------------------------
+            // UPDATE MOBILE NUMBER
+            //----------------------------------------------------
+            var updated = await _repository.UpdateCustMobileNumberAsync(dto);
+
+            if (!updated)
+            {
+                return (false, "Mobile number update failed.");
+            }
+
+            //----------------------------------------------------
+            // UPDATE STATUS THROUGH WORKFLOW
+            //----------------------------------------------------
+            var statusResult = await _repository.UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.Id,
+                    Status = "Customer Mobile Update Pending",
+                    Remarks = "Customer mobile number updated by branch",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
                 }
@@ -927,46 +963,6 @@ namespace ProductivityApi.Services
             {
                 return (false, "KYC uploaded but status update failed.");
             }
-
-            return (true, "KYC uploaded successfully.");
-        }
-
-        public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
-        {
-            if (dto.PdfFile == null || dto.PdfFile.Length == 0)
-            {
-                return (false, "PDF file is required.");
-            }
-
-            //--------------------------------------------------
-            // Convert PDF to Base64
-            //--------------------------------------------------
-
-            string pdfBase64;
-
-            using (var ms = new MemoryStream())
-            {
-                await dto.PdfFile.CopyToAsync(ms);
-
-                pdfBase64 = Convert.ToBase64String(ms.ToArray());
-            }
-
-            //--------------------------------------------------
-            // Save PDF
-            //--------------------------------------------------
-
-            var saved = await _repository.UpdateAckPdfAsync(
-                dto.TransactionId,
-                pdfBase64,
-                dto.UpdatedBy
-            );
-
-            if (!saved)
-            {
-                return (false, "Failed to save Acknowledgement PDF.");
-            }
-
-            // Trigger KYC verification email to central NOC team and branch
             try
             {
                 var txn = await _repository.GetById(dto.TransactionId);
@@ -1012,6 +1008,44 @@ namespace ProductivityApi.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
+            }
+
+            return (true, "KYC uploaded successfully.");
+        }
+
+        public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
+        {
+            if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+            {
+                return (false, "PDF file is required.");
+            }
+
+            //--------------------------------------------------
+            // Convert PDF to Base64
+            //--------------------------------------------------
+
+            string pdfBase64;
+
+            using (var ms = new MemoryStream())
+            {
+                await dto.PdfFile.CopyToAsync(ms);
+
+                pdfBase64 = Convert.ToBase64String(ms.ToArray());
+            }
+
+            //--------------------------------------------------
+            // Save PDF
+            //--------------------------------------------------
+
+            var saved = await _repository.UpdateAckPdfAsync(
+                dto.TransactionId,
+                pdfBase64,
+                dto.UpdatedBy
+            );
+
+            if (!saved)
+            {
+                return (false, "Failed to save Acknowledgement PDF.");
             }
 
             return (true, "Acknowledgement uploaded successfully.");
@@ -1100,12 +1134,16 @@ namespace ProductivityApi.Services
             if (transaction == null)
                 throw new Exception("Transaction not found");
 
-            if (string.IsNullOrWhiteSpace(transaction.CustMobile))
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedCustMobile)
+                ? transaction.UpdatedCustMobile
+                : transaction.CustMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Customer mobile number not available");
 
             string referenceId = $"NOC_{transactionId}_CUSTOMER";
 
-            await _otpService.SendOtpToMobile(referenceId, transaction.CustMobile);
+            await _otpService.SendOtpToMobile(referenceId, mobile);
 
             await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
         }
@@ -1117,8 +1155,8 @@ namespace ProductivityApi.Services
             if (transaction == null)
                 throw new Exception("Transaction not found");
 
-            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedMobile)
-                ? transaction.UpdatedMobile
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedOwnerMobile)
+                ? transaction.UpdatedOwnerMobile
                 : transaction.PropertyOwnerMobile;
 
             if (string.IsNullOrWhiteSpace(mobile))
@@ -1133,12 +1171,12 @@ namespace ProductivityApi.Services
 
         public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
         {
-#if DEBUG
-            bool result = otp == "123456";
-#else
+            // #if DEBUG
+            //             bool result = otp == "123456";
+            // #else
             string referenceId = $"NOC_{transactionId}_CUSTOMER";
             bool result = await _otpService.VerifyOtp(referenceId, otp);
-#endif
+            // #endif
 
             if (result)
             {
@@ -1150,12 +1188,12 @@ namespace ProductivityApi.Services
 
         public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
         {
-#if DEBUG
-            bool result = otp == "123456";
-#else
+            // #if DEBUG
+            //             bool result = otp == "123456";
+            // #else
             string referenceId = $"NOC_{transactionId}_OWNER";
             bool result = await _otpService.VerifyOtp(referenceId, otp);
-#endif
+            // #endif
 
             if (result)
             {

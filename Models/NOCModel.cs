@@ -33,7 +33,7 @@ namespace ProductivityApi.Models
         public string? CollId { get; set; }
         public string? CustName { get; set; }
         public string? CustMobile { get; set; }
-        public string? UpdatedMobile { get; set; }
+        public string? UpdatedCustMobile { get; set; }
         public string LoanStatus { get; set; } = string.Empty;
         public DateTime? DisbDate { get; set; }
         public DateTime? ClosureDate { get; set; }
@@ -43,6 +43,7 @@ namespace ProductivityApi.Models
         public string? PropertyOwnerCustId { get; set; }
         public string? PropertyOwnerName { get; set; }
         public string? PropertyOwnerMobile { get; set; }
+        public string? UpdatedOwnerMobile { get; set; }
         public string? POD { get; set; }
         public string? CourierPartner { get; set; }
         public int? SignUserId { get; set; }
@@ -325,12 +326,24 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
-    public class UpdateMobileNumberDto
+    public class UpdateOwnerMobileNumberDto
     {
         public int Id { get; set; }
 
         [Phone]
-        public string UpdatedMobileNo { get; set; } = string.Empty;
+        public string UpdatedOwnerMobileNo { get; set; } = string.Empty;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class UpdateCustMobileNumberDto
+    {
+        public int Id { get; set; }
+
+        [Phone]
+        public string UpdatedCustMobileNo { get; set; } = string.Empty;
 
         public string UpdatedBy { get; set; } = string.Empty;
 

@@ -299,7 +299,7 @@ namespace ProductivityApi.Repository
                 WHERE Status = 'Dispatched'
                 AND POD IS NOT NULL
                 AND POD <> ''
-                AND Delivery_Date IS NULL
+                AND DeliveryDate IS NULL
             ";
 
             return await conn.QueryAsync<NocTransaction>(sql);
@@ -317,7 +317,7 @@ namespace ProductivityApi.Repository
                 SELECT *
                 FROM NOC_Transactions
                 WHERE Status = 'Dispatched'
-                AND Delivery_Date IS NOT NULL
+                AND DeliveryDate IS NOT NULL
             ";
 
             return await conn.QueryAsync<NocTransaction>(sql);
@@ -658,7 +658,7 @@ WHERE t.Id = @TransactionId
             );
         }
 
-        public async Task<bool> UpdateMobileNumberAsync(UpdateMobileNumberDto dto)
+        public async Task<bool> UpdateOwnerMobileNumberAsync(UpdateOwnerMobileNumberDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -668,7 +668,7 @@ WHERE t.Id = @TransactionId
                 @"
         UPDATE NOC_Transactions
         SET
-            UpdatedMobileNo = @UpdatedMobileNo,
+            UpdatedOwnerMobileNo = @UpdatedOwnerMobileNo,
             Updated_By = @UpdatedBy,
             Updated_Dt = GETDATE()
         WHERE Id = @Id
@@ -679,7 +679,36 @@ WHERE t.Id = @TransactionId
                 new
                 {
                     dto.Id,
-                    dto.UpdatedMobileNo,
+                    dto.UpdatedOwnerMobileNo,
+                    dto.UpdatedBy,
+                }
+            );
+
+            return rows > 0;
+        }
+
+        public async Task<bool> UpdateCustMobileNumberAsync(UpdateCustMobileNumberDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            string sql =
+                @"
+        UPDATE NOC_Transactions
+        SET
+            UpdatedCustMobileNo = @UpdatedCustMobileNo,
+            Updated_By = @UpdatedBy,
+            Updated_Dt = GETDATE()
+        WHERE Id = @Id
+    ";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    dto.Id,
+                    dto.UpdatedCustMobileNo,
                     dto.UpdatedBy,
                 }
             );
@@ -730,7 +759,7 @@ WHERE t.Id = @TransactionId
                 @"
         UPDATE NOC_Transactions
         SET
-            Ack_PDF = @PdfBase64,
+            Ack_PDF_Signed = @PdfBase64,
             Updated_By = @UpdatedBy,
             Updated_Dt = GETDATE()
         WHERE Id = @TransactionId
