@@ -795,7 +795,7 @@ WHERE t.Id = @TransactionId
             );
         }
 
-        public async Task<bool> UpdatePodAsync(int transactionId, string pod, string updatedBy)
+        public async Task<bool> UpdatePodAsync(int transactionId, string pod, string? courierVendor, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -804,6 +804,7 @@ WHERE t.Id = @TransactionId
         UPDATE NOC_Transactions
         SET
             POD = @POD,
+            CourierVendor = @CourierVendor,
             Updated_By = @UpdatedBy,
             Updated_Dt = GETDATE()
         WHERE Id = @TransactionId
@@ -815,6 +816,7 @@ WHERE t.Id = @TransactionId
                 {
                     TransactionId = transactionId,
                     POD = pod,
+                    CourierVendor = courierVendor,
                     UpdatedBy = updatedBy,
                 }
             );

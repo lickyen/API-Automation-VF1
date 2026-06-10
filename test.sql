@@ -1,7 +1,7 @@
 SELECT * FROM NOC_Transactions;
 GO
 
-SELECT * FROM NOC_Transactions
+SELECT CourierVendor FROM NOC_Transactions
 WHERE Id IN (3, 4);
 GO
 
@@ -23,7 +23,7 @@ SET Status = 'Delivered in Branch'
 GO
 
 UPDATE NOC_Transactions
-SET Status = 'Generate NOC'
+SET Status = 'Labels Generated'
 GO
 
 UPDATE NOC_Transactions

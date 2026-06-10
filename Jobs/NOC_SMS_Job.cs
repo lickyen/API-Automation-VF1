@@ -642,6 +642,7 @@ namespace ProductivityApi.Jobs
                 { "TodayDate", DateTime.Now.ToString("dd-MMM-yyyy") },
                 { "POD", txn.POD ?? "" },
                 { "CourierPartner", txn.CourierPartner ?? "" },
+                { "CourierVendor", txn.CourierVendor ?? "" },
                 { "DispatchDate", txn.UpdatedDt?.ToString("dd-MMM-yyyy") ?? "" },
             };
         }

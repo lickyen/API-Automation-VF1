@@ -46,6 +46,7 @@ namespace ProductivityApi.Models
         public string? UpdatedOwnerMobile { get; set; }
         public string? POD { get; set; }
         public string? CourierPartner { get; set; }
+        public string? CourierVendor { get; set; }
         public int? SignUserId { get; set; }
         public string? LeegalityDocumentId { get; set; }
         public string? LeegalitySignUrl { get; set; }
@@ -114,6 +115,7 @@ namespace ProductivityApi.Models
         public DateTime? DisbDate { get; set; }
         public DateTime? ClosureDate { get; set; }
         public string? NocStatus { get; set; }
+        public string? CourierVendor { get; set; }
     }
 
     public class NocApplicantDetails
@@ -402,6 +404,8 @@ namespace ProductivityApi.Models
 
         public string POD { get; set; } = string.Empty;
 
+        public string? CourierVendor { get; set; }
+
         public string UpdatedBy { get; set; } = string.Empty;
 
         public string Role { get; set; } = string.Empty;
@@ -412,6 +416,8 @@ namespace ProductivityApi.Models
         public int TransactionId { get; set; }
 
         public string POD { get; set; } = string.Empty;
+
+        public string? CourierVendor { get; set; }
 
         public string UpdatedBy { get; set; } = string.Empty;
 
