@@ -67,6 +67,28 @@ namespace ProductivityApi.Models
         public string? BranchEmail { get; set; }
         public string? SupervisorEmail { get; set; }
 
+        // Computed TATs (not stored in DB)
+        [NotMapped]
+        public int? DeliveryTAT
+        {
+            get
+            {
+                if (DeliveryDate.HasValue)
+                    return (int)(DateTime.Now.Date - DeliveryDate.Value.Date).TotalDays;
+                return null;
+            }
+        }
+
+        [NotMapped]
+        public int? CreatedTAT
+        {
+            get
+            {
+                if (CreatedDt != default)
+                    return (int)(DateTime.Now.Date - CreatedDt.Date).TotalDays;
+                return null;
+            }
+        }
         public List<NocTransactionLog> Logs { get; set; } = new();
     }
 
@@ -155,6 +177,32 @@ namespace ProductivityApi.Models
         public string BranchCode { get; set; }
         public string BranchName { get; set; }
         public string? RoleAccess { get; set; }
+        // Optional dates returned by the query to allow TAT computation
+        public DateTime? DeliveryDate { get; set; }
+        public DateTime? CreatedDt { get; set; }
+
+        // Computed TATs (not stored in DB)
+        [NotMapped]
+        public int? DeliveryTAT
+        {
+            get
+            {
+                if (DeliveryDate.HasValue)
+                    return (int)(DateTime.Now.Date - DeliveryDate.Value.Date).TotalDays;
+                return null;
+            }
+        }
+
+        [NotMapped]
+        public int? CreatedTAT
+        {
+            get
+            {
+                if (CreatedDt.HasValue)
+                    return (int)(DateTime.Now.Date - CreatedDt.Value.Date).TotalDays;
+                return null;
+            }
+        }
     }
 
     public class UpdateNocStatusDto
