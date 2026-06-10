@@ -1172,12 +1172,12 @@ namespace ProductivityApi.Services
 
         public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
         {
-#if DEBUG
-            bool result = otp == "123456";
-#else
+            // #if DEBUG
+            //             bool result = otp == "123456";
+            // #else
             string referenceId = $"NOC_{transactionId}_CUSTOMER";
             bool result = await _otpService.VerifyOtp(referenceId, otp);
-#endif
+            // #endif
 
             if (result)
             {
@@ -1189,12 +1189,12 @@ namespace ProductivityApi.Services
 
         public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
         {
-#if DEBUG
-            bool result = otp == "123456";
-#else
+            // #if DEBUG
+            //             bool result = otp == "123456";
+            // #else
             string referenceId = $"NOC_{transactionId}_OWNER";
             bool result = await _otpService.VerifyOtp(referenceId, otp);
-#endif
+            // #endif
 
             if (result)
             {
