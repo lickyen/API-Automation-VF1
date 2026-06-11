@@ -93,8 +93,10 @@ namespace ProductivityApi.Services
             //var basePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "WabaFiles");
             var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
 
-            var uniqueId = Guid.NewGuid().ToString("N")[..8]; // 8 char short guid
-            var fileName = $"SOA_{lan}_{uniqueId}.pdf";     // e.g. SOA_LAN123456_a3f8c21d.pdf
+            //var uniqueId = Guid.NewGuid().ToString("N")[..8]; // 8 char short guid
+            //var fileName = $"SOA_{lan}_{uniqueId}.pdf";     // e.g. SOA_LAN123456_a3f8c21d.pdf
+
+            var fileName = $"{Guid.NewGuid():N}.pdf";
 
             var fullPath = Path.Combine(basePath, fileName);
 
@@ -117,7 +119,6 @@ namespace ProductivityApi.Services
                 FinReference = transferResult.FinReference
             };
         }
-
         public async Task<WabaKotakResponse> GetKotakDocumentAsync(string lan)
         {
             // Step 1: Pull Kotak master data for this LAN
@@ -164,8 +165,11 @@ namespace ProductivityApi.Services
             var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
             Directory.CreateDirectory(basePath);
 
-            var uniqueId = Guid.NewGuid().ToString("N")[..8];
-            var fileName = $"{lan}_kotak_{uniqueId}.pdf";
+            //var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            //var fileName = $"{lan}_kotak_{uniqueId}.pdf";
+
+            var fileName = $"{Guid.NewGuid():N}.pdf";
+
             var fullPath = Path.Combine(basePath, fileName);
 
             await File.WriteAllBytesAsync(
@@ -184,6 +188,17 @@ namespace ProductivityApi.Services
                 LoanAccountNo = kotakData.LoanAcId,
                 PolicyNumber = kotakData.PolicyNumber ?? string.Empty
             };
+        }
+
+        public (byte[] bytes, string fileName) GetDocument(string fileName)
+        {
+            var safeFileName = Path.GetFileName(fileName);
+            var fullPath = Path.Combine(_env.WebRootPath, "WabaFiles", safeFileName);
+
+            if (!System.IO.File.Exists(fullPath))
+                throw new FileNotFoundException("File not found");
+
+            return (System.IO.File.ReadAllBytes(fullPath), safeFileName);
         }
     }
 }

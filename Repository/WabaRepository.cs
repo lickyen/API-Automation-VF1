@@ -151,7 +151,7 @@ namespace ProductivityApi.Repository
             // Required fields — always passed
             parameters.Add("@Lan", lan);
             parameters.Add("@ReqType", "Kotak");
-            parameters.Add("@Source", "Whatsapp Banking");
+            parameters.Add("@Source", "WhatsApp");
             parameters.Add("@NewRequestId", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
