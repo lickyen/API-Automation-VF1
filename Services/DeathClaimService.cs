@@ -8,12 +8,12 @@ namespace ProductivityApi.Services
     public class DeathClaimService
     {
         private readonly DeathClaimRepository _repository;
-        private readonly string _basePath;
+        private readonly string _filePath;
 
         public DeathClaimService(DeathClaimRepository repository, AppSettings appSettings)
         {
             _repository = repository;
-            _basePath = appSettings.FilePaths.DeathClaimFilePath;
+            _filePath = appSettings.FilePaths.DeathClaimFilePath;
         }
 
         public async Task<DeathClaimResponseDto?> GetByIdAsync(int id)
@@ -92,9 +92,9 @@ namespace ProductivityApi.Services
             string templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "DeathClaim", "ClaimFormat.xlsx");
             var bytes = FillClaimFormat(templatePath, data);
             var fileName = $"{data.LAN}_ClaimFormat.xlsx";
-            var fullPath = Path.Combine(_basePath, fileName);
+            var fullPath = Path.Combine(_filePath, fileName);
 
-            Directory.CreateDirectory(_basePath);
+            Directory.CreateDirectory(_filePath);
             await File.WriteAllBytesAsync(fullPath, bytes);
             await _repository.UpdateFileNameAsync(id, "ClaimFormat", fileName, updatedBy);
         }
@@ -421,7 +421,7 @@ namespace ProductivityApi.Services
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
             return await FileHelper.ReadFileAsync(
-                _basePath,
+                _filePath,
                 fileName
             );
         }
@@ -437,9 +437,9 @@ namespace ProductivityApi.Services
 
             var ext = Path.GetExtension(dto.File.FileName).ToLowerInvariant();
             var fileName = $"{record.Lan}_{dto.FileType}{ext}";
-            var fullPath = Path.Combine(_basePath, fileName);
+            var fullPath = Path.Combine(_filePath, fileName);
 
-            Directory.CreateDirectory(_basePath);
+            Directory.CreateDirectory(_filePath);
             await using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
             await dto.File.CopyToAsync(stream);
 
@@ -490,7 +490,7 @@ namespace ProductivityApi.Services
             {
                 foreach (var fileName in fileNames)
                 {
-                    var fullPath = Path.Combine(_basePath, fileName!);
+                    var fullPath = Path.Combine(_filePath, fileName!);
                     if (!File.Exists(fullPath))
                         continue;
 
