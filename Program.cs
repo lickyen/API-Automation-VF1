@@ -147,6 +147,9 @@ builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
 
+builder.Services.AddScoped<CibilCorrectionRepository>();
+builder.Services.AddScoped<CibilCorrectionService>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

@@ -1273,5 +1273,10 @@ namespace ProductivityApi.Services
 
             return statusResult;
         }
+
+        internal async Task<byte[]> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
