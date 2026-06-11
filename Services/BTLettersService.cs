@@ -8,13 +8,13 @@ using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
-    public class BTService
+    public class BTLettersService
     {
-        private readonly BTRepository _repository;
+        private readonly BTLettersRepository _repository;
         private readonly string _filePath;
         private readonly IConfiguration _config;
 
-        public BTService(BTRepository repository, AppSettings appSettings, IConfiguration config)
+        public BTLettersService(BTLettersRepository repository, AppSettings appSettings, IConfiguration config)
         {
             _repository = repository;
             _filePath = appSettings.FilePaths.BTFilePath;
