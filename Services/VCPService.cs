@@ -71,7 +71,7 @@ namespace ProductivityApi.Services
             });
         }
 
-        public async Task<int> SubmitRCUAsync(VCPSubmitRCURequest request)
+        public async Task<(int Result, string? Error)> SubmitRCUAsync(VCPSubmitRCURequest request)
         {
             string? savedFileName = null;
 
@@ -86,25 +86,28 @@ namespace ProductivityApi.Services
                 "Rejected" => "RCU_Rejected",
                 "Exception" => "RCU_Pending",
                 "SentBack" => "RCU_SentBack",
-                _ => throw new ArgumentException("Invalid RCU status")
+                _ => null
             };
+
+            if (finalStatus is null)
+                return (0, "Invalid RCU status");
 
             var output = await _repository.SubmitRCUAsync(request, finalStatus, savedFileName);
 
             if (output > 0)
                 await AddLogAsync(request.Id, finalStatus, request.Remarks, request.UpdatedBy);
 
-            return output;
+            return (output, null);
         }
 
-        public async Task<int> SubmitBHAsync(VCPSubmitBHRequest request)
+        public async Task<(int Result, string? Error)> SubmitBHAsync(VCPSubmitBHRequest request)
         {
             var rcuStatus = await _repository.GetRCUStatusAsync(request.Id);
 
             if (string.IsNullOrEmpty(rcuStatus))
-                return -1;
+                return (-1, null);
 
-            string finalStatus;
+            string? finalStatus = null;
 
             switch (request.Role.ToUpper())
             {
@@ -117,7 +120,7 @@ namespace ProductivityApi.Services
                         ("Referred", "SentBack") => "RCUReferred_RBHSentBack",
                         ("Negative", "Approved") => "RCUNegative_ZBHPending",
                         ("Negative", "SentBack") => "RCUNegative_RBHSentBack",
-                        _ => throw new ArgumentException("Invalid RBH status")
+                        _ => null
                     };
                     break;
 
@@ -128,7 +131,7 @@ namespace ProductivityApi.Services
                         ("Referred", "SentBack") => "RCUReferred_ZBHSentBack",
                         ("Negative", "Approved") => "RCUNegative_MZBHPending",
                         ("Negative", "SentBack") => "RCUNegative_ZBHSentBack",
-                        _ => throw new ArgumentException("Invalid ZBH status")
+                        _ => null
                     };
                     break;
 
@@ -137,23 +140,26 @@ namespace ProductivityApi.Services
                     {
                         "Approved" => "COPS_Pending",
                         "SentBack" => "RCUReferred_MZBHSentBack",
-                        _ => throw new ArgumentException("Invalid MZBH status")
+                        _ => null
                     };
                     break;
 
                 default:
-                    return -1;
+                    return (-1, null);
             }
+
+            if (finalStatus is null)
+                return (0, $"Invalid {request.Role.ToUpper()} status");
 
             var output = await _repository.SubmitBHAsync(request, finalStatus);
 
             if (output > 0)
                 await AddLogAsync(request.Id, finalStatus, request.Remarks, request.UpdatedBy);
 
-            return output;
+            return (output, null);
         }
 
-        public async Task<int> SubmitCOPSAsync(VCPSubmitCOPSRequest request)
+        public async Task<(int Result, string? Error)> SubmitCOPSAsync(VCPSubmitCOPSRequest request)
         {
             var finalStatus = request.Status switch
             {
@@ -161,33 +167,58 @@ namespace ProductivityApi.Services
                 "SentBack" => "COPS_SentBack",
                 "Rejected" => "COPS_Rejected",
                 "Exception" => "COPS_Pending",
-                _ => throw new ArgumentException("Invalid COPS status")
+                _ => null
             };
+
+            if (finalStatus is null)
+                return (0, "Invalid COPS status");
 
             var output = await _repository.SubmitCOPSAsync(request, finalStatus);
 
             if (output > 0)
                 await AddLogAsync(request.Id, finalStatus, request.Remarks, request.UpdatedBy);
 
-            return output;
+            return (output, null);
         }
 
-        public async Task<int> SubmitChannelSPOCAsync(VCPSubmitChannelSPOCRequest request)
+        public async Task<(int Result, string? Error)> SubmitChannelSPOCAsync(VCPSubmitChannelSPOCRequest request)
         {
             var finalStatus = request.Status switch
             {
                 "Approved" => "Completed",
                 "SentBack" => "ChannelSpoc_SentBack",
                 "Rejected" => "ChannelSpoc_Rejected",
-                _ => throw new ArgumentException("Invalid ChannelSPOC status")
+                _ => null
             };
+
+            if (finalStatus is null)
+                return (0, "Invalid ChannelSPOC status");
 
             var output = await _repository.SubmitChannelSPOCAsync(request, finalStatus);
 
             if (output > 0)
                 await AddLogAsync(request.Id, finalStatus, request.Remarks, request.UpdatedBy);
 
-            return output;
+            return (output, null);
+        }
+        public async Task<byte[]?> DownloadFileAsync(string fileName)
+        {
+            return await FileHelper.ReadFileAsync(
+                _filePath,
+                fileName
+            );
+        }
+        public async Task<byte[]?> GetReportExcelAsync()
+        {
+            var branchWise = await _repository.GetReportBranchWiseAsync();
+            var onboarding = await _repository.GetReportOnboardingAsync();
+            var visits = await _repository.GetReportVisitsAsync();
+
+            return ExcelHelper.GenerateExcel(
+                (branchWise, "BranchWise-MIS"),
+                (onboarding, "Onboarding"),
+                (visits, "Visits")
+            );
         }
     }
 }

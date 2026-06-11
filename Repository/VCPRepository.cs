@@ -7,14 +7,14 @@ namespace ProductivityApi.Repository
 {
     public class VCPRepository
     {
-        private readonly string _connectionString;
+        private readonly string _conStr;
 
         public VCPRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("VCPDBConn");
+            _conStr = configuration.GetConnectionString("VCPDBConn");
         }
 
-        private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
+        private IDbConnection CreateConnection() => new SqlConnection(_conStr);
 
         public async Task<VCPModel?> GetByIdAsync(int id)
         {
@@ -192,5 +192,38 @@ namespace ProductivityApi.Repository
                 new { ID = id }
             );
         }
+
+        public async Task<IEnumerable<dynamic>> GetReportBranchWiseAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.QueryAsync<dynamic>(
+                "dbo.SP_HL_VCP_GetReport_BranchWise",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<IEnumerable<dynamic>> GetReportOnboardingAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.QueryAsync<dynamic>(
+                "dbo.SP_HL_VCP_GetReport_Onboarding",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<IEnumerable<dynamic>> GetReportVisitsAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.QueryAsync<dynamic>(
+                "dbo.SP_HL_VCP_GetReport_Visits",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
 }
