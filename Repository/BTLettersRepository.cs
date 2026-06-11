@@ -5,11 +5,11 @@ using ProductivityApi.Models;
 
 namespace ProductivityApi.Repository
 {
-    public class BTRepository
+    public class BTLettersRepository
     {
         private readonly string _conStr;
 
-        public BTRepository(IConfiguration configuration)
+        public BTLettersRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
