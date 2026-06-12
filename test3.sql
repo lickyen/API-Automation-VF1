@@ -1,0 +1,5 @@
+SELECT * FROM NewBranchMaster;
+GO
+
+SELECT * FROM NewBranchTransaction;
+GO
