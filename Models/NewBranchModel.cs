@@ -57,8 +57,21 @@ namespace ProductivityApi.Models
 
         public DateTime? UpdatedDate { get; set; }
         public bool HasPendingActionsForRole { get; set; }
-    }
 
+        public bool AdminHasPendingActions { get; set; }
+
+        public bool HRHasPendingActions { get; set; }
+
+        public bool ITHasPendingActions { get; set; }
+
+        public bool RCHRBHHasPendingActions { get; set; }
+
+        public bool FinanceHasPendingActions { get; set; }
+
+        public bool MarketingHasPendingActions { get; set; }
+
+        public bool COPSHasPendingActions { get; set; }
+    }
     public class NewBranchTransactionModel
     {
         public int Id { get; set; }
