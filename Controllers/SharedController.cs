@@ -105,5 +105,16 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, "Record not found"));
             return Ok(new Response(true, data, "Success"));
         }
+
+        [HttpGet("getAppVersion")]
+        public async Task<IActionResult> GetAppVersion([FromQuery] string applicationName, [FromQuery] string? platform)
+        {
+            var data = await _service.GetAppVersionAsync(applicationName, platform);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Version not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }

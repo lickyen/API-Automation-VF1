@@ -356,5 +356,8 @@ namespace ProductivityApi.Services
 
             return await _plfRepository.GetBankDetailsByIfscAsync(ifsc);
         }
+
+        public async Task<string?> GetAppVersionAsync(string applicationName, string? platform)
+            => await _repository.GetAppVersionAsync(applicationName, platform);
     }
 }
