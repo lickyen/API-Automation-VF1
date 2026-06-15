@@ -51,14 +51,14 @@ namespace ProductivityApi.Repository
 
         #region GET ALL BRANCHES
 
-        public List<NewBranchMasterModel> GetAllBranches(string? role)
+        public List<NewBranchMasterModel> GetAllBranches(string? role, string? userId)
         {
             using IDbConnection connection = new SqlConnection(_conStr);
 
             return connection
                 .Query<NewBranchMasterModel>(
                     "SP_GetAllNewBranches",
-                    new { Role = role },
+                    new { Role = role , UserId = userId},
                     commandType: CommandType.StoredProcedure
                 )
                 .ToList();
@@ -104,7 +104,7 @@ namespace ProductivityApi.Repository
 
                     return existingBranch;
                 },
-                param: new { Status = model.Status, Role = model.Role },
+                param: new { Status = model.Status, Role = model.Role, UserId = model.UserId},
                 commandType: CommandType.StoredProcedure,
                 splitOn: "TransactionId"
             );

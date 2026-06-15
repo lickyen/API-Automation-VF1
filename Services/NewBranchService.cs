@@ -31,9 +31,9 @@ namespace ProductivityApi.Services
 
         #region GET ALL BRANCHES
 
-        public List<NewBranchMasterModel> GetAllBranches(string? role)
+        public List<NewBranchMasterModel> GetAllBranches(string? role, string? userId)
         {
-            return _repository.GetAllBranches(role);
+            return _repository.GetAllBranches(role, userId);
         }
 
         #endregion
