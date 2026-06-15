@@ -46,11 +46,11 @@ namespace ProductivityApi.Controllers
 
         // GET : api/NewBranch/all
         [HttpGet("all")]
-        public IActionResult GetAllBranches(string? role)
+        public IActionResult GetAllBranches(string? role, string? userId)
         {
             try
             {
-                var branches = _services.GetAllBranches(role);
+                var branches = _services.GetAllBranches(role, userId);
 
                 if (branches == null || !branches.Any())
                 {
@@ -75,7 +75,7 @@ namespace ProductivityApi.Controllers
 
         // GET : api/NewBranch/byRole?status=Pending&role=IT
         [HttpGet("byRole")]
-        public IActionResult GetBranches([FromQuery] string? status, [FromQuery] string? role)
+        public IActionResult GetBranches([FromQuery] string? status, [FromQuery] string? role, [FromQuery] string? userId)
         {
             try
             {
@@ -83,6 +83,7 @@ namespace ProductivityApi.Controllers
                 {
                     Status = status,
                     Role = role,
+                    UserId = userId
                 };
 
                 var branches = _services.GetBranches(model);

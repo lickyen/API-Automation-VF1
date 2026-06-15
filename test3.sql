@@ -10,6 +10,10 @@ GO
 SELECT * FROM NewBranchChecklistMaster;
 GO
 
+SELECT * FROM UserMaster
+WHERE ClusterName = 'CoimbatoreRegion' AND Role = 'RCH' AND Status = 'Active';
+GO
+
 -- DELETE FROM NewBranchTransaction;
 -- GO
 
