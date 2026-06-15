@@ -113,9 +113,24 @@ namespace ProductivityApi.Controllers
         [HttpGet("getEmailMaster")]
         public async Task<IActionResult> GetEmailMaster()
         {
-            var data = await _service.GetAllEmailMasterAsync();
+            var data = await _service.GetEmailMasterAsync();
 
             return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("downloadEmailMaster")]
+        public async Task<IActionResult> DownloadEmailMaster()
+        {
+            var bytes = await _service.DownloadEmailMasterAsync();
+
+            if (bytes is null)
+                return NotFound(new Response(false, null, "No data found."));
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"BT_EmailMaster_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
         }
 
         [HttpPut("updateEmailMaster")]
@@ -128,14 +143,14 @@ namespace ProductivityApi.Controllers
                 : BadRequest(new Response(false, null, error ?? "Update failed."));
         }
 
-        [HttpPost("reUploadEmailMaster")]
+        [HttpPost("uploadEmailMaster")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> ReUploadEmailMaster([FromForm] BTFormatUploadRequest request, [FromQuery] string uploadedBy)
+        public async Task<IActionResult> UploadEmailMaster([FromForm] BTFormatUploadRequest request, [FromQuery] string uploadedBy)
         {
             if (request.File == null || request.File.Length == 0)
                 return BadRequest(new Response(false, null, "Please upload a file."));
 
-            var (rowsUploaded, error) = await _service.ReUploadEmailMasterAsync(request.File, uploadedBy);
+            var (rowsUploaded, error) = await _service.uploadEmailMasterAsync(request.File, uploadedBy);
 
             return error is not null
                 ? BadRequest(new Response(false, null, error))

@@ -316,9 +316,9 @@ namespace ProductivityApi.Services
 
         // ── Email Master ──────────────────────────────────────
 
-        public async Task<List<BTEmailMaster>> GetAllEmailMasterAsync()
+        public async Task<List<BTEmailMaster>> GetEmailMasterAsync()
         {
-            var items = await _repository.GetAllEmailMasterAsync();
+            var items = await _repository.GetEmailMasterAsync();
             return items.ToList();
         }
 
@@ -334,7 +334,7 @@ namespace ProductivityApi.Services
                 : (0, "Record not found or update failed.");
         }
 
-        public async Task<(int RowsUploaded, string? Error)> ReUploadEmailMasterAsync(IFormFile file, string uploadedBy)
+        public async Task<(int RowsUploaded, string? Error)> uploadEmailMasterAsync(IFormFile file, string uploadedBy)
         {
             var allowed = new[] { ".xls", ".xlsx" };
             var ext = Path.GetExtension(file.FileName).ToLower();
@@ -347,7 +347,7 @@ namespace ProductivityApi.Services
             if (!rows.Any())
                 return (0, "No valid rows found in the file.");
 
-            var count = await _repository.ReUploadEmailMasterAsync(rows, uploadedBy);
+            var count = await _repository.uploadEmailMasterAsync(rows, uploadedBy);
 
             return count == 0
                 ? (0, "0 rows uploaded. Please check the file.")
@@ -378,6 +378,48 @@ namespace ProductivityApi.Services
             }
 
             return list;
+        }
+
+        //public async Task<byte[]?> DownloadEmailMasterAsync()
+        //{
+        //    var data = await _repository.GetEmailMasterAsync();
+        //    return ExcelHelper.GenerateExcel(data, "Data");
+        //}
+
+        public async Task<byte[]?> DownloadEmailMasterAsync()
+        {
+            var data = await _repository.GetEmailMasterAsync();
+            var list = data.ToList();
+
+            if (!list.Any())
+                return null;
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Data");
+
+            // Header
+            ws.Cell(1, 1).Value = "Bank Name";
+            ws.Cell(1, 2).Value = "Email ID";
+
+            // Style header
+            var headerRow = ws.Row(1);
+            headerRow.Style.Font.Bold = true;
+            headerRow.Style.Fill.BackgroundColor = XLColor.FromHtml("#005baa");
+            headerRow.Style.Font.FontColor = XLColor.White;
+
+            // Data
+            for (int i = 0; i < list.Count; i++)
+            {
+                var row = list[i];
+                ws.Cell(i + 2, 1).Value = row.Bank_Name;
+                ws.Cell(i + 2, 2).Value = row.Email_ID;
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return ms.ToArray();
         }
     }
 }

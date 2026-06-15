@@ -126,12 +126,12 @@ namespace ProductivityApi.Repository
 
         // ── Email Master ──────────────────────────────────────
 
-        public async Task<IEnumerable<BTEmailMaster>> GetAllEmailMasterAsync()
+        public async Task<IEnumerable<BTEmailMaster>> GetEmailMasterAsync()
         {
             using var conn = CreateConnection();
 
             return await conn.QueryAsync<BTEmailMaster>(
-                "BT_GetAllEmailMaster",
+                "BT_GetEmailMaster",
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -156,7 +156,7 @@ namespace ProductivityApi.Repository
             return p.Get<int>("@Output");
         }
 
-        public async Task<int> ReUploadEmailMasterAsync(List<BTEmailMaster> rows, string createdBy)
+        public async Task<int> uploadEmailMasterAsync(List<BTEmailMaster> rows, string createdBy)
         {
             using var conn = CreateConnection();
             conn.Open();
