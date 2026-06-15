@@ -25,43 +25,50 @@ namespace ProductivityApi.Repository
             conn.Open();
             using var tx = conn.BeginTransaction();
 
-            await conn.ExecuteAsync(
-                "DELETE FROM BT_Letter_Details",
-                transaction: tx
-            );
-
-            var count = 0;
-            foreach (var row in rows)
+            try
             {
-                var p = new DynamicParameters();
-                p.Add("@LAN", row.LAN);
-                p.Add("@CustomerName", row.CustomerName);
-                p.Add("@BranchCode", row.BranchCode, dbType: DbType.Int32);
-                p.Add("@DisbDate", row.DisbDate, dbType: DbType.DateTime);
-                p.Add("@PrevFin", row.PrevFinancier);
-                p.Add("@BTLan", row.BtLan);
-                p.Add("@InstrType", row.InstrumentType);
-                p.Add("@InstrNo", row.InstrumentNumber);
-                p.Add("@InstrDate", row.InstrumentDate);
-                p.Add("@InstrBank", row.InstrumentBank);
-                p.Add("@InstrAmnt", row.InstrumentAmount, dbType: DbType.String);
-                p.Add("@CreatedBy", createdBy);
-                p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
                 await conn.ExecuteAsync(
-                    "BT_InsertFromExcel",
-                    p,
-                    transaction: tx,
-                    commandType: CommandType.StoredProcedure
+                    "UPDATE BT_Letter_Details SET DELETED = 'Y' WHERE DELETED IS NULL",
+                    transaction: tx
                 );
 
-                if (p.Get<int>("@Output") == 1) count++;
+                var count = 0;
+                foreach (var row in rows)
+                {
+                    var p = new DynamicParameters();
+                    p.Add("@LAN", row.LAN);
+                    p.Add("@CustomerName", row.CustomerName);
+                    p.Add("@BranchCode", row.BranchCode, dbType: DbType.Int32);
+                    p.Add("@DisbDate", row.DisbDate, dbType: DbType.DateTime);
+                    p.Add("@PrevFin", row.PrevFinancier);
+                    p.Add("@BTLan", row.BtLan);
+                    p.Add("@InstrType", row.InstrumentType);
+                    p.Add("@InstrNo", row.InstrumentNumber);
+                    p.Add("@InstrDate", row.InstrumentDate);
+                    p.Add("@InstrBank", row.InstrumentBank);
+                    p.Add("@InstrAmnt", row.InstrumentAmount, dbType: DbType.String);
+                    p.Add("@CreatedBy", createdBy);
+                    p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+                    await conn.ExecuteAsync(
+                        "BT_InsertFromExcel",
+                        p,
+                        transaction: tx,
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    if (p.Get<int>("@Output") == 1) count++;
+                }
+
+                tx.Commit();
+                return count;
             }
-
-            tx.Commit();
-            return count;
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
-
         // ── Letter Generation ─────────────────────────────────
 
         public async Task<IEnumerable<BTListItem>> GetLetterDataAsync(string letterType)
@@ -103,37 +110,6 @@ namespace ProductivityApi.Repository
                 new { BankName = bankName },
                 commandType: CommandType.StoredProcedure
             );
-        }
-
-        // ── Email Master ──────────────────────────────────────
-
-        public async Task<IEnumerable<BTEmailMaster>> GetAllEmailMasterAsync()
-        {
-            using var conn = CreateConnection();
-
-            return await conn.QueryAsync<BTEmailMaster>(
-                "BT_GetAllEmailMaster",
-                commandType: CommandType.StoredProcedure
-            );
-        }
-
-        public async Task<int> UpsertEmailMasterAsync(BTEmailMasterUploadDto row, int createdBy)
-        {
-            using var conn = CreateConnection();
-
-            var p = new DynamicParameters();
-            p.Add("@BankName", row.Bank_Name);
-            p.Add("@EmailID", row.Email_ID);
-            p.Add("@CreatedBy", createdBy);
-            p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
-            await conn.ExecuteAsync(
-                "BT_UpsertEmailMaster",
-                p,
-                commandType: CommandType.StoredProcedure
-            );
-
-            return p.Get<int>("@Output");
         }
 
         // ── Report ────────────────────────────────────────────

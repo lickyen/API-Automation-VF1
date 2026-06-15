@@ -47,22 +47,8 @@
         public List<string> Errors { get; set; } = new();
     }
 
-    // ── Email Master ──────────────────────────────────────────
-
-    public class BTEmailMaster
+    public class BTFormatUploadRequest
     {
-        public int Id { get; set; }
-        public string Bank_Name { get; set; }
-        public string Email_ID { get; set; }
-        public int? CreatedBy { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public int? UpdatedBy { get; set; }
-        public DateTime? UpdatedDate { get; set; }
-    }
-
-    public class BTEmailMasterUploadDto
-    {
-        public string Bank_Name { get; set; }
-        public string Email_ID { get; set; }
+        public IFormFile File { get; set; }
     }
 }
