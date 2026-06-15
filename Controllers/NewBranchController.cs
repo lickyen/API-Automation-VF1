@@ -180,5 +180,51 @@ namespace ProductivityApi.Controllers
                 $"NewBranch_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
             );
         }
+        #region UPDATE BRANCH CODE
+
+        // PUT : api/NewBranch/branchCode/5
+
+        [HttpPut("branchCode/{id}")]
+        public IActionResult UpdateBranchCode(
+            int id,
+            [FromBody] UpdateBranchCodeRequestDto model
+        )
+        {
+            try
+            {
+                if (id != model.Id)
+                {
+                    return BadRequest(
+                        new Response(false, null, "Invalid branch id")
+                    );
+                }
+
+                var response = _services.UpdateBranchCode(model);
+
+                if (!response.IsSuccess)
+                {
+                    return Ok(
+                        new Response(false, null, response.Message)
+                    );
+                }
+
+                return Ok(
+                    new Response(true, null, response.Message)
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
     }
 }

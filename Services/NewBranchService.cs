@@ -200,5 +200,42 @@ namespace ProductivityApi.Services
                 (transactions, "NewBranchTransaction")
             );
         }
+        #region UPDATE BRANCH CODE
+
+        public UpdateBranchCodeResponseDto UpdateBranchCode(
+            UpdateBranchCodeRequestDto model
+        )
+        {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            if (model.Id <= 0)
+            {
+                return new UpdateBranchCodeResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Invalid Branch Id."
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(model.BranchCode))
+            {
+                return new UpdateBranchCodeResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Branch Code is required."
+                };
+            }
+
+            _repository.UpdateBranchCode(model);
+
+            return new UpdateBranchCodeResponseDto
+            {
+                IsSuccess = true,
+                Message = "Branch code updated successfully."
+            };
+        }
+
+        #endregion
     }
 }

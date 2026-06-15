@@ -286,5 +286,35 @@ namespace ProductivityApi.Repository
 
             return (master, transactions);
         }
+
+        #region UPDATE BRANCH CODE
+
+        public bool UpdateBranchCode(UpdateBranchCodeRequestDto model)
+        {
+            try
+            {
+                using IDbConnection connection = new SqlConnection(_conStr);
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@Id", model.Id);
+                parameters.Add("@BranchCode", model.BranchCode);
+                parameters.Add("@UpdatedBy", model.UpdatedBy);
+
+                connection.Execute(
+                    "SP_UpdateBranchCode",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
     }
 }

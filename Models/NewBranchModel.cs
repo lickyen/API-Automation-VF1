@@ -18,6 +18,7 @@ namespace ProductivityApi.Models
         public string? Region { get; set; }
 
         public string? Megazone { get; set; }
+        public string? BranchCode { get; set; }
 
         public string? Status { get; set; }
 
@@ -166,6 +167,8 @@ namespace ProductivityApi.Models
 
         public string? Megazone { get; set; }
 
+        public string? BranchCode { get; set; }
+
         public string? Status { get; set; }
 
         public string? TeamStatus { get; set; }
@@ -267,3 +270,25 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
     }
 }
+
+#region UPDATE BRANCH CODE DTO
+
+public class UpdateBranchCodeRequestDto
+{
+    public int Id { get; set; }
+
+    [Required]
+    public string BranchCode { get; set; } = string.Empty;
+
+    [Required]
+    public string UpdatedBy { get; set; } = string.Empty;
+}
+
+public class UpdateBranchCodeResponseDto
+{
+    public bool IsSuccess { get; set; }
+
+    public string Message { get; set; } = string.Empty;
+}
+
+#endregion
