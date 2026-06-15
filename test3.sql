@@ -3,3 +3,6 @@ GO
 
 SELECT * FROM NewBranchTransaction;
 GO
+
+SELECT * FROM NewBranchChecklistMaster;
+GO

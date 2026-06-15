@@ -4,14 +4,24 @@ GO
 SELECT TOP 20 * FROM Indus_Archived_Master
 GO
 
+SELECT * FROM CIBIL_Correction_WC_WS_SC;
+GO
+
 SELECT * FROM CIBIL_Correction_LoanCancellation;
 GO
 
 SELECT * FROM CIBIL_Correction_NonCustomer;
 GO
+EXEC sp_help CIBIL_Correction_NonCustomer;
 
-SELECT * FROM CIBIL_Correction_WC_WS_SC;
-GO
+-- ALTER TABLE CIBIL_Correction_NonCustomer
+-- ADD
+--     CustId_ActualCustomer VARCHAR(20) NULL,
+--     CustName_ActualCustomer VARCHAR(200) NULL,
+--     Mobile_ActualCustomer VARCHAR(15) NULL,
+--     Email_ActualCustomer VARCHAR(255) NULL,
+--     Address_ActualCustomer VARCHAR(1000) NULL,
+--     ApplicantType_ActualCustomer CHAR(1) NULL;
 
 SELECT * FROM CIBIL_Correction_Logs;
 GO

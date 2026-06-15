@@ -9,8 +9,8 @@ namespace ProductivityApi.Models
     {
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public int Current_Balance { get; set; }
-        public int Amount_Overdue { get; set; }
+        public decimal Current_Balance { get; set; }
+        public decimal Amount_Overdue { get; set; }
         public DateTime? Date_Closed_DD_MM_YYYY { get; set; }
         public DateTime? Date_of_Last_Payment_DD_MM_YYYY { get; set; }
         public string? Date_Reported_DD_MM_YYYY { get; set; }
@@ -135,15 +135,15 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public string? Current_Balance { get; set; }
-        public string? Amount_Overdue { get; set; }
+        public decimal? Current_Balance { get; set; }
+        public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
         public DateTime? Date_of_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
         public decimal? High_credit_sanctioned_amount { get; set; }
         public int? NDPD_for_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public string? Credit_Facility_Status { get; set; }
+        public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principle_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -160,15 +160,15 @@ namespace ProductivityApi.Models
     {
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public string? Current_Balance { get; set; }
-        public string? Amount_Overdue { get; set; }
+        public decimal? Current_Balance { get; set; }
+        public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
         public DateTime? Date_of_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
         public decimal? High_credit_sanctioned_amount { get; set; }
         public int? NDPD_for_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public string? Credit_Facility_Status { get; set; }
+        public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principle_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -216,15 +216,15 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public string? Current_Balance { get; set; }
-        public string? Amount_Overdue { get; set; }
+        public decimal? Current_Balance { get; set; }
+        public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
         public DateTime? Date_of_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
         public decimal? High_credit_sanctioned_amount { get; set; }
         public int? NDPD_for_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public string? Credit_Facility_Status { get; set; }
+        public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principle_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
