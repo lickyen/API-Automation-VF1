@@ -18,6 +18,7 @@ namespace ProductivityApi.Models
         public string? Region { get; set; }
 
         public string? Megazone { get; set; }
+        public string? BranchCode { get; set; }
 
         public string? Status { get; set; }
 
@@ -72,6 +73,7 @@ namespace ProductivityApi.Models
 
         public bool COPSHasPendingActions { get; set; }
     }
+
     public class NewBranchTransactionModel
     {
         public int Id { get; set; }
@@ -164,6 +166,8 @@ namespace ProductivityApi.Models
         public string? Region { get; set; }
 
         public string? Megazone { get; set; }
+
+        public string? BranchCode { get; set; }
 
         public string? Status { get; set; }
 
@@ -265,4 +269,68 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
     }
+    #region UPDATE BRANCH CODE DTO
+
+    public class UpdateBranchCodeRequestDto
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string BranchCode { get; set; } = string.Empty;
+
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class UpdateBranchCodeResponseDto
+    {
+        public bool IsSuccess { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+    }
+
+    #endregion
+
+    #region ADD BRANCH USER DTO
+
+    public class AddBranchUserRequestDto
+    {
+        [Required]
+        public int Bid { get; set; }
+
+        [Required]
+        public string BranchName { get; set; } = string.Empty;
+
+        [Required]
+        public string Role { get; set; } = string.Empty;
+
+        [Required]
+        public int UserId { get; set; }
+    }
+
+    public class AddBranchUserResponseDto
+    {
+        public int Id { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+    }
+
+    #endregion
+
+    #region GET BRANCH USERS DTO
+
+    public class BranchUserDto
+    {
+        public int Id { get; set; }
+
+        public int Bid { get; set; }
+
+        public string BranchName { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+
+        public int UserId { get; set; }
+    }
+
+    #endregion
 }

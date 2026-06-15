@@ -200,5 +200,75 @@ namespace ProductivityApi.Services
                 (transactions, "NewBranchTransaction")
             );
         }
+        #region UPDATE BRANCH CODE
+
+        public UpdateBranchCodeResponseDto UpdateBranchCode(
+            UpdateBranchCodeRequestDto model
+        )
+        {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            if (model.Id <= 0)
+            {
+                return new UpdateBranchCodeResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Invalid Branch Id."
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(model.BranchCode))
+            {
+                return new UpdateBranchCodeResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Branch Code is required."
+                };
+            }
+
+            _repository.UpdateBranchCode(model);
+
+            return new UpdateBranchCodeResponseDto
+            {
+                IsSuccess = true,
+                Message = "Branch code updated successfully."
+            };
+        }
+
+        #endregion
+        #region ADD BRANCH USER
+
+        public AddBranchUserResponseDto AddBranchUser(
+            AddBranchUserRequestDto model
+        )
+        {
+            var id = _repository.AddBranchUser(model);
+
+            return new AddBranchUserResponseDto
+            {
+                Id = id,
+                Message = "Branch user added successfully"
+            };
+        }
+
+        #endregion
+
+        #region GET BRANCH USERS BY BID
+
+        public List<BranchUserDto> GetBranchUsersByBid(int bid)
+        {
+            if (bid <= 0)
+            {
+                throw new ArgumentException(
+                    "Branch Id must be greater than 0.",
+                    nameof(bid)
+                );
+            }
+
+            return _repository.GetBranchUsersByBid(bid);
+        }
+
+        #endregion
     }
 }

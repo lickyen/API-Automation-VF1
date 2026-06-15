@@ -180,5 +180,121 @@ namespace ProductivityApi.Controllers
                 $"NewBranch_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
             );
         }
+        #region UPDATE BRANCH CODE
+
+        // PUT : api/NewBranch/branchCode/5
+
+        [HttpPut("branchCode/{id}")]
+        public IActionResult UpdateBranchCode(
+            int id,
+            [FromBody] UpdateBranchCodeRequestDto model
+        )
+        {
+            try
+            {
+                if (id != model.Id)
+                {
+                    return BadRequest(
+                        new Response(false, null, "Invalid branch id")
+                    );
+                }
+
+                var response = _services.UpdateBranchCode(model);
+
+                if (!response.IsSuccess)
+                {
+                    return Ok(
+                        new Response(false, null, response.Message)
+                    );
+                }
+
+                return Ok(
+                    new Response(true, null, response.Message)
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
+        #region ADD BRANCH USER
+
+        // POST: api/NewBranch/branch-user
+        [HttpPost("addBranchUser")]
+        public IActionResult AddBranchUser(
+            AddBranchUserRequestDto model
+        )
+        {
+            try
+            {
+                var response = _services.AddBranchUser(model);
+
+                return Ok(
+                    new Response(
+                        true,
+                        response,
+                        response.Message
+                    )
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
+
+        #region GET BRANCH USERS
+
+        // GET : api/NewBranch/branchUsers/5
+        [HttpGet("branchUsers/{bid}")]
+        public IActionResult GetBranchUsers(int bid)
+        {
+            try
+            {
+                var users = _services.GetBranchUsersByBid(bid);
+
+                if (users == null || !users.Any())
+                {
+                    return Ok(
+                        new Response(false, null, "No users found for this branch")
+                    );
+                }
+
+                return Ok(
+                    new Response(true, users, "Success")
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
     }
 }

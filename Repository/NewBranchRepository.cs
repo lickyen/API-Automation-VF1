@@ -286,5 +286,92 @@ namespace ProductivityApi.Repository
 
             return (master, transactions);
         }
+
+        #region UPDATE BRANCH CODE
+
+        public bool UpdateBranchCode(UpdateBranchCodeRequestDto model)
+        {
+            try
+            {
+                using IDbConnection connection = new SqlConnection(_conStr);
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@Id", model.Id);
+                parameters.Add("@BranchCode", model.BranchCode);
+                parameters.Add("@UpdatedBy", model.UpdatedBy);
+
+                connection.Execute(
+                    "SP_UpdateBranchCode",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
+        #region ADD BRANCH USER
+
+        public int AddBranchUser(AddBranchUserRequestDto model)
+        {
+            try
+            {
+                using IDbConnection connection = new SqlConnection(_conStr);
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@Bid", model.Bid);
+                parameters.Add("@BranchName", model.BranchName);
+                parameters.Add("@Role", model.Role);
+                parameters.Add("@UserId", model.UserId);
+
+                int id = connection.ExecuteScalar<int>(
+                    "SP_AddBranchUser",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return id;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
+
+        #region GET BRANCH USERS BY BID
+
+        public List<BranchUserDto> GetBranchUsersByBid(int bid)
+        {
+            try
+            {
+                using IDbConnection connection = new SqlConnection(_conStr);
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@Bid", bid);
+
+                return connection
+                    .Query<BranchUserDto>(
+                        "SP_GetBranchUsersByBid",
+                        parameters,
+                        commandType: CommandType.StoredProcedure
+                    )
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
+
+        #endregion
     }
 }
