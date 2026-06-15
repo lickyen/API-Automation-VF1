@@ -313,5 +313,71 @@ namespace ProductivityApi.Services
             sb.Append("</table>");
             return sb.ToString();
         }
+
+        // ── Email Master ──────────────────────────────────────
+
+        public async Task<List<BTEmailMaster>> GetAllEmailMasterAsync()
+        {
+            var items = await _repository.GetAllEmailMasterAsync();
+            return items.ToList();
+        }
+
+        public async Task<(int Result, string? Error)> UpdateEmailMasterAsync(BTUpdateEmailMasterRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Bank_Name)) return (0, "Bank Name is required.");
+            if (string.IsNullOrWhiteSpace(request.Email_ID)) return (0, "Email ID is required.");
+
+            var result = await _repository.UpdateEmailMasterAsync(request);
+
+            return result == 1
+                ? (result, null)
+                : (0, "Record not found or update failed.");
+        }
+
+        public async Task<(int RowsUploaded, string? Error)> ReUploadEmailMasterAsync(IFormFile file, string uploadedBy)
+        {
+            var allowed = new[] { ".xls", ".xlsx" };
+            var ext = Path.GetExtension(file.FileName).ToLower();
+
+            if (!allowed.Contains(ext))
+                return (0, "Unsupported file type. Upload .xls or .xlsx.");
+
+            var rows = ParseEmailMasterRows(file);
+
+            if (!rows.Any())
+                return (0, "No valid rows found in the file.");
+
+            var count = await _repository.ReUploadEmailMasterAsync(rows, uploadedBy);
+
+            return count == 0
+                ? (0, "0 rows uploaded. Please check the file.")
+                : (count, null);
+        }
+
+        private static List<BTEmailMaster> ParseEmailMasterRows(IFormFile file)
+        {
+            var list = new List<BTEmailMaster>();
+
+            using var stream = file.OpenReadStream();
+            using var wb = new XLWorkbook(stream);
+            var ws = wb.Worksheets.First();
+
+            foreach (var row in ws.RowsUsed().Skip(1))
+            {
+                var bankName = row.Cell(1).GetValue<string>();
+                var emailId = row.Cell(2).GetValue<string>();
+
+                if (string.IsNullOrWhiteSpace(bankName) || string.IsNullOrWhiteSpace(emailId))
+                    continue;
+
+                list.Add(new BTEmailMaster
+                {
+                    Bank_Name = bankName.Trim(),
+                    Email_ID = emailId.Trim()
+                });
+            }
+
+            return list;
+        }
     }
 }

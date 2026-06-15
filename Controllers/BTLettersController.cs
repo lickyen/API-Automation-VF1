@@ -108,6 +108,40 @@ namespace ProductivityApi.Controllers
             );
         }
 
+        // ── Email Master ──────────────────────────────────────
+
+        [HttpGet("getEmailMaster")]
+        public async Task<IActionResult> GetEmailMaster()
+        {
+            var data = await _service.GetAllEmailMasterAsync();
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPut("updateEmailMaster")]
+        public async Task<IActionResult> UpdateEmailMaster([FromBody] BTUpdateEmailMasterRequest request)
+        {
+            var (result, error) = await _service.UpdateEmailMasterAsync(request);
+
+            return result > 0
+                ? Ok(new Response(true, null, "Updated successfully."))
+                : BadRequest(new Response(false, null, error ?? "Update failed."));
+        }
+
+        [HttpPost("reUploadEmailMaster")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ReUploadEmailMaster([FromForm] BTFormatUploadRequest request, [FromQuery] string uploadedBy)
+        {
+            if (request.File == null || request.File.Length == 0)
+                return BadRequest(new Response(false, null, "Please upload a file."));
+
+            var (rowsUploaded, error) = await _service.ReUploadEmailMasterAsync(request.File, uploadedBy);
+
+            return error is not null
+                ? BadRequest(new Response(false, null, error))
+                : Ok(new Response(true, new { RowsUploaded = rowsUploaded }, $"{rowsUploaded} rows uploaded successfully."));
+        }
+
         // ── Private helpers ───────────────────────────────────
 
         private static bool IsValidLetterType(string lt) =>

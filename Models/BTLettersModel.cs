@@ -51,4 +51,23 @@
     {
         public IFormFile File { get; set; }
     }
+
+    public class BTEmailMaster
+    {
+        public int ID { get; set; }
+        public string Bank_Name { get; set; }
+        public string Email_ID { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime? CreatedDt { get; set; }
+        public string UpdatedBy { get; set; }
+        public DateTime? UpdatedDt { get; set; }
+    }
+
+    public class BTUpdateEmailMasterRequest
+    {
+        public int ID { get; set; }
+        public string Bank_Name { get; set; }
+        public string Email_ID { get; set; }
+        public string UpdatedBy { get; set; }
+    }
 }

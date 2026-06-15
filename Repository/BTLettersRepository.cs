@@ -123,5 +123,76 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        // ── Email Master ──────────────────────────────────────
+
+        public async Task<IEnumerable<BTEmailMaster>> GetAllEmailMasterAsync()
+        {
+            using var conn = CreateConnection();
+
+            return await conn.QueryAsync<BTEmailMaster>(
+                "BT_GetAllEmailMaster",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
+        public async Task<int> UpdateEmailMasterAsync(BTUpdateEmailMasterRequest request)
+        {
+            using var conn = CreateConnection();
+
+            var p = new DynamicParameters();
+            p.Add("@ID", request.ID);
+            p.Add("@BankName", request.Bank_Name);
+            p.Add("@EmailID", request.Email_ID);
+            p.Add("@UpdatedBy", request.UpdatedBy);
+            p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "BT_UpdateEmailMaster",
+                p,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return p.Get<int>("@Output");
+        }
+
+        public async Task<int> ReUploadEmailMasterAsync(List<BTEmailMaster> rows, string createdBy)
+        {
+            using var conn = CreateConnection();
+            conn.Open();
+            using var tx = conn.BeginTransaction();
+
+            try
+            {
+                await conn.ExecuteAsync("DELETE FROM BT_Email_Master", transaction: tx);
+
+                var count = 0;
+                foreach (var row in rows)
+                {
+                    var p = new DynamicParameters();
+                    p.Add("@BankName", row.Bank_Name);
+                    p.Add("@EmailID", row.Email_ID);
+                    p.Add("@CreatedBy", createdBy);
+                    p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+                    await conn.ExecuteAsync(
+                        "BT_InsertEmailMaster",
+                        p,
+                        transaction: tx,
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    if (p.Get<int>("@Output") == 1) count++;
+                }
+
+                tx.Commit();
+                return count;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
     }
 }
