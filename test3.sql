@@ -6,3 +6,6 @@ GO
 
 SELECT * FROM NewBranchChecklistMaster;
 GO
+
+SELECT * FROM NewBranchUserMaster;
+GO

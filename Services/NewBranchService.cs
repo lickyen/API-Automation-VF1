@@ -237,5 +237,38 @@ namespace ProductivityApi.Services
         }
 
         #endregion
+        #region ADD BRANCH USER
+
+        public AddBranchUserResponseDto AddBranchUser(
+            AddBranchUserRequestDto model
+        )
+        {
+            var id = _repository.AddBranchUser(model);
+
+            return new AddBranchUserResponseDto
+            {
+                Id = id,
+                Message = "Branch user added successfully"
+            };
+        }
+
+        #endregion
+
+        #region GET BRANCH USERS BY BID
+
+        public List<BranchUserDto> GetBranchUsersByBid(int bid)
+        {
+            if (bid <= 0)
+            {
+                throw new ArgumentException(
+                    "Branch Id must be greater than 0.",
+                    nameof(bid)
+                );
+            }
+
+            return _repository.GetBranchUsersByBid(bid);
+        }
+
+        #endregion
     }
 }

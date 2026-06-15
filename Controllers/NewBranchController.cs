@@ -226,5 +226,75 @@ namespace ProductivityApi.Controllers
         }
 
         #endregion
+        #region ADD BRANCH USER
+
+        // POST: api/NewBranch/branch-user
+        [HttpPost("addBranchUser")]
+        public IActionResult AddBranchUser(
+            AddBranchUserRequestDto model
+        )
+        {
+            try
+            {
+                var response = _services.AddBranchUser(model);
+
+                return Ok(
+                    new Response(
+                        true,
+                        response,
+                        response.Message
+                    )
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
+
+        #region GET BRANCH USERS
+
+        // GET : api/NewBranch/branchUsers/5
+        [HttpGet("branchUsers/{bid}")]
+        public IActionResult GetBranchUsers(int bid)
+        {
+            try
+            {
+                var users = _services.GetBranchUsersByBid(bid);
+
+                if (users == null || !users.Any())
+                {
+                    return Ok(
+                        new Response(false, null, "No users found for this branch")
+                    );
+                }
+
+                return Ok(
+                    new Response(true, users, "Success")
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    new Response(
+                        false,
+                        null,
+                        $"Internal server error : {ex.Message}"
+                    )
+                );
+            }
+        }
+
+        #endregion
     }
 }
