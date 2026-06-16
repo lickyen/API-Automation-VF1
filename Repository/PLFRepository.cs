@@ -36,11 +36,12 @@ namespace ProductivityApi.Repository
                 var sql = @"SELECT 
                         HDR.RECEIPTID       AS ReceiptId,
                         HDR.RECEIPTMODE     AS ReceiptMode,
-                        HDR.RECEIPTAMOUNT   AS ReceiptAmount,
+                        HDR.RECEIPTAMOUNT / 100.0    AS ReceiptAmount,
                         HDR.RECEIPTDATE     AS ReceiptDate
                     FROM PLF.FINRECEIPTHEADER HDR
                     INNER JOIN PLF.FINRECEIPTDETAIL DTL ON HDR.RECEIPTID = DTL.RECEIPTID
                     WHERE HDR.REFERENCE = @reference
+                    AND HDR.RECEIPTPURPOSE <> 'feePayment'
                     ORDER BY HDR.RECEIPTDATE DESC;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
