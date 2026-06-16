@@ -92,5 +92,8 @@
   "NocReturnedDailyAlertEmail": {
     "Subject": "Urgent: Returned File Not Received – Loan #<<LAN>>",
     "Body": "<p>Dear Team,</p><p>The file is marked as returned, but documents are not received at NOC.</p><p>This is a daily alert and will continue until status is updated.</p><p>Kindly trace and update immediately.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+  },
+  "NewBranchMovedToQEmail": {
+    "Body": "<p>Dear Team,</p><p>A new branch workflow task has been assigned to your queue.</p><p><b>Branch Name:</b> <<BranchName>></p><p><b>Checklist Item:</b> <<ChecklistName>></p><p><b>Assigned Team:</b> <<Team>></p><p>Please take the necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
   }
 }

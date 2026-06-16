@@ -335,4 +335,35 @@ namespace ProductivityApi.Models
     }
 
     #endregion
+
+    public class NewBranchEmailDeptTriggerDto
+    {
+        public string NotifiedDepartmentGroup { get; set; } = string.Empty;
+        public string NotifiedChecklistIds { get; set; } = string.Empty;    // "10,11,15"
+        public string NotifiedChecklistNames { get; set; } = string.Empty;  // "IT asset dispatch, ..."
+        public int TriggerChecklistId { get; set; }
+    }
+
+    // Result set 2: individual rows (for logging)
+    public class NewBranchEmailLogItemDto
+    {
+        public string NotifiedDepartmentGroup { get; set; } = string.Empty;
+        public int NotifiedChecklistId { get; set; }
+        public int TriggerChecklistId { get; set; }
+    }
+
+    public class NewBranchEmailRecipientDto
+    {
+        public string EmailId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class NewBranchMasterInfoDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public string BranchCode { get; set; } = string.Empty;
+    }
 }

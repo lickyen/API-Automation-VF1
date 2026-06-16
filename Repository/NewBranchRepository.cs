@@ -58,7 +58,7 @@ namespace ProductivityApi.Repository
             return connection
                 .Query<NewBranchMasterModel>(
                     "SP_GetAllNewBranches",
-                    new { Role = role , UserId = userId},
+                    new { Role = role, UserId = userId },
                     commandType: CommandType.StoredProcedure
                 )
                 .ToList();
@@ -104,7 +104,7 @@ namespace ProductivityApi.Repository
 
                     return existingBranch;
                 },
-                param: new { Status = model.Status, Role = model.Role, UserId = model.UserId},
+                param: new { Status = model.Status, Role = model.Role, UserId = model.UserId },
                 commandType: CommandType.StoredProcedure,
                 splitOn: "TransactionId"
             );
@@ -373,5 +373,82 @@ namespace ProductivityApi.Repository
         }
 
         #endregion
+
+        public async Task<(List<NewBranchEmailDeptTriggerDto> Grouped, List<NewBranchEmailLogItemDto> Individual)>
+    GetEmailTriggersAsync(int tid, IEnumerable<int> updatedChecklistIds)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+
+            var csv = string.Join(",", updatedChecklistIds);
+
+            using var multi = await connection.QueryMultipleAsync(
+                "SP_GetNewBranchEmailTriggers",
+                new { Tid = tid, UpdatedChecklistIds = csv },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var grouped = (await multi.ReadAsync<NewBranchEmailDeptTriggerDto>()).AsList();
+            var individual = (await multi.ReadAsync<NewBranchEmailLogItemDto>()).AsList();
+
+            return (grouped, individual);
+        }
+
+        public async Task<List<NewBranchEmailRecipientDto>> GetEmailRecipientsAsync(
+            int tid, string departmentGroup)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+
+            var result = await connection.QueryAsync<NewBranchEmailRecipientDto>(
+                "SP_GetNewBranchEmailRecipients",
+                new { Tid = tid, DepartmentGroup = departmentGroup },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result.AsList();
+        }
+
+        public async Task<NewBranchMasterInfoDto?> GetBranchMasterByTidAsync(int tid)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+
+            return await connection.QueryFirstOrDefaultAsync<NewBranchMasterInfoDto>(
+                "SELECT Id, Name, Region, ISNULL(BranchCode,'') AS BranchCode FROM NewBranchMaster WHERE Id = @Tid",
+                new { Tid = tid }
+            );
+        }
+
+        public async Task LogEmailSentAsync(
+            int tid, int triggerChecklistId, int notifiedChecklistId, string departmentGroup)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+
+            await connection.ExecuteAsync(
+                "SP_LogNewBranchEmail",
+                new
+                {
+                    Tid = tid,
+                    TriggerChecklistId = triggerChecklistId,
+                    NotifiedChecklistId = notifiedChecklistId,
+                    DepartmentGroup = departmentGroup
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+        public async Task<(List<NewBranchEmailDeptTriggerDto> Grouped, List<NewBranchEmailLogItemDto> Individual)>
+    GetCreationEmailTriggersAsync(int tid)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+
+            using var multi = await connection.QueryMultipleAsync(
+                "SP_GetNewBranchCreationEmailTriggers",
+                new { Tid = tid },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var grouped = (await multi.ReadAsync<NewBranchEmailDeptTriggerDto>()).AsList();
+            var individual = (await multi.ReadAsync<NewBranchEmailLogItemDto>()).AsList();
+
+            return (grouped, individual);
+        }
     }
 }

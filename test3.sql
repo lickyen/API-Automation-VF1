@@ -4,14 +4,17 @@ GO
 SELECT * FROM NewBranchTransaction;
 GO
 
-SELECT * FROM NewBranchUserMaster;
+SELECT * FROM NewBranchChecklistMaster;
 GO
 
-SELECT * FROM NewBranchChecklistMaster;
+SELECT * FROM NewBranchUserMaster;
 GO
 
 SELECT * FROM UserMaster
 WHERE ClusterName = 'CoimbatoreRegion' AND Role = 'RCH' AND Status = 'Active';
+GO
+
+SELECT * FROM NewBranchEmailLog;
 GO
 
 -- DELETE FROM NewBranchTransaction;
@@ -30,4 +33,10 @@ GO
 -- GO
 
 -- DBCC CHECKIDENT ('NewBranchUserMaster', RESEED, 0);
+-- GO
+
+-- DELETE FROM NewBranchEmailLog;
+-- GO
+
+-- DBCC CHECKIDENT ('NewBranchEmailLog', RESEED, 0);
 -- GO
