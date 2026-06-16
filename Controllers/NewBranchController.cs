@@ -137,30 +137,25 @@ namespace ProductivityApi.Controllers
 
         // PUT : api/NewBranch/transactions/5
         [HttpPut("transactions/{tid}")]
-        public IActionResult UpdateTransactions(int tid, UpdateBranchTransactionsRequestDto model)
+        public async Task<IActionResult> UpdateTransactions(
+    int tid,
+    UpdateBranchTransactionsRequestDto model)
         {
             try
             {
                 if (tid != model.Tid)
-                {
                     return BadRequest(new Response(false, null, "Invalid branch id"));
-                }
 
-                var response = _services.UpdateTransactions(model);
+                var response = await _services.UpdateTransactionsAsync(model);
 
                 if (!response.IsSuccess)
-                {
                     return Ok(new Response(false, null, response.Message));
-                }
 
                 return Ok(new Response(true, null, response.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(
-                    500,
-                    new Response(false, null, $"Internal server error : {ex.Message}")
-                );
+                return StatusCode(500, new Response(false, null, $"Internal server error : {ex.Message}"));
             }
         }
         #endregion
