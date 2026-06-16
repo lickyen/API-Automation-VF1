@@ -224,7 +224,7 @@ namespace ProductivityApi.Services
             if (dto.ClaimStatus == "Rejected")
                 status = "CO_R_4";
             if (dto.ClaimStatus == "SentBack")
-                status = "BR_2";
+                status = "CO_SB_3";
             else if (dto.ClaimStatus == "Received" && dto.Deficit <= 0)
                 status = "CO_A_5";
             else if (dto.ClaimStatus == "Received" && dto.Deficit > 0)
