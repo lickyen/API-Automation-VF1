@@ -6,5 +6,6 @@
         public string ReceiptMode { get; set; } = string.Empty;
         public Decimal ReceiptAmount { get; set; }
         public DateTime ReceiptDate { get; set; }
+        public string ReceiptPurpose { get; set; } = string.Empty;
     }
 }

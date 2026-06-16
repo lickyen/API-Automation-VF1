@@ -37,11 +37,11 @@ namespace ProductivityApi.Repository
                         HDR.RECEIPTID       AS ReceiptId,
                         HDR.RECEIPTMODE     AS ReceiptMode,
                         HDR.RECEIPTAMOUNT / 100.0    AS ReceiptAmount,
-                        HDR.RECEIPTDATE     AS ReceiptDate
+                        HDR.RECEIPTDATE     AS ReceiptDate,
+                        HDR.RECEIPTPURPOSE AS ReceiptPurpose
                     FROM PLF.FINRECEIPTHEADER HDR
                     INNER JOIN PLF.FINRECEIPTDETAIL DTL ON HDR.RECEIPTID = DTL.RECEIPTID
                     WHERE HDR.REFERENCE = @reference
-                    AND HDR.RECEIPTPURPOSE <> 'feePayment'
                     ORDER BY HDR.RECEIPTDATE DESC;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
