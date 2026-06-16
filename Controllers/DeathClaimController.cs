@@ -227,7 +227,7 @@ namespace ProductivityApi.Controllers
             return File(
                 result.ZipBytes!,
                 "application/zip",
-                $"DeathClaim_{reqId}.zip");
+                result.FileName);
         }
 
         [HttpGet("report")]

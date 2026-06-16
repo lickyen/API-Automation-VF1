@@ -450,11 +450,12 @@ namespace ProductivityApi.Services
             return (true, fileName, null);
         }
 
-        public async Task<(bool Success, byte[]? ZipBytes, string? Error)> DownloadAllFilesAsZipAsync(int reqId)
+        public async Task<(bool Success, byte[]? ZipBytes, string? FileName, string? Error)> DownloadAllFilesAsZipAsync(int reqId)
         {
             var record = await _repository.GetByIdAsync(reqId);
+
             if (record == null)
-                return (false, null, "Record not found");
+                return (false, null, null, "Record not found");
 
             var fileNames = new[]
             {
@@ -477,36 +478,37 @@ namespace ProductivityApi.Services
                 record.KotakClaimFormPath,
                 record.DischargeFormPath,
                 record.ClaimFormatPath
-
             }
             .Where(f => !string.IsNullOrWhiteSpace(f))
             .ToList();
 
             if (!fileNames.Any())
-                return (false, null, "No files found for this record");
+                return (false, null, null, "No files found for this record");
 
             await using var memoryStream = new MemoryStream();
-            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
             {
                 foreach (var fileName in fileNames)
                 {
                     var fullPath = Path.Combine(_filePath, fileName!);
+
                     if (!File.Exists(fullPath))
                         continue;
 
                     var entry = archive.CreateEntry(fileName!, CompressionLevel.Fastest);
+
                     await using var entryStream = entry.Open();
-                    await using var fileStream = new FileStream(
-                        fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    await using var fileStream = new FileStream(fullPath,FileMode.Open,FileAccess.Read,FileShare.Read);
 
                     await fileStream.CopyToAsync(entryStream);
                 }
             }
 
             if (memoryStream.Length == 0)
-                return (false, null, "None of the referenced files exist on disk");
+                return (false, null, null, "None of the referenced files exist on disk");
 
-            return (true, memoryStream.ToArray(), null);
+            return (true, memoryStream.ToArray(), $"{record.Lan}.zip", null);
         }
         public async Task<byte[]?> GetReportExcelAsync()
         {
