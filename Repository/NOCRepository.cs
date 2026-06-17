@@ -467,35 +467,60 @@ namespace ProductivityApi.Repository
             );
         }
 
+        //public async Task<bool> UploadNOCAndAckPdfAsync(
+        //    int transactionId,
+        //    string nocPdfBase64,
+        //    string ackPdfBase64,
+        //    string updatedBy
+        //)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    string sql =
+        //        @"
+        //UPDATE NOC_Transactions
+        //SET
+        //    NOC_PDF = @NocPdf,
+        //    Ack_PDF = @AckPdf,
+        //    Updated_By = @UpdatedBy,
+        //    Updated_Dt = GETDATE()
+        //WHERE Id = @TransactionId";
+
+        //    return await conn.ExecuteAsync(
+        //            sql,
+        //            new
+        //            {
+        //                TransactionId = transactionId,
+        //                NocPdf = nocPdfBase64,
+        //                AckPdf = ackPdfBase64,
+        //                UpdatedBy = updatedBy,
+        //            }
+        //        ) > 0;
+        //}
         public async Task<bool> UploadNOCAndAckPdfAsync(
-            int transactionId,
-            string nocPdfBase64,
-            string ackPdfBase64,
-            string updatedBy
-        )
+    int transactionId,
+    string nocFileName,
+    string ackFileName,
+    string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
+            string sql = @"
         UPDATE NOC_Transactions
         SET
-            NOC_PDF = @NocPdf,
-            Ack_PDF = @AckPdf,
+            NOC_PDF    = @NocPdf,
+            Ack_PDF    = @AckPdf,
             Updated_By = @UpdatedBy,
             Updated_Dt = GETDATE()
         WHERE Id = @TransactionId";
 
-            return await conn.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        TransactionId = transactionId,
-                        NocPdf = nocPdfBase64,
-                        AckPdf = ackPdfBase64,
-                        UpdatedBy = updatedBy,
-                    }
-                ) > 0;
+            return await conn.ExecuteAsync(sql, new
+            {
+                TransactionId = transactionId,
+                NocPdf = nocFileName,
+                AckPdf = ackFileName,
+                UpdatedBy = updatedBy,
+            }) > 0;
         }
 
         //        public async Task<(string Pdf, byte[] SignImage)> GetNocPdfForSigningAsync(
@@ -571,35 +596,61 @@ namespace ProductivityApi.Repository
             return ((string)row.NOC_PDF, (string)row.SignImage);
         }
 
+        //public async Task<bool> SaveSignedNocAsync(
+        //    int transactionId,
+        //    int signUserId,
+        //    string signedPdfBase64,
+        //    string updatedBy
+        //)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    string sql =
+        //        @"
+        //UPDATE NOC_Transactions
+        //SET
+        //    NOC_PDF_Signed = @Pdf,
+        //    SignUserId = @SignUserId,
+        //    Updated_By = @UpdatedBy,
+        //    Updated_Dt = GETDATE()
+        //WHERE Id = @TransactionId";
+
+        //    return await conn.ExecuteAsync(
+        //            sql,
+        //            new
+        //            {
+        //                TransactionId = transactionId,
+        //                SignUserId = signUserId,
+        //                Pdf = signedPdfBase64,
+        //                UpdatedBy = updatedBy,
+        //            }
+        //        ) > 0;
+        //}
+
         public async Task<bool> SaveSignedNocAsync(
-            int transactionId,
-            int signUserId,
-            string signedPdfBase64,
-            string updatedBy
-        )
+    int transactionId,
+    int signUserId,
+    string fileName,
+    string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
+            string sql = @"
         UPDATE NOC_Transactions
         SET
-            NOC_PDF_Signed = @Pdf,
-            SignUserId = @SignUserId,
-            Updated_By = @UpdatedBy,
-            Updated_Dt = GETDATE()
+            NOC_PDF_Signed = @FileName,
+            SignUserId     = @SignUserId,
+            Updated_By     = @UpdatedBy,
+            Updated_Dt     = GETDATE()
         WHERE Id = @TransactionId";
 
-            return await conn.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        TransactionId = transactionId,
-                        SignUserId = signUserId,
-                        Pdf = signedPdfBase64,
-                        UpdatedBy = updatedBy,
-                    }
-                ) > 0;
+            return await conn.ExecuteAsync(sql, new
+            {
+                TransactionId = transactionId,
+                SignUserId = signUserId,
+                FileName = fileName,
+                UpdatedBy = updatedBy,
+            }) > 0;
         }
 
         public async Task<(string Pdf, string PropertyOwnerName)> GetAckPdfForSigningAsync(
@@ -634,64 +685,102 @@ namespace ProductivityApi.Repository
             return ((string)row.Ack_PDF, row.PropertyOwner_Name.ToString());
         }
 
+        //    public async Task<bool> SaveSignedAckAsync(
+        //        int transactionId,
+        //        string signedPdfBase64,
+        //        string updatedBy
+        //    )
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        string sql =
+        //            @"
+        //UPDATE NOC_Transactions
+        //SET
+        //    Ack_PDF_Signed=@Pdf,
+        //    Updated_By=@UpdatedBy,
+        //    Updated_Dt=GETDATE()
+        //WHERE Id=@TransactionId";
+
+        //        return await conn.ExecuteAsync(
+        //                sql,
+        //                new
+        //                {
+        //                    TransactionId = transactionId,
+        //                    Pdf = signedPdfBase64,
+        //                    UpdatedBy = updatedBy,
+        //                }
+        //            ) > 0;
+        //    }
+
         public async Task<bool> SaveSignedAckAsync(
-            int transactionId,
-            string signedPdfBase64,
-            string updatedBy
-        )
+    int transactionId,
+    string fileName,
+    string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
-    UPDATE NOC_Transactions
-    SET
-        Ack_PDF_Signed=@Pdf,
-        Updated_By=@UpdatedBy,
-        Updated_Dt=GETDATE()
-    WHERE Id=@TransactionId";
+            string sql = @"
+        UPDATE NOC_Transactions
+        SET
+            Ack_PDF_Signed = @FileName,
+            Updated_By     = @UpdatedBy,
+            Updated_Dt     = GETDATE()
+        WHERE Id = @TransactionId";
 
-            return await conn.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        TransactionId = transactionId,
-                        Pdf = signedPdfBase64,
-                        UpdatedBy = updatedBy,
-                    }
-                ) > 0;
+            return await conn.ExecuteAsync(sql, new
+            {
+                TransactionId = transactionId,
+                FileName = fileName,
+                UpdatedBy = updatedBy,
+            }) > 0;
         }
+
+        //public async Task<string?> GetSignedNocPdfAsync(int transactionId)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    string sql =
+        //        @"
+        //SELECT NOC_PDF_Signed
+        //FROM NOC_Transactions
+        //WHERE Id = @TransactionId";
+
+        //    return await conn.ExecuteScalarAsync<string?>(
+        //        sql,
+        //        new { TransactionId = transactionId }
+        //    );
+        //}
 
         public async Task<string?> GetSignedNocPdfAsync(int transactionId)
         {
             using var conn = new SqlConnection(_conStr);
-
-            string sql =
-                @"
-        SELECT NOC_PDF_Signed
-        FROM NOC_Transactions
-        WHERE Id = @TransactionId";
-
             return await conn.ExecuteScalarAsync<string?>(
-                sql,
-                new { TransactionId = transactionId }
-            );
+                "SELECT NOC_PDF_Signed FROM NOC_Transactions WHERE Id = @TransactionId",
+                new { TransactionId = transactionId });
         }
+        //public async Task<string?> GetSignedAckPdfAsync(int transactionId)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    string sql =
+        //        @"
+        //SELECT Ack_PDF_Signed
+        //FROM NOC_Transactions
+        //WHERE Id = @TransactionId";
+
+        //    return await conn.ExecuteScalarAsync<string?>(
+        //        sql,
+        //        new { TransactionId = transactionId }
+        //    );
+        //}
 
         public async Task<string?> GetSignedAckPdfAsync(int transactionId)
         {
             using var conn = new SqlConnection(_conStr);
-
-            string sql =
-                @"
-        SELECT Ack_PDF_Signed
-        FROM NOC_Transactions
-        WHERE Id = @TransactionId";
-
             return await conn.ExecuteScalarAsync<string?>(
-                sql,
-                new { TransactionId = transactionId }
-            );
+                "SELECT Ack_PDF_Signed FROM NOC_Transactions WHERE Id = @TransactionId",
+                new { TransactionId = transactionId });
         }
 
         public async Task<bool> UpdateOwnerMobileNumberAsync(UpdateOwnerMobileNumberDto dto)
@@ -752,83 +841,137 @@ namespace ProductivityApi.Repository
             return rows > 0;
         }
 
+        //    public async Task<bool> UpdateKycPdfAsync(
+        //        int transactionId,
+        //        string pdfBase64,
+        //        string updatedBy
+        //    )
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        string sql =
+        //            @"
+        //    UPDATE NOC_Transactions
+        //    SET
+        //        KYC_PDF = @PdfBase64,
+        //        Updated_By = @UpdatedBy,
+        //        Updated_Dt = GETDATE()
+        //    WHERE Id = @TransactionId
+        //";
+
+        //        var rows = await conn.ExecuteAsync(
+        //            sql,
+        //            new
+        //            {
+        //                TransactionId = transactionId,
+        //                PdfBase64 = pdfBase64,
+        //                UpdatedBy = updatedBy,
+        //            }
+        //        );
+
+        //        return rows > 0;
+        //    }
+
         public async Task<bool> UpdateKycPdfAsync(
-            int transactionId,
-            string pdfBase64,
-            string updatedBy
-        )
+    int transactionId,
+    string fileName,
+    string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
+            string sql = @"
         UPDATE NOC_Transactions
         SET
-            KYC_PDF = @PdfBase64,
+            KYC_PDF    = @FileName,
             Updated_By = @UpdatedBy,
             Updated_Dt = GETDATE()
-        WHERE Id = @TransactionId
-    ";
+        WHERE Id = @TransactionId";
 
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
-                {
-                    TransactionId = transactionId,
-                    PdfBase64 = pdfBase64,
-                    UpdatedBy = updatedBy,
-                }
-            );
-
-            return rows > 0;
+            return await conn.ExecuteAsync(sql, new
+            {
+                TransactionId = transactionId,
+                FileName = fileName,
+                UpdatedBy = updatedBy,
+            }) > 0;
         }
+
+        //    public async Task<bool> UpdateAckPdfAsync(
+        //        int transactionId,
+        //        string pdfBase64,
+        //        string updatedBy
+        //    )
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        string sql =
+        //            @"
+        //    UPDATE NOC_Transactions
+        //    SET
+        //        Ack_PDF_Signed = @PdfBase64,
+        //        Updated_By = @UpdatedBy,
+        //        Updated_Dt = GETDATE()
+        //    WHERE Id = @TransactionId
+        //";
+
+        //        var rows = await conn.ExecuteAsync(
+        //            sql,
+        //            new
+        //            {
+        //                TransactionId = transactionId,
+        //                PdfBase64 = pdfBase64,
+        //                UpdatedBy = updatedBy,
+        //            }
+        //        );
+
+        //        return rows > 0;
+        //    }
 
         public async Task<bool> UpdateAckPdfAsync(
-            int transactionId,
-            string pdfBase64,
-            string updatedBy
-        )
+    int transactionId,
+    string fileName,
+    string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
+            string sql = @"
         UPDATE NOC_Transactions
         SET
-            Ack_PDF_Signed = @PdfBase64,
-            Updated_By = @UpdatedBy,
-            Updated_Dt = GETDATE()
-        WHERE Id = @TransactionId
-    ";
+            Ack_PDF_Signed = @FileName,
+            Updated_By     = @UpdatedBy,
+            Updated_Dt     = GETDATE()
+        WHERE Id = @TransactionId";
 
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
-                {
-                    TransactionId = transactionId,
-                    PdfBase64 = pdfBase64,
-                    UpdatedBy = updatedBy,
-                }
-            );
-
-            return rows > 0;
+            return await conn.ExecuteAsync(sql, new
+            {
+                TransactionId = transactionId,
+                FileName = fileName,
+                UpdatedBy = updatedBy,
+            }) > 0;
         }
+
+        //    public async Task<string?> GetKycPdfAsync(int transactionId)
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        string sql =
+        //            @"
+        //    SELECT KYC_PDF
+        //    FROM NOC_Transactions
+        //    WHERE Id = @TransactionId
+        //";
+
+        //        return await conn.ExecuteScalarAsync<string?>(
+        //            sql,
+        //            new { TransactionId = transactionId }
+        //        );
+        //    }
 
         public async Task<string?> GetKycPdfAsync(int transactionId)
         {
             using var conn = new SqlConnection(_conStr);
-
-            string sql =
-                @"
-        SELECT KYC_PDF
-        FROM NOC_Transactions
-        WHERE Id = @TransactionId
-    ";
-
             return await conn.ExecuteScalarAsync<string?>(
-                sql,
-                new { TransactionId = transactionId }
-            );
+                "SELECT KYC_PDF FROM NOC_Transactions WHERE Id = @TransactionId",
+                new { TransactionId = transactionId });
         }
 
         public async Task<bool> UpdatePodAsync(int transactionId, string pod, string? courierVendor, string updatedBy)

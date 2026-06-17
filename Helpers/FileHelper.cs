@@ -37,6 +37,30 @@
                 return (false, null, "Invalid Base64 string");
             }
         }
+
+        public static async Task<(bool Success, string? FileName, string? Error)> SaveBytesAsync(
+            string basePath,
+            string fileName,
+            byte[] bytes,
+            int maxSizeInMb = 5)
+        {
+            if (bytes == null || bytes.Length == 0)
+                return (false, null, "File is empty");
+
+            if (bytes.Length > maxSizeInMb * 1024 * 1024)
+                return (false, null, "File size exceeds limit");
+
+            try
+            {
+                Directory.CreateDirectory(basePath);
+                await File.WriteAllBytesAsync(Path.Combine(basePath, fileName), bytes);
+                return (true, fileName, null);
+            }
+            catch (Exception ex)
+            {
+                return (false, null, ex.Message);
+            }
+        }
         public static async Task<byte[]?> ReadFileAsync(string basePath, string fileName)
         {
             var fullPath = Path.Combine(basePath, fileName);
@@ -46,12 +70,10 @@
 
             return await File.ReadAllBytesAsync(fullPath);
         }
-
         public static bool FileExists(string basePath, string fileName)
         {
             return File.Exists(Path.Combine(basePath, fileName));
         }
-
         public static string GetContentType(string fileName)
         {
             var extension = Path.GetExtension(fileName)?.ToLower();
