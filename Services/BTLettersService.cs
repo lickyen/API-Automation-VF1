@@ -25,49 +25,6 @@ namespace ProductivityApi.Services
             _emailService = emailService;
             _templateService = templateService;
         }
-
-        // ── Step 1 : Upload master Excel → filter in memory → return download ──
-        // No DB insert. Applies the same WHERE conditions as BT_GetUploadFormat SP.
-
-        //public async Task<(int RowsMatched, string? Error)> UploadBtFormatAsync(IFormFile file)
-        //{
-        //    var allowed = new[] { ".xls", ".xlsx" };
-        //    var ext = Path.GetExtension(file.FileName).ToLower();
-
-        //    if (!allowed.Contains(ext))
-        //        return (0, "Unsupported file type. Upload .xls or .xlsx.");
-
-        //    if (!Directory.Exists(_filePath))
-        //        Directory.CreateDirectory(_filePath);
-
-        //    // Save uploaded master file to disk — replaces existing
-        //    var fullPath = Path.Combine(_filePath, $"BT_MasterFormat{ext}");
-        //    await using (var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write))
-        //        await file.CopyToAsync(fs);
-
-        //    var rows = FilterExcelRows(fullPath);
-
-        //    if (!rows.Any())
-        //        return (0, "0 rows matched the filter criteria. Please check the file.");
-
-        //    // Save filtered rows to disk as the download template — replaces existing
-        //    SaveFilteredFormat(rows);
-
-        //    return (rows.Count, null);
-        //}
-
-        //public Task<byte[]?> DownloadBtFormatAsync()
-        //{
-        //    var templatePath = Path.Combine(_filePath, "BT_UploadFormat.xlsx");
-
-        //    if (!File.Exists(templatePath))
-        //        return Task.FromResult<byte[]?>(null);
-
-        //    var bytes = File.ReadAllBytes(templatePath);
-        //    return Task.FromResult<byte[]?>(bytes);
-        //}
-
-
         public async Task<(byte[]? FileBytes, string? Error)> CreateBtFormatAsync(IFormFile file)
         {
             var allowed = new[] { ".xls", ".xlsx" };
