@@ -349,14 +349,25 @@ namespace ProductivityApi.Services
 
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
-            var ws = wb.Worksheets.First();
+            var ws = wb.Worksheet(1);
+
+            var headerRow = ws.FirstRowUsed();
+
+            var bankCol = headerRow.Cells()
+                .First(c => c.GetString().Trim() == "Bank_Name")
+                .Address.ColumnNumber;
+
+            var emailCol = headerRow.Cells()
+                .First(c => c.GetString().Trim() == "Email_ID")
+                .Address.ColumnNumber;
 
             foreach (var row in ws.RowsUsed().Skip(1))
             {
-                var bankName = row.Cell(1).GetValue<string>();
-                var emailId = row.Cell(2).GetValue<string>();
+                var bankName = row.Cell(bankCol).GetString();
+                var emailId = row.Cell(emailCol).GetString();
 
-                if (string.IsNullOrWhiteSpace(bankName) || string.IsNullOrWhiteSpace(emailId))
+                if (string.IsNullOrWhiteSpace(bankName) ||
+                    string.IsNullOrWhiteSpace(emailId))
                     continue;
 
                 list.Add(new BTEmailMaster
