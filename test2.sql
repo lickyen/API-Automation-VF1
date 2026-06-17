@@ -42,6 +42,14 @@ GO
 DBCC CHECKIDENT ('CIBIL_Correction_LoanCancellation', RESEED, 0);
 GO
 
+-- Delete all data
+DELETE FROM CIBIL_Correction_WC_WS_SC;
+GO
+
+-- Reseed identity back to 0 (next insert will start at 1)
+DBCC CHECKIDENT ('CIBIL_Correction_WC_WS_SC', RESEED, 0);
+GO
+
 INSERT INTO CIBIL_Correction_LoanCancellation
 (
     [Date],

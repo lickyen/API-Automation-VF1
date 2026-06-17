@@ -150,6 +150,7 @@ namespace ProductivityApi.Models
         public decimal? Amount_Received { get; set; }
         public string? Status { get; set; }
         public string? LoanStatus { get; set; }
+        public string? Remarks { get; set; }
         public string? Created_By { get; set; }
         public DateTime? Created_Dt { get; set; }
         public string? Updated_By { get; set; }
@@ -230,5 +231,6 @@ namespace ProductivityApi.Models
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
         public string? Updated_By { get; set; }
+        public string? Remarks { get; set; }
     }
 }

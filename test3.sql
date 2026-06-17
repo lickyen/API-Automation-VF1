@@ -17,6 +17,9 @@ GO
 SELECT * FROM NewBranchEmailLog;
 GO
 
+SELECT * FROM EmailLog;
+GO
+
 -- DELETE FROM NewBranchTransaction;
 -- GO
 

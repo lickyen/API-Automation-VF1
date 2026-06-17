@@ -342,6 +342,7 @@ namespace ProductivityApi.Repository
                 Amount_Received,
                 Status,
                 LoanStatus,
+                Remarks,
                 Created_By,
                 Created_Dt,
                 Updated_By,
@@ -376,6 +377,7 @@ namespace ProductivityApi.Repository
                 Written_Off_Principle_Amount = @Written_Off_Principle_Amount,
                 Settlement_Amount = @Settlement_Amount,
                 Amount_Received = @Amount_Received,
+                Remarks = @Remarks,
                 Updated_By = @Updated_By,
                 Updated_Dt = GETDATE()
             WHERE Id = @Id";
@@ -581,6 +583,7 @@ namespace ProductivityApi.Repository
             Settlement_Amount,
             Amount_Received,
             Status,
+            Remarks,
             Created_By,
             Created_Dt,
             Updated_By,
