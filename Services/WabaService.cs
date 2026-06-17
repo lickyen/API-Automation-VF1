@@ -90,11 +90,13 @@ namespace ProductivityApi.Services
                 throw new Exception("Transfer Letter API returned empty document");
 
             // Step 4: Save PDF to disk
-            //var basePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "WabaFiles");
-            var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
+            //var basePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "wb");
+            var basePath = Path.Combine(_env.WebRootPath, "wb");
 
-            var uniqueId = Guid.NewGuid().ToString("N")[..8]; // 8 char short guid
-            var fileName = $"SOA_{lan}_{uniqueId}.pdf";     // e.g. SOA_LAN123456_a3f8c21d.pdf
+            //var uniqueId = Guid.NewGuid().ToString("N")[..8]; // 8 char short guid
+            //var fileName = $"SOA_{lan}_{uniqueId}.pdf";     // e.g. SOA_LAN123456_a3f8c21d.pdf
+
+            var fileName = $"{Guid.NewGuid():N}.pdf";
 
             var fullPath = Path.Combine(basePath, fileName);
 
@@ -104,7 +106,7 @@ namespace ProductivityApi.Services
                 Convert.FromBase64String(transferResult.DocContent)
             );
 
-            var fileUrl = $"{_appSettings.BaseUrl}/WabaFiles/{fileName}";
+            var fileUrl = $"{_appSettings.BaseUrl}/wb/{fileName}";
 
             // Step 5: Update letter path in DB
             await _repository.UpdateSOALetterIssuedAsync(requestId, fileUrl);
@@ -117,7 +119,6 @@ namespace ProductivityApi.Services
                 FinReference = transferResult.FinReference
             };
         }
-
         public async Task<WabaKotakResponse> GetKotakDocumentAsync(string lan)
         {
             // Step 1: Pull Kotak master data for this LAN
@@ -161,11 +162,14 @@ namespace ProductivityApi.Services
                 throw new Exception("Kotak API returned an empty PDF");
 
             // Step 4: Save PDF to disk
-            var basePath = Path.Combine(_env.WebRootPath, "WabaFiles");
+            var basePath = Path.Combine(_env.WebRootPath, "wb");
             Directory.CreateDirectory(basePath);
 
-            var uniqueId = Guid.NewGuid().ToString("N")[..8];
-            var fileName = $"{lan}_kotak_{uniqueId}.pdf";
+            //var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            //var fileName = $"{lan}_kotak_{uniqueId}.pdf";
+
+            var fileName = $"{Guid.NewGuid():N}.pdf";
+
             var fullPath = Path.Combine(basePath, fileName);
 
             await File.WriteAllBytesAsync(
@@ -173,7 +177,7 @@ namespace ProductivityApi.Services
                 Convert.FromBase64String(kotakResult.Response.PDFContent)  // ← PDFContent not DocContent
             );
 
-            var fileUrl = $"{_appSettings.BaseUrl}/WabaFiles/{fileName}";
+            var fileUrl = $"{_appSettings.BaseUrl}/wb/{fileName}";
 
             await _repository.UpdateKotakDocumentIssuedAsync(requestId, fileUrl);
 
@@ -184,6 +188,17 @@ namespace ProductivityApi.Services
                 LoanAccountNo = kotakData.LoanAcId,
                 PolicyNumber = kotakData.PolicyNumber ?? string.Empty
             };
+        }
+
+        public (byte[] bytes, string fileName) GetDocument(string fileName)
+        {
+            var safeFileName = Path.GetFileName(fileName);
+            var fullPath = Path.Combine(_env.WebRootPath, "wb", safeFileName);
+
+            if (!System.IO.File.Exists(fullPath))
+                throw new FileNotFoundException("File not found");
+
+            return (System.IO.File.ReadAllBytes(fullPath), safeFileName);
         }
     }
 }

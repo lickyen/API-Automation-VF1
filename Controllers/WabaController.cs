@@ -56,5 +56,19 @@ namespace ProductivityApi.Controllers
                 return BadRequest(new Response(false, null, ex.Message));
             }
         }
+
+        //[HttpGet("/f/{fileName}")]
+        //public IActionResult GetFile(string fileName)
+        //{
+        //    try
+        //    {
+        //        var (bytes, safeFileName) = _service.GetDocument(fileName);
+        //        return File(bytes, "application/pdf", safeFileName);
+        //    }
+        //    catch (FileNotFoundException)
+        //    {
+        //        return NotFound();
+        //    }
+        //}
     }
 }

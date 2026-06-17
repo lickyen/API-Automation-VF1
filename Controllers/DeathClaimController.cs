@@ -194,21 +194,6 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpGet("getClaimFormat/{id}")]
-        public async Task<IActionResult> GetClaimFormat(int id)
-        {
-            var (bytes, lan) = await _service.GetClaimFormatAsync(id);
-
-            if (bytes is null)
-                return NotFound(new Response(false, null, "No record found for the given Id"));
-
-            return File(
-                bytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"{lan}_ClaimFormat.xlsx"
-            );
-        }
-
         [HttpPost("upload")]
         public async Task<IActionResult> UploadDoc([FromForm] UploadFileRequestDto dto)
         {
@@ -229,6 +214,20 @@ namespace ProductivityApi.Controllers
             var contentType = FileHelper.GetContentType(fileName);
 
             return File(fileBytes, contentType, fileName);
+        }
+
+        [HttpGet("downloadAll/{reqId}")]
+        public async Task<IActionResult> DownloadAll(int reqId)
+        {
+            var result = await _service.DownloadAllFilesAsZipAsync(reqId);
+
+            if (!result.Success)
+                return BadRequest(result.Error);
+
+            return File(
+                result.ZipBytes!,
+                "application/zip",
+                result.FileName);
         }
 
         [HttpGet("report")]

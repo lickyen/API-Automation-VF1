@@ -36,8 +36,9 @@ namespace ProductivityApi.Repository
                 var sql = @"SELECT 
                         HDR.RECEIPTID       AS ReceiptId,
                         HDR.RECEIPTMODE     AS ReceiptMode,
-                        HDR.RECEIPTAMOUNT   AS ReceiptAmount,
-                        HDR.RECEIPTDATE     AS ReceiptDate
+                        HDR.RECEIPTAMOUNT / 100.0    AS ReceiptAmount,
+                        HDR.RECEIPTDATE     AS ReceiptDate,
+                        HDR.RECEIPTPURPOSE AS ReceiptPurpose
                     FROM PLF.FINRECEIPTHEADER HDR
                     INNER JOIN PLF.FINRECEIPTDETAIL DTL ON HDR.RECEIPTID = DTL.RECEIPTID
                     WHERE HDR.REFERENCE = @reference
@@ -176,6 +177,24 @@ namespace ProductivityApi.Repository
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching bank details for IFSC: {Ifsc}", ifsc);
+                return null;
+            }
+        }
+        public async Task<PlFLoanStatusModel?> GetLoanStatusByLanAsync(string lan)
+        {
+            try
+            {
+                var sql = @"
+            select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
+group by sz_loan_account_no,loan_status";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { lan });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Lan status by lan: {Lan}", lan);
                 return null;
             }
         }

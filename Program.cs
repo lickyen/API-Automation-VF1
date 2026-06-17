@@ -11,6 +11,7 @@ using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using ProductivityApi.Helpers;
 using Serilog;
+using ProductivityApi.Controllers;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -104,6 +105,10 @@ builder.Services.AddScoped<NewBranchServices>();
 builder.Services.AddScoped<KotakService>();
 builder.Services.AddScoped<DeathClaimService>();
 builder.Services.AddScoped<GurukulUserService>();
+builder.Services.AddScoped<VCPService>();
+builder.Services.AddScoped<AxisService>();
+builder.Services.AddScoped<BTLettersService>();
+
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -132,6 +137,9 @@ builder.Services.AddScoped<SARFAESIRepository>();
 builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<DeathClaimRepository>();
 builder.Services.AddScoped<GurukulUserRepository>();
+builder.Services.AddScoped<VCPRepository>();
+builder.Services.AddScoped<AxisRepository>();
+builder.Services.AddScoped<BTLettersRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();

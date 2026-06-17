@@ -73,4 +73,10 @@ namespace ProductivityApi.Models
         [Required]
         public string UpdatedBy { get; set; }
     }
+    public class GoldLeadReportFilterDto
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+       
+    }
 }

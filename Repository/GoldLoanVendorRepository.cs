@@ -197,5 +197,22 @@ namespace ProductivityApi.Repository
 
             return exists;
         }
+
+        public async Task<IEnumerable<dynamic>> GetLegalBillingReportAsync(GoldLeadReportFilterDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "usp_GetGoldLoanVendors",
+                new
+                {
+                    dto.FromDate,
+                    dto.ToDate
+
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
     }
 }
