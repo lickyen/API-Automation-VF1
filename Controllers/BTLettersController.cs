@@ -106,21 +106,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("downloadEmailMaster")]
-        public async Task<IActionResult> DownloadEmailMaster()
-        {
-            var bytes = await _service.DownloadEmailMasterAsync();
-
-            if (bytes is null)
-                return NotFound(new Response(false, null, "No data found."));
-
-            return File(
-                bytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"BT_EmailMaster_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
-            );
-        }
-
         [HttpPut("updateEmailMaster")]
         public async Task<IActionResult> UpdateEmailMaster([FromBody] BTUpdateEmailMasterRequest request)
         {

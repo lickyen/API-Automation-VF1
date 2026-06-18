@@ -380,46 +380,5 @@ namespace ProductivityApi.Services
             return list;
         }
 
-        //public async Task<byte[]?> DownloadEmailMasterAsync()
-        //{
-        //    var data = await _repository.GetEmailMasterAsync();
-        //    return ExcelHelper.GenerateExcel(data, "Data");
-        //}
-
-        public async Task<byte[]?> DownloadEmailMasterAsync()
-        {
-            var data = await _repository.GetEmailMasterAsync();
-            var list = data.ToList();
-
-            if (!list.Any())
-                return null;
-
-            using var wb = new XLWorkbook();
-            var ws = wb.Worksheets.Add("Data");
-
-            // Header
-            ws.Cell(1, 1).Value = "Bank Name";
-            ws.Cell(1, 2).Value = "Email ID";
-
-            // Style header
-            var headerRow = ws.Row(1);
-            headerRow.Style.Font.Bold = true;
-            headerRow.Style.Fill.BackgroundColor = XLColor.FromHtml("#005baa");
-            headerRow.Style.Font.FontColor = XLColor.White;
-
-            // Data
-            for (int i = 0; i < list.Count; i++)
-            {
-                var row = list[i];
-                ws.Cell(i + 2, 1).Value = row.Bank_Name;
-                ws.Cell(i + 2, 2).Value = row.Email_ID;
-            }
-
-            ws.Columns().AdjustToContents();
-
-            using var ms = new MemoryStream();
-            wb.SaveAs(ms);
-            return ms.ToArray();
-        }
     }
 }
