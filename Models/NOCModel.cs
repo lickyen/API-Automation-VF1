@@ -166,6 +166,8 @@ namespace ProductivityApi.Models
         public string NocStatus { get; set; } = string.Empty;
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
+        [Required]
+        public bool GenerateNOC { get; set; }
     }
 
     public class NocApplicantDetails
