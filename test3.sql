@@ -11,7 +11,7 @@ SELECT * FROM NewBranchUserMaster;
 GO
 
 SELECT * FROM UserMaster
-WHERE ClusterName = 'CoimbatoreRegion' AND Role = 'RCH' AND Status = 'Active';
+-- WHERE ClusterName = 'CoimbatoreRegion' AND Role = 'RCH' AND Status = 'Active';
 GO
 
 SELECT * FROM NewBranchEmailLog;

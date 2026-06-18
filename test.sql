@@ -1,8 +1,7 @@
 SELECT * FROM NOC_Transactions;
 GO
 
-SELECT CourierVendor FROM NOC_Transactions
-WHERE Id IN (3, 4);
+SELECT * FROM NOC_Transactions
 GO
 
 SELECT * FROM NOC_RoleStatusMap;

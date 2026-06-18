@@ -48,11 +48,6 @@ namespace ProductivityApi.Services
             return await _repository.InsertClosedLansAsync(lans);
         }
 
-        public async Task<IEnumerable<NocClosedLan>> GetEligibleLansAsync()
-        {
-            return await _repository.GetEligibleLansAsync();
-        }
-
         public async Task<IEnumerable<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
             return await _plfRepository.GetLoansByCustIdAsync(custId);
@@ -1277,6 +1272,11 @@ namespace ProductivityApi.Services
         internal async Task<byte[]> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<NocClosedLan>> GetClosedLansAsync(bool? isEligible)
+        {
+            return await _repository.GetClosedLansAsync(isEligible);
         }
     }
 }

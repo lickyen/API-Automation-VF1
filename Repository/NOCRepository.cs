@@ -46,12 +46,17 @@ namespace ProductivityApi.Repository
             return affected;
         }
 
-        public async Task<IEnumerable<NocClosedLan>> GetEligibleLansAsync()
+        public async Task<IEnumerable<NocClosedLan>> GetClosedLansAsync(bool? isEligible)
         {
             using var conn = new SqlConnection(_conStr);
             conn.Open();
+
             return await conn.QueryAsync<NocClosedLan>(
-                "sp_NOC_GetEligibleLans",
+                "sp_NOC_GetClosedLans",
+                new
+                {
+                    IsEligible = isEligible
+                },
                 commandType: CommandType.StoredProcedure
             );
         }

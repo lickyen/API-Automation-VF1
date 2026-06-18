@@ -18,19 +18,20 @@ namespace ProductivityApi.Controllers
             _env = env;
         }
 
-        [HttpGet("getEligibleLans")]
-        public async Task<IActionResult> GetEligibleLans()
+
+          [HttpGet("getClosedLans")]
+        public async Task<IActionResult> GetClosedLans([FromQuery] bool? isEligible)
         {
-            var data = await _service.GetEligibleLansAsync();
+            var data = await _service.GetClosedLansAsync(isEligible);
             return Ok(new Response(true, data));
         }
-
+ 
         [HttpGet("getLinkedLans")]
         public async Task<IActionResult> GetLinkedLans([FromQuery] string lan)
         {
             if (string.IsNullOrEmpty(lan))
                 return BadRequest(new Response(false, message: "LAN is required."));
-
+ 
             var result = await _service.GetLinkedLoansByLanAsync(lan);
             return Ok(new Response(true, result));
         }
@@ -463,6 +464,19 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, result.Message));
+        }
+
+        [HttpPost("insertTransaction")]
+        public async Task<IActionResult> InsertTransaction([FromBody] NocTransactionInsertDto dto)
+        {
+            var result = await _service.InsertTransactionAsync(dto);
+ 
+            if (!result)
+            {
+                return BadRequest(new Response(false, message: "Failed to insert transaction."));
+            }
+ 
+            return Ok(new Response(true, message: "Transaction inserted successfully."));
         }
     }
 }

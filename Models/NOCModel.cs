@@ -121,23 +121,51 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
     }
 
-    public class NocTransactionInsertDto
+  public class NocTransactionInsertDto
     {
+        [Required]
         public string Lan { get; set; } = string.Empty;
+ 
+        [Required]
         public string BranchCode { get; set; } = string.Empty;
-        public string? BranchName { get; set; }
-        public string? Region { get; set; }
-        public string? Zone { get; set; }
-        public string? MegaZone { get; set; }
+ 
+        [Required]
+        public string BranchName { get; set; } = string.Empty;
+ 
+        [Required]
+        public string Region { get; set; } = string.Empty;
+ 
+        [Required]
+        public string Zone { get; set; } = string.Empty;
+ 
+        [Required]
+        public string MegaZone { get; set; } = string.Empty;
+ 
+        [Required]
         public string CustId { get; set; } = string.Empty;
-        public string? CustName { get; set; }
-        public string? CustMobile { get; set; }
-        public string? CollId { get; set; }
-        public string? LoanStatus { get; set; }
-        public DateTime? DisbDate { get; set; }
-        public DateTime? ClosureDate { get; set; }
-        public string? NocStatus { get; set; }
-        public string? CourierVendor { get; set; }
+ 
+        [Required]
+        public string CustName { get; set; } = string.Empty;
+ 
+        [Required]
+        public string CustMobile { get; set; } = string.Empty;
+ 
+        [Required]
+        public string CollId { get; set; } = string.Empty;
+ 
+        [Required]
+        public string LoanStatus { get; set; } = string.Empty;
+ 
+        [Required]
+        public DateTime DisbDate { get; set; }
+ 
+        [Required]
+        public DateTime ClosureDate { get; set; }
+ 
+        [Required]
+        public string NocStatus { get; set; } = string.Empty;
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
     }
 
     public class NocApplicantDetails
