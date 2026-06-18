@@ -83,10 +83,14 @@ namespace ProductivityApi.Services
             var result = loans.Select(loan => new
             {
                 LoanAccountNo = loan.LoanAccountNo,
+                BranchCode = loan.BranchCode,
                 LoanStatus = loan.LoanStatus,
                 NocStatus = loan.NocStatus,
                 DisbDate = loan.DisbursementDate,
                 ClosureDate = loan.LoanClosureDate,
+                CustomerId = loan.CustomerId,
+                CustomerName = loan.CustomerName,
+                CollateralId = loan.CollateralId,
                 Customers = custList,
             });
 
