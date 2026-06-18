@@ -853,10 +853,12 @@ namespace ProductivityApi.Services
             if (pdfBytes == null)
                 throw new Exception($"NOC PDF file not found: {data.Pdf}");
 
-            if (!File.Exists(data.SignImage))
-                throw new Exception($"Signature image file not found at: {data.SignImage}");
+            string signImagePath = Path.Combine(AppContext.BaseDirectory, "templates", "noc", data.SignImage);
 
-            byte[] signBytes = await File.ReadAllBytesAsync(data.SignImage);
+            if (!File.Exists(signImagePath))
+                throw new Exception($"Signature image not found: {signImagePath}");
+
+            byte[] signBytes = await File.ReadAllBytesAsync(signImagePath);
 
             using var output = new MemoryStream();
             using (var reader = new PdfReader(pdfBytes))

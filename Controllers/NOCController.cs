@@ -10,12 +10,9 @@ namespace ProductivityApi.Controllers
     {
         private readonly NOCService _service;
 
-        private readonly IWebHostEnvironment _env;
-
-        public NOCController(NOCService service, IWebHostEnvironment env)
+        public NOCController(NOCService service)
         {
             _service = service;
-            _env = env;
         }
 
         [HttpGet("getClosedLans")]
