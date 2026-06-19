@@ -143,19 +143,6 @@ namespace ProductivityApi.Controllers
             };
         }
 
-        [HttpPost("submitQuestionnaire")]
-        public async Task<IActionResult> SubmitQuestionnaire([FromBody] SubmitQuestionnaireDto dto)
-        {
-            var result = await _service.SubmitQuestionnaireAsync(dto);
-            return result switch
-            {
-                0 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
-                -1 => NotFound(new Response(false, null, "Request not found")),
-                -2 => BadRequest(new Response(false, null, "Invalid source")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
-        }
-
         // File Download
         [HttpGet("download/{fileName}")]
         public async Task<IActionResult> DownloadFile(string fileName)
@@ -169,6 +156,26 @@ namespace ProductivityApi.Controllers
 
             var contentType = Helpers.FileHelper.GetContentType(fileName);
             return File(fileBytes, contentType, fileName);
+        }
+
+        [HttpGet("getQuestionnaire")]
+        public async Task<IActionResult> GetQuestionnaireMaster()
+        {
+            var data = await _service.GetQuestionnaireMasterAsync();
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPost("submitQuestionnaire")]
+        public async Task<IActionResult> SubmitQuestionnaire([FromBody] SubmitQuestionnaireDto dto)
+        {
+            var result = await _service.SubmitQuestionnaireAsync(dto);
+            return result switch
+            {
+                0 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
+                -1 => NotFound(new Response(false, null, "Request not found")),
+                -2 => BadRequest(new Response(false, null, "Invalid source")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
     }
 }

@@ -80,6 +80,21 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<string?> GetAppVersionAsync(string applicationName, string? platform)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<string>(
+                "SP_Get_APPVersion",
+                new
+                {
+                    ApplicationName = applicationName,
+                    Platform = platform
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
 
     }
 }

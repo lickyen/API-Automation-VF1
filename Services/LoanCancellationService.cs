@@ -38,6 +38,13 @@ namespace ProductivityApi.Services
 
             var payments = await _plfRepository.GetPaymentsByLan(transaction.Lan);
 
+            payments = payments
+                .Where(p => !string.Equals(
+                    p.ReceiptPurpose,
+                    "feePayment",
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             return new LoanCancelDetailsDto
             {
                 Transaction = transaction,

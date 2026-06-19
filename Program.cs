@@ -1,17 +1,12 @@
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.SqlServer;
-using Microsoft.Extensions.Options;
-using ProductivityApi;
 using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
-using ProductivityApi.Helpers;
 using Serilog;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +101,8 @@ builder.Services.AddScoped<DeathClaimService>();
 builder.Services.AddScoped<GurukulUserService>();
 builder.Services.AddScoped<VCPService>();
 builder.Services.AddScoped<AxisService>();
+builder.Services.AddScoped<BTLettersService>();
+builder.Services.AddScoped<TrainingDashboardService>();
 
 
 builder.Services.AddScoped<UserRepository>();
@@ -137,6 +134,8 @@ builder.Services.AddScoped<DeathClaimRepository>();
 builder.Services.AddScoped<GurukulUserRepository>();
 builder.Services.AddScoped<VCPRepository>();
 builder.Services.AddScoped<AxisRepository>();
+builder.Services.AddScoped<BTLettersRepository>();
+builder.Services.AddScoped<TrainingDashboardRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
@@ -149,6 +148,14 @@ builder.Services.AddScoped<IJob, LegalBillingJob>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Configure cookie policy to enforce secure cookies and reasonable SameSite policy
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+    options.Secure = CookieSecurePolicy.Always;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+});
 
 var app = builder.Build();
 
@@ -163,17 +170,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
-
-// Serilog Request Logging
-//app.UseSerilogRequestLogging(options =>
-//{
-//    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
-//    options.GetLevel = (httpContext, elapsed, ex) =>
-//        ex != null || httpContext.Response.StatusCode >= 500
-//            ? Serilog.Events.LogEventLevel.Error
-//            : Serilog.Events.LogEventLevel.Information;
-//});
-
 
 app.UseSerilogRequestLogging(options =>
 {
@@ -197,7 +193,7 @@ app.UseHsts(); // enables HTTP Strict Transport Security (HSTS).
 
 app.UseCors("AllowFrontend");
 
-app.UseStaticFiles();
+
 
 if (!app.Environment.IsDevelopment())
 {

@@ -508,5 +508,8 @@ namespace ProductivityApi.Services
         {
             return await FileHelper.ReadFileAsync(_filePath, fileName);
         }
+
+        public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
+             => await _repository.GetQuestionnaireMasterAsync();
     }
 }

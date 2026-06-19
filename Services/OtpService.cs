@@ -57,6 +57,33 @@ public class OtpService
         return true;
     }
 
+    public async Task<bool> SendOtpToMobile(string referenceId, string mobileNumber)
+    {
+        if (string.IsNullOrWhiteSpace(mobileNumber))
+            throw new InvalidOperationException("Mobile number not found");
+
+        string otp = GenerateOtp();
+        string hashedOtp = HashOtp(otp);
+
+        await _otpRepository.SaveOtpAsync(
+            new OtpModel
+            {
+                UserId = referenceId,
+                OtpHash = hashedOtp,
+                Attempts = 0,
+            }
+        );
+
+        var placeholders = new Dictionary<string, string> { { "OTP", otp } };
+
+        var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
+
+        var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+
+        await _smsService.SendSms(mobileNumber, smsBody, smsTemplate.DltContentId);
+
+        return true;
+    }
     public async Task<bool> VerifyOtp(string userId, string otp)
     {
         bool isValid = false;

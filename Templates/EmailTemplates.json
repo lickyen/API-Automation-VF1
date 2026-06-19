@@ -40,5 +40,13 @@
   },
   "LegalBillingReminderEmail": {
     "Body": "<p>Hi <b><<Name>></b>,</p><p>There are <b>open requests pending</b> for your action on the <b>Vistaar Field Assist – Legal Billing</b> mobile application.</p><p>Kindly review the pending requests and provide the necessary action at the earliest to avoid any delays in processing.</p><br/><<RecordsTable>><br/><p>Regards,<br/>Vistaar Finance.</p>"
+  },
+  "BTLetter1Email": {
+    "Subject": "Take - Over Of Loan facility Of Mr. /Mrs. /Ms. <<CustomerName>>",
+    "Body": "<p>Dear Sir/Madam</p><p>This is in reference to Cheque/DD/pay order issued in your favor towards full &amp; final /Partial settlement of all loan facilities availed by Mr. /Mrs. /Ms. <b><<CustomerName>></b> with your bank. The details of the instruments are as below, <strong>we are yet to receive the set of property documents mortgaged with you.</strong> We request you to share the Cersai Satisfaction transaction id /Asset Ids for the linked property/s along with NOC/complete set of documents within 2 days of receipt of this letter.</p><p>Appreciate if you could kindly expedite and sensitize the release of Collaterals held by you against the loan of Mr. /Mrs. /Ms. <b><<CustomerName>></b>. For any further clarification please feel free to contact the undersigned.</p><p>Customer loan A/C number in your bank was <b><<BT_LAN>></b></p><<Table>><p>Thanking you.</p><p>Mayank Vajpeyee<br/>Head of Central Operations<br/>Vistaar Financial Services Private Limited<br/>Email: mayank.vajpeyee@vistaarfinance.com</p>"
+  },
+  "BTLetter3Email": {
+    "Subject": "Take - Over Of Loan facility Of Mr. /Mrs. /Ms. <<CustomerName>> **Reminder 2",
+    "Body": "<p>Referring to the RBI notification stated in the previous mail we would be reporting the same to RBI Ombudsman since the customer has officially permitted us to collect the property documents from your bank within 30 days of disbursement of our loan to the customer.</p><p>Thanking you.</p><p>Mayank Vajpeyee<br/>Head of Central Operations<br/>Vistaar Financial Services Private Limited<br/>Email: mayank.vajpeyee@vistaarfinance.com</p>"
   }
 }

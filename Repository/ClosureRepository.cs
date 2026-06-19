@@ -547,5 +547,22 @@ namespace ProductivityApi.Repository
                 throw new Exception("DB Error.", ex);
             }
         }
+
+        public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+                var rows = await connection.QueryAsync<ClosureQuestionnaireMaster>(
+                    "sp_newClosure_GetQuestionnaireMaster",
+                    commandType: CommandType.StoredProcedure);
+                return rows.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
     }
 }

@@ -18,6 +18,7 @@ namespace ProductivityApi.Models
         public string? Region { get; set; }
 
         public string? Megazone { get; set; }
+        public string? BranchCode { get; set; }
 
         public string? Status { get; set; }
 
@@ -57,6 +58,20 @@ namespace ProductivityApi.Models
 
         public DateTime? UpdatedDate { get; set; }
         public bool HasPendingActionsForRole { get; set; }
+
+        public bool AdminHasPendingActions { get; set; }
+
+        public bool HRHasPendingActions { get; set; }
+
+        public bool ITHasPendingActions { get; set; }
+
+        public bool RCHRBHHasPendingActions { get; set; }
+
+        public bool FinanceHasPendingActions { get; set; }
+
+        public bool MarketingHasPendingActions { get; set; }
+
+        public bool COPSHasPendingActions { get; set; }
     }
 
     public class NewBranchTransactionModel
@@ -136,6 +151,8 @@ namespace ProductivityApi.Models
         public string? Status { get; set; }
 
         public string? Role { get; set; }
+
+        public string? UserId { get; set; }
     }
 
     public class NewBranchListItemDto
@@ -151,6 +168,8 @@ namespace ProductivityApi.Models
         public string? Region { get; set; }
 
         public string? Megazone { get; set; }
+
+        public string? BranchCode { get; set; }
 
         public string? Status { get; set; }
 
@@ -251,5 +270,100 @@ namespace ProductivityApi.Models
     public class NewBranchIdDto
     {
         public int Id { get; set; }
+    }
+    #region UPDATE BRANCH CODE DTO
+
+    public class UpdateBranchCodeRequestDto
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string BranchCode { get; set; } = string.Empty;
+
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class UpdateBranchCodeResponseDto
+    {
+        public bool IsSuccess { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+    }
+
+    #endregion
+
+    #region ADD BRANCH USER DTO
+
+    public class AddBranchUserRequestDto
+    {
+        [Required]
+        public int Bid { get; set; }
+
+        [Required]
+        public string BranchName { get; set; } = string.Empty;
+
+        [Required]
+        public string Role { get; set; } = string.Empty;
+
+        [Required]
+        public int UserId { get; set; }
+    }
+
+    public class AddBranchUserResponseDto
+    {
+        public int Id { get; set; }
+
+        public string Message { get; set; } = string.Empty;
+    }
+
+    #endregion
+
+    #region GET BRANCH USERS DTO
+
+    public class BranchUserDto
+    {
+        public int Id { get; set; }
+
+        public int Bid { get; set; }
+
+        public string BranchName { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+
+        public int UserId { get; set; }
+    }
+
+    #endregion
+
+    public class NewBranchEmailDeptTriggerDto
+    {
+        public string NotifiedDepartmentGroup { get; set; } = string.Empty;
+        public string NotifiedChecklistIds { get; set; } = string.Empty;    // "10,11,15"
+        public string NotifiedChecklistNames { get; set; } = string.Empty;  // "IT asset dispatch, ..."
+        public int TriggerChecklistId { get; set; }
+    }
+
+    // Result set 2: individual rows (for logging)
+    public class NewBranchEmailLogItemDto
+    {
+        public string NotifiedDepartmentGroup { get; set; } = string.Empty;
+        public int NotifiedChecklistId { get; set; }
+        public int TriggerChecklistId { get; set; }
+    }
+
+    public class NewBranchEmailRecipientDto
+    {
+        public string EmailId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class NewBranchMasterInfoDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public string BranchCode { get; set; } = string.Empty;
     }
 }
