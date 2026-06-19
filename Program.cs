@@ -150,6 +150,9 @@ builder.Services.AddScoped<TrainingDashboardRepository>();
 builder.Services.AddScoped<CibilCorrectionRepository>();
 builder.Services.AddScoped<CibilCorrectionService>();
 
+builder.Services.AddScoped<FixedAssetRepository>();
+builder.Services.AddScoped<FixedAssetService>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

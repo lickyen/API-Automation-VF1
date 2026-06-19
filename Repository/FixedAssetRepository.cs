@@ -1,0 +1,598 @@
+using System.Data;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using ProductivityApi.Models;
+
+namespace ProductivityApi.Repository
+{
+    public class FixedAssetRepository
+    {
+        private readonly string _conStr;
+
+        public FixedAssetRepository(IConfiguration configuration)
+        {
+            _conStr = configuration.GetConnectionString("DBConn");
+        }
+
+        #region Asset Master
+
+        public async Task<IEnumerable<FixedAssetMaster>> GetFixedAssetsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM FixedAssetMaster
+                ORDER BY Id DESC";
+
+            return await conn.QueryAsync<FixedAssetMaster>(sql);
+        }
+
+        public async Task<IEnumerable<FixedAssetMaster>> GetFixedAssetsByBranchAsync(
+            string branchCode
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM FixedAssetMaster
+                WHERE BranchCode = @BranchCode
+                ORDER BY Id DESC";
+
+            return await conn.QueryAsync<FixedAssetMaster>(
+                sql,
+                new { BranchCode = branchCode }
+            );
+        }
+
+        public async Task<int> InsertFixedAssetAsync(FixedAssetInsertDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetMaster
+                (
+                    BranchCode,
+                    BranchName,
+                    AssetCode,
+                    AssetType,
+                    Description,
+                    PurchaseDate,
+                    InvoiceNumber,
+                    Amount,
+                    AssetOwner,
+                    AssetStatus,
+                    Remarks,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @BranchCode,
+                    @BranchName,
+                    @AssetCode,
+                    @AssetType,
+                    @Description,
+                    @PurchaseDate,
+                    @InvoiceNumber,
+                    @Amount,
+                    @AssetOwner,
+                    @AssetStatus,
+                    @Remarks,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(sql, dto);
+        }
+
+        public async Task<int> BulkInsertAssetsAsync(
+    List<FixedAssetBulkInsertDto> assets
+)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            int affected = 0;
+
+            foreach (var asset in assets)
+            {
+                affected += await conn.ExecuteAsync(
+                    @"
+            INSERT INTO FixedAssetMaster
+            (
+                BranchCode,
+                BranchName,
+                AssetCode,
+                AssetType,
+                Description,
+                PurchaseDate,
+                InvoiceNumber,
+                Amount,
+                AssetOwner,
+                AssetStatus,
+                Remarks,
+                CreatedBy
+            )
+            VALUES
+            (
+                @BranchCode,
+                @BranchName,
+                @AssetCode,
+                @AssetType,
+                @Description,
+                @PurchaseDate,
+                @InvoiceNumber,
+                @Amount,
+                @AssetOwner,
+                @AssetStatus,
+                @Remarks,
+                @UpdatedBy
+            )",
+                    asset
+                );
+            }
+
+            return affected;
+        }
+
+        public async Task<bool> UpdateAssetStatusAsync(UpdateAssetStatusDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                UPDATE FixedAssetMaster
+                SET
+                    AssetStatus = @AssetStatus,
+                    Remarks = @Remarks,
+                    UpdatedBy = @UpdatedBy,
+                    UpdatedDate = GETDATE()
+                WHERE Id = @AssetId";
+
+            return await conn.ExecuteAsync(sql, dto) > 0;
+        }
+
+        public async Task<bool> UpdateAssetBranchAsync(UpdateAssetBranchDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                UPDATE FixedAssetMaster
+                SET
+                    BranchCode = @BranchCode,
+                    BranchName = @BranchName,
+                    UpdatedBy = @UpdatedBy,
+                    UpdatedDate = GETDATE()
+                WHERE Id = @AssetId";
+
+            return await conn.ExecuteAsync(sql, dto) > 0;
+        }
+
+        #endregion
+
+        #region Asset Types
+
+        public async Task<IEnumerable<FixedAssetTypeMaster>> GetAssetTypesAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM FixedAssetTypeMaster
+                WHERE IsActive = 1
+                ORDER BY AssetType";
+
+            return await conn.QueryAsync<FixedAssetTypeMaster>(sql);
+        }
+
+        public async Task<int> AddAssetTypeAsync(AddFixedAssetTypeDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetTypeMaster
+                (
+                    AssetType,
+                    IsActive,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @AssetType,
+                    @IsActive,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(sql, dto);
+        }
+
+        #endregion
+
+        #region Addition Requests
+
+        public async Task<int> CreateAdditionRequestAsync(
+            AssetAdditionRequestDto dto,
+            string? photoPath
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetRequestTransactions
+                (
+                    AssetCode,
+                    AssetType,
+                    Description,
+                    PurchaseDate,
+                    SupportingPhoto,
+                    Remarks,
+                    AdditionStatus,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @AssetCode,
+                    @AssetType,
+                    @Description,
+                    @PurchaseDate,
+                    @SupportingPhoto,
+                    @Remarks,
+                    'Pending',
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(
+                sql,
+                new
+                {
+                    dto.AssetCode,
+                    dto.AssetType,
+                    dto.Description,
+                    dto.PurchaseDate,
+                    SupportingPhoto = photoPath,
+                    dto.Remarks,
+                    dto.CreatedBy,
+                }
+            );
+        }
+
+        public async Task<bool> UpdateAdditionStatusAsync(UpdateAdditionStatusDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                UPDATE FixedAssetRequestTransactions
+                SET
+                    AdditionStatus = @AdditionStatus,
+                    Remarks = @Remarks
+                WHERE Id = @Id";
+
+            return await conn.ExecuteAsync(sql, dto) > 0;
+        }
+
+        #endregion
+
+        #region Transfers
+
+        public async Task<int> CreateTransferRequestAsync(AssetTransferRequestDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetTransferTransactions
+                (
+                    AssetId,
+                    SourceBranch,
+                    DestinationBranch,
+                    Remarks,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @AssetId,
+                    @SourceBranch,
+                    @DestinationBranch,
+                    @Remarks,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(sql, dto);
+        }
+
+        public async Task<int> CreateBulkTransferRequestAsync(
+            BulkAssetTransferRequestDto dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            int count = 0;
+
+            foreach (var assetId in dto.AssetIds)
+            {
+                count += await conn.ExecuteAsync(
+                    @"
+                    INSERT INTO FixedAssetTransferTransactions
+                    (
+                        AssetId,
+                        SourceBranch,
+                        DestinationBranch,
+                        Remarks,
+                        CreatedBy
+                    )
+                    VALUES
+                    (
+                        @AssetId,
+                        @SourceBranch,
+                        @DestinationBranch,
+                        @Remarks,
+                        @CreatedBy
+                    )",
+                    new
+                    {
+                        AssetId = assetId,
+                        dto.SourceBranch,
+                        dto.DestinationBranch,
+                        dto.Remarks,
+                        dto.CreatedBy,
+                    }
+                );
+            }
+
+            return count;
+        }
+
+        #endregion
+
+        #region Sale
+
+        public async Task<int> CreateSaleRequestAsync(AssetSaleRequestDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetSaleTransactions
+                (
+                    AssetId,
+                    SaleAmount,
+                    Remarks,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @AssetId,
+                    @SaleAmount,
+                    @Remarks,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(sql, dto);
+        }
+
+        public async Task<int> CreateBulkSaleRequestAsync(
+            BulkAssetSaleRequestDto dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            int count = 0;
+
+            foreach (var assetId in dto.AssetIds)
+            {
+                count += await conn.ExecuteAsync(
+                    @"
+                    INSERT INTO FixedAssetSaleTransactions
+                    (
+                        AssetId,
+                        SaleAmount,
+                        Remarks,
+                        CreatedBy
+                    )
+                    VALUES
+                    (
+                        @AssetId,
+                        @SaleAmount,
+                        @Remarks,
+                        @CreatedBy
+                    )",
+                    new
+                    {
+                        AssetId = assetId,
+                        dto.SaleAmount,
+                        dto.Remarks,
+                        dto.CreatedBy,
+                    }
+                );
+            }
+
+            return count;
+        }
+
+        public async Task<bool> UpdateSaleInvoiceAsync(UpdateSaleInvoiceDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                UPDATE FixedAssetSaleTransactions
+                SET
+                    SaleId = @SaleId,
+                    InvoiceDate = @InvoiceDate,
+                    Vendor = @Vendor,
+                    AmtTransferRef = @AmtTransferRef,
+                    Remarks = @Remarks
+                WHERE Id = @Id";
+
+            return await conn.ExecuteAsync(sql, dto) > 0;
+        }
+
+        #endregion
+
+        #region Audit
+
+        public async Task<int> UploadAuditReportAsync(
+            UploadAuditReportDto dto,
+            string verificationStatus
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetAuditTransactions
+                (
+                    BranchCode,
+                    AssetCode,
+                    AssetType,
+                    AssetList,
+                    QtyVerified,
+                    QtyExpected,
+                    Difference,
+                    Remarks,
+                    VerificationStatus,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @BranchCode,
+                    @AssetCode,
+                    @AssetType,
+                    @AssetList,
+                    @QtyVerified,
+                    @QtyExpected,
+                    @Difference,
+                    @Remarks,
+                    @VerificationStatus,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(
+                sql,
+                new
+                {
+                    dto.BranchCode,
+                    dto.AssetCode,
+                    dto.AssetType,
+                    dto.AssetList,
+                    dto.QtyVerified,
+                    dto.QtyExpected,
+                    dto.Difference,
+                    dto.Remarks,
+                    VerificationStatus = verificationStatus,
+                    dto.CreatedBy,
+                }
+            );
+        }
+
+        public async Task<bool> UpdateVerificationStatusAsync(
+            UpdateVerificationStatusDto dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                UPDATE FixedAssetAuditTransactions
+                SET
+                    VerificationStatus = @VerificationStatus,
+                    Remarks = @Remarks
+                WHERE Id = @Id";
+
+            return await conn.ExecuteAsync(sql, dto) > 0;
+        }
+
+        public async Task<IEnumerable<FixedAssetAuditTransaction>> GetAuditReportAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                SELECT *
+                FROM FixedAssetAuditTransactions
+                ORDER BY Id DESC";
+
+            return await conn.QueryAsync<FixedAssetAuditTransaction>(sql);
+        }
+
+        #endregion
+
+        #region Condition Report
+
+        public async Task<int> CreateConditionReportAsync(
+            ConditionReportDto dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetReportTransactions
+                (
+                    AssetCode,
+                    AssetType,
+                    AssetCondition,
+                    Remarks,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @AssetCode,
+                    @AssetType,
+                    @AssetCondition,
+                    @Remarks,
+                    @CreatedBy
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(sql, dto);
+        }
+
+        #endregion
+
+        #region Logs
+
+        public async Task<int> InsertAssetLogAsync(int assetId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+                INSERT INTO FixedAssetLogs
+                (
+                    BranchCode,
+                    BranchName,
+                    AssetCode,
+                    AssetType,
+                    Description,
+                    PurchaseDate,
+                    InvoiceNumber,
+                    Amount,
+                    AssetOwner,
+                    AssetStatus,
+                    CreatedBy
+                )
+                SELECT
+                    BranchCode,
+                    BranchName,
+                    AssetCode,
+                    AssetType,
+                    Description,
+                    PurchaseDate,
+                    InvoiceNumber,
+                    Amount,
+                    AssetOwner,
+                    AssetStatus,
+                    UpdatedBy
+                FROM FixedAssetMaster
+                WHERE Id = @AssetId";
+
+            return await conn.ExecuteAsync(sql, new { AssetId = assetId });
+        }
+
+        #endregion
+    }
+}
