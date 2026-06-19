@@ -181,22 +181,6 @@ namespace ProductivityApi.Controllers
 
         #region Transfers
 
-        [HttpPost("createTransferRequest")]
-        public async Task<IActionResult> CreateTransferRequest(
-            [FromBody] AssetTransferRequestDto dto
-        )
-        {
-            var result = await _service.CreateTransferRequestAsync(dto);
-
-            return Ok(
-                new Response(
-                    true,
-                    result,
-                    "Transfer request created successfully."
-                )
-            );
-        }
-
         [HttpPost("createBulkTransferRequest")]
         public async Task<IActionResult> CreateBulkTransferRequest(
             [FromBody] BulkAssetTransferRequestDto dto
@@ -237,23 +221,7 @@ namespace ProductivityApi.Controllers
 
         #endregion
 
-        #region Sale
-
-        [HttpPost("createSaleRequest")]
-        public async Task<IActionResult> CreateSaleRequest(
-            [FromBody] AssetSaleRequestDto dto
-        )
-        {
-            var result = await _service.CreateSaleRequestAsync(dto);
-
-            return Ok(
-                new Response(
-                    true,
-                    result,
-                    "Sale request created successfully."
-                )
-            );
-        }
+        #region SaleR
 
         [HttpPost("createBulkSaleRequest")]
         public async Task<IActionResult> CreateBulkSaleRequest(
@@ -351,22 +319,78 @@ namespace ProductivityApi.Controllers
 
         #region Condition Report
 
-        [HttpPost("createConditionReport")]
-        public async Task<IActionResult> CreateConditionReport(
-            [FromBody] ConditionReportDto dto
-        )
+        [HttpPost("bulkCreateConditionReports")]
+        public async Task<IActionResult> CreateConditionReports([FromBody] List<FixedAssetReportTransaction> dto)
         {
-            var result = await _service.CreateConditionReportAsync(dto);
+            if (dto == null || !dto.Any())
+            {
+                return BadRequest(
+                    new Response(false, null, "No records provided.")
+                );
+            }
 
-            return Ok(
-                new Response(
-                    true,
-                    result,
-                    "Condition report submitted successfully."
-                )
-            );
+            var result = await _service.CreateConditionReportsAsync(dto);
+
+            return result > 0
+                ? Ok(new Response(true, result, "Success"))
+                : BadRequest(new Response(false, null, "Failed"));
         }
 
         #endregion
+
+        [HttpGet("getAdditionRequests")]
+        public async Task<IActionResult> GetAdditionRequests()
+        {
+            var result = await _service.GetAdditionRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getAdditionRequestById/{id}")]
+        public async Task<IActionResult> GetAdditionRequestById(int id)
+        {
+            var result = await _service.GetAdditionRequestByIdAsync(id);
+
+            if (result == null)
+            {
+                return NotFound(
+                    new Response(false, message: "Request not found.")
+                );
+            }
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getTransferRequests")]
+        public async Task<IActionResult> GetTransferRequests()
+        {
+            var result = await _service.GetTransferRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getSaleRequests")]
+        public async Task<IActionResult> GetSaleRequests()
+        {
+            var result = await _service.GetSaleRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getAuditReports")]
+        public async Task<IActionResult> GetAuditReports()
+        {
+            var result = await _service.GetAuditReportsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getConditionReports")]
+        public async Task<IActionResult> GetConditionReports()
+        {
+            var result = await _service.GetConditionReportsAsync();
+
+            return Ok(new Response(true, result));
+        }
     }
 }

@@ -180,7 +180,7 @@ namespace ProductivityApi.Repository
                 SELECT *
                 FROM FixedAssetTypeMaster
                 WHERE IsActive = 1
-                ORDER BY AssetType";
+                ORDER BY Id";
 
             return await conn.QueryAsync<FixedAssetTypeMaster>(sql);
         }
@@ -222,6 +222,7 @@ namespace ProductivityApi.Repository
             string sql = @"
                 INSERT INTO FixedAssetRequestTransactions
                 (
+                    BranchCode,
                     AssetCode,
                     AssetType,
                     Description,
@@ -233,6 +234,7 @@ namespace ProductivityApi.Repository
                 )
                 VALUES
                 (
+                    @BranchCode
                     @AssetCode,
                     @AssetType,
                     @Description,
@@ -277,34 +279,6 @@ namespace ProductivityApi.Repository
         #endregion
 
         #region Transfers
-
-        public async Task<int> CreateTransferRequestAsync(AssetTransferRequestDto dto)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                INSERT INTO FixedAssetTransferTransactions
-                (
-                    AssetId,
-                    SourceBranch,
-                    DestinationBranch,
-                    Remarks,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @AssetId,
-                    @SourceBranch,
-                    @DestinationBranch,
-                    @Remarks,
-                    @CreatedBy
-                );
-
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
-            return await conn.ExecuteScalarAsync<int>(sql, dto);
-        }
-
         public async Task<int> CreateBulkTransferRequestAsync(
             BulkAssetTransferRequestDto dto
         )
@@ -350,32 +324,6 @@ namespace ProductivityApi.Repository
         #endregion
 
         #region Sale
-
-        public async Task<int> CreateSaleRequestAsync(AssetSaleRequestDto dto)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                INSERT INTO FixedAssetSaleTransactions
-                (
-                    AssetId,
-                    SaleAmount,
-                    Remarks,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @AssetId,
-                    @SaleAmount,
-                    @Remarks,
-                    @CreatedBy
-                );
-
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
-            return await conn.ExecuteScalarAsync<int>(sql, dto);
-        }
-
         public async Task<int> CreateBulkSaleRequestAsync(
             BulkAssetSaleRequestDto dto
         )
@@ -390,6 +338,7 @@ namespace ProductivityApi.Repository
                     @"
                     INSERT INTO FixedAssetSaleTransactions
                     (
+                        BranchCode,
                         AssetId,
                         SaleAmount,
                         Remarks,
@@ -397,6 +346,7 @@ namespace ProductivityApi.Repository
                     )
                     VALUES
                     (
+                        @BranchCode
                         @AssetId,
                         @SaleAmount,
                         @Remarks,
@@ -405,7 +355,7 @@ namespace ProductivityApi.Repository
                     new
                     {
                         AssetId = assetId,
-                        dto.SaleAmount,
+                        dto.SaleId,
                         dto.Remarks,
                         dto.CreatedBy,
                     }
@@ -422,7 +372,7 @@ namespace ProductivityApi.Repository
             string sql = @"
                 UPDATE FixedAssetSaleTransactions
                 SET
-                    SaleId = @SaleId,
+                    SaleAmount = @SaleAmount
                     InvoiceDate = @InvoiceDate,
                     Vendor = @Vendor,
                     AmtTransferRef = @AmtTransferRef,
@@ -522,34 +472,37 @@ namespace ProductivityApi.Repository
         #endregion
 
         #region Condition Report
-
-        public async Task<int> CreateConditionReportAsync(
-            ConditionReportDto dto
-        )
+        public async Task<int> CreateConditionReportsAsync(List<FixedAssetReportTransaction> reports)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                INSERT INTO FixedAssetReportTransactions
-                (
-                    AssetCode,
-                    AssetType,
-                    AssetCondition,
-                    Remarks,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @AssetCode,
-                    @AssetType,
-                    @AssetCondition,
-                    @Remarks,
-                    @CreatedBy
+            int affected = 0;
+
+            foreach (var report in reports)
+            {
+                affected += await conn.ExecuteAsync(
+                    @"
+            INSERT INTO FixedAssetReportTransactions
+            (
+                AssetCode,
+                AssetType,
+                AssetCondition,
+                Remarks,
+                CreatedBy
+            )
+            VALUES
+            (
+                @AssetCode,
+                @AssetType,
+                @AssetCondition,
+                @Remarks,
+                @CreatedBy
+            )",
+                    report
                 );
+            }
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
-            return await conn.ExecuteScalarAsync<int>(sql, dto);
+            return affected;
         }
 
         #endregion
@@ -594,5 +547,74 @@ namespace ProductivityApi.Repository
         }
 
         #endregion
+
+        public async Task<IEnumerable<FixedAssetRequestTransaction>>
+    GetAdditionRequestsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetRequestTransaction>(
+                @"SELECT *
+          FROM FixedAssetRequestTransactions
+          ORDER BY Id DESC");
+        }
+
+        public async Task<FixedAssetRequestTransaction?> GetAdditionRequestByIdAsync(
+            int id
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<FixedAssetRequestTransaction>(
+                @"SELECT *
+          FROM FixedAssetRequestTransactions
+          WHERE Id = @Id",
+                new { Id = id }
+            );
+        }
+
+        public async Task<IEnumerable<FixedAssetTransferTransaction>>
+            GetTransferRequestsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetTransferTransaction>(
+                @"SELECT *
+          FROM FixedAssetTransferTransactions
+          ORDER BY Id DESC");
+        }
+
+        public async Task<IEnumerable<FixedAssetSaleTransaction>>
+            GetSaleRequestsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetSaleTransaction>(
+                @"SELECT *
+          FROM FixedAssetSaleTransactions
+          ORDER BY Id DESC");
+        }
+
+        public async Task<IEnumerable<FixedAssetAuditTransaction>>
+            GetAuditReportsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetAuditTransaction>(
+                @"SELECT *
+          FROM FixedAssetAuditTransactions
+          ORDER BY Id DESC");
+        }
+
+        public async Task<IEnumerable<FixedAssetReportTransaction>>
+            GetConditionReportsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetReportTransaction>(
+                @"SELECT *
+          FROM FixedAssetReportTransactions
+          ORDER BY Id DESC");
+        }
     }
 }

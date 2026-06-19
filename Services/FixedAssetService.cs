@@ -88,13 +88,6 @@ namespace ProductivityApi.Services
 
         #region Transfers
 
-        public async Task<int> CreateTransferRequestAsync(
-            AssetTransferRequestDto dto
-        )
-        {
-            return await _repository.CreateTransferRequestAsync(dto);
-        }
-
         public async Task<int> CreateBulkTransferRequestAsync(
             BulkAssetTransferRequestDto dto
         )
@@ -119,14 +112,6 @@ namespace ProductivityApi.Services
         #endregion
 
         #region Sale
-
-        public async Task<int> CreateSaleRequestAsync(
-            AssetSaleRequestDto dto
-        )
-        {
-            return await _repository.CreateSaleRequestAsync(dto);
-        }
-
         public async Task<int> CreateBulkSaleRequestAsync(
             BulkAssetSaleRequestDto dto
         )
@@ -175,14 +160,47 @@ namespace ProductivityApi.Services
         #endregion
 
         #region Condition Report
-
-        public async Task<int> CreateConditionReportAsync(
-            ConditionReportDto dto
-        )
+        public async Task<int> CreateConditionReportsAsync(List<FixedAssetReportTransaction> reports)
         {
-            return await _repository.CreateConditionReportAsync(dto);
+            return await _repository.CreateConditionReportsAsync(reports);
         }
 
         #endregion
+
+        public async Task<IEnumerable<FixedAssetRequestTransaction>>
+    GetAdditionRequestsAsync()
+        {
+            return await _repository.GetAdditionRequestsAsync();
+        }
+
+        public async Task<FixedAssetRequestTransaction?>
+            GetAdditionRequestByIdAsync(int id)
+        {
+            return await _repository.GetAdditionRequestByIdAsync(id);
+        }
+
+        public async Task<IEnumerable<FixedAssetTransferTransaction>>
+            GetTransferRequestsAsync()
+        {
+            return await _repository.GetTransferRequestsAsync();
+        }
+
+        public async Task<IEnumerable<FixedAssetSaleTransaction>>
+            GetSaleRequestsAsync()
+        {
+            return await _repository.GetSaleRequestsAsync();
+        }
+
+        public async Task<IEnumerable<FixedAssetAuditTransaction>>
+            GetAuditReportsAsync()
+        {
+            return await _repository.GetAuditReportsAsync();
+        }
+
+        public async Task<IEnumerable<FixedAssetReportTransaction>>
+            GetConditionReportsAsync()
+        {
+            return await _repository.GetConditionReportsAsync();
+        }
     }
 }

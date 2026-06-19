@@ -92,6 +92,7 @@ namespace ProductivityApi.Models
     public class FixedAssetRequestTransaction
     {
         public int Id { get; set; }
+        public string? BranchCode { get; set; }
 
         public string? AssetCode { get; set; }
 
@@ -136,6 +137,8 @@ namespace ProductivityApi.Models
         public string? SaleId { get; set; }
 
         public int AssetId { get; set; }
+
+        public string? BranchCode { get; set; }
 
         public decimal? SaleAmount { get; set; }
 
@@ -182,6 +185,7 @@ namespace ProductivityApi.Models
     public class FixedAssetReportTransaction
     {
         public int Id { get; set; }
+        public string? BranchCode { get; set; }
 
         public string? AssetCode { get; set; }
 
@@ -250,6 +254,7 @@ namespace ProductivityApi.Models
 
     public class AssetAdditionRequestDto
     {
+        public string? BranchCode { get; set; }
         public string AssetCode { get; set; } = string.Empty;
 
         public string AssetType { get; set; } = string.Empty;
@@ -312,23 +317,13 @@ namespace ProductivityApi.Models
 
         public string UpdatedBy { get; set; } = string.Empty;
     }
-
-    public class AssetSaleRequestDto
-    {
-        public int AssetId { get; set; }
-
-        public decimal SaleAmount { get; set; }
-
-        public string? Remarks { get; set; }
-
-        public string CreatedBy { get; set; } = string.Empty;
-    }
-
     public class BulkAssetSaleRequestDto
     {
         public List<int> AssetIds { get; set; } = new();
 
-        public decimal SaleAmount { get; set; }
+        public string? BranchCode { get; set; }
+
+        public decimal SaleId { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -339,7 +334,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
 
-        public string SaleId { get; set; } = string.Empty;
+        public string SaleAmount { get; set; } = string.Empty;
 
         public DateTime InvoiceDate { get; set; }
 
@@ -386,6 +381,7 @@ namespace ProductivityApi.Models
 
     public class ConditionReportDto
     {
+        public string? BranchCode { get; set; }
         public string AssetCode { get; set; } = string.Empty;
 
         public string AssetType { get; set; } = string.Empty;
