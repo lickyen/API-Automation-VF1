@@ -8,7 +8,7 @@ using ProductivityApi.Models.PLF;
 using DocumentFormat.OpenXml.Office.Word;
 using Azure;
 
-namespace ProductivityApi.Repositories
+namespace ProductivityApi.Repository
 {
     public class SOALODFCLRepository
     {
