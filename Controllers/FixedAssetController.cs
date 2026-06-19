@@ -136,6 +136,29 @@ namespace ProductivityApi.Controllers
 
         #region Addition Requests
 
+        [HttpGet("getAdditionRequests")]
+        public async Task<IActionResult> GetAdditionRequests()
+        {
+            var result = await _service.GetAdditionRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
+        [HttpGet("getAdditionRequestById/{id}")]
+        public async Task<IActionResult> GetAdditionRequestById(int id)
+        {
+            var result = await _service.GetAdditionRequestByIdAsync(id);
+
+            if (result == null)
+            {
+                return NotFound(
+                    new Response(false, message: "Request not found.")
+                );
+            }
+
+            return Ok(new Response(true, result));
+        }
+
         [HttpPost("requestAssetAddition")]
         public async Task<IActionResult> RequestAssetAddition(
             [FromBody] AssetAdditionRequestDto dto
@@ -181,6 +204,14 @@ namespace ProductivityApi.Controllers
 
         #region Transfers
 
+        [HttpGet("getTransferRequests")]
+        public async Task<IActionResult> GetTransferRequests()
+        {
+            var result = await _service.GetTransferRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
         [HttpPost("createBulkTransferRequest")]
         public async Task<IActionResult> CreateBulkTransferRequest(
             [FromBody] BulkAssetTransferRequestDto dto
@@ -221,7 +252,15 @@ namespace ProductivityApi.Controllers
 
         #endregion
 
-        #region SaleR
+        #region Sale
+
+        [HttpGet("getSaleRequests")]
+        public async Task<IActionResult> GetSaleRequests()
+        {
+            var result = await _service.GetSaleRequestsAsync();
+
+            return Ok(new Response(true, result));
+        }
 
         [HttpPost("createBulkSaleRequest")]
         public async Task<IActionResult> CreateBulkSaleRequest(
@@ -264,6 +303,14 @@ namespace ProductivityApi.Controllers
         #endregion
 
         #region Audit
+
+        [HttpGet("getAuditReports")]
+        public async Task<IActionResult> GetAuditReports()
+        {
+            var result = await _service.GetAuditReportsAsync();
+
+            return Ok(new Response(true, result));
+        }
 
         [HttpPost("uploadAuditReport")]
         public async Task<IActionResult> UploadAuditReport(
@@ -319,8 +366,18 @@ namespace ProductivityApi.Controllers
 
         #region Condition Report
 
+        [HttpGet("getConditionReports")]
+        public async Task<IActionResult> GetConditionReports()
+        {
+            var result = await _service.GetConditionReportsAsync();
+
+            return Ok(new Response(true, result));
+        }
+
         [HttpPost("bulkCreateConditionReports")]
-        public async Task<IActionResult> CreateConditionReports([FromBody] List<FixedAssetReportTransaction> dto)
+        public async Task<IActionResult> CreateConditionReports(
+            [FromBody] List<FixedAssetReportTransaction> dto
+        )
         {
             if (dto == null || !dto.Any())
             {
@@ -337,60 +394,5 @@ namespace ProductivityApi.Controllers
         }
 
         #endregion
-
-        [HttpGet("getAdditionRequests")]
-        public async Task<IActionResult> GetAdditionRequests()
-        {
-            var result = await _service.GetAdditionRequestsAsync();
-
-            return Ok(new Response(true, result));
-        }
-
-        [HttpGet("getAdditionRequestById/{id}")]
-        public async Task<IActionResult> GetAdditionRequestById(int id)
-        {
-            var result = await _service.GetAdditionRequestByIdAsync(id);
-
-            if (result == null)
-            {
-                return NotFound(
-                    new Response(false, message: "Request not found.")
-                );
-            }
-
-            return Ok(new Response(true, result));
-        }
-
-        [HttpGet("getTransferRequests")]
-        public async Task<IActionResult> GetTransferRequests()
-        {
-            var result = await _service.GetTransferRequestsAsync();
-
-            return Ok(new Response(true, result));
-        }
-
-        [HttpGet("getSaleRequests")]
-        public async Task<IActionResult> GetSaleRequests()
-        {
-            var result = await _service.GetSaleRequestsAsync();
-
-            return Ok(new Response(true, result));
-        }
-
-        [HttpGet("getAuditReports")]
-        public async Task<IActionResult> GetAuditReports()
-        {
-            var result = await _service.GetAuditReportsAsync();
-
-            return Ok(new Response(true, result));
-        }
-
-        [HttpGet("getConditionReports")]
-        public async Task<IActionResult> GetConditionReports()
-        {
-            var result = await _service.GetConditionReportsAsync();
-
-            return Ok(new Response(true, result));
-        }
     }
 }
