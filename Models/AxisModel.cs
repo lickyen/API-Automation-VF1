@@ -2,11 +2,11 @@
 {
     public class AxisModel
     {
-        public string UTR { get; set; }
-        public string Bene_acc_no { get; set; }
-        public string Req_type { get; set; }
-        public string Req_date { get; set; }
-        public string Txn_amnt { get; set; }
+        public string? UTR { get; set; }
+        public string? Bene_acc_no { get; set; }
+        public string? Req_type { get; set; }
+        public string? Req_date { get; set; }
+        public string? Txn_amnt { get; set; }
         public string? Pmode { get; set; }
         public string? Sndr_acnt { get; set; }
         public string? Sndr_nm { get; set; }

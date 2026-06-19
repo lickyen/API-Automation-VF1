@@ -61,7 +61,7 @@ namespace ProductivityApi.Services
             return SendRequest<GenerateStatementResponse>(HttpMethod.Post, endPoint, request, serviceName: "generateStatement", "3");
         }
 
-        //SOA Download step -1
+        //SOA Download step -2
         public Task<TransferLetterResponse> TransferLetter(TransferLetterRequest request)
         {
             var endPoint = "pff-api/services/loanLetterRest/loanLetter/transferLetter";

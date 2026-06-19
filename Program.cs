@@ -192,7 +192,8 @@ app.UseSerilogRequestLogging(options =>
 
 //app.UseMiddleware<LoggingMiddleware>();
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection(); //HTTPS Only
+app.UseHsts(); // enables HTTP Strict Transport Security (HSTS).
 
 app.UseCors("AllowFrontend");
 

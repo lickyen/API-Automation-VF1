@@ -8,12 +8,10 @@ namespace ProductivityApi.Repository
     public class VCPRepository
     {
         private readonly string _connectionString;
-
-        public VCPRepository(string connectionString)
+        public VCPRepository(IConfiguration configuration)
         {
-            _connectionString = connectionString;
+            _connectionString = configuration.GetConnectionString("DBConn");
         }
-
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
         public async Task<VCPModel?> GetByIdAsync(int id)

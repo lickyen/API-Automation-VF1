@@ -697,8 +697,13 @@ namespace ProductivityApi.Services
                         Base64 = Convert.ToBase64String(File.ReadAllBytes(outputFilePath)),
                         FileName = fileName
                     };
+                    return (responsedto, "Success");
                 }
-                return (responsedto, "Success");
+                else
+                {
+                    return (null, "FCL not available in the path.");
+                }
+                   
             }
             else
             {
@@ -712,7 +717,7 @@ namespace ProductivityApi.Services
                 {
                     var basePath = _appSettings.FilePaths.SOALODFilePath;
                     // var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForeclosureLetter.pdf");
-                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "FCL", "PaymentReceipt.pdf");
+                    var TemplatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "FCL", "ForeclosureLetter.pdf");
 
                     if (!File.Exists(TemplatePath))
                         throw new FileNotFoundException($"template file not found: {TemplatePath}");
@@ -735,10 +740,10 @@ namespace ProductivityApi.Services
                                 fields.SetField("Loan Account No", data.Lan);
                                 fields.SetFieldProperty("Loan Account No", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("Branch Name", soalod.Branch_Name);
-                                fields.SetFieldProperty("Branch Name", "setfflags", PdfFormField.FF_READ_ONLY, null);
+                                fields.SetField("Branch", soalod.Branch_Name);
+                                fields.SetFieldProperty("Branch", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
-                                fields.SetField("LAN Name", data.Lan);
+                                fields.SetField("LAN", data.Lan);
                                 fields.SetFieldProperty("LAN", "setfflags", PdfFormField.FF_READ_ONLY, null);
 
                                 fields.SetField("Date", today);
