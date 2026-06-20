@@ -11,17 +11,17 @@ GO
 SELECT * FROM FixedAssetLogs;
 GO
 
-SELECT * FROM FixedAssetRequestTransactions; -- add branch 
+SELECT * FROM FixedAssetRequestTransactions;
 GO
 
 SELECT * FROM FixedAssetTransferTransactions;
 GO
 
-SELECT * FROM FixedAssetSaleTransactions; -- add branch code
+SELECT * FROM FixedAssetSaleTransactions;
 GO
 
 SELECT * FROM FixedAssetAuditTransactions;
 GO
 
-SELECT * FROM FixedAssetReportTransactions; -- add branch code
+SELECT * FROM FixedAssetReportTransactions;
 GO

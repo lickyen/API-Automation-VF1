@@ -95,20 +95,6 @@ namespace ProductivityApi.Services
             return await _repository.CreateBulkTransferRequestAsync(dto);
         }
 
-        public async Task<bool> UpdateAssetBranchAsync(
-            UpdateAssetBranchDto dto
-        )
-        {
-            var result = await _repository.UpdateAssetBranchAsync(dto);
-
-            if (result)
-            {
-                await _repository.InsertAssetLogAsync(dto.AssetId);
-            }
-
-            return result;
-        }
-
         #endregion
 
         #region Sale
@@ -129,19 +115,6 @@ namespace ProductivityApi.Services
         #endregion
 
         #region Audit
-
-        public async Task<int> UploadAuditReportAsync(
-            UploadAuditReportDto dto
-        )
-        {
-            string verificationStatus =
-                dto.Difference == 0 ? "Matched" : "Mismatch";
-
-            return await _repository.UploadAuditReportAsync(
-                dto,
-                verificationStatus
-            );
-        }
 
         public async Task<bool> UpdateVerificationStatusAsync(
             UpdateVerificationStatusDto dto
@@ -201,6 +174,40 @@ namespace ProductivityApi.Services
             GetConditionReportsAsync()
         {
             return await _repository.GetConditionReportsAsync();
+        }
+
+        public async Task<int> UpdateAssetAsync(
+    UpdateFixedAssetDto dto
+)
+        {
+            return await _repository.UpdateAssetAsync(dto);
+        }
+
+        public async Task<int> UpdateAssetTypeStatusAsync(
+            UpdateAssetTypeStatusDto dto
+        )
+        {
+            return await _repository.UpdateAssetTypeStatusAsync(dto);
+        }
+
+        public async Task<int> BulkUpdateAssetBranchAsync(
+            List<BulkUpdateAssetBranchDto> dto
+        )
+        {
+            return await _repository.BulkUpdateAssetBranchAsync(dto);
+        }
+
+        public async Task<int> CreateAuditReportsAsync(
+            List<FixedAssetAuditTransaction> reports
+        )
+        {
+            return await _repository.CreateAuditReportsAsync(reports);
+        }
+
+        public async Task<IEnumerable<FixedAssetAuditTransaction>>
+            GetAuditReportsByBranchAsync(string branchCode)
+        {
+            return await _repository.GetAuditReportsByBranchAsync(branchCode);
         }
     }
 }

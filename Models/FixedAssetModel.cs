@@ -306,24 +306,11 @@ namespace ProductivityApi.Models
 
         public string CreatedBy { get; set; } = string.Empty;
     }
-
-    public class UpdateAssetBranchDto
-    {
-        public int AssetId { get; set; }
-
-        public string BranchCode { get; set; } = string.Empty;
-
-        public string BranchName { get; set; } = string.Empty;
-
-        public string UpdatedBy { get; set; } = string.Empty;
-    }
     public class BulkAssetSaleRequestDto
     {
         public List<int> AssetIds { get; set; } = new();
 
         public string? BranchCode { get; set; }
-
-        public decimal SaleId { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -345,27 +332,6 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
 
         public string UpdatedBy { get; set; } = string.Empty;
-    }
-
-    public class UploadAuditReportDto
-    {
-        public string BranchCode { get; set; } = string.Empty;
-
-        public string? AssetCode { get; set; }
-
-        public string? AssetType { get; set; }
-
-        public string AssetList { get; set; } = string.Empty;
-
-        public int QtyVerified { get; set; }
-
-        public int QtyExpected { get; set; }
-
-        public int Difference { get; set; }
-
-        public string? Remarks { get; set; }
-
-        public string CreatedBy { get; set; } = string.Empty;
     }
 
     public class UpdateVerificationStatusDto
@@ -419,6 +385,59 @@ namespace ProductivityApi.Models
 
         public string UpdatedBy { get; set; } = string.Empty;
     }
+
+    public class UpdateFixedAssetDto
+    {
+        public int Id { get; set; }
+
+        public string BranchCode { get; set; } = string.Empty;
+
+        public string BranchName { get; set; } = string.Empty;
+
+        public string AssetCode { get; set; } = string.Empty;
+
+        public string AssetType { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        public DateTime? PurchaseDate { get; set; }
+
+        public string? InvoiceNumber { get; set; }
+
+        public int? Amount { get; set; }
+
+        public string? AssetOwner { get; set; }
+
+        public string? Remarks { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class UpdateAssetTypeStatusDto
+    {
+        public int Id { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class BulkUpdateAssetBranchDto
+    {
+        public int AssetId { get; set; }
+
+        public string DestinationBranchCode { get; set; } = string.Empty;
+
+        public string DestinationBranchName { get; set; } = string.Empty;
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class AuditReportBulkDto
+    {
+        public List<FixedAssetAuditTransaction> Reports { get; set; } = new();
+    }
+
 
     #endregion
 }

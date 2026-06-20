@@ -63,23 +63,14 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpPost("bulkInsertAssets")]
-        public async Task<IActionResult> BulkInsertAssets(
-            [FromBody] List<FixedAssetBulkInsertDto> dto
+        [HttpPut("updateAsset")]
+        public async Task<IActionResult> UpdateAsset(
+            [FromBody] UpdateFixedAssetDto dto
         )
         {
-            if (dto == null || !dto.Any())
-            {
-                return BadRequest(
-                    new Response(false, null, "No records provided.")
-                );
-            }
+            var result = await _service.UpdateAssetAsync(dto);
 
-            var result = await _service.BulkInsertAssetsAsync(dto);
-
-            return result > 0
-                ? Ok(new Response(true, result, "Success"))
-                : BadRequest(new Response(false, null, "Failed"));
+            return Ok(new Response(true, result));
         }
 
         [HttpPut("updateAssetStatus")]
@@ -102,6 +93,35 @@ namespace ProductivityApi.Controllers
                     message: "Asset status updated successfully."
                 )
             );
+        }
+
+        [HttpPost("bulkInsertAssets")]
+        public async Task<IActionResult> BulkInsertAssets(
+            [FromBody] List<FixedAssetBulkInsertDto> dto
+        )
+        {
+            if (dto == null || !dto.Any())
+            {
+                return BadRequest(
+                    new Response(false, null, "No records provided.")
+                );
+            }
+
+            var result = await _service.BulkInsertAssetsAsync(dto);
+
+            return result > 0
+                ? Ok(new Response(true, result, "Success"))
+                : BadRequest(new Response(false, null, "Failed"));
+        }
+
+        [HttpPut("bulkUpdateAssetBranch")]
+        public async Task<IActionResult> BulkUpdateAssetBranch(
+            [FromBody] List<BulkUpdateAssetBranchDto> dto
+        )
+        {
+            var result = await _service.BulkUpdateAssetBranchAsync(dto);
+
+            return Ok(new Response(true, result));
         }
 
         #endregion
@@ -130,6 +150,16 @@ namespace ProductivityApi.Controllers
                     "Asset type added successfully."
                 )
             );
+        }
+
+        [HttpPut("disableAssetType")]
+        public async Task<IActionResult> DisableAssetType(
+            [FromBody] UpdateAssetTypeStatusDto dto
+        )
+        {
+            var result = await _service.UpdateAssetTypeStatusAsync(dto);
+
+            return Ok(new Response(true, result));
         }
 
         #endregion
@@ -228,28 +258,6 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpPut("updateAssetBranch")]
-        public async Task<IActionResult> UpdateAssetBranch(
-            [FromBody] UpdateAssetBranchDto dto
-        )
-        {
-            var result = await _service.UpdateAssetBranchAsync(dto);
-
-            if (!result)
-            {
-                return BadRequest(
-                    new Response(false, message: "Update failed.")
-                );
-            }
-
-            return Ok(
-                new Response(
-                    true,
-                    message: "Asset branch updated successfully."
-                )
-            );
-        }
-
         #endregion
 
         #region Sale
@@ -312,20 +320,25 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result));
         }
 
-        [HttpPost("uploadAuditReport")]
-        public async Task<IActionResult> UploadAuditReport(
-            [FromBody] UploadAuditReportDto dto
+        [HttpGet("getAuditReportsByBranch")]
+        public async Task<IActionResult> GetAuditReportsByBranch(
+            [FromQuery] string branchCode
         )
         {
-            var result = await _service.UploadAuditReportAsync(dto);
+            var result =
+                await _service.GetAuditReportsByBranchAsync(branchCode);
 
-            return Ok(
-                new Response(
-                    true,
-                    result,
-                    "Audit report uploaded successfully."
-                )
-            );
+            return Ok(new Response(true, result));
+        }
+
+        [HttpPost("uploadAuditReports")]
+        public async Task<IActionResult> UploadAuditReports(
+            [FromBody] List<FixedAssetAuditTransaction> dto
+        )
+        {
+            var result = await _service.CreateAuditReportsAsync(dto);
+
+            return Ok(new Response(true, result));
         }
 
         [HttpPut("updateVerificationStatus")]

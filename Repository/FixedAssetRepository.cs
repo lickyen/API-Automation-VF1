@@ -152,22 +152,6 @@ namespace ProductivityApi.Repository
             return await conn.ExecuteAsync(sql, dto) > 0;
         }
 
-        public async Task<bool> UpdateAssetBranchAsync(UpdateAssetBranchDto dto)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                UPDATE FixedAssetMaster
-                SET
-                    BranchCode = @BranchCode,
-                    BranchName = @BranchName,
-                    UpdatedBy = @UpdatedBy,
-                    UpdatedDate = GETDATE()
-                WHERE Id = @AssetId";
-
-            return await conn.ExecuteAsync(sql, dto) > 0;
-        }
-
         #endregion
 
         #region Asset Types
@@ -332,32 +316,35 @@ namespace ProductivityApi.Repository
 
             int count = 0;
 
+            var saleId = await GenerateSaleIdAsync();
+
             foreach (var assetId in dto.AssetIds)
             {
                 count += await conn.ExecuteAsync(
                     @"
-                    INSERT INTO FixedAssetSaleTransactions
-                    (
-                        BranchCode,
-                        AssetId,
-                        SaleAmount,
-                        Remarks,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @BranchCode
-                        @AssetId,
-                        @SaleAmount,
-                        @Remarks,
-                        @CreatedBy
-                    )",
+            INSERT INTO FixedAssetSaleTransactions
+            (
+                SaleId,
+                BranchCode,
+                AssetId,
+                Remarks,
+                CreatedBy
+            )
+            VALUES
+            (
+                @SaleId,
+                @BranchCode,
+                @AssetId,
+                @Remarks,
+                @CreatedBy
+            )",
                     new
                     {
+                        SaleId = saleId,
+                        dto.BranchCode,
                         AssetId = assetId,
-                        dto.SaleId,
                         dto.Remarks,
-                        dto.CreatedBy,
+                        dto.CreatedBy
                     }
                 );
             }
@@ -385,61 +372,6 @@ namespace ProductivityApi.Repository
         #endregion
 
         #region Audit
-
-        public async Task<int> UploadAuditReportAsync(
-            UploadAuditReportDto dto,
-            string verificationStatus
-        )
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                INSERT INTO FixedAssetAuditTransactions
-                (
-                    BranchCode,
-                    AssetCode,
-                    AssetType,
-                    AssetList,
-                    QtyVerified,
-                    QtyExpected,
-                    Difference,
-                    Remarks,
-                    VerificationStatus,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @BranchCode,
-                    @AssetCode,
-                    @AssetType,
-                    @AssetList,
-                    @QtyVerified,
-                    @QtyExpected,
-                    @Difference,
-                    @Remarks,
-                    @VerificationStatus,
-                    @CreatedBy
-                );
-
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
-            return await conn.ExecuteScalarAsync<int>(
-                sql,
-                new
-                {
-                    dto.BranchCode,
-                    dto.AssetCode,
-                    dto.AssetType,
-                    dto.AssetList,
-                    dto.QtyVerified,
-                    dto.QtyExpected,
-                    dto.Difference,
-                    dto.Remarks,
-                    VerificationStatus = verificationStatus,
-                    dto.CreatedBy,
-                }
-            );
-        }
 
         public async Task<bool> UpdateVerificationStatusAsync(
             UpdateVerificationStatusDto dto
@@ -615,6 +547,155 @@ namespace ProductivityApi.Repository
                 @"SELECT *
           FROM FixedAssetReportTransactions
           ORDER BY Id DESC");
+        }
+
+        public async Task<int> UpdateAssetAsync(UpdateFixedAssetDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.ExecuteAsync(
+                @"
+        UPDATE FixedAssetMaster
+        SET
+            BranchCode=@BranchCode,
+            BranchName=@BranchName,
+            AssetCode=@AssetCode,
+            AssetType=@AssetType,
+            Description=@Description,
+            PurchaseDate=@PurchaseDate,
+            InvoiceNumber=@InvoiceNumber,
+            Amount=@Amount,
+            AssetOwner=@AssetOwner,
+            Remarks=@Remarks,
+            UpdatedBy=@UpdatedBy,
+            UpdatedDate=GETDATE()
+        WHERE Id=@Id",
+                dto
+            );
+        }
+
+        public async Task<int> UpdateAssetTypeStatusAsync(
+            UpdateAssetTypeStatusDto dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.ExecuteAsync(
+                @"
+        UPDATE FixedAssetTypeMaster
+        SET
+            IsActive=@IsActive,
+            UpdatedBy=@UpdatedBy,
+            UpdatedDate=GETDATE()
+        WHERE Id=@Id",
+                dto
+            );
+        }
+
+        public async Task<int> BulkUpdateAssetBranchAsync(
+            List<BulkUpdateAssetBranchDto> dto
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            int affected = 0;
+
+            foreach (var item in dto)
+            {
+                affected += await conn.ExecuteAsync(
+                    @"
+            UPDATE FixedAssetMaster
+            SET
+                BranchCode=@DestinationBranchCode,
+                BranchName=@DestinationBranchName,
+                UpdatedBy=@UpdatedBy,
+                UpdatedDate=GETDATE()
+            WHERE Id=@AssetId",
+                    item
+                );
+            }
+
+            return affected;
+        }
+
+        public async Task<string> GenerateSaleIdAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var lastSaleId = await conn.ExecuteScalarAsync<string>(
+                @"
+        SELECT TOP 1 SaleId
+        FROM FixedAssetSaleTransactions
+        WHERE SaleId IS NOT NULL
+        ORDER BY Id DESC"
+            );
+
+            if (string.IsNullOrWhiteSpace(lastSaleId))
+                return "SAL000001";
+
+            var numericPart = int.Parse(lastSaleId.Replace("SAL", ""));
+
+            return $"SAL{(numericPart + 1):D6}";
+        }
+
+        public async Task<int> CreateAuditReportsAsync(
+            List<FixedAssetAuditTransaction> reports
+        )
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            int affected = 0;
+
+            foreach (var report in reports)
+            {
+                affected += await conn.ExecuteAsync(
+                    @"
+            INSERT INTO FixedAssetAuditTransactions
+            (
+                BranchCode,
+                AssetCode,
+                AssetType,
+                AssetList,
+                QtyVerified,
+                QtyExpected,
+                Difference,
+                Remarks,
+                VerificationStatus,
+                CreatedBy
+            )
+            VALUES
+            (
+                @BranchCode,
+                @AssetCode,
+                @AssetType,
+                @AssetList,
+                @QtyVerified,
+                @QtyExpected,
+                @Difference,
+                @Remarks,
+                @VerificationStatus,
+                @CreatedBy
+            )",
+                    report
+                );
+            }
+
+            return affected;
+        }
+
+        public async Task<IEnumerable<FixedAssetAuditTransaction>>
+            GetAuditReportsByBranchAsync(string branchCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryAsync<FixedAssetAuditTransaction>(
+                @"
+        SELECT *
+        FROM FixedAssetAuditTransactions
+        WHERE BranchCode=@BranchCode
+        ORDER BY Id DESC",
+                new { BranchCode = branchCode }
+            );
         }
     }
 }
