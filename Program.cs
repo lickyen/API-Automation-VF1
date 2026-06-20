@@ -102,6 +102,7 @@ builder.Services.AddScoped<VCPService>();
 builder.Services.AddScoped<AxisService>();
 builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
+builder.Services.AddScoped<RazorpayService>();
 
 
 builder.Services.AddScoped<UserRepository>();
