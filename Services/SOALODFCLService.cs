@@ -1,5 +1,5 @@
 ﻿using ProductivityApi.Models;
-using ProductivityApi.Repositories;
+using ProductivityApi.Repository;
 using Serilog;
 using System.Runtime.InteropServices;
 using System.Data;
@@ -10,7 +10,6 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using System.Reflection;
 using Azure;
 using DocumentFormat.OpenXml.Wordprocessing;
-using ProductivityApi.Repository;
 using Microsoft.IdentityModel.Tokens;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using iTextSharp.text.pdf;

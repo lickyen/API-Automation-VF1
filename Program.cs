@@ -3,7 +3,6 @@ using Hangfire.Dashboard;
 using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
-using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
