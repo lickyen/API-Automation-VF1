@@ -76,12 +76,10 @@ namespace ProductivityApi.Repository
                 command.Parameters.AddWithValue("@UserID", user.UserId);
                 command.Parameters.AddWithValue("@UserName", user.UserName);
                 command.Parameters.AddWithValue("@Role", user.Role);
-                command.Parameters.AddWithValue("@Designation", (object?)user.Designation ?? DBNull.Value);
                 command.Parameters.AddWithValue("@BranchCode", (object?)user.BranchCode ?? DBNull.Value);
                 command.Parameters.AddWithValue("@BranchName", (object?)user.BranchName ?? DBNull.Value);
                 command.Parameters.AddWithValue("@ClusterName", (object?)user.ClusterName ?? DBNull.Value);
                 command.Parameters.AddWithValue("@State", (object?)user.State ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Email", (object?)user.Email ?? DBNull.Value);
                 command.Parameters.AddWithValue("@Department", (object?)user.Department ?? DBNull.Value);
                 command.Parameters.AddWithValue("@CreatedBy", user.CreatedBy);
 
@@ -111,12 +109,10 @@ namespace ProductivityApi.Repository
                 command.Parameters.AddWithValue("@UserID", user.UserId);
                 command.Parameters.AddWithValue("@UserName", (object?)user.UserName ?? DBNull.Value);
                 command.Parameters.AddWithValue("@Role", (object?)user.Role ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Designation", (object?)user.Designation ?? DBNull.Value);
                 command.Parameters.AddWithValue("@BranchCode", (object?)user.BranchCode ?? DBNull.Value);
                 command.Parameters.AddWithValue("@BranchName", (object?)user.BranchName ?? DBNull.Value);
                 command.Parameters.AddWithValue("@ClusterName", (object?)user.ClusterName ?? DBNull.Value);
                 command.Parameters.AddWithValue("@State", (object?)user.State ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Email", (object?)user.Email ?? DBNull.Value);
                 command.Parameters.AddWithValue("@Department", (object?)user.Department ?? DBNull.Value);
                 command.Parameters.AddWithValue("@UpdatedBy", user.UpdatedBy);
 

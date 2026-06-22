@@ -55,8 +55,6 @@ namespace ProductivityApi.Models
         [Required]
         public string Role { get; set; } = string.Empty;
 
-        public string? Designation { get; set; }
-
         public string? BranchCode { get; set; }
 
         public string? BranchName { get; set; }
@@ -64,11 +62,6 @@ namespace ProductivityApi.Models
         public string? ClusterName { get; set; }
 
         public string? State { get; set; }
-
-        public int? PreferedLangID { get; set; }
-
-        [EmailAddress]
-        public string? Email { get; set; }
 
         public string? Department { get; set; }
 
@@ -85,8 +78,6 @@ namespace ProductivityApi.Models
 
         public string? Role { get; set; }
 
-        public string? Designation { get; set; }
-
         public string? BranchCode { get; set; }
 
         public string? BranchName { get; set; }
@@ -94,11 +85,6 @@ namespace ProductivityApi.Models
         public string? ClusterName { get; set; }
 
         public string? State { get; set; }
-
-        public int? PreferedLangID { get; set; }
-
-        [EmailAddress]
-        public string? Email { get; set; }
 
         public string? Department { get; set; }
 
