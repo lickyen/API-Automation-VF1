@@ -1,5 +1,8 @@
-SELECT * FROM BranchMaster
-Where BranchId = '11117';
+SELECT * FROM BranchMaster;
+GO
+
+SELECT * FROM usermaster
+Where EmpId = '1004';
 GO
 
 SELECT * FROM FixedAssetMaster;

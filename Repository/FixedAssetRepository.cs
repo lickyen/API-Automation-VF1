@@ -163,7 +163,6 @@ namespace ProductivityApi.Repository
             string sql = @"
                 SELECT *
                 FROM FixedAssetTypeMaster
-                WHERE IsActive = 1
                 ORDER BY Id";
 
             return await conn.QueryAsync<FixedAssetTypeMaster>(sql);
