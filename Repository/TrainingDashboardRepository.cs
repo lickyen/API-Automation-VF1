@@ -114,25 +114,14 @@ namespace ProductivityApi.Repository
         // DOWNLOAD REPORT
         // =========================================
 
-        public DataTable DownloadReport()
+        public async Task<IEnumerable<dynamic>> DownloadReportAsync()
         {
-            using SqlConnection conn = new(_conStr);
+            using var conn = new SqlConnection(_conStr);
 
-            using SqlCommand cmd = new(
+            return await conn.QueryAsync(
                 "SP_GetTrainingReport",
-                conn);
-
-            cmd.CommandType = CommandType.StoredProcedure;
-
-            DataTable dt = new();
-
-            conn.Open();
-
-            using SqlDataReader reader = cmd.ExecuteReader();
-
-            dt.Load(reader);
-
-            return dt;
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

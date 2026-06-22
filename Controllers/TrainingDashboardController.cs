@@ -194,32 +194,25 @@ namespace ProductivityApi.Controllers
         // =========================================
 
         [HttpGet("report")]
-        public IActionResult DownloadReport()
+        public async Task<IActionResult> DownloadReport()
         {
             try
             {
-                var dt = _service.DownloadReport();
+                var excelBytes = await _service.DownloadReportExcelAsync();
 
-                using XLWorkbook wb = new();
-
-                wb.Worksheets.Add(dt, "Report");
-
-                using MemoryStream stream = new();
-
-                wb.SaveAs(stream);
+                if (excelBytes == null)
+                    return NoContent();
 
                 return File(
-                    stream.ToArray(),
+                    excelBytes,
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    $"TrainingReport_{DateTime.Now:ddMMyyyy}.xlsx"
-                );
+                    $"TrainingReport_{DateTime.Now:ddMMyyyy}.xlsx");
             }
             catch (Exception ex)
             {
                 return BadRequest(new Response(
                     success: false,
-                    message: ex.Message
-                ));
+                    message: ex.Message));
             }
         }
     }
