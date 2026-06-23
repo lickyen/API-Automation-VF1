@@ -212,13 +212,19 @@ namespace ProductivityApi.Services
             return (role, action) switch
             {
                 // MZDSH
-                ("MZDSH", "approved") when currentStatus == LegalBillingStatus.Initiated
+                ("MZDSH", "approved")
+                    when (currentStatus == LegalBillingStatus.Initiated
+                       || currentStatus == LegalBillingStatus.ZDSHApproved)
                     => LegalBillingStatus.MZDSHApproved,
 
-                ("MZDSH", "rejected") when currentStatus == LegalBillingStatus.Initiated
+                ("MZDSH", "rejected")
+                    when (currentStatus == LegalBillingStatus.Initiated
+                       || currentStatus == LegalBillingStatus.ZDSHApproved)
                     => LegalBillingStatus.MZDSHRejected,
 
-                ("MZDSH", "sentback") when currentStatus == LegalBillingStatus.Initiated
+                ("MZDSH", "sentback")
+                    when (currentStatus == LegalBillingStatus.Initiated
+                       || currentStatus == LegalBillingStatus.ZDSHApproved)
                     => LegalBillingStatus.MZDSHSentBack,
 
                 // CDSO after MZDSH approval
