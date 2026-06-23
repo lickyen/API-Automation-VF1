@@ -358,5 +358,10 @@ namespace ProductivityApi.Services
 
         public async Task<string?> GetAppVersionAsync(string applicationName, string? platform)
             => await _repository.GetAppVersionAsync(applicationName, platform);
+
+        public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
+        {
+            return await _plfRepository.GetDisbursementsAsync(request);
+        }
     }
 }

@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ProductivityApi.Services;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
+using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
 {
@@ -126,6 +127,17 @@ namespace ProductivityApi.Controllers
             if (details is null)
                 return Ok(new Response(false, null, "Invalid or unknown IFSC code."));
             return Ok(new Response(true, details));
+        }
+
+        [HttpPost("getDisbursements")]
+        public async Task<IActionResult> GetDisbursements([FromBody] DisbLansRequestDto request)
+        {
+            var result = await _service.GetDisbursementsAsync(request);
+
+            if (result == null || !result.Any())
+                return Ok(new Response(false, null, "No disbursement records found for given date range."));
+
+            return Ok(new Response(true, result));
         }
     }
 }

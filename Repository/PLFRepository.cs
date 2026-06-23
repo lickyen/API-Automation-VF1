@@ -231,6 +231,47 @@ CC.CUSTID";
                 return null;
             }
         }
+
+        public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
+        {
+            try
+            {
+                var sql = @"
+            SELECT  
+                d.finreference      AS Lan,
+                d.disbdate          AS DisbDate,
+                d.disbseq           AS DisbSeq,
+                f.extreference      AS LosApplicationNo
+            FROM plf.findisbursementdetails d
+            INNER JOIN plf.financemain f 
+                ON d.finreference = f.finreference
+            WHERE d.disbseq = 1
+              AND d.disbdate >= @FromDate
+              AND d.disbdate < @ToDate + INTERVAL '1 day'
+            ORDER BY d.finreference ASC;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync<DisbLansResponseDto>(
+                    sql,
+                    new
+                    {
+                        request.FromDate,
+                        request.ToDate
+                    }
+                );
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching disbursement records between {FromDate} and {ToDate}",
+                    request.FromDate, request.ToDate);
+
+                return new List<DisbLansResponseDto>();
+            }
+        }
     }
 }
 
