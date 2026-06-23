@@ -39,13 +39,15 @@ namespace ProductivityApi.Services
             return await _repository.BulkInsertAssetsAsync(assets);
         }
 
-        public async Task<bool> UpdateAssetStatusAsync(UpdateAssetStatusDto dto)
+        public async Task<int> BulkUpdateAssetStatusAsync(
+    BulkUpdateAssetStatusDto dto
+)
         {
-            var result = await _repository.UpdateAssetStatusAsync(dto);
+            var result = await _repository.BulkUpdateAssetStatusAsync(dto);
 
-            if (result)
+            if (result > 0)
             {
-                await _repository.InsertAssetLogAsync(dto.AssetId);
+                await _repository.InsertAssetLogsAsync(dto.AssetIds);
             }
 
             return result;
@@ -152,16 +154,44 @@ namespace ProductivityApi.Services
             return await _repository.GetAdditionRequestByIdAsync(id);
         }
 
-        public async Task<IEnumerable<FixedAssetTransferTransaction>>
-            GetTransferRequestsAsync()
+        public async Task<IEnumerable<BulkTransferGroupedDto>> GetTransferRequestsAsync()
         {
             return await _repository.GetTransferRequestsAsync();
         }
 
-        public async Task<IEnumerable<FixedAssetSaleTransaction>>
-            GetSaleRequestsAsync()
+        public async Task<IEnumerable<BulkSaleGroupedDto>> GetSaleRequestsAsync()
         {
             return await _repository.GetSaleRequestsAsync();
+        }
+
+        public async Task<int> ApproveTransferAsync(string transferId, string updatedBy)
+        {
+            return await _repository.ApproveTransferByIdAsync(transferId, updatedBy);
+        }
+
+        public async Task<int> RejectTransferAsync(string transferId, string updatedBy)
+        {
+            return await _repository.RejectTransferByIdAsync(transferId, updatedBy);
+        }
+
+        public async Task<int> ApproveSaleAsync(string saleId)
+        {
+            return await _repository.ApproveSaleByIdAsync(saleId);
+        }
+
+        public async Task<int> RejectSaleAsync(string saleId)
+        {
+            return await _repository.RejectSaleByIdAsync(saleId);
+        }
+
+        public async Task<List<int>> GetAssetIdsBySaleIdAsync(string saleId)
+        {
+            return await _repository.GetAssetIdsBySaleIdAsync(saleId);
+        }
+
+        public async Task<List<int>> GetAssetIdsByTransferIdAsync(string transferId)
+        {
+            return await _repository.GetAssetIdsByTransferIdAsync(transferId);
         }
 
         public async Task<IEnumerable<FixedAssetAuditTransaction>>

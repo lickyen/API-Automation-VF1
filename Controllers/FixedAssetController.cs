@@ -73,14 +73,21 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result));
         }
 
-        [HttpPut("updateAssetStatus")]
-        public async Task<IActionResult> UpdateAssetStatus(
-            [FromBody] UpdateAssetStatusDto dto
-        )
+        [HttpPut("bulkUpdateAssetStatus")]
+        public async Task<IActionResult> BulkUpdateAssetStatus(
+     [FromBody] BulkUpdateAssetStatusDto dto
+ )
         {
-            var result = await _service.UpdateAssetStatusAsync(dto);
+            if (dto.AssetIds == null || !dto.AssetIds.Any())
+            {
+                return BadRequest(
+                    new Response(false, message: "AssetIds are required.")
+                );
+            }
 
-            if (!result)
+            var result = await _service.BulkUpdateAssetStatusAsync(dto);
+
+            if (result <= 0)
             {
                 return BadRequest(
                     new Response(false, message: "Update failed.")
@@ -90,7 +97,8 @@ namespace ProductivityApi.Controllers
             return Ok(
                 new Response(
                     true,
-                    message: "Asset status updated successfully."
+                    result,
+                    $"{result} asset(s) updated successfully."
                 )
             );
         }
@@ -258,6 +266,37 @@ namespace ProductivityApi.Controllers
             );
         }
 
+        [HttpPut("approveTransfer/{transferId}")]
+        public async Task<IActionResult> ApproveTransfer(string transferId, [FromBody] BulkUpdateAssetBranchDto[] branchUpdates, [FromQuery] string updatedBy)
+        {
+            await _service.ApproveTransferAsync(transferId, updatedBy);
+            await _service.BulkUpdateAssetBranchAsync(branchUpdates.ToList());
+            var assetIds = await _service.GetAssetIdsByTransferIdAsync(transferId);
+            await _service.BulkUpdateAssetStatusAsync(new BulkUpdateAssetStatusDto
+            {
+                AssetIds = assetIds,
+                AssetStatus = "Active",
+                Remarks = "Transfer Approved",
+                UpdatedBy = updatedBy
+            });
+            return Ok(new Response(true, message: "Transfer approved successfully."));
+        }
+
+        [HttpPut("rejectTransfer/{transferId}")]
+        public async Task<IActionResult> RejectTransfer(string transferId, [FromBody] RejectRequestDto dto)
+        {
+            var assetIds = await _service.GetAssetIdsByTransferIdAsync(transferId);
+            await _service.RejectTransferAsync(transferId, dto.UpdatedBy);
+            await _service.BulkUpdateAssetStatusAsync(new BulkUpdateAssetStatusDto
+            {
+                AssetIds = assetIds,
+                AssetStatus = "Active",
+                Remarks = dto.Remarks,
+                UpdatedBy = dto.UpdatedBy
+            });
+            return Ok(new Response(true, message: "Transfer rejected."));
+        }
+
         #endregion
 
         #region Sale
@@ -287,25 +326,51 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPut("updateSaleInvoice")]
-        public async Task<IActionResult> UpdateSaleInvoice(
-            [FromBody] UpdateSaleInvoiceDto dto
-        )
+        public async Task<IActionResult> UpdateSaleInvoice([FromBody] UpdateSaleInvoiceDto dto)
         {
             var result = await _service.UpdateSaleInvoiceAsync(dto);
+            if (!result) return BadRequest(new Response(false, message: "Update failed."));
 
-            if (!result)
+            var assetIds = await _service.GetAssetIdsBySaleIdAsync(dto.SaleId!);
+            await _service.BulkUpdateAssetStatusAsync(new BulkUpdateAssetStatusDto
             {
-                return BadRequest(
-                    new Response(false, message: "Update failed.")
-                );
-            }
+                AssetIds = assetIds,
+                AssetStatus = "Sold",
+                Remarks = dto.Remarks ?? "Sale completed",
+                UpdatedBy = dto.UpdatedBy
+            });
 
-            return Ok(
-                new Response(
-                    true,
-                    message: "Sale details updated successfully."
-                )
-            );
+            return Ok(new Response(true, message: "Sale details updated successfully."));
+        }
+
+        [HttpPut("approveSale/{saleId}")]
+        public async Task<IActionResult> ApproveSale(string saleId, [FromQuery] string updatedBy)
+        {
+            var assetIds = await _service.GetAssetIdsBySaleIdAsync(saleId);
+            await _service.ApproveSaleAsync(saleId);
+            await _service.BulkUpdateAssetStatusAsync(new BulkUpdateAssetStatusDto
+            {
+                AssetIds = assetIds,
+                AssetStatus = "Under Sale Processing",
+                Remarks = "Sale Approved",
+                UpdatedBy = updatedBy
+            });
+            return Ok(new Response(true, message: "Sale approved successfully."));
+        }
+
+        [HttpPut("rejectSale/{saleId}")]
+        public async Task<IActionResult> RejectSale(string saleId, [FromBody] RejectRequestDto dto)
+        {
+            var assetIds = await _service.GetAssetIdsBySaleIdAsync(saleId);
+            await _service.RejectSaleAsync(saleId);
+            await _service.BulkUpdateAssetStatusAsync(new BulkUpdateAssetStatusDto
+            {
+                AssetIds = assetIds,
+                AssetStatus = "Active",
+                Remarks = dto.Remarks,
+                UpdatedBy = dto.UpdatedBy
+            });
+            return Ok(new Response(true, message: "Sale rejected."));
         }
 
         #endregion
