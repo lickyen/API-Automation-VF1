@@ -103,6 +103,7 @@ builder.Services.AddScoped<AxisService>();
 builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
+builder.Services.AddScoped<DmsDocsService>();
 
 
 builder.Services.AddScoped<UserRepository>();
@@ -136,6 +137,7 @@ builder.Services.AddScoped<VCPRepository>();
 builder.Services.AddScoped<AxisRepository>();
 builder.Services.AddScoped<BTLettersRepository>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
+builder.Services.AddScoped<DmsDocsRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
