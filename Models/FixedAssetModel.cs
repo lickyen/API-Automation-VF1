@@ -28,6 +28,10 @@ namespace ProductivityApi.Models
 
         public string? AssetStatus { get; set; }
 
+        public string? EmployeeID { get; set; }
+
+        public string? ServiceTag { get; set; }
+
         public string? Remarks { get; set; }
 
         public string? CreatedBy { get; set; }
@@ -193,6 +197,8 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
         public string? BranchCode { get; set; }
+
+        public string? BranchName { get; set; }
 
         public string? AssetCode { get; set; }
 
@@ -412,6 +418,9 @@ namespace ProductivityApi.Models
         public int? Amount { get; set; }
 
         public string? AssetOwner { get; set; }
+
+        public string? EmployeeID { get; set; }
+        public string? ServiceTag { get; set; }
 
         public string? Remarks { get; set; }
 

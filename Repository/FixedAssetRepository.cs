@@ -429,6 +429,8 @@ namespace ProductivityApi.Repository
                     @"
                 INSERT INTO FixedAssetReportTransactions
                 (
+                    BranchCode,
+                    BranchName,
                     AssetCode,
                     AssetType,
                     AssetCondition,
@@ -437,6 +439,8 @@ namespace ProductivityApi.Repository
                 )
                 VALUES
                 (
+                    @BranchCode,
+                    @BranchName,
                     @AssetCode,
                     @AssetType,
                     @AssetCondition,
@@ -607,6 +611,8 @@ namespace ProductivityApi.Repository
                 InvoiceNumber=@InvoiceNumber,
                 Amount=@Amount,
                 AssetOwner=@AssetOwner,
+                EmployeeID=@EmployeeID,
+                ServiceTag=@ServiceTag,
                 Remarks=@Remarks,
                 UpdatedBy=@UpdatedBy,
                 UpdatedDate=GETDATE()

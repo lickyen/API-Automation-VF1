@@ -1,10 +1,3 @@
-SELECT * FROM BranchMaster;
-GO
-
-SELECT * FROM usermaster
-Where EmpId = '1004';
-GO
-
 SELECT * FROM FixedAssetMaster;
 GO
 
