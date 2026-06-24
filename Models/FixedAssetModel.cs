@@ -332,7 +332,7 @@ namespace ProductivityApi.Models
     {
         public string? SaleId { get; set; }
 
-        public string SaleAmount { get; set; } = string.Empty;
+        public int SaleAmount { get; set; }
 
         public DateTime InvoiceDate { get; set; }
 
