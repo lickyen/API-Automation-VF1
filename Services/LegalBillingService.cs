@@ -211,6 +211,11 @@ namespace ProductivityApi.Services
 
             return (role, action) switch
             {
+                // ZDSH
+                ("ZDSH", "approved") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHApproved,
+                ("ZDSH", "rejected") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHRejected,
+                ("ZDSH", "sentback") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHSentBack,
+
                 // MZDSH
                 ("MZDSH", "approved")
                     when (currentStatus == LegalBillingStatus.Initiated
