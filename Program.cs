@@ -153,6 +153,9 @@ builder.Services.AddScoped<CibilCorrectionService>();
 builder.Services.AddScoped<FixedAssetRepository>();
 builder.Services.AddScoped<FixedAssetService>();
 
+builder.Services.AddScoped<ModulesRepository>();
+builder.Services.AddScoped<ModulesService>();
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
