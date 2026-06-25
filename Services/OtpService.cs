@@ -27,7 +27,38 @@ namespace ProductivityApi.Services
             _userLogRepository = userLogRepository;
         }
 
-        public async Task<bool> SendOtp(string userId)
+        //public async Task<bool> SendOtp(string userId)
+        //{
+        //    var user = _userRepository.GetUser(userId)
+        //               ?? throw new InvalidOperationException("User not found");
+
+        //    if (string.IsNullOrWhiteSpace(user.Mobile))
+        //        throw new InvalidOperationException("Contact details not found");
+
+        //    string otp = GenerateOtp();
+        //    string hashedOtp = HashOtp(otp);
+
+        //    await _otpRepository.SaveOtpAsync(new OtpModel
+        //    {
+        //        UserId = userId,
+        //        OtpHash = hashedOtp,
+        //        Attempts = 0
+        //    });
+
+        //    var placeholders = new Dictionary<string, string>
+        //    {
+        //        { "OTP", otp }
+        //    };
+
+        //    var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
+        //    var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+
+        //    await _smsService.SendSms(user.Mobile, smsBody, smsTemplate.DltContentId);
+
+        //    return true;
+        //}
+
+        public async Task<string> SendOtp(string userId)
         {
             var user = _userRepository.GetUser(userId)
                        ?? throw new InvalidOperationException("User not found");
@@ -46,16 +77,21 @@ namespace ProductivityApi.Services
             });
 
             var placeholders = new Dictionary<string, string>
-        {
-            { "OTP", otp }
-        };
+            {
+                { "OTP", otp }
+            };
 
             var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
-            var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
+            var smsBody = _templateService.ReplacePlaceholders(
+                smsTemplate.Content,
+                placeholders);
 
-            await _smsService.SendSms(user.Mobile, smsBody, smsTemplate.DltContentId);
+            await _smsService.SendSms(
+                user.Mobile,
+                smsBody,
+                smsTemplate.DltContentId);
 
-            return true;
+            return user.Mobile;
         }
 
         public async Task<bool> SendOtpToMobile(string referenceId, string mobileNumber)
