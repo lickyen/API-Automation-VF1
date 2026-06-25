@@ -124,5 +124,31 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetRolesByModuleAsync(moduleCode);
         }
+        public async Task<(bool Success, string Message)> ToggleModuleStatusAsync(string moduleCode)
+        {
+            var exists = await _repository.ModuleCodeExistsAsync(moduleCode);
+
+            if (!exists)
+                return (false, "Module not found.");
+
+            var result = await _repository.ToggleModuleStatusAsync(moduleCode);
+
+            return result
+                ? (true, "Module status updated.")
+                : (false, "Failed to update module.");
+        }
+        public async Task<(bool Success, string Message)> ToggleRoleStatusAsync(string role)
+        {
+            var exists = await _repository.RoleExistsAsync(role);
+
+            if (!exists)
+                return (false, "Role not found.");
+
+            var result = await _repository.ToggleRoleStatusAsync(role);
+
+            return result
+                ? (true, "Role status updated.")
+                : (false, "Failed to update role.");
+        }
     }
 }

@@ -25,7 +25,6 @@ namespace ProductivityApi.Repository
             string sql = @"
                 SELECT *
                 FROM ModuleMaster
-                WHERE IsActive = 1
                 ORDER BY ModuleName";
 
             return await conn.QueryAsync<ModuleMaster>(sql);
@@ -44,7 +43,11 @@ namespace ProductivityApi.Repository
 
                 SELECT rm.*
                 FROM RoleModuleMaster rm
-                WHERE rm.Module = @ModuleCode AND rm.IsActive = 1;";
+                INNER JOIN RoleMaster r
+                    ON r.Role = rm.Role
+                WHERE rm.Module = @ModuleCode
+                AND rm.IsActive = 1
+                AND r.IsActive = 1;";
 
             using var multi = await conn.QueryMultipleAsync(sql, new { ModuleCode = moduleCode });
 
@@ -110,7 +113,6 @@ namespace ProductivityApi.Repository
             string sql = @"
                 SELECT *
                 FROM RoleMaster
-                WHERE IsActive = 1
                 ORDER BY Role";
 
             return await conn.QueryAsync<RoleMaster>(sql);
@@ -202,8 +204,9 @@ namespace ProductivityApi.Repository
             using var conn = new SqlConnection(_conStr);
 
             var rows = await conn.ExecuteAsync(
-                @"UPDATE RoleModuleMaster SET IsActive = 0
-                  WHERE Role = @Role AND Module = @ModuleCode",
+                @"DELETE FROM RoleModuleMaster
+          WHERE Role = @Role
+            AND Module = @ModuleCode",
                 new { Role = role, ModuleCode = moduleCode }
             );
 
@@ -217,8 +220,13 @@ namespace ProductivityApi.Repository
             await conn.OpenAsync();
 
             string sql = @"
-                SELECT * FROM ModuleMaster WHERE IsActive = 1 ORDER BY ModuleName;
-                SELECT * FROM RoleModuleMaster WHERE IsActive = 1;";
+                SELECT * FROM ModuleMaster ORDER BY ModuleName;
+                SELECT rm.*
+                FROM RoleModuleMaster rm
+                INNER JOIN RoleMaster r
+                    ON r.Role = rm.Role
+                WHERE rm.IsActive = 1
+                AND r.IsActive = 1;";
 
             using var multi = await conn.QueryMultipleAsync(sql);
 
@@ -233,6 +241,69 @@ namespace ProductivityApi.Repository
                 IsActive = m.IsActive,
                 AssignedRoles = assignments.Where(a => a.Module == m.ModuleCode).ToList()
             });
+        }
+        public async Task<bool> ToggleModuleStatusAsync(string moduleCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var rows = await conn.ExecuteAsync(@"
+        UPDATE ModuleMaster
+        SET IsActive =
+            CASE WHEN IsActive = 1 THEN 0 ELSE 1 END
+        WHERE ModuleCode = @ModuleCode",
+                new { ModuleCode = moduleCode });
+
+            return rows > 0;
+        }
+        public async Task<bool> ToggleRoleStatusAsync(string role)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            using var tx = conn.BeginTransaction();
+
+            try
+            {
+                var currentStatus = await conn.ExecuteScalarAsync<int>(
+                    @"SELECT IsActive
+              FROM RoleMaster
+              WHERE Role = @Role",
+                    new { Role = role },
+                    tx);
+
+                int newStatus = currentStatus == 1 ? 0 : 1;
+
+                await conn.ExecuteAsync(@"
+            UPDATE RoleMaster
+            SET IsActive = @Status
+            WHERE Role = @Role",
+                    new
+                    {
+                        Status = newStatus,
+                        Role = role
+                    },
+                    tx);
+
+                await conn.ExecuteAsync(@"
+            UPDATE RoleModuleMaster
+            SET IsActive = @Status
+            WHERE Role = @Role",
+                    new
+                    {
+                        Status = newStatus,
+                        Role = role
+                    },
+                    tx);
+
+                tx.Commit();
+                return true;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
     }
 }

@@ -128,5 +128,25 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, message: result.Message));
         }
+        [HttpPatch("{moduleCode}/toggle")]
+        public async Task<IActionResult> ToggleModuleStatus(string moduleCode)
+        {
+            var result = await _service.ToggleModuleStatusAsync(moduleCode);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, message: result.Message));
+        }
+        [HttpPatch("roles/{role}/toggle")]
+        public async Task<IActionResult> ToggleRoleStatus(string role)
+        {
+            var result = await _service.ToggleRoleStatusAsync(role);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, message: result.Message));
+        }
     }
 }
