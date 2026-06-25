@@ -6,3 +6,6 @@ GO
 
 SELECT * FROM RoleModuleMaster;
 GO
+
+SELECT * FROM EmailLog
+Order by CreatedOn desc

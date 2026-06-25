@@ -4,10 +4,10 @@ GO
 SELECT * FROM NewBranchTransaction;
 GO
 
-SELECT * FROM NewBranchChecklistMaster;
+SELECT * FROM NewBranchUserMaster;
 GO
 
-SELECT * FROM NewBranchUserMaster;
+SELECT * FROM NewBranchChecklistMaster;
 GO
 
 SELECT * FROM UserMaster

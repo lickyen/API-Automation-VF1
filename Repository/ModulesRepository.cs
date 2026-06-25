@@ -305,5 +305,18 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
+        public async Task<bool> UpdateModuleAsync(UpdateModuleDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var rows = await conn.ExecuteAsync(@"
+        UPDATE ModuleMaster
+        SET
+            ModuleName = @ModuleName
+        WHERE ModuleCode = @ModuleCode",
+                dto);
+
+            return rows > 0;
+        }
     }
 }
