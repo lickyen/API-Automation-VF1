@@ -50,43 +50,49 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                    INSERT INTO FixedAssetMaster
-                    (
-                        BranchCode,
-                        BranchName,
-                        AssetCode,
-                        AssetType,
-                        Description,
-                        PurchaseDate,
-                        InvoiceNumber,
-                        Amount,
-                        AssetOwner,
-                        AssetStatus,
-                        Remarks,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @BranchCode,
-                        @BranchName,
-                        @AssetCode,
-                        @AssetType,
-                        @Description,
-                        @PurchaseDate,
-                        @InvoiceNumber,
-                        @Amount,
-                        @AssetOwner,
-                        @AssetStatus,
-                        @Remarks,
-                        @CreatedBy
-                    );
+            var exists = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM FixedAssetMaster WHERE AssetCode = @AssetCode",
+                new { dto.AssetCode });
 
-                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+            if (exists > 0)
+                throw new Exception("Asset code already exists.");
+
+            const string sql = @"
+        INSERT INTO FixedAssetMaster
+        (
+            BranchCode,
+            BranchName,
+            AssetCode,
+            AssetType,
+            Description,
+            PurchaseDate,
+            InvoiceNumber,
+            Amount,
+            AssetOwner,
+            AssetStatus,
+            Remarks,
+            CreatedBy
+        )
+        VALUES
+        (
+            @BranchCode,
+            @BranchName,
+            @AssetCode,
+            @AssetType,
+            @Description,
+            @PurchaseDate,
+            @InvoiceNumber,
+            @Amount,
+            @AssetOwner,
+            @AssetStatus,
+            @Remarks,
+            @CreatedBy
+        );
+ 
+        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             return await conn.ExecuteScalarAsync<int>(sql, dto);
         }
-
         public async Task<int> BulkInsertAssetsAsync(
     List<FixedAssetBulkInsertDto> assets
 )
