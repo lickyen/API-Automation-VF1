@@ -120,9 +120,8 @@ namespace ProductivityApi.Jobs
                     AND CLOSINGSTATUS = 'C'
                     AND d.disbseq = 1
                     AND finisactive = 0
-                    AND CLOSEDDATE >= DATE_TRUNC('MONTH', CURRENT_DATE - INTERVAL '1 MONTH')
-                    AND CLOSEDDATE < DATE_TRUNC('MONTH', CURRENT_DATE)";
-
+                    AND CLOSEDDATE >= DATE_TRUNC('MONTH', CURRENT_DATE)
+                    AND CLOSEDDATE < DATE_TRUNC('MONTH', CURRENT_DATE + INTERVAL '1 MONTH')";
 
             var dtos = new List<LcRefundAddLanDto>();
 
