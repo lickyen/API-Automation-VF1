@@ -84,44 +84,44 @@ namespace ProductivityApi.Jobs
 
         private async Task<List<LcRefundAddLanDto>> FetchLansFromPlfAsync(CancellationToken ct)
         {
-            //const string query = @"
-            //                    SELECT
-            //        F.finreference,
-            //        COALESCE(c.custfname, '') || ' ' ||
-            //        COALESCE(c.custmname, '') || ' ' ||
-            //        COALESCE(c.custlname, '') AS full_name,   
-            //        D.disbdate,
-            //        F.CLOSEDDATE,
-            //        F.finbranch
-            //    FROM PLF.FINANCEMAIN F, plf.customers c, plf.findisbursementdetails d
-            //    WHERE
-            //        f.custid = c.custid AND
-            //        d.finreference = f.finreference AND
-            //        CLOSINGSTATUS = 'C' AND
-            //        d.disbseq = 1 AND
-            //        finisactive = 0 AND
-            //        CLOSEDDATE = CURRENT_DATE - 1";
-
             const string query = @"
-                SELECT
+                                SELECT
                     F.finreference,
                     COALESCE(c.custfname, '') || ' ' ||
                     COALESCE(c.custmname, '') || ' ' ||
-                    COALESCE(c.custlname, '') AS full_name,
+                    COALESCE(c.custlname, '') AS full_name,   
                     D.disbdate,
                     F.CLOSEDDATE,
                     F.finbranch
-                FROM PLF.FINANCEMAIN F,
-                     plf.customers c,
-                     plf.findisbursementdetails d
+                FROM PLF.FINANCEMAIN F, plf.customers c, plf.findisbursementdetails d
                 WHERE
-                    f.custid = c.custid
-                    AND d.finreference = f.finreference
-                    AND CLOSINGSTATUS = 'C'
-                    AND d.disbseq = 1
-                    AND finisactive = 0
-                    AND CLOSEDDATE >= DATE_TRUNC('MONTH', CURRENT_DATE)
-                    AND CLOSEDDATE < DATE_TRUNC('MONTH', CURRENT_DATE + INTERVAL '1 MONTH')";
+                    f.custid = c.custid AND
+                    d.finreference = f.finreference AND
+                    CLOSINGSTATUS = 'C' AND
+                    d.disbseq = 1 AND
+                    finisactive = 0 AND
+                    CLOSEDDATE = CURRENT_DATE - 1";
+
+            //const string query = @"
+            //    SELECT
+            //        F.finreference,
+            //        COALESCE(c.custfname, '') || ' ' ||
+            //        COALESCE(c.custmname, '') || ' ' ||
+            //        COALESCE(c.custlname, '') AS full_name,
+            //        D.disbdate,
+            //        F.CLOSEDDATE,
+            //        F.finbranch
+            //    FROM PLF.FINANCEMAIN F,
+            //         plf.customers c,
+            //         plf.findisbursementdetails d
+            //    WHERE
+            //        f.custid = c.custid
+            //        AND d.finreference = f.finreference
+            //        AND CLOSINGSTATUS = 'C'
+            //        AND d.disbseq = 1
+            //        AND finisactive = 0
+            //        AND CLOSEDDATE >= DATE_TRUNC('MONTH', CURRENT_DATE)
+            //        AND CLOSEDDATE < DATE_TRUNC('MONTH', CURRENT_DATE + INTERVAL '1 MONTH')";
 
             var dtos = new List<LcRefundAddLanDto>();
 
