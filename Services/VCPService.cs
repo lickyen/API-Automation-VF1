@@ -8,11 +8,13 @@ namespace ProductivityApi.Services
     {
         private readonly VCPRepository _repository;
         private readonly string _filePath;
+        private readonly string _esignFilePath;
 
         public VCPService(VCPRepository repository, AppSettings appSettings)
         {
             _repository = repository;
             _filePath = appSettings.FilePaths.VCPFilePath;
+            _esignFilePath = appSettings.FilePaths.VCPAgreementFilePath;
         }
 
         public async Task<VCPDetailDto?> GetByIdAsync(int id)
@@ -201,12 +203,21 @@ namespace ProductivityApi.Services
 
             return (output, null);
         }
+        //public async Task<byte[]?> DownloadFileAsync(string fileName)
+        //{
+        //    return await FileHelper.ReadFileAsync(
+        //        _filePath,
+        //        fileName
+        //    );
+        //}
+
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
-            return await FileHelper.ReadFileAsync(
-                _filePath,
-                fileName
-            );
+            var basePath = fileName.Contains("esign", StringComparison.OrdinalIgnoreCase)
+                ? _esignFilePath
+                : _filePath;
+
+            return await FileHelper.ReadFileAsync(basePath, fileName);
         }
         public async Task<byte[]?> GetReportExcelAsync()
         {
