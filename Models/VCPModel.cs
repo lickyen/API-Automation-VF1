@@ -3,7 +3,6 @@
     public class VCPModel
     {
         public int Id { get; set; }
-        public string FinalStatus { get; set; }
         public string Name { get; set; }
         public string Mobile { get; set; }
         public string Email { get; set; }
@@ -68,8 +67,13 @@
         public DateTime? HUBUpdatedDt { get; set; }
 
         public string CreatedBy { get; set; }
+        public DateTime? CreatedDt { get; set; }
         public string UpdatedBy { get; set; }
+        public DateTime? UpdatedDt { get; set; }
+
+        public string VCPType { get; set; }
         public string? VCPCode { get; set; }
+        public string FinalStatus { get; set; }
 
     }
 
@@ -79,6 +83,7 @@
         public string Name { get; set; }
         public string Mobile { get; set; }
         public string PanNo { get; set; }
+        public string VCPType { get; set; }
         public string FinalStatus { get; set; }
         public string RCUStatus { get; set; }
         public string CreatedBy { get; set; }
