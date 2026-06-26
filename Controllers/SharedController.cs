@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ProductivityApi.Services;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
+using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
 {
@@ -10,10 +11,12 @@ namespace ProductivityApi.Controllers
     public class SharedController : ControllerBase
     {
         private readonly SharedService _service;
+        private readonly RazorpayService _razorpayService;
 
-        public SharedController(SharedService service)
+        public SharedController(SharedService service, RazorpayService razorpayService)
         {
             _service = service;
+            _razorpayService = razorpayService;
         }
 
         [HttpGet("getVistaarBankAcnts")]
@@ -97,15 +100,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, message));
         }
 
-        [HttpGet("getBankDetailsByIfsc/{ifsc}")]
-        public async Task<IActionResult> GetBankDetailsByIfsc(string ifsc)
-        {
-            var data = await _service.GetBankDetailsByIfscAsync(ifsc);
-            if (data == null)
-                return NotFound(new Response(false, null, "Record not found"));
-            return Ok(new Response(true, data, "Success"));
-        }
-
         [HttpGet("getAppVersion")]
         public async Task<IActionResult> GetAppVersion([FromQuery] string applicationName, [FromQuery] string? platform)
         {
@@ -115,6 +109,35 @@ namespace ProductivityApi.Controllers
                 return NotFound(new Response(false, null, "Version not found"));
 
             return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getBankDetailsByIfsc/{ifsc}")]
+        public async Task<IActionResult> GetBankDetailsByIfsc(string ifsc)
+        {
+            var data = await _service.GetBankDetailsByIfscAsync(ifsc);
+            if (data == null)
+                return NotFound(new Response(false, null, "Record not found"));
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getIfscDetails/{ifsc}")]
+        public async Task<IActionResult> GetBankDetailsByIFSC(string ifsc)
+        {
+            var details = await _razorpayService.GetBankDetailsByIfscAsync(ifsc);
+            if (details is null)
+                return Ok(new Response(false, null, "Invalid or unknown IFSC code."));
+            return Ok(new Response(true, details));
+        }
+
+        [HttpPost("getDisbursements")]
+        public async Task<IActionResult> GetDisbursements([FromBody] DisbLansRequestDto request)
+        {
+            var result = await _service.GetDisbursementsAsync(request);
+
+            if (result == null || !result.Any())
+                return Ok(new Response(false, null, "No disbursement records found for given date range."));
+
+            return Ok(new Response(true, result));
         }
     }
 }

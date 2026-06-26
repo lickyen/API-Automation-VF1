@@ -198,6 +198,80 @@ group by sz_loan_account_no,loan_status";
                 return null;
             }
         }
+
+        public async Task<PlFLoanStatusModel?> GetCashPayemntsByCIFAsync(string cif)
+        {
+            try
+            {
+                var sql = @"
+            select DISTINCT (CC.CUSTID),
+CAST (SUM(FP.RECEIPTAMOUNT/100) AS NUMERIC (18,2))AMOUNT
+from plf.financemain c
+join plf.customers cc
+on cc.custid=c.custid
+join plf.finreceiptheader fp
+on c.finreference=fp.reference
+JOIN PLF.NEOLOTEX_DISB ND
+ON ND.SZ_LOAN_ACCOUNT_NO=c.finreference
+AND ND.CUSTOMERID=CC.CUSTCIF
+where CC.CUSTCIF=@cif
+and FP.receiptmode='CASH'
+AND FP.RECEIPTMODESTATUS='R'
+AND RECEIPTDATE='2026-06-04'
+GROUP BY 
+CC.CUSTID";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { cif });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Cash Payemnts  by CIF: {CIF}", cif);
+                return null;
+            }
+        }
+
+        public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
+        {
+            try
+            {
+                var sql = @"
+            SELECT  
+                d.finreference      AS Lan,
+                d.disbdate          AS DisbDate,
+                d.disbseq           AS DisbSeq,
+                f.extreference      AS LosApplicationNo
+            FROM plf.findisbursementdetails d
+            INNER JOIN plf.financemain f 
+                ON d.finreference = f.finreference
+            WHERE d.disbseq = 1
+              AND d.disbdate >= @FromDate
+              AND d.disbdate < @ToDate + INTERVAL '1 day'
+            ORDER BY d.finreference ASC;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync<DisbLansResponseDto>(
+                    sql,
+                    new
+                    {
+                        request.FromDate,
+                        request.ToDate
+                    }
+                );
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching disbursement records between {FromDate} and {ToDate}",
+                    request.FromDate, request.ToDate);
+
+                return new List<DisbLansResponseDto>();
+            }
+        }
     }
 }
 

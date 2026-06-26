@@ -16,32 +16,20 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // ── Step 1 : Prepare BT Format ────────────────────────
-
         [HttpPost("createFormat")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadFormat([FromForm] BTFormatUploadRequest request)
+        public async Task<IActionResult> CreateFormat([FromForm] BTFormatUploadRequest request)
         {
             if (request.File == null || request.File.Length == 0)
                 return BadRequest(new Response(false, null, "Please upload a file."));
 
-            var (rowsMatched, error) = await _service.UploadBtFormatAsync(request.File);
+            var (fileBytes, error) = await _service.CreateBtFormatAsync(request.File);
 
-            return error is not null
-                ? BadRequest(new Response(false, null, error))
-                : Ok(new Response(true, new { RowsMatched = rowsMatched }, $"{rowsMatched} rows matched. Proceed to download format."));
-        }
-
-        [HttpGet("downloadFormat")]
-        public async Task<IActionResult> DownloadFormat()
-        {
-            var bytes = await _service.DownloadBtFormatAsync();
-
-            if (bytes is null)
-                return NotFound(new Response(false, null, "No data found to generate format."));
+            if (error != null)
+                return BadRequest(new Response(false, null, error));
 
             return File(
-                bytes,
+                fileBytes!,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "BTUploadFormat.xlsx"
             );
@@ -116,21 +104,6 @@ namespace ProductivityApi.Controllers
             var data = await _service.GetEmailMasterAsync();
 
             return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("downloadEmailMaster")]
-        public async Task<IActionResult> DownloadEmailMaster()
-        {
-            var bytes = await _service.DownloadEmailMasterAsync();
-
-            if (bytes is null)
-                return NotFound(new Response(false, null, "No data found."));
-
-            return File(
-                bytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"BT_EmailMaster_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
-            );
         }
 
         [HttpPut("updateEmailMaster")]

@@ -18,12 +18,18 @@ namespace ProductivityApi.Controllers
         }
 
 
-        //[HttpPost("Validation")]
-        //public async Task<IActionResult> Validation([FromBody] AxisModel dto)
-        //{
-        //   // var data = await _service.GeneratePaymentLink(dto);
-        //    return Ok(new Response(true, data, "Success"));
-        //}
+        [HttpPost("Validation")]
+        public async Task<IActionResult> OnlineValidation([FromBody] AxisModel dto)
+        {
+             var data = await _service.OnlinePaymentsValidation(dto);
+            return Ok(data);
+        }
+        [HttpPost("Notification")]
+        public async Task<IActionResult> OnlineNotification([FromBody] AxisModel dto)
+        {
+            var data = await _service.OnlinePaymentsNotification(dto);
+            return Ok(data);
+        }
 
         [HttpPost("OfflineFetch")]
         public async Task<IActionResult> OfflinePaymentsValidation([FromBody] AxisOfflineReqModel dto)

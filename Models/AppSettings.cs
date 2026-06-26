@@ -66,7 +66,9 @@ namespace ProductivityApi.Models
         public string SARFAESIFilePath { get; set; } = string.Empty;
         public string GoldLoanFilePath { get; set; } = string.Empty;
         public string VCPFilePath { get; set; } = string.Empty;
+        public string VCPAgreementFilePath { get; set; } = string.Empty;
         public string BTFilePath { get; set; } = string.Empty;
+        public string NOCFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {

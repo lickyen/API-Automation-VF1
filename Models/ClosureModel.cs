@@ -385,6 +385,22 @@
         public decimal ChargesWaiverAmount { get; set; }
         public decimal ChargesWaiverPer { get; set; }
     }
+
+    public class ClosureQuestionnaireMaster
+    {
+        public int Id { get; set; }
+        public string QuestionCode { get; set; }
+        public string QuestionText { get; set; }
+        public string SectionName { get; set; }
+        public string InputType { get; set; }
+        public string OptionsJson { get; set; }
+        public string ParentQuestionCode { get; set; }
+        public string TriggerOperator { get; set; }
+        public string TriggerValue { get; set; }
+        public int DisplayOrder { get; set; }
+        public bool IsMandatory { get; set; }
+        public bool IsActive { get; set; }
+    }
 }
 
 

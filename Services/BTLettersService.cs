@@ -25,46 +25,35 @@ namespace ProductivityApi.Services
             _emailService = emailService;
             _templateService = templateService;
         }
-
-        // ── Step 1 : Upload master Excel → filter in memory → return download ──
-        // No DB insert. Applies the same WHERE conditions as BT_GetUploadFormat SP.
-
-        public async Task<(int RowsMatched, string? Error)> UploadBtFormatAsync(IFormFile file)
+        public async Task<(byte[]? FileBytes, string? Error)> CreateBtFormatAsync(IFormFile file)
         {
             var allowed = new[] { ".xls", ".xlsx" };
             var ext = Path.GetExtension(file.FileName).ToLower();
 
             if (!allowed.Contains(ext))
-                return (0, "Unsupported file type. Upload .xls or .xlsx.");
+                return (null, "Unsupported file type. Upload .xls or .xlsx.");
 
             if (!Directory.Exists(_filePath))
                 Directory.CreateDirectory(_filePath);
 
-            // Save uploaded master file to disk — replaces existing
-            var fullPath = Path.Combine(_filePath, $"BT_MasterFormat{ext}");
-            await using (var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write))
-                await file.CopyToAsync(fs);
+            var masterPath = Path.Combine(_filePath, $"BT_MasterFormat{ext}");
 
-            var rows = FilterExcelRows(fullPath);
+            await using (var fs = new FileStream(masterPath, FileMode.Create, FileAccess.Write))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            var rows = FilterExcelRows(masterPath);
 
             if (!rows.Any())
-                return (0, "0 rows matched the filter criteria. Please check the file.");
+                return (null, "0 rows matched the filter criteria. Please check the file.");
 
-            // Save filtered rows to disk as the download template — replaces existing
             SaveFilteredFormat(rows);
 
-            return (rows.Count, null);
-        }
+            var outputPath = Path.Combine(_filePath, "BT_UploadFormat.xlsx");
+            var bytes = await File.ReadAllBytesAsync(outputPath);
 
-        public Task<byte[]?> DownloadBtFormatAsync()
-        {
-            var templatePath = Path.Combine(_filePath, "BT_UploadFormat.xlsx");
-
-            if (!File.Exists(templatePath))
-                return Task.FromResult<byte[]?>(null);
-
-            var bytes = File.ReadAllBytes(templatePath);
-            return Task.FromResult<byte[]?>(bytes);
+            return (bytes, null);
         }
 
         private void SaveFilteredFormat(List<BTUploadFormatRowDto> rows)
@@ -360,14 +349,25 @@ namespace ProductivityApi.Services
 
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
-            var ws = wb.Worksheets.First();
+            var ws = wb.Worksheet(1);
+
+            var headerRow = ws.FirstRowUsed();
+
+            var bankCol = headerRow.Cells()
+                .First(c => c.GetString().Trim() == "Bank_Name")
+                .Address.ColumnNumber;
+
+            var emailCol = headerRow.Cells()
+                .First(c => c.GetString().Trim() == "Email_ID")
+                .Address.ColumnNumber;
 
             foreach (var row in ws.RowsUsed().Skip(1))
             {
-                var bankName = row.Cell(1).GetValue<string>();
-                var emailId = row.Cell(2).GetValue<string>();
+                var bankName = row.Cell(bankCol).GetString();
+                var emailId = row.Cell(emailCol).GetString();
 
-                if (string.IsNullOrWhiteSpace(bankName) || string.IsNullOrWhiteSpace(emailId))
+                if (string.IsNullOrWhiteSpace(bankName) ||
+                    string.IsNullOrWhiteSpace(emailId))
                     continue;
 
                 list.Add(new BTEmailMaster
@@ -380,46 +380,5 @@ namespace ProductivityApi.Services
             return list;
         }
 
-        //public async Task<byte[]?> DownloadEmailMasterAsync()
-        //{
-        //    var data = await _repository.GetEmailMasterAsync();
-        //    return ExcelHelper.GenerateExcel(data, "Data");
-        //}
-
-        public async Task<byte[]?> DownloadEmailMasterAsync()
-        {
-            var data = await _repository.GetEmailMasterAsync();
-            var list = data.ToList();
-
-            if (!list.Any())
-                return null;
-
-            using var wb = new XLWorkbook();
-            var ws = wb.Worksheets.Add("Data");
-
-            // Header
-            ws.Cell(1, 1).Value = "Bank Name";
-            ws.Cell(1, 2).Value = "Email ID";
-
-            // Style header
-            var headerRow = ws.Row(1);
-            headerRow.Style.Font.Bold = true;
-            headerRow.Style.Fill.BackgroundColor = XLColor.FromHtml("#005baa");
-            headerRow.Style.Font.FontColor = XLColor.White;
-
-            // Data
-            for (int i = 0; i < list.Count; i++)
-            {
-                var row = list[i];
-                ws.Cell(i + 2, 1).Value = row.Bank_Name;
-                ws.Cell(i + 2, 2).Value = row.Email_ID;
-            }
-
-            ws.Columns().AdjustToContents();
-
-            using var ms = new MemoryStream();
-            wb.SaveAs(ms);
-            return ms.ToArray();
-        }
     }
 }
