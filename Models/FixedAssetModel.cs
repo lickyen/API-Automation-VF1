@@ -149,6 +149,8 @@ namespace ProductivityApi.Models
         public string? BranchCode { get; set; }
         public string? BranchName { get; set; }
 
+        public decimal? ProposedSaleAmount { get; set; }
+
         public decimal? SaleAmount { get; set; }
 
         public DateTime? InvoiceDate { get; set; }
@@ -156,6 +158,7 @@ namespace ProductivityApi.Models
         public string? Vendor { get; set; }
 
         public string? AmtTransferRef { get; set; }
+        public string? ReasonForSale { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -325,6 +328,9 @@ namespace ProductivityApi.Models
         public string? BranchName { get; set; }
         public string? Remarks { get; set; }
         public string? SaleStatus { get; set; }
+
+        public decimal? ProposedSaleAmount { get; set; }
+        public string? ReasonForSale { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -471,14 +477,28 @@ namespace ProductivityApi.Models
         public List<int> AssetIds { get; set; } = new();
         public string? BranchCode { get; set; }
         public string? BranchName { get; set; }
+
+        public decimal? ProposedSaleAmount { get; set; }
         public decimal? SaleAmount { get; set; }
         public DateTime? InvoiceDate { get; set; }
         public string? Vendor { get; set; }
         public string? AmtTransferRef { get; set; }
+
+        public string? ReasonForSale { get; set; }
+        public List<AssetBasicDetail>? AssetDetails { get; set; }  // new
         public string? Remarks { get; set; }
         public string SaleStatus { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDate { get; set; }
+    }
+
+    public class AssetBasicDetail
+    {
+        public int AssetId { get; set; }
+        public string? AssetCode { get; set; }
+        public string? AssetType { get; set; }
+        public string? Description { get; set; }
+        public string? AssetStatus { get; set; }
     }
 
     #endregion

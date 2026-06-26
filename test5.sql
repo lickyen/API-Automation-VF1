@@ -7,6 +7,10 @@ GO
 SELECT * FROM FixedAssetSaleTransactions;
 GO
 
+ALTER TABLE FixedAssetSaleTransactions
+ADD ReasonForSale NVARCHAR(100);
+GO
+
 -- UPDATE FixedAssetMaster
 -- SET AssetStatus = 'Active';
 

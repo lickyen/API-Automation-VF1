@@ -357,18 +357,20 @@ namespace ProductivityApi.Repository
             {
                 count += await conn.ExecuteAsync(
                     @"INSERT INTO FixedAssetSaleTransactions
-            (SaleId, BranchCode, BranchName, AssetId, Remarks, SaleStatus, CreatedBy)
-            VALUES
-            (@SaleId, @BranchCode, @BranchName, @AssetId, @Remarks, 'Sale Pending Approval', @CreatedBy)",
-                    new
-                    {
-                        SaleId = saleId,
-                        dto.BranchCode,
-                        dto.BranchName,
-                        AssetId = assetId,
-                        dto.Remarks,
-                        dto.CreatedBy
-                    }
+                    (SaleId, BranchCode, BranchName, AssetId, ProposedSaleAmount, ReasonForSale, Remarks, SaleStatus, CreatedBy)
+                    VALUES
+                    (@SaleId, @BranchCode, @BranchName, @AssetId, @ProposedSaleAmount, @ReasonForSale, @Remarks, 'Sale Pending Approval', @CreatedBy)",
+                        new
+                        {
+                            SaleId = saleId,
+                            dto.BranchCode,
+                            dto.BranchName,
+                            AssetId = assetId,
+                            dto.ProposedSaleAmount,
+                            dto.ReasonForSale,
+                            dto.Remarks,
+                            dto.CreatedBy
+                        }
                 );
             }
             return count;
@@ -556,6 +558,7 @@ namespace ProductivityApi.Repository
                 });
         }
 
+        // Replace GetSaleRequestsAsync:
         public async Task<IEnumerable<BulkSaleGroupedDto>> GetSaleRequestsAsync()
         {
             using var conn = new SqlConnection(_conStr);
@@ -563,14 +566,26 @@ namespace ProductivityApi.Repository
             var rows = await conn.QueryAsync<FixedAssetSaleTransaction>(
                 @"SELECT * FROM FixedAssetSaleTransactions ORDER BY Id DESC");
 
+            var allAssetIds = rows.Select(r => r.AssetId).Distinct().ToList();
+
+            var assetDetails = (await conn.QueryAsync<AssetBasicDetail>(
+                @"SELECT Id AS AssetId, AssetCode, AssetType, Description, AssetStatus
+          FROM FixedAssetMaster WHERE Id IN @Ids",
+                new { Ids = allAssetIds }
+            )).ToList();
+
             return rows
                 .GroupBy(r => r.SaleId)
                 .Select(g => new BulkSaleGroupedDto
                 {
                     SaleId = g.Key ?? "",
                     AssetIds = g.Select(r => r.AssetId).ToList(),
+                    AssetDetails = g.Select(r => assetDetails.FirstOrDefault(a => a.AssetId == r.AssetId))
+                                    .Where(a => a != null).ToList()!,
                     BranchCode = g.First().BranchCode,
                     BranchName = g.First().BranchName,
+                    ProposedSaleAmount = g.First().ProposedSaleAmount,
+                    ReasonForSale = g.First().ReasonForSale,
                     SaleAmount = g.First().SaleAmount,
                     InvoiceDate = g.First().InvoiceDate,
                     Vendor = g.First().Vendor,
