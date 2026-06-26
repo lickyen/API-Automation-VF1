@@ -150,5 +150,24 @@ namespace ProductivityApi.Services
                 ? (true, "Role status updated.")
                 : (false, "Failed to update role.");
         }
+        public async Task<(bool Success, string Message)> UpdateModuleAsync(UpdateModuleDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.ModuleCode))
+                return (false, "ModuleCode is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.ModuleName))
+                return (false, "ModuleName is required.");
+
+            var exists = await _repository.ModuleCodeExistsAsync(dto.ModuleCode);
+
+            if (!exists)
+                return (false, "Module not found.");
+
+            var result = await _repository.UpdateModuleAsync(dto);
+
+            return result
+                ? (true, "Module updated successfully.")
+                : (false, "Failed to update module.");
+        }
     }
 }

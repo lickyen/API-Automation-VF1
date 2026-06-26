@@ -148,5 +148,15 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, message: result.Message));
         }
+        [HttpPut]
+        public async Task<IActionResult> UpdateModule([FromBody] UpdateModuleDto dto)
+        {
+            var result = await _service.UpdateModuleAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, message: result.Message));
+        }
     }
 }

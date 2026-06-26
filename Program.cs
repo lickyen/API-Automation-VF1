@@ -8,6 +8,7 @@ using ProductivityApi.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+Console.WriteLine("APP BUILD COMPLETE");
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -130,7 +131,6 @@ builder.Services.AddScoped<ClosureRepository>();
 builder.Services.AddScoped<GoldLoanLeadRepository>();
 builder.Services.AddScoped<GoldLoanVendorRepository>();
 builder.Services.AddScoped<SARFAESIRepository>();
-builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<DeathClaimRepository>();
 builder.Services.AddScoped<GurukulUserRepository>();
 builder.Services.AddScoped<VCPRepository>();
@@ -145,6 +145,28 @@ builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
+builder.Services.AddScoped<IJob, NOC_SMS_Job>();
+
+builder.Services.AddScoped<GoldLoanVendorService>();
+builder.Services.AddScoped<GoldLoanVendorRepository>();
+
+builder.Services.AddScoped<GoldLoanLeadService>();
+builder.Services.AddScoped<GoldLoanLeadRepository>();
+
+builder.Services.AddScoped<NewBranchServices>();
+builder.Services.AddScoped<NewBranchRepository>();
+
+builder.Services.AddScoped<TrainingDashboardService>();
+builder.Services.AddScoped<TrainingDashboardRepository>();
+
+builder.Services.AddScoped<CibilCorrectionRepository>();
+builder.Services.AddScoped<CibilCorrectionService>();
+
+builder.Services.AddScoped<FixedAssetRepository>();
+builder.Services.AddScoped<FixedAssetService>();
+
+builder.Services.AddScoped<ModulesRepository>();
+builder.Services.AddScoped<ModulesService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -213,4 +235,5 @@ app.MapControllers();
 
 await app.MapJobsAsync();
 
+Console.WriteLine("BEFORE APP.RUN");
 app.Run();
