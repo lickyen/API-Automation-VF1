@@ -130,6 +130,7 @@ builder.Services.AddScoped<ClosureRepository>();
 builder.Services.AddScoped<GoldLoanLeadRepository>();
 builder.Services.AddScoped<GoldLoanVendorRepository>();
 builder.Services.AddScoped<SARFAESIRepository>();
+builder.Services.AddScoped<NewBranchRepository>();
 builder.Services.AddScoped<DeathClaimRepository>();
 builder.Services.AddScoped<GurukulUserRepository>();
 builder.Services.AddScoped<VCPRepository>();
