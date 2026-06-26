@@ -199,13 +199,10 @@ namespace ProductivityApi.Controllers
 
         [HttpPost("requestAssetAddition")]
         public async Task<IActionResult> RequestAssetAddition(
-            [FromBody] AssetAdditionRequestDto dto
+            [FromForm] AssetAdditionRequestDto dto
         )
         {
-            var result = await _service.CreateAdditionRequestAsync(
-                dto,
-                _env
-            );
+            var result = await _service.CreateAdditionRequestAsync(dto, _env);
 
             return Ok(
                 new Response(

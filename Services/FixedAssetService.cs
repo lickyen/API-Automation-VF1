@@ -76,9 +76,16 @@ namespace ProductivityApi.Services
             IWebHostEnvironment env
         )
         {
-            string? filePath = dto.SupportingPhoto;
+            byte[]? photoBytes = null;
 
-            return await _repository.CreateAdditionRequestAsync(dto, filePath);
+            if (dto.SupportingPhoto != null)
+            {
+                using var ms = new MemoryStream();
+                await dto.SupportingPhoto.CopyToAsync(ms);
+                photoBytes = ms.ToArray();
+            }
+
+            return await _repository.CreateAdditionRequestAsync(dto, photoBytes);
         }
 
         public async Task<bool> UpdateAdditionStatusAsync(UpdateAdditionStatusDto dto)

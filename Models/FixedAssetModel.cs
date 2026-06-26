@@ -106,7 +106,7 @@ namespace ProductivityApi.Models
 
         public DateTime? PurchaseDate { get; set; }
 
-        public string? SupportingPhoto { get; set; }
+        public byte[]? SupportingPhoto { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -268,7 +268,7 @@ namespace ProductivityApi.Models
     public class AssetAdditionRequestDto
     {
         public string? BranchCode { get; set; }
-        public string AssetCode { get; set; } = string.Empty;
+        public string? AssetCode { get; set; }
 
         public string AssetType { get; set; } = string.Empty;
 
@@ -276,7 +276,7 @@ namespace ProductivityApi.Models
 
         public DateTime? PurchaseDate { get; set; }
 
-        public string? SupportingPhoto { get; set; }
+        public IFormFile? SupportingPhoto { get; set; }
 
         public string? Remarks { get; set; }
 

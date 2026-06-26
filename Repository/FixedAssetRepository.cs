@@ -214,21 +214,32 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                    INSERT INTO FixedAssetTypeMaster
-                    (
-                        AssetType,
-                        IsActive,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @AssetType,
-                        @IsActive,
-                        @CreatedBy
-                    );
+            var exists = await conn.ExecuteScalarAsync<int>(
+                @"SELECT COUNT(*)
+          FROM FixedAssetTypeMaster
+          WHERE UPPER(AssetType) = UPPER(@AssetType)",
+                new { dto.AssetType });
 
-                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+            if (exists > 0)
+            {
+                return 0; // or throw an exception
+            }
+
+            string sql = @"
+        INSERT INTO FixedAssetTypeMaster
+        (
+            AssetType,
+            IsActive,
+            CreatedBy
+        )
+        VALUES
+        (
+            @AssetType,
+            @IsActive,
+            @CreatedBy
+        );
+
+        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             return await conn.ExecuteScalarAsync<int>(sql, dto);
         }
@@ -238,39 +249,39 @@ namespace ProductivityApi.Repository
         #region Addition Requests
 
         public async Task<int> CreateAdditionRequestAsync(
-            AssetAdditionRequestDto dto,
-            string? photoPath
-        )
+    AssetAdditionRequestDto dto,
+    byte[]? supportingPhoto
+)
         {
             using var conn = new SqlConnection(_conStr);
 
             string sql = @"
-                    INSERT INTO FixedAssetRequestTransactions
-                    (
-                        BranchCode,
-                        AssetCode,
-                        AssetType,
-                        Description,
-                        PurchaseDate,
-                        SupportingPhoto,
-                        Remarks,
-                        AdditionStatus,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @BranchCode,
-                        @AssetCode,
-                        @AssetType,
-                        @Description,
-                        @PurchaseDate,
-                        @SupportingPhoto,
-                        @Remarks,
-                        'Pending',
-                        @CreatedBy
-                    );
+        INSERT INTO FixedAssetRequestTransactions
+        (
+            BranchCode,
+            AssetCode,
+            AssetType,
+            Description,
+            PurchaseDate,
+            SupportingPhoto,
+            Remarks,
+            AdditionStatus,
+            CreatedBy
+        )
+        VALUES
+        (
+            @BranchCode,
+            @AssetCode,
+            @AssetType,
+            @Description,
+            @PurchaseDate,
+            @SupportingPhoto,
+            @Remarks,
+            'Pending',
+            @CreatedBy
+        );
 
-                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             return await conn.ExecuteScalarAsync<int>(
                 sql,
@@ -281,11 +292,10 @@ namespace ProductivityApi.Repository
                     dto.AssetType,
                     dto.Description,
                     dto.PurchaseDate,
-                    SupportingPhoto = photoPath,
+                    SupportingPhoto = supportingPhoto,
                     dto.Remarks,
-                    dto.CreatedBy,
-                }
-            );
+                    dto.CreatedBy
+                });
         }
 
         public async Task<bool> UpdateAdditionStatusAsync(UpdateAdditionStatusDto dto)
