@@ -467,6 +467,8 @@ namespace ProductivityApi.Models
         public string DestinationBranchName { get; set; } = string.Empty;
         public string? Remarks { get; set; }
         public string TransferStatus { get; set; } = string.Empty;
+
+        public List<AssetBasicDetail>? AssetDetails { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDate { get; set; }
     }
@@ -485,7 +487,7 @@ namespace ProductivityApi.Models
         public string? AmtTransferRef { get; set; }
 
         public string? ReasonForSale { get; set; }
-        public List<AssetBasicDetail>? AssetDetails { get; set; }  // new
+        public List<AssetBasicDetail>? AssetDetails { get; set; }
         public string? Remarks { get; set; }
         public string SaleStatus { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
@@ -498,7 +500,6 @@ namespace ProductivityApi.Models
         public string? AssetCode { get; set; }
         public string? AssetType { get; set; }
         public string? Description { get; set; }
-        public string? AssetStatus { get; set; }
     }
 
     #endregion

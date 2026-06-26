@@ -541,12 +541,22 @@ namespace ProductivityApi.Repository
             var rows = await conn.QueryAsync<FixedAssetTransferTransaction>(
                 @"SELECT * FROM FixedAssetTransferTransactions ORDER BY Id DESC");
 
+            var allAssetIds = rows.Select(r => r.AssetId).Distinct().ToList();
+
+            var assetDetails = (await conn.QueryAsync<AssetBasicDetail>(
+                @"SELECT Id AS AssetId, AssetCode, AssetType, Description, AssetStatus
+          FROM FixedAssetMaster WHERE Id IN @Ids",
+                new { Ids = allAssetIds }
+            )).ToList();
+
             return rows
                 .GroupBy(r => r.TransferId)
                 .Select(g => new BulkTransferGroupedDto
                 {
                     TransferId = g.Key ?? "",
                     AssetIds = g.Select(r => r.AssetId).ToList(),
+                    AssetDetails = g.Select(r => assetDetails.FirstOrDefault(a => a.AssetId == r.AssetId))
+                                    .Where(a => a != null).ToList()!,
                     SourceBranch = g.First().SourceBranch ?? "",
                     SourceBranchName = g.First().SourceBranchName ?? "",
                     DestinationBranch = g.First().DestinationBranch ?? "",
