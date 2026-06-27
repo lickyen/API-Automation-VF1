@@ -14,7 +14,7 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("VCPDBConn");
         }
 
-        private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
+        private IDbConnection CreateConnection() => new SqlConnection(_conStr);
 
         public async Task<VCPModel?> GetByIdAsync(int id)
         {

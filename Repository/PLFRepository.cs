@@ -180,6 +180,7 @@ namespace ProductivityApi.Repository
                 return null;
             }
         }
+        //added by Harika
         public async Task<PlFLoanStatusModel?> GetLoanStatusByLanAsync(string lan)
         {
             try
@@ -197,33 +198,33 @@ group by sz_loan_account_no,loan_status";
                 _logger.LogError(ex, "Error fetching Lan status by lan: {Lan}", lan);
                 return null;
             }
-        }
+        } 
 
-        public async Task<PlFLoanStatusModel?> GetCashPayemntsByCIFAsync(string cif)
+        //added by Harika
+        public async Task<PlfCashByCIFModel?> GetCashPayemntsByCIFAsync(string cif)
         {
             try
             {
                 var sql = @"
-            select DISTINCT (CC.CUSTID),
-CAST (SUM(FP.RECEIPTAMOUNT/100) AS NUMERIC (18,2))AMOUNT
-from plf.financemain c
-join plf.customers cc
-on cc.custid=c.custid
-join plf.finreceiptheader fp
-on c.finreference=fp.reference
-JOIN PLF.NEOLOTEX_DISB ND
-ON ND.SZ_LOAN_ACCOUNT_NO=c.finreference
-AND ND.CUSTOMERID=CC.CUSTCIF
-where CC.CUSTCIF=@cif
-and FP.receiptmode='CASH'
-AND FP.RECEIPTMODESTATUS='R'
-AND RECEIPTDATE='2026-06-04'
-GROUP BY 
-CC.CUSTID";
+            select DISTINCT (CC.CUSTID) as CUSTID,
+            CAST (SUM(FP.RECEIPTAMOUNT/100) AS NUMERIC (18,2))AMOUNT
+            from plf.financemain c
+            join plf.customers cc
+            on cc.custid=c.custid
+            join plf.finreceiptheader fp
+            on c.finreference=fp.reference
+            JOIN PLF.NEOLOTEX_DISB ND
+            ON ND.SZ_LOAN_ACCOUNT_NO=c.finreference
+            AND ND.CUSTOMERID=CC.CUSTCIF
+            where CC.CUSTCIF=@cif
+            and FP.receiptmode='CASH'
+            AND FP.RECEIPTMODESTATUS='R'
+            AND RECEIPTDATE='2026-06-05'
+            GROUP BY CC.CUSTID";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
-                return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { cif });
+                return await connection.QueryFirstOrDefaultAsync<PlfCashByCIFModel>(sql, new { cif });
             }
             catch (Exception ex)
             {

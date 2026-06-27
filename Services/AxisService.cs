@@ -30,6 +30,13 @@ namespace ProductivityApi.Services
                 response.message = "Invalid payment mode. Allowed values are CASH, DD, or CHEQUE.";
                 return response;
             }
+            if (string.IsNullOrWhiteSpace(dto.Req_type) || dto.Req_type != "Validation")
+            {
+                response.Stts_flg = "F";
+                response.Err_cd = "0002";
+                response.message = "Req_type should not be empty and must be set to 'Validation'.";
+                return response;
+            }
 
             // Check PLF Loan Status
             var PlfloanStatus = await _pLFRepository.GetLoanStatusByLanAsync(dto.Loan_acc_no);
@@ -78,6 +85,8 @@ namespace ProductivityApi.Services
                 {
                     //Get Customer id
                     var (data, message) = await _sharedservice.GetLanDetailsAsync(dto.Loan_acc_no);
+                    var custid = data.CustId;
+                    var cashpayment = await _pLFRepository.GetCashPayemntsByCIFAsync(custid);
 
                 }
                 
