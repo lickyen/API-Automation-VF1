@@ -1,6 +1,5 @@
 ﻿using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
-using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using System.Net.Http.Headers;
 using System.Net.Http;
@@ -72,13 +71,13 @@ namespace ProductivityApi.Services
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            var (statement, msg) = await GetForeclosureStatementAsync(lan);
+            //var (statement, msg) = await GetForeclosureStatementAsync(lan);
 
-            if (msg != "Success")
-                return (null, msg);
+            //if (msg != "Success")
+            //    return (null, msg);
 
-            data.TotalOutstanding = statement.TotalOutstandingExclFc;
-            data.PrincipalOutstanding = statement.Pos;
+            //data.TotalOutstanding = statement.TotalOutstandingExclFc;
+            //data.PrincipalOutstanding = statement.Pos;
 
            // data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
            // data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
@@ -359,5 +358,10 @@ namespace ProductivityApi.Services
 
         public async Task<string?> GetAppVersionAsync(string applicationName, string? platform)
             => await _repository.GetAppVersionAsync(applicationName, platform);
+
+        public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
+        {
+            return await _plfRepository.GetDisbursementsAsync(request);
+        }
     }
 }

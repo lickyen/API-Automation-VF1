@@ -1,5 +1,4 @@
 ﻿using ProductivityApi.Models;
-using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services

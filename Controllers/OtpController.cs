@@ -24,8 +24,12 @@ namespace ProductivityApi.Controllers
 
             try
             {
-                await _otpService.SendOtp(request.UserId);
-                return Ok(new Response(true, null, "OTP sent successfully"));
+                var mobile = await _otpService.SendOtp(request.UserId);
+
+                return Ok(new Response(
+                    true,
+                    new { Mobile = mobile },
+                    "OTP sent successfully"));
             }
             catch (Exception ex)
             {

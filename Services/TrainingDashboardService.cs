@@ -1,6 +1,7 @@
-using System.Data;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.Data;
 
 namespace ProductivityApi.Services
 {
@@ -92,9 +93,11 @@ namespace ProductivityApi.Services
             return _repository.DisableEmployee(dto);
         }
 
-        public DataTable DownloadReport()
+        public async Task<byte[]?> DownloadReportExcelAsync()
         {
-            return _repository.DownloadReport();
+            var data = await _repository.DownloadReportAsync();
+
+            return ExcelHelper.GenerateExcel(data, "Report");
         }
     }
 }

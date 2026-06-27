@@ -4,7 +4,7 @@ using Dapper;
 using Microsoft.Extensions.Configuration;
 using ProductivityApi.Models;
 
-namespace ProductivityApi.Repositories
+namespace ProductivityApi.Repository
 {
     public class SettlementRepository
     {

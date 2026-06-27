@@ -3,7 +3,6 @@ using Hangfire.Dashboard;
 using ProductivityApi.Jobs;
 using ProductivityApi.Middlewares;
 using ProductivityApi.Models;
-using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
@@ -103,6 +102,8 @@ builder.Services.AddScoped<VCPService>();
 builder.Services.AddScoped<AxisService>();
 builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
+builder.Services.AddScoped<RazorpayService>();
+builder.Services.AddScoped<DmsDocsService>();
 
 
 builder.Services.AddScoped<UserRepository>();
@@ -136,13 +137,24 @@ builder.Services.AddScoped<VCPRepository>();
 builder.Services.AddScoped<AxisRepository>();
 builder.Services.AddScoped<BTLettersRepository>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
+builder.Services.AddScoped<DmsDocsRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
-builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
+builder.Services.AddScoped<IJob, NOCJob>();
+builder.Services.AddScoped<IJob, NOC_SMS_Job>();
+
+builder.Services.AddScoped<CibilCorrectionRepository>();
+builder.Services.AddScoped<CibilCorrectionService>();
+
+builder.Services.AddScoped<FixedAssetRepository>();
+builder.Services.AddScoped<FixedAssetService>();
+
+builder.Services.AddScoped<ModulesRepository>();
+builder.Services.AddScoped<ModulesService>();
 
 // Add services to the container.
 builder.Services.AddControllers();

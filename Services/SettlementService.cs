@@ -1,7 +1,7 @@
 ﻿using ClosedXML.Excel;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
-using ProductivityApi.Repositories;
+using ProductivityApi.Repository;
 using System.Data;
 
 namespace ProductivityApi.Services

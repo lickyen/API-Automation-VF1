@@ -15,8 +15,12 @@ namespace ProductivityApi.Services
         {
             return _branchRepository.GetBranches();
         }
+        public List<BranchModel> GetBranchesByZone(string zone)
+        {
+            return _branchRepository.GetBranchesByZone(zone);
+        }
         public BranchModel? GetBranchByID(string BranchCode)
-        {         
+        {
             return _branchRepository.GetBranchByID(BranchCode);
         }
 
