@@ -62,7 +62,7 @@ namespace ProductivityApi.Repository
             {
                 var sql = $@"{NeolotexDisbColumns}
                 WHERE loan_status <> 'Active Loan'
-                    AND loanclosure_date >= CURRENT_DATE - 2
+                    AND loanclosure_date >= CURRENT_DATE - 1
                     AND loanclosure_date <  CURRENT_DATE;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
@@ -153,6 +153,32 @@ namespace ProductivityApi.Repository
                 return new List<NeolotexDisb>();
             }
         }
+        public async Task<List<NeolotexDisb>> GetApplicantsByLansAsync(IEnumerable<string> loanAccountNos)
+        {
+            try
+            {
+                var sql = $@"
+                    {NeolotexDisbColumns}
+                    WHERE sz_loan_account_no = ANY(@loanAccountNos);";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync<NeolotexDisb>(
+                    sql,
+                    new
+                    {
+                        loanAccountNos = loanAccountNos.ToArray()
+                    });
+
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching applicants for linked loans");
+                return new List<NeolotexDisb>();
+            }
+        }
         public async Task<PlfBankDetails?> GetBankDetailsByIfscAsync(string ifsc)
         {
             try
@@ -185,8 +211,8 @@ namespace ProductivityApi.Repository
             try
             {
                 var sql = @"
-            select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
-group by sz_loan_account_no,loan_status";
+                    select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
+                    group by sz_loan_account_no,loan_status";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
