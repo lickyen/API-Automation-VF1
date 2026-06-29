@@ -33,6 +33,24 @@ namespace ProductivityApi.Controllers
             }
         }
 
+        [HttpGet("zone/{zone}")]
+        public IActionResult GetBranchesByZone(string zone)
+        {
+            try
+            {
+                var branches = _branchServices.GetBranchesByZone(zone);
+
+                if (branches == null || !branches.Any())
+                    return Ok(new Response(false, null, $"No branches found for zone {zone}"));
+
+                return Ok(new Response(true, branches, "Success"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new Response(false, null, $"Internal server error: {ex.Message}"));
+            }
+        }
+
         [HttpGet("{BranchCode}")]
         public IActionResult GetBranch(string BranchCode)
         {

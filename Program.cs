@@ -6,6 +6,7 @@ using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -143,8 +144,18 @@ builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
 builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
-builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
+builder.Services.AddScoped<IJob, NOCJob>();
+builder.Services.AddScoped<IJob, NOC_SMS_Job>();
+
+builder.Services.AddScoped<CibilCorrectionRepository>();
+builder.Services.AddScoped<CibilCorrectionService>();
+
+builder.Services.AddScoped<FixedAssetRepository>();
+builder.Services.AddScoped<FixedAssetService>();
+
+builder.Services.AddScoped<ModulesRepository>();
+builder.Services.AddScoped<ModulesService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -194,6 +205,15 @@ app.UseHttpsRedirection(); //HTTPS Only
 app.UseHsts(); // enables HTTP Strict Transport Security (HSTS).
 
 app.UseCors("AllowFrontend");
+
+app.UseStaticFiles(); // keeps default wwwroot working
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "wb")),
+    RequestPath = "/wb"
+});
 
 
 

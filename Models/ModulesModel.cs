@@ -67,4 +67,11 @@ namespace ProductivityApi.Models
         public bool IsActive { get; set; }
         public List<RoleModuleMaster> AssignedRoles { get; set; } = new();
     }
+
+    public class UpdateModuleDto
+    {
+        public string ModuleCode { get; set; } = string.Empty;
+        public string ModuleName { get; set; } = string.Empty;
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
 }

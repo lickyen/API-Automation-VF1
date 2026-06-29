@@ -12,7 +12,7 @@ namespace ProductivityApi.Middlewares
         {
             "/swagger",
             "/hangfire",
-            "/WabaFiles"
+            "/wb"
         };
 
         public ApiKeyMiddleware(RequestDelegate next, AppSettings appSettings)

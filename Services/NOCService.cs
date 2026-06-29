@@ -56,30 +56,25 @@ namespace ProductivityApi.Services
             return await _repository.GetClosedLansAsync(isEligible);
         }
 
-        public async Task<IEnumerable<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
-        {
-            return await _plfRepository.GetLoansByCustIdAsync(custId);
-        }
-
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
-            // Step 1: Get all loans for the lan (borrower only)
+            // Step 1: Get linked loans
             var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
 
-            // Step 2: Get all customers for the lan
-            var customers = await _plfRepository.GetApplicantsByLanAsync(lan);
+            if (!loans.Any())
+                return Enumerable.Empty<object>();
 
-            var custList = customers
-                .Where(x => !string.IsNullOrEmpty(x.CustomerId))
-                .Select(x => new
-                {
-                    CustId = x.CustomerId,
-                    CustName = x.CustomerName,
-                    ApplicantType = x.ApplicantType,
-                })
-                .ToList();
+            // Step 2: Fetch applicants/co-applicants for all linked loans
+            var loanAccountNos = loans
+                .Select(x => x.LoanAccountNo)
+                .Distinct()
+                .ToArray();
 
-            // Step 3: Attach customer list to each loan
+            var applicants = await _plfRepository.GetApplicantsByLansAsync(loanAccountNos);
+
+            // Step 3: Attach applicants to each loan
+            var applicantsLookup = applicants.ToLookup(a => a.LoanAccountNo);
+
             var result = loans.Select(loan => new
             {
                 LoanAccountNo = loan.LoanAccountNo,
@@ -91,7 +86,15 @@ namespace ProductivityApi.Services
                 CustomerId = loan.CustomerId,
                 CustomerName = loan.CustomerName,
                 CollateralId = loan.CollateralId,
-                Customers = custList,
+
+                Customers = applicantsLookup[loan.LoanAccountNo]
+                    .Select(a => new
+                    {
+                        CustId = a.CustomerId,
+                        CustName = a.CustomerName,
+                        ApplicantType = a.ApplicantType
+                    })
+                    .ToList()
             });
 
             return result;
