@@ -56,47 +56,6 @@ namespace ProductivityApi.Services
             return await _repository.GetClosedLansAsync(isEligible);
         }
 
-        public async Task<IEnumerable<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
-        {
-            return await _plfRepository.GetLoansByCustIdAsync(custId);
-        }
-
-        //public async Task<object> GetLinkedLoansByLanAsync(string lan)
-        //{
-        //    // Step 1: Get all loans for the same CustId of Applicant/CoApplicant
-        //    var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
-
-        //    // Step 2: Get all customers for the lan
-        //    var customers = await _plfRepository.GetApplicantsByLanAsync(lan);
-
-        //    var custList = customers
-        //        .Where(x => !string.IsNullOrEmpty(x.CustomerId))
-        //        .Select(x => new
-        //        {
-        //            CustId = x.CustomerId,
-        //            CustName = x.CustomerName,
-        //            ApplicantType = x.ApplicantType,
-        //        })
-        //        .ToList();
-
-        //    // Step 3: Attach customer list to each loan
-        //    var result = loans.Select(loan => new
-        //    {
-        //        LoanAccountNo = loan.LoanAccountNo,
-        //        BranchCode = loan.BranchCode,
-        //        LoanStatus = loan.LoanStatus,
-        //        NocStatus = loan.NocStatus,
-        //        DisbDate = loan.DisbursementDate,
-        //        ClosureDate = loan.LoanClosureDate,
-        //        CustomerId = loan.CustomerId,
-        //        CustomerName = loan.CustomerName,
-        //        CollateralId = loan.CollateralId,
-        //        Customers = custList,
-        //    });
-
-        //    return result;
-        //}
-
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
             // Step 1: Get linked loans
