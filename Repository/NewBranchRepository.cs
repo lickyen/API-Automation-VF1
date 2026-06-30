@@ -32,7 +32,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@CreatedBy", model.CreatedBy);
 
                 int branchId = connection.ExecuteScalar<int>(
-                    "SP_AddNewBranch",
+                    "SP_NewBranch_Add",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -57,7 +57,7 @@ namespace ProductivityApi.Repository
 
             return connection
                 .Query<NewBranchMasterModel>(
-                    "SP_GetAllNewBranches",
+                    "SP_NewBranch_GetAll",
                     new { Role = role, UserId = userId },
                     commandType: CommandType.StoredProcedure
                 )
@@ -80,7 +80,7 @@ namespace ProductivityApi.Repository
                 PendingTransactionDto,
                 NewBranchListItemDto
             >(
-                "SP_NewBranchGetTransactionsByRole", // stored procedure name
+                "SP_NewBranch_GetTransactionsByRole", // stored procedure name
                 (branch, transaction) =>
                 {
                     if (!branchDictionary.TryGetValue(branch.Id, out var existingBranch))
@@ -127,7 +127,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@Id", id);
 
                 var branch = connection.QueryFirstOrDefault<NewBranchMasterModel>(
-                    "SP_GetNewBranchById",
+                    "SP_NewBranch_GetById",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -156,7 +156,7 @@ namespace ProductivityApi.Repository
 
                 var transactions = connection
                     .Query<ChecklistTransactionDto>(
-                        "SP_GetBranchTransactions",
+                        "SP_NewBranch_GetTransactions",
                         parameters,
                         commandType: CommandType.StoredProcedure
                     )
@@ -202,7 +202,7 @@ namespace ProductivityApi.Repository
                         parameters.Add("@UpdatedBy", model.UpdatedBy);
 
                         connection.Execute(
-                            "SP_UpdateBranchTransaction",
+                            "SP_NewBranch_UpdateTransaction",
                             parameters,
                             commandType: CommandType.StoredProcedure,
                             transaction: transaction
@@ -252,7 +252,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@Tid", tid);
 
                 bool isCompleted = connection.ExecuteScalar<bool>(
-                    "SP_CheckBranchCompleted",
+                    "SP_NewBranch_CheckCompleted",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -277,7 +277,7 @@ namespace ProductivityApi.Repository
             await conn.OpenAsync();
 
             using var multi = await conn.QueryMultipleAsync(
-                "SP_GetNewBranchReport",
+                "SP_NewBranch_GetReport",
                 commandType: CommandType.StoredProcedure
             );
 
@@ -302,7 +302,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@UpdatedBy", model.UpdatedBy);
 
                 connection.Execute(
-                    "SP_UpdateBranchCode",
+                    "SP_NewBranch_UpdateCode",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -332,7 +332,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@UserId", model.UserId);
 
                 int id = connection.ExecuteScalar<int>(
-                    "SP_AddBranchUser",
+                    "SP_NewBranch_AddBranchUser",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );
@@ -360,7 +360,7 @@ namespace ProductivityApi.Repository
 
                 return connection
                     .Query<BranchUserDto>(
-                        "SP_GetBranchUsersByBid",
+                        "SP_NewBranch_GetBranchUsersByBid",
                         parameters,
                         commandType: CommandType.StoredProcedure
                     )
@@ -382,7 +382,7 @@ namespace ProductivityApi.Repository
             var csv = string.Join(",", updatedChecklistIds);
 
             using var multi = await connection.QueryMultipleAsync(
-                "SP_GetNewBranchEmailTriggers",
+                "SP_NewBranch_GetEmailTriggers",
                 new { Tid = tid, UpdatedChecklistIds = csv },
                 commandType: CommandType.StoredProcedure
             );
@@ -399,7 +399,7 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
 
             var result = await connection.QueryAsync<NewBranchEmailRecipientDto>(
-                "SP_GetNewBranchEmailRecipients",
+                "SP_NewBranch_GetEmailRecipients",
                 new { Tid = tid, DepartmentGroup = departmentGroup },
                 commandType: CommandType.StoredProcedure
             );
@@ -423,7 +423,7 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
 
             await connection.ExecuteAsync(
-                "SP_LogNewBranchEmail",
+                "SP_NewBranch_LogEmail",
                 new
                 {
                     Tid = tid,
@@ -440,7 +440,7 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
 
             using var multi = await connection.QueryMultipleAsync(
-                "SP_GetNewBranchCreationEmailTriggers",
+                "SP_NewBranch_GetCreationEmailTriggers",
                 new { Tid = tid },
                 commandType: CommandType.StoredProcedure
             );
