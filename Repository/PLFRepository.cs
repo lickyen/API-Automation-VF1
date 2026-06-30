@@ -78,39 +78,23 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
+            var sql = $@"{NeolotexDisbColumns}
                     WHERE sz_collateral_id = @collId;";
 
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { collId });
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching loans for CollId: {CollId}", collId);
-                return new List<NeolotexDisb>();
-            }
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            await connection.OpenAsync();
+            var result = await connection.QueryAsync<NeolotexDisb>(sql, new { collId });
+            return result.ToList();
         }
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
+            var sql = $@"{NeolotexDisbColumns}
                     WHERE customerid = @custId;";
 
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql, new { custId });
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching loans for CustId: {CustId}", custId);
-                return new List<NeolotexDisb>();
-            }
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            await connection.OpenAsync();
+            var result = await connection.QueryAsync<NeolotexDisb>(sql, new { custId });
+            return result.ToList();
         }
         public async Task<List<NeolotexDisb>> GetLinkedLoansByLanAsync(string lan)
         {
