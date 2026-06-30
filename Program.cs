@@ -199,8 +199,6 @@ app.UseSerilogRequestLogging(options =>
     };
 });
 
-//app.UseMiddleware<LoggingMiddleware>();
-
 app.UseHttpsRedirection(); //HTTPS Only
 app.UseHsts(); // enables HTTP Strict Transport Security (HSTS).
 
@@ -208,14 +206,12 @@ app.UseCors("AllowFrontend");
 
 app.UseStaticFiles(); // keeps default wwwroot working
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.WebRootPath, "wb")),
-    RequestPath = "/wb"
-});
-
-
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider(
+//        Path.Combine(builder.Environment.WebRootPath, "wb")),
+//    RequestPath = "/wb"
+//});
 
 if (!app.Environment.IsDevelopment())
 {
