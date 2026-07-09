@@ -23,10 +23,6 @@ namespace ProductivityApi.Repository
                 var parameters = new
                 {
                     dto.Lan,
-                    dto.IsMainLan,
-                    dto.ParentLoanId,
-                    dto.ParallelLoan,
-                    dto.ParallelLoanClosure,
                     dto.BranchCode,
                     dto.BranchName,
                     dto.Region,
@@ -34,11 +30,12 @@ namespace ProductivityApi.Repository
                     dto.MegaZone,
                     dto.DPD,
                     dto.LoanAmount,
-                    dto.Action,
+                    dto.Criticality,
                     dto.Allocation,
                     dto.Bucket,
                     dto.IsAmountCollected,
                     dto.ReasonAmountCollected,
+                    dto.TotalPaidAmount,
                     dto.IsWaiver,
                     dto.LetterId,
                     dto.FinalApprover,
@@ -47,6 +44,7 @@ namespace ProductivityApi.Repository
                     status,
 
                     dto.TotalOutstanding,
+                    dto.ExcessAmount,
                     dto.POS,
                     dto.Interest,
                     dto.Charges,
@@ -81,11 +79,12 @@ namespace ProductivityApi.Repository
                     dto.Id,
                     dto.DPD,
                     dto.LoanAmount,
-                    dto.Action,
+                    dto.Criticality,
                     dto.Allocation,
                     dto.Bucket,
                     dto.IsAmountCollected,
                     dto.ReasonAmountCollected,
+                    dto.TotalPaidAmount,
                     dto.IsWaiver,
                     dto.FinalApprover,
                     dto.Remarks,
@@ -93,6 +92,7 @@ namespace ProductivityApi.Repository
                     status,
 
                     dto.TotalOutstanding,
+                    dto.ExcessAmount,
                     dto.POS,
                     dto.Interest,
                     dto.Charges,
@@ -127,7 +127,12 @@ namespace ProductivityApi.Repository
                     dto.Id,
                     dto.Remarks,
                     dto.UpdatedBy,
-                    status
+                    dto.DiffAmount,
+                    dto.UpdatedTotal,
+                    dto.DiffAmountIncWaiver,
+                    dto.UpdatedTotalIncWaiver,
+                    dto.TotalPaidAmount,
+                    Status = status
                 };
 
                 return await connection.ExecuteAsync(
@@ -152,7 +157,12 @@ namespace ProductivityApi.Repository
                     dto.Id,
                     dto.Remarks,
                     dto.UpdatedBy,
-                    status
+                    dto.DiffAmount,
+                    dto.UpdatedTotal,
+                    dto.DiffAmountIncWaiver,
+                    dto.UpdatedTotalIncWaiver,
+                    dto.TotalPaidAmount,
+                    Status = status
                 };
 
                 return await connection.ExecuteAsync(
@@ -165,37 +175,45 @@ namespace ProductivityApi.Repository
                 throw new Exception("DB Error.", ex);
             }
         }
-
         public async Task<int> AddLogAsync(AddClosureLogDto dto)
         {
-            using var connection = new SqlConnection(_conStr);
-            var parameters = new DynamicParameters();
-            parameters.Add("@ReqId", dto.ReqId);
-            parameters.Add("@Role", dto.Role);
-            parameters.Add("@Action", dto.Action);
-            parameters.Add("@Status", dto.Status);
-            parameters.Add("@Remarks", dto.Remarks);
-            parameters.Add("@Total_Outstanding", dto.TotalOutstanding);
-            parameters.Add("@Excess_Amount", dto.ExcessAmount);
-            parameters.Add("@POS", dto.POS);
-            parameters.Add("@Interest", dto.Interest);
-            parameters.Add("@Charges", dto.Charges);
-            parameters.Add("@Amount_Proposed", dto.AmountProposed);
-            parameters.Add("@POS_Proposed", dto.POSProposed);
-            parameters.Add("@Interest_Proposed", dto.InterestProposed);
-            parameters.Add("@Charges_Proposed", dto.ChargesProposed);
-            parameters.Add("@POS_WaiverPer", dto.POSWaiverPer);
-            parameters.Add("@Interest_WaiverPer", dto.InterestWaiverPer);
-            parameters.Add("@Charges_WaiverPer", dto.ChargesWaiverPer);
-            parameters.Add("@CreatedBy", dto.CreatedBy);
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
 
-            return await connection.ExecuteScalarAsync<int>(
-                "sp_newClosure_AddLog",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            );
+                var parameters = new
+                {
+                    dto.ReqId,
+                    dto.Role,
+                    dto.Action,
+                    dto.Status,
+                    dto.Remarks,
+                    dto.TotalOutstanding,
+                    dto.ExcessAmount,
+                    dto.POS,
+                    dto.Interest,
+                    dto.Charges,
+                    dto.AmountProposed,
+                    dto.POSProposed,
+                    dto.InterestProposed,
+                    dto.ChargesProposed,
+                    dto.POSWaiverPer,
+                    dto.InterestWaiverPer,
+                    dto.ChargesWaiverPer,
+                    dto.CreatedBy
+                };
+
+                return await connection.ExecuteScalarAsync<int>(
+                    "sp_newClosure_AddLog",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
         }
-
         public async Task<int> ApproveAsync(ClosureApprovalDto dto)
         {
             try
@@ -225,7 +243,6 @@ namespace ProductivityApi.Repository
                     dto.ChargesWaiverPer
                 };
 
-                // stored proc returns int status (1 success, -1 not found, -2 invalid role etc.)
                 return await connection.ExecuteScalarAsync<int>(
                     "sp_newClosure_Approval",
                     parameters,
@@ -236,7 +253,6 @@ namespace ProductivityApi.Repository
                 throw new Exception("DB Error.", ex);
             }
         }
-
         public async Task<ClosureTransaction?> GetByIdAsync(int id)
         {
             try
@@ -408,7 +424,6 @@ namespace ProductivityApi.Repository
                 throw new Exception("DB Error.", ex);
             }
         }
-
         public async Task<int> UpdatePaymentAsync(UpdateClosurePaymentDto dto, string? proofPath)
         {
             try
@@ -522,7 +537,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> UpdateFilePathsAsync(int reqId, string? ackPath, string? checklistPath, string? fcLetterPath)
+        public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string? filePath)
         {
             try
             {
@@ -532,13 +547,12 @@ namespace ProductivityApi.Repository
                 var parameters = new
                 {
                     Id = reqId,
-                    AckPath = ackPath,
-                    ChecklistPath = checklistPath,
-                    FCLetterPath = fcLetterPath
+                    FileType = fileType,
+                    FilePath = filePath
                 };
 
                 return await connection.ExecuteAsync(
-                    "sp_newClosure_UpdateFilePaths",
+                    "sp_newClosure_UpdateFilePath",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -564,5 +578,25 @@ namespace ProductivityApi.Repository
                 throw new Exception("DB Error.", ex);
             }
         }
+
+        public async Task<int> UpdateFileNameAsync(int reqId, string fileType, string fileName, string updatedBy)
+        {
+            using var connection = new SqlConnection(_conStr);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@Id", reqId);
+            parameters.Add("@FileName", fileName);
+            parameters.Add("@FileType", fileType);
+            parameters.Add("@UpdatedBy", updatedBy);
+            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await connection.ExecuteAsync(
+                "dbo.sp_newClosure_UpdateFileName",
+                parameters,
+                commandType: CommandType.StoredProcedure);
+
+            return parameters.Get<int>("@Output");
+        }
+
     }
 }

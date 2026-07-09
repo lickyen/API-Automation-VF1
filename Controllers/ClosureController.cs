@@ -23,7 +23,7 @@ namespace ProductivityApi.Controllers
             return result switch
             {
                 > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
+                -1 => NotFound(new Response(false, null, "An active request exists for the same LAN")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -86,7 +86,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("getListByUser")]
+        [HttpGet("getByUser")]
         public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role, [FromQuery] string status)
         {
             var data = await _service.GetListByUserAsync(userId, role, status);
@@ -158,6 +158,15 @@ namespace ProductivityApi.Controllers
             return File(fileBytes, contentType, fileName);
         }
 
+        //[HttpPost("upload")]
+        //public async Task<IActionResult> UploadDoc([FromForm] UploadFileRequestDto dto)
+        //{
+        //    var result = await _service.UploadFileAsync(dto);
+        //    return result.Success
+        //        ? Ok(new Response(true, result.FilePath, "File uploaded successfully"))
+        //        : BadRequest(new Response(false, null, result.Error));
+        //}
+
         [HttpGet("getQuestionnaire")]
         public async Task<IActionResult> GetQuestionnaireMaster()
         {
@@ -176,6 +185,16 @@ namespace ProductivityApi.Controllers
                 -2 => BadRequest(new Response(false, null, "Invalid source")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
+        }
+
+        [HttpPost("getWaiverApprover")]
+        public async Task<IActionResult> GetWaiverApprover([FromBody] GetWaiverApproverDto dto)
+        {
+            var result = await _service.GetWaiverApproverAsync(dto);
+
+            return string.IsNullOrWhiteSpace(result)
+                ? StatusCode(500, new Response(false, null, "Unable to determine a waiver approver for the given inputs"))
+                : Ok(new Response(true, new { finalApprover = result }, "Success"));
         }
     }
 }

@@ -4,22 +4,16 @@
     {
         public int Id { get; set; }
         public string Lan { get; set; }
-        public bool IsMainLan { get; set; }
-        public int? ParentLoanId { get; set; }
-        public string ParallelLoan { get; set; }
-        public bool ParallelLoanClosure { get; set; }
-
         public string BranchCode { get; set; }
         public string BranchName { get; set; }
         public string Region { get; set; }
         public string Zone { get; set; }
         public string MegaZone { get; set; }
 
-        public int? MOB { get; set; }
-        public int? DPD { get; set; }
-        public string Bucket { get; set; }
-        public string Action { get; set; }
+        public int DPD { get; set; }
+        public string Criticality { get; set; }
         public string Allocation { get; set; }
+        public string Bucket { get; set; }
 
         public decimal LoanAmount { get; set; }
         public decimal TotalOutstanding { get; set; }
@@ -46,6 +40,14 @@
         public string PendingRole { get; set; }
         public string PendingUser { get; set; }
         public string FinalApprover { get; set; }
+        public string WaiverStatus { get; set; }
+        public int? WaiverCurrentStep { get; set; }
+        public string WaiverPendingRole { get; set; }
+        public string WaiverPendingUser { get; set; }
+        public string RetentionStatus { get; set; }
+        public int? RetentionCurrentStep { get; set; }
+        public string RetentionPendingRole { get; set; }
+        public string RetentionPendingUser { get; set; }
 
         public bool IsAmountCollected { get; set; }
         public string ReasonAmountCollected { get; set; }
@@ -61,58 +63,16 @@
         public string CheckListPath { get; set; }
         public string FCLetterPath { get; set; }
         public int? LetterId { get; set; }
-
         public bool PLFIsActive { get; set; }
         public DateTime? PLFUpdatedDt { get; set; }
-
-        // Approval columns
-        public string RHStatus { get; set; }
-        public string RHRemarks { get; set; }
-        public string RHUpdatedBy { get; set; }
-        public DateTime? RHUpdatedDt { get; set; }
-
-        public string ZHStatus { get; set; }
-        public string ZHRemarks { get; set; }
-        public string ZHUpdatedBy { get; set; }
-        public DateTime? ZHUpdatedDt { get; set; }
-
-        public string MZHStatus { get; set; }
-        public string MZHRemarks { get; set; }
-        public string MZHUpdatedBy { get; set; }
-        public DateTime? MZHUpdatedDt { get; set; }
-
-        public string RD1Status { get; set; }
-        public string RD1Remarks { get; set; }
-        public string RD1UpdatedBy { get; set; }
-        public DateTime? RD1UpdatedDt { get; set; }
-
-        public string RD2Status { get; set; }
-        public string RD2Remarks { get; set; }
-        public string RD2UpdatedBy { get; set; }
-        public DateTime? RD2UpdatedDt { get; set; }
-
-        public string RCHStatus { get; set; }
-        public string RCHRemarks { get; set; }
-        public string RCHUpdatedBy { get; set; }
-        public DateTime? RCHUpdatedDt { get; set; }
-
-        public string ZCHStatus { get; set; }
-        public string ZCHRemarks { get; set; }
-        public string ZCHUpdatedBy { get; set; }
-        public DateTime? ZCHUpdatedDt { get; set; }
-
-        public string MZCHStatus { get; set; }
-        public string MZCHRemarks { get; set; }
-        public string MZCHUpdatedBy { get; set; }
-        public DateTime? MZCHUpdatedDt { get; set; }
 
         // Branch workflow
         public string BranchInitiatedBy { get; set; }
         public DateTime? BranchInitiatedDt { get; set; }
         public string BranchReinitiatedBy { get; set; }
         public DateTime? BranchReinitiatedDt { get; set; }
-        public string BranchPaymentUpdatedBy { get; set; }
-        public DateTime? BranchPaymentUpdatedDt { get; set; }
+        public string BranchAmountCollectedBy { get; set; }
+        public DateTime? BranchAmountCollectedDt { get; set; }
 
         // COPS
         public string CopsUpdatedBy { get; set; }
@@ -155,6 +115,8 @@
         public string Action { get; set; }
         public string Status { get; set; }
         public string Remarks { get; set; }
+        public string? WorkflowType { get; set; }
+        public int? StepOrder { get; set; }
         public decimal TotalOutstanding { get; set; }
         public decimal ExcessAmount { get; set; }
         public decimal POS { get; set; }
@@ -213,29 +175,24 @@
     public class AddClosureRequestDto : ClosureFinancialDto
     {
         public string Lan { get; set; }
-        public bool IsMainLan { get; set; }
-        public int? ParentLoanId { get; set; }
-        public string ParallelLoan { get; set; }
-        public bool ParallelLoanClosure { get; set; }
         public string BranchCode { get; set; }
         public string BranchName { get; set; }
         public string Region { get; set; }
         public string Zone { get; set; }
         public string MegaZone { get; set; }
-        public int? DPD { get; set; }
+        public int DPD { get; set; }
         public decimal LoanAmount { get; set; }
-        public string Action { get; set; }
+        public string Criticality { get; set; }
         public string Allocation { get; set; }
         public string Bucket { get; set; }
         public bool IsAmountCollected { get; set; }
-        public string ReasonAmountCollected { get; set; }
+        public string? ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
         public int? LetterId { get; set; }
-        public string Status { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string CreatedBy { get; set; }
-
+        public decimal? TotalPaidAmount { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
@@ -245,9 +202,9 @@
     public class ReinitiateClosureRequestDto : ClosureFinancialDto
     {
         public int Id { get; set; }
-        public int? DPD { get; set; }
+        public int DPD { get; set; }
         public decimal LoanAmount { get; set; }
-        public string Action { get; set; }
+        public string Criticality { get; set; }
         public string Allocation { get; set; }
         public string Bucket { get; set; }
         public bool IsAmountCollected { get; set; }
@@ -256,7 +213,7 @@
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
-
+        public decimal? TotalPaidAmount { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
@@ -268,7 +225,11 @@
         public int Id { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
-
+        public decimal DiffAmount { get; set; }
+        public decimal UpdatedTotal { get; set; }
+        public decimal DiffAmountIncWaiver { get; set; }
+        public decimal UpdatedTotalIncWaiver { get; set; }
+        public decimal TotalPaidAmount { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
@@ -280,7 +241,11 @@
         public int Id { get; set; }
         public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
-
+        public decimal DiffAmount { get; set; }
+        public decimal UpdatedTotal { get; set; }
+        public decimal DiffAmountIncWaiver { get; set; }
+        public decimal UpdatedTotalIncWaiver { get; set; }
+        public decimal TotalPaidAmount { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
