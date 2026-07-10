@@ -530,6 +530,28 @@ namespace ProductivityApi.Services
             return await FileHelper.ReadFileAsync(_filePath, fileName);
         }
         public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
-             => await _repository.GetQuestionnaireMasterAsync();
+        {
+            return await _repository.GetQuestionnaireMasterAsync();
+        }
+
+        public async Task<int> CancelRequestAsync(CancelClosureRequestDto dto)
+        {
+            var result = await _repository.CancelRequestAsync(dto);
+
+            if (result > 0)
+            {
+                await _repository.AddLogAsync(new AddClosureLogDto
+                {
+                    ReqId = dto.Id,
+                    Role = "OPS",
+                    Action = ClosureStatus.Cancelled,
+                    Status = ClosureStatus.Cancelled,
+                    Remarks = dto.Remarks,
+                    CreatedBy = dto.CancelledBy
+                });
+            }
+
+            return result;
+        }
     }
 }

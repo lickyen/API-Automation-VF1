@@ -180,7 +180,7 @@ namespace ProductivityApi.Controllers
             var result = await _service.SubmitQuestionnaireAsync(dto);
             return result switch
             {
-                0 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
+                1 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Request not found")),
                 -2 => BadRequest(new Response(false, null, "Invalid source")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
@@ -195,6 +195,19 @@ namespace ProductivityApi.Controllers
             return string.IsNullOrWhiteSpace(result)
                 ? StatusCode(500, new Response(false, null, "Unable to determine a waiver approver for the given inputs"))
                 : Ok(new Response(true, new { finalApprover = result }, "Success"));
+        }
+
+        [HttpPut("cancel")]
+        public async Task<IActionResult> Cancel([FromBody] CancelClosureRequestDto dto)
+        {
+            var result = await _service.CancelRequestAsync(dto);
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Request cancelled successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Request is already closed/cancelled/rejected")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
     }
 }

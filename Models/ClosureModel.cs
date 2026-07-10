@@ -157,20 +157,19 @@
     // ── Shared financial block ──────────────────────────────────────────
     public class ClosureFinancialDto
     {
-        public decimal TotalOutstanding { get; set; }
-        public decimal POS { get; set; }
-        public decimal Interest { get; set; }
-        public decimal Charges { get; set; }
-        public decimal ExcessAmount { get; set; }
-        public decimal AmountProposed { get; set; }
-        public decimal POSProposed { get; set; }
-        public decimal InterestProposed { get; set; }
-        public decimal ChargesProposed { get; set; }
-        public decimal POSWaiverPer { get; set; }
-        public decimal InterestWaiverPer { get; set; }
-        public decimal ChargesWaiverPer { get; set; }
+        public decimal? TotalOutstanding { get; set; }
+        public decimal? POS { get; set; }
+        public decimal? Interest { get; set; }
+        public decimal? Charges { get; set; }
+        public decimal? ExcessAmount { get; set; }
+        public decimal? AmountProposed { get; set; }
+        public decimal? POSProposed { get; set; }
+        public decimal? InterestProposed { get; set; }
+        public decimal? ChargesProposed { get; set; }
+        public decimal? POSWaiverPer { get; set; }
+        public decimal? InterestWaiverPer { get; set; }
+        public decimal? ChargesWaiverPer { get; set; }
     }
-
     // ── Add Request ─────────────────────────────────────────────────────
     public class AddClosureRequestDto : ClosureFinancialDto
     {
@@ -365,6 +364,12 @@
         public int DisplayOrder { get; set; }
         public bool IsMandatory { get; set; }
         public bool IsActive { get; set; }
+    }
+    public class CancelClosureRequestDto
+    {
+        public int Id { get; set; }
+        public string Remarks { get; set; }
+        public string CancelledBy { get; set; }
     }
 }
 
