@@ -86,20 +86,20 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("getByUser")]
-        public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role, [FromQuery] string status)
-        {
-            var data = await _service.GetListByUserAsync(userId, role, status);
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("searchByLan/{lan}")]
-        public async Task<IActionResult> SearchByLan(string lan)
+        [HttpGet("getByLan/{lan}")]
+        public async Task<IActionResult> GetByLan(string lan)
         {
             if (string.IsNullOrWhiteSpace(lan))
                 return BadRequest(new Response(false, null, "LAN is required"));
 
-            var data = await _service.SearchByLanAsync(lan);
+            var data = await _service.GetByLanAsync(lan);
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getByUser")]
+        public async Task<IActionResult> GetListByUser([FromQuery] string userId, [FromQuery] string role, [FromQuery] string? status)
+        {
+            var data = await _service.GetListByUserAsync(userId, role, status);
             return Ok(new Response(true, data, "Success"));
         }
 

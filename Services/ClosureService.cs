@@ -454,24 +454,13 @@ namespace ProductivityApi.Services
             return txn;
         }
 
-        public async Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string status)
+        public Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string? status)
         {
-            var s = (status ?? string.Empty).Trim().ToUpper();
-
-            if (s == "P")
-            {
-                return await _repository.GetPendingByUserAsync(userId, role);
-            }
-            else if (s == "C")
-            {
-                return await _repository.GetCompletedByUserAsync(userId, role);
-            }
-
-            return await _repository.GetPendingByUserAsync(userId, role);
+            return _repository.GetByUserAsync(userId, role, status);
         }
 
-        public async Task<List<ClosureTransaction>> SearchByLanAsync(string lan)
-            => await _repository.SearchByLanAsync(lan);
+        public async Task<List<ClosureTransaction>> GetByLanAsync(string lan)
+            => await _repository.GetByLanAsync(lan);
 
         public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto)
         {

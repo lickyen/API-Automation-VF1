@@ -220,7 +220,33 @@ namespace ProductivityApi.Repository
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
         }
+        public async Task<List<ClosureTransaction>> GetByLanAsync(string lan)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            var rows = await connection.QueryAsync<ClosureTransaction>(
+                "sp_newClosure_GetByLan",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure);
+            return rows.ToList();
+        }
+        public async Task<List<ClosureTransaction>> GetByUserAsync(string userId, string role, string? status)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
 
+            var rows = await connection.QueryAsync<ClosureTransaction>(
+                "sp_newClosure_GetByUser",
+                new
+                {
+                    UserId = userId,
+                    Role = role,
+                    Status = status
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return rows.ToList();
+        }
         public async Task<List<ClosurePayment>> GetPaymentsAsync(int reqId)
         {
             using var connection = new SqlConnection(_conStr);
@@ -231,7 +257,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-
         public async Task<List<ClosureLog>> GetLogsAsync(int reqId)
         {
             using var connection = new SqlConnection(_conStr);
@@ -242,7 +267,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-
         public async Task<List<ClosureQuestionnaireResponse>> GetQuestionnaireAsync(int reqId, string reqSource)
         {
             using var connection = new SqlConnection(_conStr);
@@ -253,50 +277,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-
-        public async Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var rows = await connection.QueryAsync<ClosureTransaction>(
-                "sp_GetClosureListByUser",
-                new { UserId = userId, Role = role },
-                commandType: CommandType.StoredProcedure);
-            return rows.ToList();
-        }
-
-        public async Task<List<ClosureTransaction>> GetPendingByUserAsync(string userId, string role)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var rows = await connection.QueryAsync<ClosureTransaction>(
-                "sp_newClosure_GetByUser_Pending",
-                new { UserId = userId, Role = role },
-                commandType: CommandType.StoredProcedure);
-            return rows.ToList();
-        }
-
-        public async Task<List<ClosureTransaction>> GetCompletedByUserAsync(string userId, string role)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var rows = await connection.QueryAsync<ClosureTransaction>(
-                "sp_newClosure_GetByUser_Completed",
-                new { UserId = userId, Role = role },
-                commandType: CommandType.StoredProcedure);
-            return rows.ToList();
-        }
-        public async Task<List<ClosureTransaction>> SearchByLanAsync(string lan)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var rows = await connection.QueryAsync<ClosureTransaction>(
-                "sp_newClosure_SearchByLan",
-                new { Lan = lan },
-                commandType: CommandType.StoredProcedure);
-            return rows.ToList();
-        }
-
         public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto, string? proofPath)
         {
             using var connection = new SqlConnection(_conStr);
@@ -341,7 +321,6 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
-
         public async Task<int> DeletePaymentAsync(int id, string deletedBy)
         {
             using var connection = new SqlConnection(_conStr);
@@ -352,6 +331,15 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
         }
 
+        public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            var rows = await connection.QueryAsync<ClosureQuestionnaireMaster>(
+                "sp_newClosure_GetQuestionnaireMaster",
+                commandType: CommandType.StoredProcedure);
+            return rows.ToList();
+        }
         public async Task<int> AddQuestionnaireResponseAsync(AddQuestionnaireResponseDto dto)
         {
             using var connection = new SqlConnection(_conStr);
@@ -371,7 +359,6 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
-
         public async Task<int> SubmitQuestionnaireAsync(SubmitQuestionnaireDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
@@ -404,7 +391,6 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-
         public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string? filePath)
         {
             using var connection = new SqlConnection(_conStr);
@@ -422,36 +408,6 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
-
-        public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-            var rows = await connection.QueryAsync<ClosureQuestionnaireMaster>(
-                "sp_newClosure_GetQuestionnaireMaster",
-                commandType: CommandType.StoredProcedure);
-            return rows.ToList();
-        }
-
-        public async Task<int> UpdateFileNameAsync(int reqId, string fileType, string fileName, string updatedBy)
-        {
-            using var connection = new SqlConnection(_conStr);
-
-            var parameters = new DynamicParameters();
-            parameters.Add("@Id", reqId);
-            parameters.Add("@FileName", fileName);
-            parameters.Add("@FileType", fileType);
-            parameters.Add("@UpdatedBy", updatedBy);
-            parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
-
-            await connection.ExecuteAsync(
-                "dbo.sp_newClosure_UpdateFileName",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            return parameters.Get<int>("@Output");
-        }
-
         public async Task<int> CancelRequestAsync(CancelClosureRequestDto dto)
         {
             using var connection = new SqlConnection(_conStr);
