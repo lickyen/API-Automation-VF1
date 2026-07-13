@@ -475,9 +475,6 @@ namespace ProductivityApi.Services
         public async Task<int> DeletePaymentAsync(int id, string deletedBy)
             => await _repository.DeletePaymentAsync(id, deletedBy);
 
-        public async Task<int> AddQuestionnaireResponseAsync(AddQuestionnaireResponseDto dto)
-            => await _repository.AddQuestionnaireResponseAsync(dto);
-
         public async Task<string?> GetWaiverApproverAsync(GetWaiverApproverDto dto)
             => await _repository.GetWaiverApproverAsync(dto);
 
