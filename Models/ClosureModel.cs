@@ -310,14 +310,12 @@
     }
 
     // ── Add Questionnaire Response ──────────────────────────────────────
+
     public class AddQuestionnaireResponseDto
     {
-        public int ReqId { get; set; }
-        public string ReqSource { get; set; }
         public int QuestionId { get; set; }
         public string QuestionCode { get; set; }
         public string ResponseValue { get; set; }
-        public string CreatedBy { get; set; }
     }
 
     // ── Submit Questionnaire ────────────────────────────────────────────

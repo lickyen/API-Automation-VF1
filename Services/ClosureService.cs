@@ -305,20 +305,12 @@ namespace ProductivityApi.Services
             // First, save any questionnaire responses provided in the request
             if (dto.Responses != null && dto.Responses.Any())
             {
-                foreach (var r in dto.Responses)
-                {
-                    var addDto = new AddQuestionnaireResponseDto
-                    {
-                        ReqId = dto.Id,
-                        ReqSource = dto.Source,
-                        QuestionId = r.QuestionId,
-                        QuestionCode = r.QuestionCode,
-                        ResponseValue = r.ResponseValue,
-                        CreatedBy = dto.CreatedBy
-                    };
-
-                    await _repository.AddQuestionnaireResponseAsync(addDto);
-                }
+                await _repository.AddQuestionnaireResponseAsync(
+                    dto.Id,
+                    dto.Source,
+                    dto.Responses,
+                    dto.CreatedBy
+                );
             }
 
             var result = await _repository.SubmitQuestionnaireAsync(dto, status);

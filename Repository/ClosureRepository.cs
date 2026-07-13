@@ -340,19 +340,36 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-        public async Task<int> AddQuestionnaireResponseAsync(AddQuestionnaireResponseDto dto)
+        public async Task<int> AddQuestionnaireResponseAsync(
+            int reqId,
+            string reqSource,
+            List<AddQuestionnaireResponseDto> responses,
+            string createdBy)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
-            var parameters = new
+
+            var table = new DataTable();
+
+            table.Columns.Add("QuestionId", typeof(int));
+            table.Columns.Add("QuestionCode", typeof(string));
+            table.Columns.Add("ResponseValue", typeof(string));
+
+            foreach (var response in responses)
             {
-                dto.ReqId,
-                dto.ReqSource,
-                dto.QuestionId,
-                dto.QuestionCode,
-                dto.ResponseValue,
-                dto.CreatedBy
-            };
+                table.Rows.Add(
+                    response.QuestionId,
+                    response.QuestionCode,
+                    response.ResponseValue
+                );
+            }
+
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ReqId", reqId);
+            parameters.Add("@ReqSource", reqSource);
+            parameters.Add("@Responses", table.AsTableValuedParameter("dbo.QuestionnaireResponseType"));
+            parameters.Add("@CreatedBy", createdBy);
 
             return await connection.ExecuteScalarAsync<int>(
                 "sp_newClosure_AddQuestionnaireResponse",
