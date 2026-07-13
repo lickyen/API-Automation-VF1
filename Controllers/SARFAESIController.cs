@@ -140,7 +140,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getMappedLans")]
-        public async Task<IActionResult> GetLansByEmpId(string empId)
+        public async Task<IActionResult> GetLansByEmpId([FromQuery] string? empId)
         {
             var data = await _service.GetLansByEmpIdAsync(empId);
 

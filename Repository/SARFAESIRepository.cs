@@ -213,17 +213,18 @@ namespace ProductivityApi.Repository
             return parameters.Get<int>("@RowsAffected");
         }
 
-        public async Task<List<string>> GetLansByEmpIdAsync(string empId)
+        public async Task<List<string>> GetLansByEmpIdAsync(string? empId)
         {
             using var conn = new SqlConnection(_conStr);
 
             return (await conn.QueryAsync<string>(
-                @"SELECT LAN
-          FROM SARFAESI_LAN_Master
-          WHERE EmpID=@EmpID
-          ORDER BY LAN",
-                new { EmpID = empId }))
-                .ToList();
+                "sp_SARFAESI_GetMappedLans",
+                new
+                {
+                    EmpID = empId
+                },
+                commandType: CommandType.StoredProcedure
+            )).ToList();
         }
     }
 }

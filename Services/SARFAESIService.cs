@@ -189,7 +189,7 @@ namespace ProductivityApi.Services
 
             return (true, $"{result} records uploaded successfully.");
         }
-        public Task<List<string>> GetLansByEmpIdAsync(string empId)
+        public Task<List<string>> GetLansByEmpIdAsync(string? empId)
         {
             return _repository.GetLansByEmpIdAsync(empId);
         }
