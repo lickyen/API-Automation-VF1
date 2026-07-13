@@ -42,6 +42,7 @@ namespace ProductivityApi.Jobs
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error in NOCJob.ExecuteAsync");
+                throw;
             }
         }
 
@@ -76,7 +77,6 @@ namespace ProductivityApi.Jobs
                         isEligible = false;
                         remarks = "No collateral ID.";
                         noCollId++;
-                        _logger.Warning("LAN {Lan} not eligible — no collateral ID.", lan.LoanAccountNo);
                     }
                     else
                     {
@@ -89,9 +89,6 @@ namespace ProductivityApi.Jobs
                             isEligible = false;
                             remarks = $"Active loan exists on CollId {lan.CollateralId}.";
                             notEligible++;
-                            _logger.Information(
-                                "LAN {Lan} not eligible — active loan exists on CollId {CollId}.",
-                                lan.LoanAccountNo, lan.CollateralId);
                         }
                     }
 
@@ -111,22 +108,32 @@ namespace ProductivityApi.Jobs
                     };
 
                     var affected = await _nocService.InsertClosedLansAsync(new[] { masterDto });
+
                     if (affected > 0)
+                    {
                         masterInserted++;
 
-                    _logger.Information(
-                        "LAN {Lan} inserted — Eligible: {IsEligible}, Remarks: {Remarks}.",
-                        lan.LoanAccountNo, isEligible, remarks ?? "N/A");
+                        _logger.Information(
+                            "{Lan} - Inserted.",
+                            lan.LoanAccountNo);
+                    }
+                    else
+                    {
+                        _logger.Information(
+                            "{Lan} - skipped (already exists).",
+                            lan.LoanAccountNo);
+                    }
                 }
 
                 _logger.Information(
-                    "NOCJob summary — Fetched: {Total} | Inserted: {Master} | " +
-                    "Not Eligible: {NotEligible} | No CollId: {NoCollId}",
-                    closedLans.Count, masterInserted, notEligible, noCollId);
+                    "NOCJob summary — Fetched: {Total} | Inserted: {Inserted}",
+                    closedLans.Count,
+                    masterInserted);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to insert LANs");
+                throw;
             }
         }
 

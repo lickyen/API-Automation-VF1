@@ -24,7 +24,7 @@ namespace ProductivityApi.Repository
 
             foreach (var lan in lans)
             {
-                affected += await conn.ExecuteAsync(
+                var result = await conn.ExecuteScalarAsync<int>(
                     "sp_NOC_InsertClosedLan",
                     new
                     {
@@ -37,10 +37,12 @@ namespace ProductivityApi.Repository
                         ClosureDate = lan.ClosureDate,
                         NocStatus = lan.NocStatus,
                         IsEligible = lan.IsEligible,
-                        Remarks = lan.Remarks,
+                        Remarks = lan.Remarks
                     },
                     commandType: CommandType.StoredProcedure
                 );
+
+                affected += result;
             }
 
             return affected;
