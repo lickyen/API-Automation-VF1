@@ -405,19 +405,6 @@ namespace ProductivityApi.Repository
         //  CDSM-ZDSH Allocation
         // ─────────────────────────────────────────────
 
-        public async Task<IEnumerable<dynamic>> GetAllocationForExcelAsync()
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            var result = await connection.QueryAsync<dynamic>(
-                "sp_Get_CDSM_ZDSH_Allocation",
-                commandType: CommandType.StoredProcedure
-            );
-
-            return result;
-        }
-
         public async Task<IEnumerable<CollectionUserMappingDto>> GetAllocationAsync()
         {
             using var connection = new SqlConnection(_conStr);
@@ -441,26 +428,37 @@ namespace ProductivityApi.Repository
             table.Columns.Add("CDSM_ID", typeof(string));
             table.Columns.Add("ZDSH_ID", typeof(string));
             table.Columns.Add("MZDSH_ID", typeof(string));
+            table.Columns.Add("ZLM_ID", typeof(string));
             table.Columns.Add("ModifiedBy", typeof(string));
 
             foreach (var dto in dtos)
             {
-                table.Rows.Add(dto.BranchId, dto.CdsmId, dto.ZdshId, dto.MzdshId, dto.ModifiedBy);
+                table.Rows.Add(
+                    dto.BranchId,
+                    dto.CdsmId,
+                    dto.ZdshId,
+                    dto.MzdshId,
+                    dto.ZlmId,
+                    dto.ModifiedBy);
             }
 
             var parameters = new DynamicParameters();
-            parameters.Add("@Allocations", table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
 
-            // ✅ Use returnValue: true — Dapper handles RETURN without passing it as an SP argument
-            parameters.Add("@ReturnVal", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
+            parameters.Add(
+                "@Allocations",
+                table.AsTableValuedParameter("TVP_CDSM_ZDSH_Allocation"));
+
+            parameters.Add(
+                "@RowsAffected",
+                dbType: DbType.Int32,
+                direction: ParameterDirection.Output);
 
             await connection.ExecuteAsync(
                 "sp_Update_CDSM_ZDSH_Allocation",
                 parameters,
-                commandType: CommandType.StoredProcedure
-            );
+                commandType: CommandType.StoredProcedure);
 
-            return parameters.Get<int>("@ReturnVal");
+            return parameters.Get<int>("@RowsAffected");
         }
     }
 }

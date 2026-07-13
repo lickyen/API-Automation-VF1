@@ -278,9 +278,9 @@
         public int ReqId { get; set; }
         public string PaymentMode { get; set; }
         public decimal Amount { get; set; }
-        public string PaymentDetails { get; set; }
-        public string BankDetails { get; set; }
-        public string TransactionRef { get; set; }
+        public string? PaymentDetails { get; set; }
+        public string? BankDetails { get; set; }
+        public string? TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string CreatedBy { get; set; }
 
@@ -292,10 +292,10 @@
     {
         public int Id { get; set; }
         public string PaymentMode { get; set; }
-        public decimal? Amount { get; set; }
-        public string PaymentDetails { get; set; }
-        public string BankDetails { get; set; }
-        public string TransactionRef { get; set; }
+        public decimal Amount { get; set; }
+        public string? PaymentDetails { get; set; }
+        public string? BankDetails { get; set; }
+        public string? TransactionRef { get; set; }
         public DateTime? PaymentDate { get; set; }
         public string UpdatedBy { get; set; }
 

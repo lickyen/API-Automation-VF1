@@ -127,5 +127,24 @@ namespace ProductivityApi.Controllers
 
             return Ok(data);
         }
+
+        [HttpPost("uploadLanMapping")]
+        public async Task<IActionResult> UploadLanMapping([FromBody] SARFAESILanUploadDto dto)
+        {
+            var result = await _service.UploadLanMappingAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, null, result.Message));
+
+            return Ok(new Response(true, null, result.Message));
+        }
+
+        [HttpGet("getMappedLans")]
+        public async Task<IActionResult> GetLansByEmpId(string empId)
+        {
+            var data = await _service.GetLansByEmpIdAsync(empId);
+
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }

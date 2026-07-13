@@ -328,13 +328,6 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetAllocationAsync();
         }
-        public async Task<byte[]?> GetAllocationExcelAsync()
-        {
-            var data = await _repository.GetAllocationForExcelAsync();
-
-            return ExcelHelper.GenerateExcel(data, "data");
-        }
-
         public async Task<int> UpdateAllocationBulkAsync(List<CollectionUserMappingUpdateDto> dtos)
             => await _repository.UpdateAllocationAsync(dtos);
 

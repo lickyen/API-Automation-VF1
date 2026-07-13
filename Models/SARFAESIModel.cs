@@ -218,4 +218,19 @@ namespace ProductivityApi.Models
     }
 
     #endregion
+
+    public class SARFAESILanMappingDto
+    {
+        public string Lan { get; set; } = string.Empty;
+        public string EmpId { get; set; } = string.Empty;
+    }
+
+    public class SARFAESILanUploadDto
+    {
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+
+        [Required]
+        public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
+    }
 }
