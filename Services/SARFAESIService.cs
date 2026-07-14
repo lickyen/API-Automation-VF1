@@ -194,6 +194,11 @@ namespace ProductivityApi.Services
             return _repository.GetLansByEmpIdAsync(empId);
         }
 
+        public Task<List<SARFAESILanMappingDto>> GetAllMappedLansAsync()
+        {
+            return _repository.GetAllMappedLansAsync();
+        }
+
         private string GetFileCategory(string extension)
         {
             extension = extension.ToLowerInvariant();

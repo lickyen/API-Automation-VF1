@@ -146,5 +146,13 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, data, "Success"));
         }
+
+        [HttpGet("getAllMappedLans")]
+        public async Task<IActionResult> GetAllMappedLans()
+        {
+            var data = await _service.GetAllMappedLansAsync();
+
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }

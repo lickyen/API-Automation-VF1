@@ -226,5 +226,16 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             )).ToList();
         }
+
+        public async Task<List<SARFAESILanMappingDto>> GetAllMappedLansAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return (await conn.QueryAsync<SARFAESILanMappingDto>(
+                "sp_SARFAESI_GetMappedLans",
+                commandType: CommandType.StoredProcedure
+            )).ToList();
+        }
+
     }
 }
