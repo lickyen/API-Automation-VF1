@@ -47,6 +47,7 @@ namespace ProductivityApi.Models
         public int? TurnaroundTime { get; set; }
         public string? CancelledChequeFilePath { get; set; }
         public string? InvoiceFilePath { get; set; }
+        public decimal? DeductedGstAmount { get; set; }
 
     }
 
@@ -196,6 +197,7 @@ namespace ProductivityApi.Models
         public string? Utr { get; set; }
         public decimal? UtrAmount { get; set; }
         public decimal? InvoiceAmount { get; set; }
+        public decimal? DeductedGstAmount { get; set; }
         public FileUploadBase64? InvoiceFile { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;

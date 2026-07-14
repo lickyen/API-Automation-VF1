@@ -272,6 +272,7 @@ namespace ProductivityApi.Repository
                     dto.UtrAmount,
                     PaymentDate = dto.PaymentDate?.ToDateTime(TimeOnly.MinValue),
                     dto.InvoiceAmount,
+                    dto.DeductedGstAmount,
                     Status = nextStatus,
                     ModifiedBy = dto.ModifiedBy
                 },

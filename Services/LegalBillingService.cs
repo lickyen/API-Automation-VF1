@@ -120,7 +120,7 @@ namespace ProductivityApi.Services
             if (data is null)
                 return -1;
 
-            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, data, dto.InvoiceAmount);
+            var nextStatus = ResolveNextStatus(LegalBillingRoles.Legal, dto.PaymentStatus, data);
             if (nextStatus is null)
                 return -2;
 
@@ -149,7 +149,7 @@ namespace ProductivityApi.Services
             return await _repository.UpdateLegalBillingFinanceAsync(dto, nextStatus);
         }
 
-        private static string? ResolveNextStatus(string role, string action, LegalBillingDetailsDto data, decimal? dtoInvoiceAmount = null)
+        private static string? ResolveNextStatus(string role, string action, LegalBillingDetailsDto data)
         {
             role = role.Trim().ToUpperInvariant();
             action = action.Trim().ToLowerInvariant();
@@ -157,57 +157,6 @@ namespace ProductivityApi.Services
             string? paymentType = data?.Transaction?.PaymentType;
 
             bool isBeforeService = string.Equals(paymentType, "Before Service", StringComparison.OrdinalIgnoreCase);
-
-            var paymentAmount = data?.Transaction?.PaymentAmount;
-            var invoiceAmount = dtoInvoiceAmount;
-
-            //return (role, action) switch
-            //{
-            //    // ZDSH
-            //    ("ZDSH", "approved") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHApproved,
-            //    ("ZDSH", "rejected") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHRejected,
-            //    ("ZDSH", "sentback") when currentStatus == LegalBillingStatus.Initiated => LegalBillingStatus.ZDSHSentBack,
-
-            //    // MZDSH can act only after ZDSH approved
-            //    ("MZDSH", "approved") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHApproved,
-            //    ("MZDSH", "rejected") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHRejected,
-            //    ("MZDSH", "sentback") when currentStatus == LegalBillingStatus.ZDSHApproved => LegalBillingStatus.MZDSHSentBack,
-
-            //    // CDSO can act only after MZDSH approved
-            //    ("CDSO", "approved") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSOApproved,
-            //    ("CDSO", "rejected") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSORejected,
-            //    ("CDSO", "sentback") when currentStatus == LegalBillingStatus.MZDSHApproved => LegalBillingStatus.CDSOSentBack,
-
-            //    //FINANCE (BEFORE SERVICE)
-            //    ("FINANCE", "") when currentStatus == LegalBillingStatus.CDSOApproved && isBeforeService
-            //            => LegalBillingStatus.FinanceApproved,
-
-            //    ("LEGAL", "payment completed")
-            //        when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-            //        || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-            //        || (currentStatus == LegalBillingStatus.Pending)
-            //        => LegalBillingStatus.Completed,
-
-            //    ("LEGAL", "payment on hold")
-            //        when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.Pending)
-            //            => LegalBillingStatus.Pending,
-
-            //    ("LEGAL", "others")
-            //        when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.Pending)
-            //            => LegalBillingStatus.Pending,
-
-            //    ("LEGAL", "cancelled")
-            //        when (currentStatus == LegalBillingStatus.CDSOApproved && !isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.FinanceApproved && isBeforeService)
-            //          || (currentStatus == LegalBillingStatus.Pending)
-            //            => LegalBillingStatus.Cancelled,
-
-            //    _ => null
-            //};
 
             return (role, action) switch
             {
