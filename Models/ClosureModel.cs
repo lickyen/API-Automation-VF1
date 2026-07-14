@@ -369,6 +369,23 @@
         public string Remarks { get; set; }
         public string CancelledBy { get; set; }
     }
+
+    // ── Shortfall Calculation ────────────────────────────────────────────
+    public class CalculateShortfallDto
+    {
+        public decimal TotalProposedAmount { get; set; }
+        public decimal InterestApproved { get; set; }
+        public decimal InterestLive { get; set; }
+        public decimal InterestWaiverPer { get; set; }
+    }
+
+    public class ClosureShortfallResultDto
+    {
+        public decimal DiffAmount { get; set; }
+        public decimal UpdatedTotal { get; set; }
+        public decimal DiffAmountIncWaiver { get; set; }
+        public decimal UpdatedTotalIncWaiver { get; set; }
+    }
 }
 
 

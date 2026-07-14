@@ -36,7 +36,7 @@ namespace ProductivityApi.Services
         {
             string status = string.Empty;
 
-            if (IsCritical(dto.Criticality) || IsBucket(dto.Bucket))
+            if (IsCritical(dto.Criticality) || IsBucket(dto.Bucket) || dto.LetterId is not null)
             {
                 if (dto.IsWaiver)
                 {
@@ -531,5 +531,33 @@ namespace ProductivityApi.Services
 
             return result;
         }
+
+        public static ClosureShortfallResultDto CalculateShortfall(CalculateShortfallDto dto)
+        {
+            // Shortfall = Live – Approved (only if Live > 0, matching the VB guard)
+            decimal diffAmount = dto.InterestLive > 0m
+                ? dto.InterestLive - dto.InterestApproved
+                : 0m;
+
+            // Updated Total (before waiver)
+            decimal updatedTotal = dto.TotalProposedAmount + diffAmount;
+
+            // Shortfall after waiver
+            decimal diffAmountIncWaiver = diffAmount - (diffAmount * (dto.InterestWaiverPer / 100m));
+
+            // Updated total after waiver
+            decimal updatedTotalIncWaiver = dto.TotalProposedAmount + diffAmountIncWaiver;
+
+            return new ClosureShortfallResultDto
+            {
+                DiffAmount = Math.Round(diffAmount, 2),
+                UpdatedTotal = Math.Round(updatedTotal, 2),
+                DiffAmountIncWaiver = Math.Round(diffAmountIncWaiver, 2),
+                UpdatedTotalIncWaiver = Math.Round(updatedTotalIncWaiver, 2)
+            };
+        }
+
+        public async Task<int?> GetLetterIdAsync(string lan)
+            => await _repository.GetLetterIdAsync(lan);
     }
 }

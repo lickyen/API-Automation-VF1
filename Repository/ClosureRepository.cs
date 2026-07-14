@@ -441,5 +441,16 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
         }
 
+        public async Task<int?> GetLetterIdAsync(string lan)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int?>(
+                "sp_newClosure_getLetterId",
+                new { LAN = lan },
+                commandType: CommandType.StoredProcedure);
+        }
+
     }
 }

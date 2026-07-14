@@ -209,6 +209,24 @@ namespace ProductivityApi.Controllers
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
+        [HttpPost("calculateShortfall")]
+        public IActionResult CalculateShortfall([FromBody] CalculateShortfallDto dto)
+        {
+            var result = ClosureService.CalculateShortfall(dto);
+            return Ok(new Response(true, result, "Success"));
+        }
+
+        [HttpGet("getLetterId/{lan}")]
+        public async Task<IActionResult> GetLetterId(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest(new Response(false, null, "LAN is required"));
+
+            var letterId = await _service.GetLetterIdAsync(lan);
+
+            return Ok(new Response(true, new { letterId }, "Success"));
+        }
     }
 }
 
