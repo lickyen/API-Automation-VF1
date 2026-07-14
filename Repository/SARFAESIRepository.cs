@@ -227,14 +227,42 @@ namespace ProductivityApi.Repository
             )).ToList();
         }
 
-        public async Task<List<SARFAESILanMappingDto>> GetAllMappedLansAsync()
+        public async Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
         {
             using var conn = new SqlConnection(_conStr);
 
-            return (await conn.QueryAsync<SARFAESILanMappingDto>(
-                "sp_SARFAESI_GetMappedLans",
+            return (await conn.QueryAsync<SARFAESILanMapping>(
+                "sp_SARFAESI_GetAllMappedLans",
                 commandType: CommandType.StoredProcedure
             )).ToList();
+        }
+
+        public async Task<bool> DeleteMappedLanAsync(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var rowsAffected = await conn.ExecuteScalarAsync<int>(
+                "sp_SARFAESI_DeleteMappedLan",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            return rowsAffected > 0;
+        }
+
+        public async Task<bool> UpdateMappedLanAsync(int id, string empId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var rowsAffected = await conn.ExecuteScalarAsync<int>(
+                "sp_SARFAESI_UpdateMappedLan",
+                new
+                {
+                    Id = id,
+                    EmpID = empId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return rowsAffected > 0;
         }
 
     }

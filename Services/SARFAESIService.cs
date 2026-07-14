@@ -194,9 +194,19 @@ namespace ProductivityApi.Services
             return _repository.GetLansByEmpIdAsync(empId);
         }
 
-        public Task<List<SARFAESILanMappingDto>> GetAllMappedLansAsync()
+        public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
         {
             return _repository.GetAllMappedLansAsync();
+        }
+
+        public Task<bool> DeleteMappedLanAsync(int id)
+        {
+            return _repository.DeleteMappedLanAsync(id);
+        }
+
+        public Task<bool> UpdateMappedLanAsync(int id, string empId)
+        {
+            return _repository.UpdateMappedLanAsync(id, empId);
         }
 
         private string GetFileCategory(string extension)

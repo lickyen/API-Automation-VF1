@@ -154,5 +154,28 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, data, "Success"));
         }
+
+        [HttpDelete("deleteMappedLan/{id}")]
+        public async Task<IActionResult> DeleteMappedLan(int id)
+        {
+            var deleted = await _service.DeleteMappedLanAsync(id);
+
+            if (!deleted)
+                return NotFound(new Response(false, null, "Record not found."));
+
+            return Ok(new Response(true, null, "Record deleted successfully."));
+        }
+
+        [HttpPost("updateMappedLan")]
+        public async Task<IActionResult> UpdateMappedLan([FromBody] UpdateMappedLanRequest request)
+        {
+            var updated = await _service.UpdateMappedLanAsync(request.Id, request.EmpID);
+
+            if (!updated)
+                return NotFound(new Response(false, null, "Record not found."));
+
+            return Ok(new Response(true, null, "Record updated successfully."));
+        }
+
     }
 }
