@@ -47,7 +47,7 @@ namespace ProductivityApi.Services
 
 
                 var allowedModes = new[] { "NEFT", "RTGS", "Transfer", "IMPS" };
-                if (!allowedModes.Contains(dto.Pmode.Trim(), StringComparer.OrdinalIgnoreCase))
+                if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
                     response = new AxisResponseModel("F", "0003", "Invalid payment mode. Allowed values are NEFT, RTGS,Transfer or IMPS.");
                     return await LogAndReturn(
@@ -90,13 +90,18 @@ namespace ProductivityApi.Services
 
                 }
 
-                if (string.IsNullOrWhiteSpace(dto.Txn_amnt))
+                if (string.IsNullOrWhiteSpace(dto.Txn_amnt) ||
+                   !decimal.TryParse(dto.Txn_amnt, out decimal txnAmount) ||
+                   txnAmount <= 0)
                 {
-                    response = new AxisResponseModel("F", "0008", "Txn_amnt is mandatory.");
+                    response = new AxisResponseModel("F", "0008", "Txn_amnt is mandatory and must be greater than zero.");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
 
                 }
+
+
+
                 if (string.IsNullOrWhiteSpace(dto.Req_date))
                 {
                     response = new AxisResponseModel("F", "0009", "Req_date is mandatory.");
@@ -178,10 +183,10 @@ namespace ProductivityApi.Services
 
             var allowedstatus = new[] { "Active Loan", "Paid Off Settled" };
             if (string.IsNullOrWhiteSpace(PlfloanStatus.LoanStatus) ||
-                !allowedstatus.Contains(PlfloanStatus.LoanStatus.Trim(), StringComparer.OrdinalIgnoreCase))
+                !allowedstatus.Contains(PlfloanStatus.LoanStatus.Trim()))
             {
 
-                    response = new AxisResponseModel("F", "0015", $"Loan Account number is closed -{loanAccountNumber}.");
+                    response = new AxisResponseModel("F", "0015", $"Loan Account number is closed - {loanAccountNumber}.");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
 
@@ -242,7 +247,7 @@ namespace ProductivityApi.Services
                    
 
                 var allowedModes = new[] { "NEFT", "RTGS", "Transfer", "IMPS" };
-                if (!allowedModes.Contains(dto.Pmode.Trim(), StringComparer.OrdinalIgnoreCase))
+                if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
                     response = new AxisResponseModel("F", "0003", "Invalid payment mode. Allowed values are NEFT, RTGS,Transfer or IMPS.");
                     return await LogAndReturn(
@@ -285,13 +290,20 @@ namespace ProductivityApi.Services
                    
                 }
 
-                if (string.IsNullOrWhiteSpace(dto.Txn_amnt))
-                {
-                    response = new AxisResponseModel("F", "0008", "Txn_amnt is mandatory.");
-                    return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
+               
 
+                if (string.IsNullOrWhiteSpace(dto.Txn_amnt) ||
+                    !decimal.TryParse(dto.Txn_amnt, out decimal txnAmount) ||
+                    txnAmount <= 0)
+                {
+                    response = new AxisResponseModel(
+                        "F",
+                        "0008",
+                        "Txn_amnt is mandatory and must be greater than zero.");
+
+                    return await LogAndReturn(apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);     
                 }
+
                 if (string.IsNullOrWhiteSpace(dto.Req_date))
                 {
                     response = new AxisResponseModel("F", "0009", "Req_date is mandatory.");
@@ -409,7 +421,7 @@ namespace ProductivityApi.Services
 
 
                 var allowedModes = new[] { "CASH", "DD", "CHEQUE" };
-                if (!allowedModes.Contains(dto.Pmode.Trim(), StringComparer.OrdinalIgnoreCase))
+                if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
                     response = new AxisofflinefetchResponseModel("F", "0003", "Invalid payment mode. Allowed values are CASH, DD, or CHEQUE.");
                     return await LogAndReturn(
@@ -446,9 +458,17 @@ namespace ProductivityApi.Services
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
-                if (string.IsNullOrWhiteSpace(dto.Txn_amnt))
+               
+
+                if (string.IsNullOrWhiteSpace(dto.Txn_amnt) ||
+                    !decimal.TryParse(dto.Txn_amnt, out decimal txnAmount) ||
+                    txnAmount <= 0)
                 {
-                    response = new AxisofflinefetchResponseModel("F", "0008", "Txn_amnt is mandatory.");
+                    response = new AxisofflinefetchResponseModel(
+                        "F",
+                        "0008",
+                        "Txn_amnt is mandatory and must be greater than zero.");
+
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
@@ -495,7 +515,7 @@ namespace ProductivityApi.Services
 
                 var allowedstatus = new[] { "Active Loan", "Paid Off Settled" };
                 if (string.IsNullOrWhiteSpace(plfLoanStatus.LoanStatus) ||
-                    !allowedstatus.Contains(plfLoanStatus.LoanStatus.Trim(), StringComparer.OrdinalIgnoreCase))
+                    !allowedstatus.Contains(plfLoanStatus.LoanStatus.Trim()))
                 {
 
                     response = new AxisofflinefetchResponseModel("F", "0012", $"Loan Account number is closed -{dto.Loan_acc_no}.");
@@ -510,7 +530,22 @@ namespace ProductivityApi.Services
                 {
                     var cashValidation = await ValidateCashLimit(dto);
                     if (cashValidation.Stts_flg == "F")
-                        return cashValidation;
+                    {
+                       // response = new AxisofflinefetchResponseModel("F", cashValidation.Err_cd, cashValidation.message,cashValidation.AmountTobeAccepted,dto.UTR);
+
+                        response = new AxisofflinefetchResponseModel
+                        {
+                            Stts_flg = "F",
+                            Err_cd = cashValidation.Err_cd,
+                            message = cashValidation.message,
+                            AmountTobeAccepted = cashValidation.AmountTobeAccepted,
+                            UTR = dto.UTR
+                        };
+                        return await LogAndReturn(
+                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+
+                    }
+                   
 
                     return await InsertOfflinePayment(dto, cashValidation.AmountTobeAccepted, plfLoanStatus.customer_name);
                 }
@@ -545,8 +580,8 @@ namespace ProductivityApi.Services
 
             decimal PLFCashPaid = cashPayment?.AMOUNT ?? 0m;
             decimal totalCashPaid = PLFCashPaid + Convert.ToDecimal(dto.Txn_amnt);
-            decimal acceptableCash = 199000m - PLFCashPaid;
-            if (totalCashPaid >= 199000m)
+            decimal acceptableCash = 199999m - PLFCashPaid;
+            if (totalCashPaid > 199999m)
             {
                 return new AxisofflinefetchResponseModel
                 {
@@ -618,7 +653,7 @@ namespace ProductivityApi.Services
 
 
                 var allowedModes = new[] { "CASH", "DD", "CHEQUE" };
-                if (!allowedModes.Contains(dto.Pmode.Trim(), StringComparer.OrdinalIgnoreCase))
+                if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
                     response = new AxisResponseModel("F", "0003", "Invalid payment mode. Allowed values are CASH, DD, or CHEQUE.");
                     return await LogAndReturn(
@@ -656,12 +691,21 @@ namespace ProductivityApi.Services
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
-                if (string.IsNullOrWhiteSpace(dto.Txn_amnt))
+              
+
+                if (string.IsNullOrWhiteSpace(dto.Txn_amnt) ||
+                    !decimal.TryParse(dto.Txn_amnt, out decimal txnAmount) ||
+                    txnAmount <= 0)
                 {
-                    response = new AxisResponseModel("F", "0008", "Txn_amnt is mandatory.");
+                    response = new AxisResponseModel(
+                        "F",
+                        "0008",
+                        "Txn_amnt is mandatory and must be greater than zero.");
+
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
+
 
                 if (string.IsNullOrWhiteSpace(dto.Req_date))
                 {
