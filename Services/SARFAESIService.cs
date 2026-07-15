@@ -178,6 +178,37 @@ namespace ProductivityApi.Services
             return ExcelHelper.GenerateExcel(data, "Data");
         }
 
+        public async Task<(bool Success, string Message)> UploadLanMappingAsync(SARFAESILanUploadDto dto)
+        {
+            if (dto.Mappings == null || dto.Mappings.Count == 0)
+                return (false, "No records found");
+
+            var result = await _repository.BulkInsertLanMappingsAsync(
+                dto.Mappings,
+                dto.CreatedBy);
+
+            return (true, $"{result} records uploaded successfully.");
+        }
+        public Task<List<string>> GetLansByEmpIdAsync(string? empId)
+        {
+            return _repository.GetLansByEmpIdAsync(empId);
+        }
+
+        public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
+        {
+            return _repository.GetAllMappedLansAsync();
+        }
+
+        public Task<bool> DeleteMappedLanAsync(int id)
+        {
+            return _repository.DeleteMappedLanAsync(id);
+        }
+
+        public Task<bool> UpdateMappedLanAsync(int id, string empId)
+        {
+            return _repository.UpdateMappedLanAsync(id, empId);
+        }
+
         private string GetFileCategory(string extension)
         {
             extension = extension.ToLowerInvariant();
