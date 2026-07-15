@@ -195,9 +195,18 @@ namespace ProductivityApi.Repository
         {
             try
             {
+                //var sql = @"
+                //    select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
+                //    group by sz_loan_account_no,loan_status";
+
                 var sql = @"
-                    select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
-                    group by sz_loan_account_no,loan_status";
+                     select distinct sz_loan_account_no as LoanNumber,
+                loan_status as LoanStatus, customer_name
+                from plf.neolotex_disb
+                where sz_loan_account_no = @lan and applicant_type = 'B'
+                group by sz_loan_account_no,loan_status,customer_name";
+
+             
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
@@ -229,12 +238,13 @@ namespace ProductivityApi.Repository
             where CC.CUSTCIF=@cif
             and FP.receiptmode='CASH'
             AND FP.RECEIPTMODESTATUS='R'
-            AND RECEIPTDATE='2026-06-05'
+            AND RECEIPTDATE=@ReceiptDate
             GROUP BY CC.CUSTID";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
-                return await connection.QueryFirstOrDefaultAsync<PlfCashByCIFModel>(sql, new { cif });
+                return await connection.QueryFirstOrDefaultAsync<PlfCashByCIFModel>(sql, 
+                    new { cif, ReceiptDate = DateTime.Today });
             }
             catch (Exception ex)
             {
