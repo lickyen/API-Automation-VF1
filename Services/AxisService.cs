@@ -543,14 +543,22 @@ namespace ProductivityApi.Services
 
             var cashPayment = await _pLFRepository.GetCashPayemntsByCIFAsync(data.CustId);
 
-            decimal totalCashPaid = cashPayment?.AMOUNT ?? 0m;
-
+            decimal PLFCashPaid = cashPayment?.AMOUNT ?? 0m;
+            decimal totalCashPaid = PLFCashPaid + Convert.ToDecimal(dto.Txn_amnt);
+            decimal acceptableCash = 199000m - PLFCashPaid;
             if (totalCashPaid >= 199000m)
             {
-                return new AxisofflinefetchResponseModel("F", "0014", "Cash limit already exceeded."); 
+                return new AxisofflinefetchResponseModel
+                {
+                    Stts_flg = "F",
+                    Err_cd = "0014",
+                    message = "Cash limit will be exceeded.",
+                    AmountTobeAccepted = acceptableCash.ToString("0.00"),
+                    UTR = ""
+                };
             }
 
-            decimal acceptableCash = 199000m - totalCashPaid;
+           
 
 
             return new AxisofflinefetchResponseModel
