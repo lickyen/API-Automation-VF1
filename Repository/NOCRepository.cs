@@ -338,7 +338,7 @@ namespace ProductivityApi.Repository
                 @"
                 SELECT Status
                 FROM NOC_RoleStatusMap
-                WHERE Role = @Role AND ActiveStatus = 'Active'
+                WHERE Role = @Role AND IsActive = '1'
                 ORDER BY Id
             ";
 
