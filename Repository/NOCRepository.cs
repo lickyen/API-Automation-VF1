@@ -333,12 +333,25 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
+            //const string sql = @"
+            //    SELECT Status
+            //    FROM NOC_RoleStatusMap
+            //    WHERE IsActive = 1
+            //      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
+            //    ORDER BY Id;";
+
             const string sql = @"
-                SELECT DISTINCT Status
-                FROM NOC_RoleStatusMap
-                WHERE IsActive = 1
-                  AND (@Role IS NULL OR @Role = '' OR Role = @Role)
-                ORDER BY Status;";
+                SELECT Status
+                FROM
+                (
+                    SELECT Status, MIN(Id) AS Id
+                    FROM NOC_RoleStatusMap
+                    WHERE IsActive = 1
+                      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
+                    GROUP BY Status
+                ) AS T
+                ORDER BY Id;";
+
 
             return await conn.QueryAsync<string>(sql, new { Role = role });
         }
