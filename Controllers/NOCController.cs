@@ -138,13 +138,8 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getAllowedStatuses")]
-        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string role)
+        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string? role)
         {
-            if (string.IsNullOrWhiteSpace(role))
-            {
-                return BadRequest(new Response(false, message: "Role is required."));
-            }
-
             var statuses = await _service.GetAllowedStatusesAsync(role);
 
             return Ok(new Response(true, statuses));

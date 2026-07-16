@@ -329,24 +329,19 @@ namespace ProductivityApi.Repository
 
             return await conn.QueryAsync<NocTransaction>(sql);
         }
-
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
+        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
-                SELECT Status
+            const string sql = @"
+                SELECT DISTINCT Status
                 FROM NOC_RoleStatusMap
-                WHERE Role = @Role AND IsActive = '1'
-                ORDER BY Id
-            ";
+                WHERE IsActive = 1
+                  AND (@Role IS NULL OR @Role = '' OR Role = @Role)
+                ORDER BY Status;";
 
-            var result = await conn.QueryAsync<string>(sql, new { Role = role });
-
-            return result;
+            return await conn.QueryAsync<string>(sql, new { Role = role });
         }
-
         public async Task<IEnumerable<dynamic>> GetOneilReportDataAsync(List<int> ids)
         {
             using var conn = new SqlConnection(_conStr);

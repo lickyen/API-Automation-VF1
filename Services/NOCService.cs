@@ -485,14 +485,10 @@ namespace ProductivityApi.Services
             return to.Distinct().ToList();
         }
 
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
+        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
         {
-            if (string.IsNullOrWhiteSpace(role))
-                return Enumerable.Empty<string>();
-
             return await _repository.GetAllowedStatusesAsync(role);
         }
-
         public async Task<List<SignUser>> GetSignUsersAsync()
         {
             return await _repository.GetSignUsersAsync();
