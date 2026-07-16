@@ -211,6 +211,32 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> CopsApprovalAsync(ClosureCopsApprovalDto dto)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+
+                var parameters = new
+                {
+                    dto.Id,
+                    dto.Status,
+                    dto.Remarks,
+                    dto.UserId
+                };
+
+                return await connection.ExecuteScalarAsync<int>(
+                    "sp_newClosure_CopsApproval",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
         public async Task<ClosureTransaction?> GetByIdAsync(int id)
         {
             using var connection = new SqlConnection(_conStr);

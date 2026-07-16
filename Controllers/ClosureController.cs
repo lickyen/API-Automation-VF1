@@ -77,6 +77,18 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        [HttpPost("copsApproval")]
+        public async Task<IActionResult> CopsApproval([FromBody] ClosureCopsApprovalDto dto)
+        {
+            var result = await _service.CopsApprovalAsync(dto);
+            return result switch
+            {
+                1 => Ok(new Response(true, null, "Action completed successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
         [HttpGet("getById/{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -227,6 +239,7 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, new { letterId }, "Success"));
         }
+
     }
 }
 

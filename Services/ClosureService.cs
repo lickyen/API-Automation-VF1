@@ -298,6 +298,16 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        public async Task<int> CopsApprovalAsync(ClosureCopsApprovalDto dto)
+        {
+            var result = await _repository.CopsApprovalAsync(dto);
+            if (result > 0)
+            {
+                await NotifyBranchAsync(dto.Id, dto.Status);
+            }
+            return result;
+        }
+
         public async Task<int> SubmitQuestionnaireAsync(SubmitQuestionnaireDto dto)
         {
             string status = ClosureStatus.Initiated;

@@ -272,6 +272,14 @@
         public string UserId { get; set; }
     }
 
+    public class ClosureCopsApprovalDto
+    {
+        public int Id { get; set; }
+        public string Status { get; set; }    
+        public string Remarks { get; set; }
+        public string UserId { get; set; }
+    }
+
     // ── Add Payment ─────────────────────────────────────────────────────
     public class AddClosurePaymentDto
     {
