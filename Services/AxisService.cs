@@ -81,7 +81,7 @@ namespace ProductivityApi.Services
                     apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
                 }
 
-                if (!dto.Req_type.Trim().Equals("Validation", StringComparison.OrdinalIgnoreCase))
+                if (!dto.Req_type.Trim().Equals("Validation"))
                 {
                     response = new AxisResponseModel("F", "0007", "Req_type should be 'Validation'");
                     return await LogAndReturn(
@@ -281,7 +281,7 @@ namespace ProductivityApi.Services
                     apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
                 }
                     
-                if (!dto.Req_type.Trim().Equals("Notification", StringComparison.OrdinalIgnoreCase))
+                if (!dto.Req_type.Trim().Equals("Notification"))
                 {
                     response = new AxisResponseModel("F", "0007", "Req_type should be 'Notification'");
                     return await LogAndReturn(
@@ -374,7 +374,8 @@ namespace ProductivityApi.Services
                 var id = await _repository.UpdatePaymentDetailsAsync(dto);
                 if (id == -1)
                 {
-                    response = new AxisResponseModel("F", "0017", $"Record not found for mentioned Bene_acc_no- {dto.Bene_acc_no} and UTR- {dto.UTR}");
+                    response = new AxisResponseModel(  "F","0017",
+                    $"No eligible record found. The record was either not found or the payment status has already been updated for Bene_acc_no - {dto.Bene_acc_no} and UTR - {dto.UTR}.");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, loanAccountNumber, response.Stts_flg, response.Err_cd);
 
@@ -452,7 +453,7 @@ namespace ProductivityApi.Services
 
 
 
-                if (!dto.Req_type.Trim().Equals("Validation", StringComparison.OrdinalIgnoreCase))
+                if (!dto.Req_type.Trim().Equals("Validation"))
                 {
                     response = new AxisofflinefetchResponseModel("F", "0007", "Req_type should be 'Validation'");
                     return await LogAndReturn(
@@ -685,7 +686,7 @@ namespace ProductivityApi.Services
                   
 
 
-                if (!dto.Req_type.Trim().Equals("Notification", StringComparison.OrdinalIgnoreCase))
+                if (!dto.Req_type.Trim().Equals("Notification"))
                 {
                      response = new AxisResponseModel("F", "0007", "Req_type should be 'Notification'");
                     return await LogAndReturn(
@@ -782,6 +783,8 @@ namespace ProductivityApi.Services
                 if (updatedRows == 0)
                 {
                      response = new AxisResponseModel("F", "0016", $"No payment record found for UTR and LAN / Payment status already Updated.");
+                    response = new AxisResponseModel("F","0017",
+                    $"No eligible record found. The record was either not found or the payment status has already been updated for Bene_acc_no - {dto.Loan_acc_no} and UTR - {dto.UTR}.");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 
