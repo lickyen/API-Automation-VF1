@@ -299,8 +299,8 @@
     public class UpdateClosurePaymentDto
     {
         public int Id { get; set; }
-        public string PaymentMode { get; set; }
-        public decimal Amount { get; set; }
+        public string? PaymentMode { get; set; }
+        public decimal? Amount { get; set; }
         public string? PaymentDetails { get; set; }
         public string? BankDetails { get; set; }
         public string? TransactionRef { get; set; }
