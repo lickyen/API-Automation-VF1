@@ -100,8 +100,8 @@ namespace ProductivityApi.Repository
 
         public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
             string userId,
-            string role,
-            string status
+            string? role,
+            string? status
         )
         {
             try

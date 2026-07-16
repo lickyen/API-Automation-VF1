@@ -61,9 +61,6 @@ namespace ProductivityApi.Controllers
         [HttpGet("getLansByUser")]
         public async Task<IActionResult> GetLansByUser([FromQuery] GetLanByUserRequestDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new Response(false, "UserId is required."));
-
             var result = await _service.GetLansByUserAsync(dto);
 
             if (result.Error != null)

@@ -111,20 +111,8 @@ namespace ProductivityApi.Services
             return await _repository.GetById(id);
         }
 
-        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
-            GetLanByUserRequestDto dto
-        )
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(GetLanByUserRequestDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.UserId))
-                return (null, "UserId is required.");
-
-            // Role should NOT block data fetch (only used in SP permission check)
-            if (string.IsNullOrWhiteSpace(dto.Role))
-                dto.Role = "NOCCOPS"; // optional default OR fetch from DB
-
-            if (string.IsNullOrWhiteSpace(dto.Status))
-                return (null, "Status is required.");
-
             return await _repository.GetLansByUserAsync(dto.UserId, dto.Role, dto.Status);
         }
 
