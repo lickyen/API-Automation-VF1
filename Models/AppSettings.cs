@@ -69,6 +69,7 @@ namespace ProductivityApi.Models
         public string VCPAgreementFilePath { get; set; } = string.Empty;
         public string BTFilePath { get; set; } = string.Empty;
         public string NOCFilePath { get; set; } = string.Empty;
+        public string BulkFclFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {
