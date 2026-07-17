@@ -266,7 +266,7 @@
     {
         public int Id { get; set; }
         public string Role { get; set; }
-        public string ApprovalType { get; set; }    // Waiver / Retention
+        public string? ApprovalType { get; set; }    // Waiver / Retention
         public string Status { get; set; }          // Approved / Rejected / SentBack
         public string Remarks { get; set; }
         public string UserId { get; set; }
