@@ -15,21 +15,15 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        [HttpPost("insert")]
-        public async Task<IActionResult> BulkInsertAsync([FromBody] BulkDocInsertRequest dto)
+        [HttpPost("upload")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Upload([FromForm] BulkDocUploadRequest request)
         {
-            if (dto?.Lans == null || dto.Lans.Count == 0)
-                return BadRequest(new Response(false, null, "Lans list cannot be empty"));
-
-            var result = await _service.BulkInsertAsync(dto);
-            return result switch
-            {
-                > 0 => Ok(new Response(true, new { RowsInserted = result }, "Success")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred while processing the request"))
-            };
+            var result = await _service.UploadAsync(request.File, request.CreatedBy);
+            return Ok(new Response(true, new { RowsInserted = result }, "Upload successful"));
         }
 
-        [HttpGet("list")]
+        [HttpGet("lans")]
         public async Task<IActionResult> GetLanList([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] string? status)
         {
             var filter = new BulkDocListFilter

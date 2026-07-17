@@ -22,11 +22,6 @@
         public DateTime FromDate { get; set; }
         public DateTime ToDate { get; set; }
     }
-    public class BulkDocInsertRequest
-    {
-        public List<BulkDocItem> Lans { get; set; } = new();
-        public string CreatedBy { get; set; }
-    }
 
     // filter for GET list
     public class BulkDocListFilter
@@ -34,6 +29,12 @@
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public string? Status { get; set; }
+    }
+
+    public class BulkDocUploadRequest
+    {
+        public IFormFile File { get; set; }
+        public string CreatedBy { get; set; }
     }
 }
 
