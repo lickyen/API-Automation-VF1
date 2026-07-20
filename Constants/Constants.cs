@@ -73,10 +73,4 @@
         public const string Finance = "Finance";
     }
 
-    //public static class LegalBillingAmountMatchStatus
-    //{
-    //    public const string Matched = "Invoice amount matches the advance payment amount";
-    //    public const string NotMatched = "Invoice amount DOES NOT match the advance payment amount";
-    //}
-
 }
