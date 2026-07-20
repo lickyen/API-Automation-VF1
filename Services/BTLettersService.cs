@@ -106,27 +106,34 @@ namespace ProductivityApi.Services
 
             foreach (var row in ws.RowsUsed().Skip(1))
             {
-                var chequeDDAvailability = row.Cell(13).GetValue<string>();
-                var disbDateRaw = row.Cell(16).GetValue<string>();
-                var documentCategory = row.Cell(26).GetValue<string>();
-                var balanceTakeOver = row.Cell(27).GetValue<string>();
-                var dpd = row.Cell(36).GetValue<string>();
+                var chequeDDAvailability = row.Cell(13).GetString();
+                var documentCategory = row.Cell(26).GetString();
+                var balanceTakeOver = row.Cell(27).GetString();
+                var dpd = row.Cell(36).GetString();
 
-                if (chequeDDAvailability != "Handed over to customer") continue;
-                if (!DateTime.TryParse(disbDateRaw, out var disbDate)) continue;
-                if ((DateTime.Now - disbDate).TotalDays < 7) continue;
-                if (documentCategory != "Red") continue;
-                if (balanceTakeOver != "BT / Take Over Case") continue;
-                if (dpd != "#N/A") continue;
+                DateTime disbDate;
+                if (row.Cell(16).DataType == XLDataType.DateTime)
+                {
+                    disbDate = row.Cell(16).GetDateTime();
+                }
+                else if (!DateTime.TryParse(row.Cell(16).GetString(), out disbDate))
+                {
+                    continue;
+                }
+                if (!EqualsIgnoreSpaces(chequeDDAvailability, "Handed over to customer")) continue;
+                if ((DateTime.Today - disbDate.Date).TotalDays <= 7) continue;
+                if (!EqualsIgnoreSpaces(documentCategory, "Red")) continue;
+                if (!EqualsIgnoreSpaces(balanceTakeOver, "BT/Take Over Case")) continue;
+                if (!EqualsIgnoreSpaces(dpd, "#N/A")) continue;
 
                 list.Add(new BTUploadFormatRowDto
                 {
-                    LAN = row.Cell(7).GetValue<string>(),
-                    CustomerName = row.Cell(8).GetValue<string>(),
+                    LAN = row.Cell(7).GetString().Trim(),
+                    CustomerName = row.Cell(8).GetString().Trim(),
                     BranchCode = row.Cell(2).GetValue<int>(),
                     DisbDate = disbDate,
-                    PrevFinancier = row.Cell(32).GetValue<string>(),
-                    BtLan = row.Cell(31).GetValue<string>(),
+                    PrevFinancier = row.Cell(32).GetString().Trim(),
+                    BtLan = row.Cell(31).GetString().Trim(),
                 });
             }
 
@@ -378,6 +385,19 @@ namespace ProductivityApi.Services
             }
 
             return list;
+        }
+
+        private static bool EqualsIgnoreSpaces(string actual, string expected)
+        {
+            string Normalize(string s) =>
+                string.IsNullOrWhiteSpace(s)
+                    ? string.Empty
+                    : s.Replace(" ", "")
+                       .Replace("\t", "")
+                       .Trim();
+
+            return Normalize(actual)
+                .Equals(Normalize(expected), StringComparison.OrdinalIgnoreCase);
         }
 
     }
