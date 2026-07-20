@@ -167,7 +167,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("updateMappedLan")]
-        public async Task<IActionResult> UpdateMappedLan([FromBody] UpdateMappedLanRequest request)
+        public async Task<IActionResult> UpdateMappedLan([FromBody] SARFAESIUpdateMappedLanRequest request)
         {
             var updated = await _service.UpdateMappedLanAsync(request.Id, request.EmpID);
 

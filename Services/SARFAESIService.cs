@@ -7,6 +7,7 @@ namespace ProductivityApi.Services
     public class SARFAESIService
     {
         private readonly SARFAESIRepository _repository;
+        private readonly PLFService _plfService;
         private readonly string _filePath;
 
         private static readonly HashSet<string> AllowedExtensions = new()
@@ -23,10 +24,11 @@ namespace ProductivityApi.Services
             public const long Video = (long)(100 * 1024 * 1024);   // 100 MB
         }
 
-        public SARFAESIService(SARFAESIRepository repository, AppSettings appSettings)
+        public SARFAESIService(SARFAESIRepository repository, AppSettings appSettings, PLFService plfService)
         {
             _repository = repository;
             _filePath = appSettings.FilePaths.SARFAESIFilePath;
+            _plfService = plfService;
         }
 
         public Task<int> CreateAsync(SARFAESICreateDto dto)
@@ -189,11 +191,41 @@ namespace ProductivityApi.Services
 
             return (true, $"{result} records uploaded successfully.");
         }
-        public Task<List<string>> GetLansByEmpIdAsync(string? empId)
-        {
-            return _repository.GetLansByEmpIdAsync(empId);
-        }
+        //public Task<List<string>> GetLansByEmpIdAsync(string? empId)
+        //{
+        //    return _repository.GetLansByEmpIdAsync(empId);
+        //}
 
+        public async Task<List<SARFAESILanCustomerDto>> GetLansByEmpIdAsync(string? empId)
+        {
+            var lans = await _repository.GetLansByEmpIdAsync(empId);
+
+            var tasks = lans.Select(async lan =>
+            {
+                try
+                {
+                    var loan = await _plfService.GetFinance(lan);
+
+                    return new SARFAESILanCustomerDto
+                    {
+                        LAN = lan,
+                        CustomerName = loan?.customer?.personalInfo?.shortName ?? string.Empty
+                    };
+                }
+                catch
+                {
+                    return new SARFAESILanCustomerDto
+                    {
+                        LAN = lan,
+                        CustomerName = string.Empty
+                    };
+                }
+            });
+
+            var result = await Task.WhenAll(tasks);
+
+            return result.ToList();
+        }
         public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
         {
             return _repository.GetAllMappedLansAsync();

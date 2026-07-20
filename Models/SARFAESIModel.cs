@@ -243,10 +243,16 @@ namespace ProductivityApi.Models
         [Required]
         public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
     }
-    public class UpdateMappedLanRequest
+    public class SARFAESIUpdateMappedLanRequest
     {
         [Required]
         public int Id { get; set; }
         public string EmpID { get; set; }
+    }
+
+    public class SARFAESILanCustomerDto
+    {
+        public string LAN { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
     }
 }
