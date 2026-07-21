@@ -140,7 +140,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getMappedLans")]
-        public async Task<IActionResult> GetLansByEmpId([FromQuery] string? empId)
+        public async Task<IActionResult> GetLansByEmpId([FromQuery] string empId)
         {
             var data = await _service.GetLansByEmpIdAsync(empId);
 
@@ -169,7 +169,7 @@ namespace ProductivityApi.Controllers
         [HttpPost("updateMappedLan")]
         public async Task<IActionResult> UpdateMappedLan([FromBody] SARFAESIUpdateMappedLanRequest request)
         {
-            var updated = await _service.UpdateMappedLanAsync(request.Id, request.EmpID);
+            var updated = await _service.UpdateMappedLanAsync(request);
 
             if (!updated)
                 return NotFound(new Response(false, null, "Record not found."));

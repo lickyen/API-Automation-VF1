@@ -223,6 +223,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
         public string Lan { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
         public string EmpId { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime? CreatedDt { get; set; }
@@ -233,6 +234,7 @@ namespace ProductivityApi.Models
     public class SARFAESILanMappingDto
     {
         public string Lan { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
         public string EmpId { get; set; } = string.Empty;
     }
     public class SARFAESILanUploadDto
@@ -248,11 +250,7 @@ namespace ProductivityApi.Models
         [Required]
         public int Id { get; set; }
         public string EmpID { get; set; }
+        public string UpdatedBy { get; set; }
     }
 
-    public class SARFAESILanCustomerDto
-    {
-        public string LAN { get; set; } = string.Empty;
-        public string CustomerName { get; set; } = string.Empty;
-    }
 }

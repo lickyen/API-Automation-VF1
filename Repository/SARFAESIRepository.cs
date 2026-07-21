@@ -185,11 +185,12 @@ namespace ProductivityApi.Repository
             var table = new DataTable();
 
             table.Columns.Add("LAN", typeof(string));
+            table.Columns.Add("CustomerName", typeof(string));
             table.Columns.Add("EmpID", typeof(string));
 
             foreach (var item in mappings)
             {
-                table.Rows.Add(item.Lan, item.EmpId);
+                table.Rows.Add(item.Lan, item.CustomerName, item.EmpId);
             }
 
             var parameters = new DynamicParameters();
@@ -213,11 +214,11 @@ namespace ProductivityApi.Repository
             return parameters.Get<int>("@RowsAffected");
         }
 
-        public async Task<List<string>> GetLansByEmpIdAsync(string? empId)
+        public async Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId)
         {
             using var conn = new SqlConnection(_conStr);
 
-            return (await conn.QueryAsync<string>(
+            return (await conn.QueryAsync<SARFAESILanMapping>(
                 "sp_SARFAESI_GetMappedLans",
                 new
                 {
@@ -249,7 +250,7 @@ namespace ProductivityApi.Repository
             return rowsAffected > 0;
         }
 
-        public async Task<bool> UpdateMappedLanAsync(int id, string empId)
+        public async Task<bool> UpdateMappedLanAsync(int id, string empId, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -258,7 +259,8 @@ namespace ProductivityApi.Repository
                 new
                 {
                     Id = id,
-                    EmpID = empId
+                    EmpID = empId,
+                    UpdatedBy = updatedBy
                 },
                 commandType: CommandType.StoredProcedure);
 

@@ -191,40 +191,9 @@ namespace ProductivityApi.Services
 
             return (true, $"{result} records uploaded successfully.");
         }
-        //public Task<List<string>> GetLansByEmpIdAsync(string? empId)
-        //{
-        //    return _repository.GetLansByEmpIdAsync(empId);
-        //}
-
-        public async Task<List<SARFAESILanCustomerDto>> GetLansByEmpIdAsync(string? empId)
+        public Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId)
         {
-            var lans = await _repository.GetLansByEmpIdAsync(empId);
-
-            var tasks = lans.Select(async lan =>
-            {
-                try
-                {
-                    var loan = await _plfService.GetFinance(lan);
-
-                    return new SARFAESILanCustomerDto
-                    {
-                        LAN = lan,
-                        CustomerName = loan?.customer?.personalInfo?.shortName ?? string.Empty
-                    };
-                }
-                catch
-                {
-                    return new SARFAESILanCustomerDto
-                    {
-                        LAN = lan,
-                        CustomerName = string.Empty
-                    };
-                }
-            });
-
-            var result = await Task.WhenAll(tasks);
-
-            return result.ToList();
+            return _repository.GetLansByEmpIdAsync(empId);
         }
         public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
         {
@@ -236,9 +205,9 @@ namespace ProductivityApi.Services
             return _repository.DeleteMappedLanAsync(id);
         }
 
-        public Task<bool> UpdateMappedLanAsync(int id, string empId)
+        public Task<bool> UpdateMappedLanAsync(SARFAESIUpdateMappedLanRequest request)
         {
-            return _repository.UpdateMappedLanAsync(id, empId);
+            return _repository.UpdateMappedLanAsync(request.Id, request.EmpID, request.UpdatedBy);
         }
 
         private string GetFileCategory(string extension)
