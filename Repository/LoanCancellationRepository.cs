@@ -237,5 +237,15 @@ namespace ProductivityApi.Repository
             return param.Get<int>("@Output");
         }
 
+        public async Task<List<LoanCancelRequest>> GetAllRequestsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var sql = @"SELECT * FROM LoanCancel_Requests";
+
+            var data = await conn.QueryAsync<LoanCancelRequest>(sql, commandType: CommandType.Text);
+            return data.ToList();
+        }
+
     }
 }

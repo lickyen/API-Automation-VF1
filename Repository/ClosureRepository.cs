@@ -13,6 +13,21 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
+
+        public async Task<List<ClosureTransaction>> GetAllAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var sql = @"SELECT * FROM Closure_Transactions";
+
+            var rows = await connection.QueryAsync<ClosureTransaction>(
+                sql,
+                commandType: CommandType.Text
+            );
+
+            return rows.ToList();
+        }
         public async Task<int> AddRequestAsync(AddClosureRequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);

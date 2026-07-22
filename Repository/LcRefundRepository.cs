@@ -231,5 +231,18 @@ namespace ProductivityApi.Repository
             };
         }
 
+        public async Task<List<LcRefundModel>> GetAllAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var result = await conn.QueryAsync<LcRefundModel>(
+                "SELECT * FROM LC_PREMIUMREFUND",
+                commandType: CommandType.Text
+            );
+
+            return result.ToList();
+        }
+
     }
 }

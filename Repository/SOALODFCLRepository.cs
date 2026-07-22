@@ -18,6 +18,21 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
+
+        public async Task<List<SOADashboard>> GetAllAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var sql = @"SELECT * FROM SOALOD_Transactions_Main";
+
+            var rows = await conn.QueryAsync<SOADashboard>(
+                sql,
+                commandType: CommandType.Text
+            );
+
+            return rows.ToList();
+        }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
             using var conn = new SqlConnection(_conStr);

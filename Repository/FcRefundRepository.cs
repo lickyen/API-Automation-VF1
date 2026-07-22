@@ -226,5 +226,18 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<List<FcRefundModel>> GetAllAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var result = await connection.QueryAsync<FcRefundModel>(
+                "SELECT * FROM FC_PREMIUMREFUND",
+                commandType: CommandType.Text
+            );
+
+            return result.ToList();
+        }
+
     }
 }

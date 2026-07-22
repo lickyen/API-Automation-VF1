@@ -108,6 +108,11 @@ namespace ProductivityApi.Services
             return await _repository.GetDashboardByUserAsync(dto);
         }
 
+        public async Task<IEnumerable<SettlementDashboard>> GetAllSettlementsAsync()
+        {
+            return await _repository.GetAllSettlementsAsync();
+        }
+
         public async Task<int> CancelSettlementAsync(CancelSettlementDto dto)
         {
             var result = await _repository.CancelSettlementAsync(dto);

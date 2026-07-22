@@ -179,6 +179,18 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<IEnumerable<SettlementDashboard>> GetAllSettlementsAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var sql = @"SELECT * FROM Settlement_Transactions";
+
+            return await conn.QueryAsync<SettlementDashboard>(
+                sql,
+                commandType: CommandType.Text
+            );
+        }
+
         public async Task<int> CancelSettlementAsync(CancelSettlementDto dto)
         {
             using var conn = new SqlConnection(_conStr);

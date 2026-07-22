@@ -117,6 +117,11 @@ namespace ProductivityApi.Services
 
             return result;
         }
+
+        public async Task<List<LoanCancelRequest>> GetAllAsync()
+        {
+            return await _repository.GetAllRequestsAsync();
+        }
         public async Task<int> TakeActionAsync(LoanCancelActionDto dto)
         {
             var result = await _repository.TakeActionAsync(dto);

@@ -423,5 +423,20 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<List<DeathClaimMaster>> GetAllAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var sql = @"SELECT * FROM DeathClaim_Master";
+
+            var rows = await connection.QueryAsync<DeathClaimMaster>(
+                sql,
+                commandType: CommandType.Text
+            );
+
+            return rows.ToList();
+        }
     }
 }

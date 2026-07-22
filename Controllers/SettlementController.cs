@@ -27,6 +27,18 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, settlement, "Success"));
         }
 
+        // GET: api/settlements
+        [HttpGet]
+        public async Task<IActionResult> GetAllSettlements()
+        {
+            var data = await _service.GetAllSettlementsAsync();
+
+            if (data == null || !data.Any())
+                return Ok(new Response(true, new List<object>(), "No records found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         // GET: api/settlements/dashboard?userId=123&role=OPS
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard([FromQuery] SettlementDashboardRequestDto dto)

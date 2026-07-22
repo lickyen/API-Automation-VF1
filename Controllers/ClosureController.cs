@@ -98,6 +98,17 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var data = await _service.GetAllAsync();
+
+            if (data == null || !data.Any())
+                return Ok(new Response(true, new List<object>(), "No records found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpGet("getByLan/{lan}")]
         public async Task<IActionResult> GetByLan(string lan)
         {
