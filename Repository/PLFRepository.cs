@@ -80,7 +80,8 @@ namespace ProductivityApi.Repository
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
             var sql = $@"{NeolotexDisbColumns}
-                    WHERE sz_collateral_id = @collId;";
+                    WHERE sz_collateral_id = @collId
+                    AND applicant_type = 'B';";
 
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
@@ -90,7 +91,8 @@ namespace ProductivityApi.Repository
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
             var sql = $@"{NeolotexDisbColumns}
-                    WHERE customerid = @custId;";
+                    WHERE customerid = @custId
+                    AND applicant_type = 'B';";
 
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
