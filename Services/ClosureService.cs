@@ -171,8 +171,10 @@ namespace ProductivityApi.Services
                     await NotifyBranchAsync(dto.Id, "Approved");
                 }
 
-                await NotifyPendingUserAsync(dto.Id);
-
+                else
+                {
+                    await NotifyPendingUserAsync(dto.Id);
+                }
             }
 
             return result;

@@ -23,7 +23,7 @@ namespace ProductivityApi.Controllers
             return result switch
             {
                 > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
-                -1 => NotFound(new Response(false, null, "An active request exists for the same LAN")),
+                -1 => Conflict(new Response(false, null, "An active request exists for the same LAN")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
