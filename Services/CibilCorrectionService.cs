@@ -13,21 +13,7 @@ namespace ProductivityApi.Services
             _repository = repository;
         }
 
-        // ============================================================
-        // INDUS ARCHIVED MASTER
-        // ============================================================
-
-        public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
-        {
-            if (string.IsNullOrWhiteSpace(accountNumber))
-                return Enumerable.Empty<IndusArchivedMaster>();
-
-            return await _repository.GetArchivedByAccountNumberAsync(accountNumber);
-        }
-
-        // ============================================================
-        // LOAN CANCELLATION
-        // ============================================================
+        #region Loan Cancellation
 
         public async Task<LoanCancellationResponseDto?> GetLoanCancellationByIdAsync(int id)
         {
@@ -35,6 +21,11 @@ namespace ProductivityApi.Services
                 return null;
 
             return await _repository.GetLoanCancellationDetailsAsync(id);
+        }
+
+        public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
+        {
+            return await _repository.GetLoanCancellationByStatusAsync(status);
         }
 
         public async Task<(bool Success, string Message)> UpdateLoanCancellationAsync(
@@ -83,49 +74,96 @@ namespace ProductivityApi.Services
                 : (false, "Status update failed.");
         }
 
-        // ============================================================
-        // NON CUSTOMER
-        // ============================================================
 
-        public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(
-            CreateNonCustomerDto dto)
+        #endregion
+
+        #region Non Customer
+
+        //    public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(
+        //        CreateNonCustomerDto dto)
+        //    {
+        //        if (string.IsNullOrWhiteSpace(dto.Name))
+        //            return (false, 0, "Name is required.");
+
+        //        var id =
+        //            await _repository.CreateNonCustomerAsync(dto);
+
+        //        return (true, id, "Record created successfully.");
+        //    }
+
+        //    public async Task<NonCustomerResponseDto?> GetNonCustomerByIdAsync(int id)
+        //    {
+        //        return await _repository.GetNonCustomerDetailsAsync(id);
+        //    }
+
+        //    public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(
+        //        UpdateNonCustomerDto dto)
+        //    {
+        //        if (dto.Id <= 0)
+        //            return (false, "Invalid Id.");
+
+        //        var existing =
+        //            await _repository.GetNonCustomerByIdAsync(dto.Id);
+
+        //        if (existing == null)
+        //            return (false, "Record not found.");
+
+        //        var result =
+        //            await _repository.UpdateNonCustomerAsync(dto);
+
+        //        return result
+        //            ? (true, "Non Customer record updated successfully.")
+        //            : (false, "Update failed.");
+        //    }
+
+        //    public async Task<(bool Success, string Message)> UpdateNonCustomerStatusAsync(
+        //UpdateNonCustomerStatusDto dto)
+        //    {
+        //        if (dto.Id <= 0)
+        //            return (false, "Invalid Id.");
+
+        //        var existing =
+        //            await _repository.GetNonCustomerByIdAsync(dto.Id);
+
+        //        if (existing == null)
+        //            return (false, "Record not found.");
+
+        //        var result =
+        //            await _repository.UpdateNonCustomerStatusAsync(dto);
+
+        //        return result
+        //            ? (true, "Status updated successfully.")
+        //            : (false, "Status update failed.");
+        //    }
+
+        public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(CreateNonCustomerDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Name))
-                return (false, 0, "Name is required.");
+            if (!Enum.IsDefined(typeof(NonCustomerScenarioType), dto.ScenarioType))
+                return (false, 0, "ScenarioType must be NON_CUSTOMER or CUSTOMER_MISMATCH.");
 
-            var id =
-                await _repository.CreateNonCustomerAsync(dto);
+            var id = await _repository.CreateNonCustomerAsync(dto);
 
             return (true, id, "Record created successfully.");
         }
 
-        public async Task<NonCustomerResponseDto?> GetNonCustomerByIdAsync(int id)
-        {
-            return await _repository.GetNonCustomerDetailsAsync(id);
-        }
-
-        public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(
-            UpdateNonCustomerDto dto)
+        public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(UpdateNonCustomerDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
 
-            var existing =
-                await _repository.GetNonCustomerByIdAsync(dto.Id);
-
+            var existing = await _repository.GetNonCustomerByIdAsync(dto.Id);
             if (existing == null)
                 return (false, "Record not found.");
 
-            var result =
-                await _repository.UpdateNonCustomerAsync(dto);
+            var result = await _repository.UpdateNonCustomerAsync(dto);
 
             return result
-                ? (true, "Non Customer record updated successfully.")
+                ? (true, "Record updated successfully.")
                 : (false, "Update failed.");
         }
 
         public async Task<(bool Success, string Message)> UpdateNonCustomerStatusAsync(
-    UpdateNonCustomerStatusDto dto)
+UpdateNonCustomerStatusDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
@@ -144,9 +182,22 @@ namespace ProductivityApi.Services
                 : (false, "Status update failed.");
         }
 
-        // ============================================================
-        // WC / WS / SC
-        // ============================================================
+        public async Task<NonCustomerResponseDto?> GetNonCustomerByIdAsync(int id)
+        {
+            if (id <= 0)
+                return null;
+
+            return await _repository.GetNonCustomerDetailsAsync(id);
+        }
+
+        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
+        {
+            return await _repository.GetNonCustomerByStatusAsync(status);
+        }
+
+        #endregion
+
+        #region WC / WS / SC
 
         public async Task<(bool Success, int Id, string Message)> CreateWCWSSCAsync(
             CreateWCWSSCDto dto)
@@ -207,20 +258,22 @@ namespace ProductivityApi.Services
                 ? (true, "Status updated successfully.")
                 : (false, "Status update failed.");
         }
-        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
-        {
-            return await _repository.GetNonCustomerByStatusAsync(status);
-        }
 
         public async Task<IEnumerable<CibilCorrectionWCWSSC>> GetWCWSSCByStatusAsync(string status)
         {
             return await _repository.GetWCWSSCByStatusAsync(status);
         }
 
-        public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
+        #endregion
+
+        public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
         {
-            return await _repository.GetLoanCancellationByStatusAsync(status);
+            if (string.IsNullOrWhiteSpace(accountNumber))
+                return Enumerable.Empty<IndusArchivedMaster>();
+
+            return await _repository.GetArchivedByAccountNumberAsync(accountNumber);
         }
+
         public async Task<byte[]?> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
         {
             var (loan, nonCustomer, wcwssc) =

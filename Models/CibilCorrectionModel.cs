@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ProductivityApi.Models
 {
@@ -68,19 +69,114 @@ namespace ProductivityApi.Models
     // =========================================================
     // NON CUSTOMER
     // =========================================================
+    //public class CibilCorrectionNonCustomer
+    //{
+    //    public int Id { get; set; }
+    //    public string Name { get; set; } = string.Empty;
+    //    public DateTime? DOB { get; set; }
+    //    public string? PAN { get; set; }
+    //    public string? Account_Number { get; set; }
+    //    public string? Mobile_Number { get; set; }
+    //    public string? Address { get; set; }
+    //    public string? ERN_No { get; set; }
+    //    public string? LAN_Number { get; set; }
+    //    public string? Details_of_Complainant { get; set; }
+    //    public string? Details_Actual_Customer { get; set; }
+    //    public string? Status { get; set; }
+    //    public string? Created_By { get; set; }
+    //    public DateTime? Created_Dt { get; set; }
+    //    public string? Updated_By { get; set; }
+    //    public DateTime? Updated_Dt { get; set; }
+    //}
+
+    //public class CreateNonCustomerDto
+    //{
+    //    public string Name { get; set; } = string.Empty;
+    //    public DateTime? DOB { get; set; }
+    //    public string? PAN { get; set; }
+    //    public string? Account_Number { get; set; }
+    //    public string? Mobile_Number { get; set; }
+    //    public string? Address { get; set; }
+    //    public string? ERN_No { get; set; }
+    //    public string? LAN_Number { get; set; }
+    //    public string? Details_of_Complainant { get; set; }
+    //    public string? Details_Actual_Customer { get; set; }
+    //    public string? Status { get; set; }
+    //    public string? Created_By { get; set; }
+    //}
+
+    //public class UpdateNonCustomerDto
+    //{
+    //    public int Id { get; set; }
+    //    public string Name { get; set; } = string.Empty;
+    //    public DateTime? DOB { get; set; }
+    //    public string? PAN { get; set; }
+    //    public string? Account_Number { get; set; }
+    //    public string? Mobile_Number { get; set; }
+    //    public string? Address { get; set; }
+    //    public string? ERN_No { get; set; }
+    //    public string? LAN_Number { get; set; }
+    //    public string? Details_of_Complainant { get; set; }
+    //    public string? Details_Actual_Customer { get; set; }
+    //    public string? Updated_By { get; set; }
+    //}
+
+    //public class UpdateNonCustomerStatusDto
+    //{
+    //    public int Id { get; set; }
+    //    public string? Status { get; set; }
+    //    public string? Updated_By { get; set; }
+    //}
+
+    //public class NonCustomerResponseDto
+    //{
+    //    public CibilCorrectionNonCustomer? NonCustomer { get; set; }
+
+    //    public List<CibilCorrectionLog> Logs { get; set; } = new();
+    //}
+
+    public class PersonDetailDto
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        [Required]
+        public DateTime DOB { get; set; }
+        [Required]
+        public string PAN { get; set; } = string.Empty;
+        [Required]
+        public string Account_Number { get; set; } = string.Empty;
+        public string? Mobile_Number { get; set; } // optional
+        [Required]
+        public string Address { get; set; } = string.Empty;
+        [Required]
+        public string ERN_No { get; set; } = string.Empty;
+        [Required]
+        public string LAN_Number { get; set; } = string.Empty;
+    }
+
     public class CibilCorrectionNonCustomer
     {
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public DateTime? DOB { get; set; }
-        public string? PAN { get; set; }
-        public string? Account_Number { get; set; }
-        public string? Mobile_Number { get; set; }
-        public string? Address { get; set; }
-        public string? ERN_No { get; set; }
-        public string? LAN_Number { get; set; }
-        public string? Details_of_Complainant { get; set; }
-        public string? Details_Actual_Customer { get; set; }
+        public NonCustomerScenarioType ScenarioType { get; set; }
+
+        public string Complainant_Name { get; set; } = string.Empty;
+        public DateTime? Complainant_DOB { get; set; }
+        public string? Complainant_PAN { get; set; }
+        public string? Complainant_Account_Number { get; set; }
+        public string? Complainant_Mobile_Number { get; set; }
+        public string? Complainant_Address { get; set; }
+        public string? Complainant_ERN_No { get; set; }
+        public string? Complainant_LAN_Number { get; set; }
+
+        public string ActualCustomer_Name { get; set; } = string.Empty;
+        public DateTime? ActualCustomer_DOB { get; set; }
+        public string? ActualCustomer_PAN { get; set; }
+        public string? ActualCustomer_Account_Number { get; set; }
+        public string? ActualCustomer_Mobile_Number { get; set; }
+        public string? ActualCustomer_Address { get; set; }
+        public string? ActualCustomer_ERN_No { get; set; }
+        public string? ActualCustomer_LAN_Number { get; set; }
+
         public string? Status { get; set; }
         public string? Created_By { get; set; }
         public DateTime? Created_Dt { get; set; }
@@ -90,34 +186,46 @@ namespace ProductivityApi.Models
 
     public class CreateNonCustomerDto
     {
-        public string Name { get; set; } = string.Empty;
-        public DateTime? DOB { get; set; }
-        public string? PAN { get; set; }
-        public string? Account_Number { get; set; }
-        public string? Mobile_Number { get; set; }
-        public string? Address { get; set; }
-        public string? ERN_No { get; set; }
-        public string? LAN_Number { get; set; }
-        public string? Details_of_Complainant { get; set; }
-        public string? Details_Actual_Customer { get; set; }
-        public string? Status { get; set; }
-        public string? Created_By { get; set; }
+        [Required]
+        public NonCustomerScenarioType ScenarioType { get; set; }
+
+        [Required]
+        public PersonDetailDto Complainant { get; set; } = new();
+
+        [Required]
+        public PersonDetailDto ActualCustomer { get; set; } = new();
+
+        public string Created_By { get; set; } = String.Empty;
+        public string Status { get; set; } = String.Empty;
     }
 
     public class UpdateNonCustomerDto
     {
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public DateTime? DOB { get; set; }
-        public string? PAN { get; set; }
-        public string? Account_Number { get; set; }
-        public string? Mobile_Number { get; set; }
-        public string? Address { get; set; }
-        public string? ERN_No { get; set; }
-        public string? LAN_Number { get; set; }
-        public string? Details_of_Complainant { get; set; }
-        public string? Details_Actual_Customer { get; set; }
+        public NonCustomerScenarioType ScenarioType { get; set; }
+
+        [Required]
+        public PersonDetailDto Complainant { get; set; } = new();
+
+        [Required]
+        public PersonDetailDto ActualCustomer { get; set; } = new();
+
         public string? Updated_By { get; set; }
+    }
+
+    public class NonCustomerResponseDto
+    {
+        public int Id { get; set; }
+        public NonCustomerScenarioType ScenarioType { get; set; }
+        public PersonDetailDto Complainant { get; set; } = new();
+        public PersonDetailDto ActualCustomer { get; set; } = new();
+        public string? Status { get; set; }
+        public string? Created_By { get; set; }
+        public DateTime? Created_Dt { get; set; }
+        public string? Updated_By { get; set; }
+        public DateTime? Updated_Dt { get; set; }
+
+        public List<CibilCorrectionLog> Logs { get; set; } = new();
     }
 
     public class UpdateNonCustomerStatusDto
@@ -125,6 +233,16 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
         public string? Status { get; set; }
         public string? Updated_By { get; set; }
+    }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum NonCustomerScenarioType
+    {
+        /// <summary>Bureau showing a Vistaar account for a non customer.</summary>
+        NON_CUSTOMER,
+
+        /// <summary>Bureau showing Customer 1's account against Customer 2.</summary>
+        CUSTOMER_MISMATCH
     }
 
     // =========================================================
@@ -198,12 +316,6 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
         public string? Updated_By { get; set; }
         public DateTime? Updated_Dt { get; set; }
-    }
-    public class NonCustomerResponseDto
-    {
-        public CibilCorrectionNonCustomer? NonCustomer { get; set; }
-
-        public List<CibilCorrectionLog> Logs { get; set; } = new();
     }
     public class WCWSSCResponseDto
     {
