@@ -237,14 +237,33 @@ namespace ProductivityApi.Repository
             return param.Get<int>("@Output");
         }
 
-        public async Task<List<LoanCancelRequest>> GetAllRequestsAsync()
+        public async Task<PagedResult<LoanCancelRequest>> GetAllRequestsAsync(PaginationRequestDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
-            var sql = @"SELECT * FROM LoanCancel_Requests";
+            using var multi = await conn.QueryMultipleAsync(
+                "dbo.sp_LoanCancel_GetAll",
+                new
+                {
+                    PageNumber = dto.PageNumber,
+                    PageSize = dto.PageSize,
+                    Search = dto.Search
+                },
+                commandType: CommandType.StoredProcedure);
 
-            var data = await conn.QueryAsync<LoanCancelRequest>(sql, commandType: CommandType.Text);
-            return data.ToList();
+            var totalRecords = await multi.ReadSingleAsync<int>();
+
+            var items = (
+                await multi.ReadAsync<LoanCancelRequest>()
+            ).ToList();
+
+            return new PagedResult<LoanCancelRequest>
+            {
+                Items = items,
+                PageNumber = dto.PageNumber,
+                PageSize = dto.PageSize,
+                TotalRecords = totalRecords
+            };
         }
 
     }

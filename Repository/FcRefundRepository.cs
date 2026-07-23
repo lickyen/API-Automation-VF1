@@ -226,17 +226,31 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<FcRefundModel>> GetAllAsync()
+        public async Task<PagedResult<FcRefundModel>> GetAllAsync(PaginationRequestDto request)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var result = await connection.QueryAsync<FcRefundModel>(
-                "SELECT * FROM FC_PREMIUMREFUND",
-                commandType: CommandType.Text
-            );
+            using var multi = await connection.QueryMultipleAsync(
+                "sp_FcRefund_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure);
 
-            return result.ToList();
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<FcRefundModel>()).ToList();
+
+            return new PagedResult<FcRefundModel>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
 
     }

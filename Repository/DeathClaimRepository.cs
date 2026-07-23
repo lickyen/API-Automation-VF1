@@ -424,19 +424,31 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<List<DeathClaimMaster>> GetAllAsync()
+        public async Task<PagedResult<DeathClaimMaster>> GetAllAsync(PaginationRequestDto request)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var sql = @"SELECT * FROM DeathClaim_Master";
+            using var multi = await connection.QueryMultipleAsync(
+                "dbo.sp_newDeathClaim_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure);
 
-            var rows = await connection.QueryAsync<DeathClaimMaster>(
-                sql,
-                commandType: CommandType.Text
-            );
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<DeathClaimMaster>()).ToList();
 
-            return rows.ToList();
+            return new PagedResult<DeathClaimMaster>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
     }
 }

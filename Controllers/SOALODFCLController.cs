@@ -212,14 +212,20 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
         {
-            var data = await _service.GetAllAsync();
+            if (request.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
 
-            if (data == null || !data.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
+            if (request.PageSize < 1 || request.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
 
-            return Ok(new Response(true, data, "Success"));
+            var result = await _service.GetAllAsync(request);
+
+            return Ok(new Response(
+                true,
+                result,
+                result.TotalRecords == 0 ? "No records found" : "Success"));
         }
     }
 }

@@ -35,9 +35,6 @@ namespace ProductivityApi.Services
         public async Task<List<LcRefundModel>> GetByStatusAsync(string status)
             => await _repository.GetByStatusAsync(status);
 
-        public async Task<List<LcRefundModel>> GetAllAsync()
-            => await _repository.GetAllAsync();
-
         public async Task<List<LcUtrModel>> GetUtrByLanAsync(string lan)
             => await _repository.GetUtrByLanAsync(lan);
 
@@ -226,5 +223,8 @@ namespace ProductivityApi.Services
                 (utrs, "UTR")
             );
         }
+
+        public Task<PagedResult<LcRefundModel>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

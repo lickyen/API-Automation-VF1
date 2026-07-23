@@ -44,17 +44,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var data = await _service.GetAllAsync();
-
-            if (data == null || !data.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
         [HttpGet("getByBranch")]
         public async Task<IActionResult> GetByBranch(
             [FromQuery] string branchCode,
@@ -167,6 +156,23 @@ namespace ProductivityApi.Controllers
             return result.Success
                 ? Ok(new Response(true, result.Data, "Success"))
                 : NotFound(new Response(false, null, result.Message));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
+        {
+            if (request.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (request.PageSize < 1 || request.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllAsync(request);
+
+            return Ok(new Response(
+                true,
+                result,
+                result.TotalRecords == 0 ? "No records found" : "Success"));
         }
     }
 }

@@ -16,9 +16,6 @@ namespace ProductivityApi.Services
             _filePath = appSettings.FilePaths.DeathClaimFilePath;
         }
 
-        public async Task<List<DeathClaimMaster>> GetAllAsync()
-            => await _repository.GetAllAsync();
-
         public async Task<DeathClaimResponseDto?> GetByIdAsync(int id)
         {
             var response = new DeathClaimResponseDto();
@@ -524,5 +521,8 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetByUserAsync(dto);
         }
+
+        public Task<PagedResult<DeathClaimMaster>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

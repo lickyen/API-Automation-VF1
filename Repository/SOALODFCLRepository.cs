@@ -19,20 +19,6 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public async Task<List<SOADashboard>> GetAllAsync()
-        {
-            using var conn = new SqlConnection(_conStr);
-            await conn.OpenAsync();
-
-            var sql = @"SELECT * FROM SOALOD_Transactions_Main";
-
-            var rows = await conn.QueryAsync<SOADashboard>(
-                sql,
-                commandType: CommandType.Text
-            );
-
-            return rows.ToList();
-        }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -567,6 +553,33 @@ namespace ProductivityApi.Repository
 
             return TransactionId;
 
+        }
+
+        public async Task<PagedResult<SOADashboard>> GetAllAsync(PaginationRequestDto request)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "dbo.sp_SOALOD_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure);
+
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<SOADashboard>()).ToList();
+
+            return new PagedResult<SOADashboard>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
 
     }

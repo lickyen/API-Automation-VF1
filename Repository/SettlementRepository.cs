@@ -109,7 +109,6 @@ namespace ProductivityApi.Repository
 
             return settlement;
         }
-
         public async Task<int> ApproveSettlementAsync(ApproveSettlementDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -179,18 +178,6 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<IEnumerable<SettlementDashboard>> GetAllSettlementsAsync()
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            var sql = @"SELECT * FROM Settlement_Transactions";
-
-            return await conn.QueryAsync<SettlementDashboard>(
-                sql,
-                commandType: CommandType.Text
-            );
-        }
-
         public async Task<int> CancelSettlementAsync(CancelSettlementDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -228,6 +215,38 @@ namespace ProductivityApi.Repository
             var logs = await multi.ReadAsync();
 
             return (transactions, payments, logs);
+        }
+
+        public async Task<PagedResult<SettlementDashboard>> GetAllSettlementsAsync(PaginationRequestDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "dbo.sp_Settlement_GetAll",
+                new
+                {
+                    PageNumber = dto.PageNumber,
+                    PageSize = dto.PageSize,
+                    Search = dto.Search
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var totalRecords = await multi.ReadSingleAsync<int>();
+
+            var items = (
+                await multi.ReadAsync<SettlementDashboard>()
+            ).ToList();
+
+            return new PagedResult<SettlementDashboard>
+            {
+                Items = items,
+                PageNumber = dto.PageNumber,
+                PageSize = dto.PageSize,
+                TotalRecords = totalRecords
+            };
         }
     }
 }

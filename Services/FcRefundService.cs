@@ -483,9 +483,6 @@ namespace ProductivityApi.Services
         public async Task<int> UpdateAdditionalRequestAsync(List<FcRefundAdditionalRequestDto> dtos)
             => await _repository.UpdateAdditionalRequestAsync(dtos);
 
-        public async Task<List<FcRefundModel>> GetAllAsync()
-            => await _repository.GetAllAsync();
-
         public (bool Success, string Message, FcRefundDownloadFileResponseDto? Data) GetFileAsBase64(FcRefundDownloadFileRequestDto dto)
         {
             var basePath = _appSettings.FilePaths.FcRefundFilePath;
@@ -511,6 +508,9 @@ namespace ProductivityApi.Services
             return ExcelHelper.GenerateExcel(
                 (data, "Data"));
         }
+
+        public async Task<PagedResult<FcRefundModel>> GetAllAsync(PaginationRequestDto request)
+            => await _repository.GetAllAsync(request);
     }
 
 }

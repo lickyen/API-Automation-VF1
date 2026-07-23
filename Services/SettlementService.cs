@@ -108,11 +108,6 @@ namespace ProductivityApi.Services
             return await _repository.GetDashboardByUserAsync(dto);
         }
 
-        public async Task<IEnumerable<SettlementDashboard>> GetAllSettlementsAsync()
-        {
-            return await _repository.GetAllSettlementsAsync();
-        }
-
         public async Task<int> CancelSettlementAsync(CancelSettlementDto dto)
         {
             var result = await _repository.CancelSettlementAsync(dto);
@@ -129,6 +124,12 @@ namespace ProductivityApi.Services
                 (payments, "Payments"),
                 (logs, "Logs")
             );
+        }
+
+        //Get All Records with pagination
+        public Task<PagedResult<SettlementDashboard>> GetAllSettlementsAsync(PaginationRequestDto dto)
+        {
+            return _repository.GetAllSettlementsAsync(dto);
         }
     }
 }

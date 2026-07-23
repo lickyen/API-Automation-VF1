@@ -66,8 +66,6 @@ namespace ProductivityApi.Services
             var result = await _repository.GetBaseChargesAsync(type);
             return result;
         }
-        public async Task<List<SOADashboard>> GetAllAsync()
-            => await _repository.GetAllAsync();
         public async Task<IEnumerable<ActiverequestsResponseDto>> GetActiverequestsAsync(string Lan)
         {
             return await _repository.GetActiveRequestsByLANAsync(Lan);
@@ -808,6 +806,9 @@ namespace ProductivityApi.Services
                 }
             }
         }
+
+        public Task<PagedResult<SOADashboard>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
 
     }
 }

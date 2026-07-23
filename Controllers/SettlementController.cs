@@ -27,18 +27,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, settlement, "Success"));
         }
 
-        // GET: api/settlements
-        [HttpGet]
-        public async Task<IActionResult> GetAllSettlements()
-        {
-            var data = await _service.GetAllSettlementsAsync();
-
-            if (data == null || !data.Any())
-                return Ok(new Response(true, new List<object>(), "No records found"));
-
-            return Ok(new Response(true, data, "Success"));
-        }
-
         // GET: api/settlements/dashboard?userId=123&role=OPS
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard([FromQuery] SettlementDashboardRequestDto dto)
@@ -164,6 +152,21 @@ namespace ProductivityApi.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Settlement_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
+        }
+
+        // GET: api/settlements?pageNumber=1&pageSize=20&search=LAN001
+        [HttpGet]
+        public async Task<IActionResult> GetAllSettlements([FromQuery] PaginationRequestDto dto)
+        {
+            if (dto.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (dto.PageSize < 1 || dto.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllSettlementsAsync(dto);
+
+            return Ok(new Response(true, result, result.TotalRecords == 0 ? "No records found" : "Success"));
         }
 
 

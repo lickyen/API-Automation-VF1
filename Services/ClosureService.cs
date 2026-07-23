@@ -458,9 +458,6 @@ namespace ProductivityApi.Services
             return txn;
         }
 
-        public async Task<List<ClosureTransaction>> GetAllAsync()
-            => await _repository.GetAllAsync();
-
         public Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string? status)
         {
             return _repository.GetByUserAsync(userId, role, status);
@@ -574,5 +571,8 @@ namespace ProductivityApi.Services
 
         public async Task<int?> GetLetterIdAsync(string lan)
             => await _repository.GetLetterIdAsync(lan);
+
+        public Task<PagedResult<ClosureTransaction>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

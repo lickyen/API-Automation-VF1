@@ -13,21 +13,6 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
-
-        public async Task<List<ClosureTransaction>> GetAllAsync()
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            var sql = @"SELECT * FROM Closure_Transactions";
-
-            var rows = await connection.QueryAsync<ClosureTransaction>(
-                sql,
-                commandType: CommandType.Text
-            );
-
-            return rows.ToList();
-        }
         public async Task<int> AddRequestAsync(AddClosureRequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
@@ -491,6 +476,34 @@ namespace ProductivityApi.Repository
                 "sp_newClosure_getLetterId",
                 new { LAN = lan },
                 commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<PagedResult<ClosureTransaction>> GetAllAsync(PaginationRequestDto request)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            using var multi = await connection.QueryMultipleAsync(
+                "dbo.sp_newClosure_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<ClosureTransaction>()).ToList();
+
+            return new PagedResult<ClosureTransaction>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
 
     }
