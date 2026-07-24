@@ -79,10 +79,17 @@ namespace ProductivityApi.Controllers
 
         // Get by Status
 
+        //[HttpGet("loanCancellationbyStatus")]
+        //public async Task<IActionResult> GetLoanCancellation([FromQuery] string? status)
+        //{
+        //    var data = await _service.GetLoanCancellationByStatusAsync(status);
+        //    return Ok(new Response(true, data));
+        //}
+
         [HttpGet("loanCancellationbyStatus")]
-        public async Task<IActionResult> GetLoanCancellation([FromQuery] string? status)
+        public async Task<IActionResult> GetLoanCancellation([FromQuery] CibilCorrectionGetByStatusDto request)
         {
-            var data = await _service.GetLoanCancellationByStatusAsync(status);
+            var data = await _service.GetLoanCancellationByStatusAsync(request);
             return Ok(new Response(true, data));
         }
 
@@ -143,10 +150,18 @@ namespace ProductivityApi.Controllers
         }
 
         // Get by Status
+
+        //[HttpGet("nonCustomerbyStatus")]
+        //public async Task<IActionResult> GetNonCustomer([FromQuery] string? status)
+        //{
+        //    var data = await _service.GetNonCustomerByStatusAsync(status);
+        //    return Ok(new Response(true, data));
+        //}
+
         [HttpGet("nonCustomerbyStatus")]
-        public async Task<IActionResult> GetNonCustomer([FromQuery] string? status)
+        public async Task<IActionResult> GetNonCustomer([FromQuery] CibilCorrectionGetByStatusDto request)
         {
-            var data = await _service.GetNonCustomerByStatusAsync(status);
+            var data = await _service.GetNonCustomerByStatusAsync(request);
             return Ok(new Response(true, data));
         }
 
@@ -242,10 +257,18 @@ namespace ProductivityApi.Controllers
 
         // Get by Status
 
+        //[HttpGet("wcwsscbyStatus")]
+        //public async Task<IActionResult> GetWCWSSC([FromQuery] string? status)
+        //{
+        //    var data = await _service.GetWCWSSCByStatusAsync(status);
+        //    return Ok(new Response(true, data));
+        //}
+
         [HttpGet("wcwsscbyStatus")]
-        public async Task<IActionResult> GetWCWSSC([FromQuery] string? status)
+        public async Task<IActionResult> GetWCWSSC(
+             [FromQuery] CibilCorrectionGetByStatusDto request)
         {
-            var data = await _service.GetWCWSSCByStatusAsync(status);
+            var data = await _service.GetWCWSSCByStatusAsync(request);
             return Ok(new Response(true, data));
         }
 

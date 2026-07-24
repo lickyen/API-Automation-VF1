@@ -23,11 +23,15 @@ namespace ProductivityApi.Services
             return await _repository.GetLoanCancellationDetailsAsync(id);
         }
 
-        public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
-        {
-            return await _repository.GetLoanCancellationByStatusAsync(status);
-        }
+        //public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
+        //{
+        //    return await _repository.GetLoanCancellationByStatusAsync(status);
+        //}
 
+        public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(CibilCorrectionGetByStatusDto request)
+        {
+            return await _repository.GetLoanCancellationByStatusAsync(request);
+        }
         public async Task<(bool Success, string Message)> UpdateLoanCancellationAsync(
             UpdateLoanCancellationDto dto)
         {
@@ -78,64 +82,6 @@ namespace ProductivityApi.Services
         #endregion
 
         #region Non Customer
-
-        //    public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(
-        //        CreateNonCustomerDto dto)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(dto.Name))
-        //            return (false, 0, "Name is required.");
-
-        //        var id =
-        //            await _repository.CreateNonCustomerAsync(dto);
-
-        //        return (true, id, "Record created successfully.");
-        //    }
-
-        //    public async Task<NonCustomerResponseDto?> GetNonCustomerByIdAsync(int id)
-        //    {
-        //        return await _repository.GetNonCustomerDetailsAsync(id);
-        //    }
-
-        //    public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(
-        //        UpdateNonCustomerDto dto)
-        //    {
-        //        if (dto.Id <= 0)
-        //            return (false, "Invalid Id.");
-
-        //        var existing =
-        //            await _repository.GetNonCustomerByIdAsync(dto.Id);
-
-        //        if (existing == null)
-        //            return (false, "Record not found.");
-
-        //        var result =
-        //            await _repository.UpdateNonCustomerAsync(dto);
-
-        //        return result
-        //            ? (true, "Non Customer record updated successfully.")
-        //            : (false, "Update failed.");
-        //    }
-
-        //    public async Task<(bool Success, string Message)> UpdateNonCustomerStatusAsync(
-        //UpdateNonCustomerStatusDto dto)
-        //    {
-        //        if (dto.Id <= 0)
-        //            return (false, "Invalid Id.");
-
-        //        var existing =
-        //            await _repository.GetNonCustomerByIdAsync(dto.Id);
-
-        //        if (existing == null)
-        //            return (false, "Record not found.");
-
-        //        var result =
-        //            await _repository.UpdateNonCustomerStatusAsync(dto);
-
-        //        return result
-        //            ? (true, "Status updated successfully.")
-        //            : (false, "Status update failed.");
-        //    }
-
         public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(CreateNonCustomerDto dto)
         {
             if (!Enum.IsDefined(typeof(NonCustomerScenarioType), dto.ScenarioType))
@@ -190,9 +136,14 @@ UpdateNonCustomerStatusDto dto)
             return await _repository.GetNonCustomerDetailsAsync(id);
         }
 
-        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
+        //public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
+        //{
+        //    return await _repository.GetNonCustomerByStatusAsync(status);
+        //}
+
+        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
-            return await _repository.GetNonCustomerByStatusAsync(status);
+            return await _repository.GetNonCustomerByStatusAsync(request);
         }
 
         #endregion
@@ -259,9 +210,15 @@ UpdateNonCustomerStatusDto dto)
                 : (false, "Status update failed.");
         }
 
-        public async Task<IEnumerable<CibilCorrectionWCWSSC>> GetWCWSSCByStatusAsync(string status)
+        //public async Task<IEnumerable<CibilCorrectionWCWSSC>> GetWCWSSCByStatusAsync(string status)
+        //{
+        //    return await _repository.GetWCWSSCByStatusAsync(status);
+        //}
+
+        public async Task<IEnumerable<CibilCorrectionWCWSSC>>
+            GetWCWSSCByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
-            return await _repository.GetWCWSSCByStatusAsync(status);
+            return await _repository.GetWCWSSCByStatusAsync(request);
         }
 
         #endregion

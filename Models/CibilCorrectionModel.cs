@@ -8,20 +8,12 @@ namespace ProductivityApi.Models
     // =========================================================
     public class IndusArchivedMaster
     {
-        public string Consumer_Name { get; set; } = string.Empty;
-        public string Account_Number { get; set; } = string.Empty;
-        public decimal Current_Balance { get; set; }
-        public decimal Amount_Overdue { get; set; }
-        public DateTime? Date_Closed_DD_MM_YYYY { get; set; }
-        public DateTime? Date_of_Last_Payment_DD_MM_YYYY { get; set; }
-        public string? Date_Reported_DD_MM_YYYY { get; set; }
-        public double High_credit_sanctioned_amount { get; set; }
-        public int NDPD_for_latest_month { get; set; }
-        public string? Account_Status_Suit_Filed_Wilful_Default_etc { get; set; }
-        public int Credit_Facility_Status { get; set; }
-        public double Written_Off_Total_Amount { get; set; }
-        public double Written_Off_Principle_Amount { get; set; }
-        public double Settlement_Amount { get; set; }
+        public string LAN { get; set; } = string.Empty;
+        public string CustName { get; set; } = string.Empty;
+        public decimal LoanAmount { get; set; }
+        public decimal TotalOutstanding { get; set; }
+        public decimal PrincipalOutstanding { get; set; }
+        public int DPD { get; set; }
     }
 
     // =========================================================
@@ -62,8 +54,9 @@ namespace ProductivityApi.Models
     public class UpdateLoanCancellationStatusDto
     {
         public int Id { get; set; }
-        public string? Status { get; set; }
-        public string? Updated_By { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Updated_By { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
     }
 
     // =========================================================
@@ -231,8 +224,9 @@ namespace ProductivityApi.Models
     public class UpdateNonCustomerStatusDto
     {
         public int Id { get; set; }
-        public string? Status { get; set; }
-        public string? Updated_By { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Updated_By { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -248,6 +242,7 @@ namespace ProductivityApi.Models
     // =========================================================
     // WC / WS / SC
     // =========================================================
+
     public class CibilCorrectionWCWSSC
     {
         public int Id { get; set; }
@@ -256,23 +251,23 @@ namespace ProductivityApi.Models
         public decimal? Current_Balance { get; set; }
         public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
-        public DateTime? Date_of_Last_Payment { get; set; }
+        public DateTime? Date_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
-        public decimal? High_credit_sanctioned_amount { get; set; }
-        public int? NDPD_for_latest_month { get; set; }
+        public decimal? Sanctioned_amount { get; set; }
+        public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
         public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
-        public decimal? Written_Off_Principle_Amount { get; set; }
+        public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
-        public string? Status { get; set; }
-        public string? LoanStatus { get; set; }
-        public string? Remarks { get; set; }
         public string? Created_By { get; set; }
         public DateTime? Created_Dt { get; set; }
         public string? Updated_By { get; set; }
         public DateTime? Updated_Dt { get; set; }
+        public string? Status { get; set; }
+        public string? LoanStatus { get; set; }
+        public string? Remarks { get; set; }
     }
 
     public class CreateWCWSSCDto
@@ -282,46 +277,19 @@ namespace ProductivityApi.Models
         public decimal? Current_Balance { get; set; }
         public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
-        public DateTime? Date_of_Last_Payment { get; set; }
+        public DateTime? Date_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
-        public decimal? High_credit_sanctioned_amount { get; set; }
-        public int? NDPD_for_latest_month { get; set; }
+        public decimal? Sanctioned_amount { get; set; }
+        public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
         public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
-        public decimal? Written_Off_Principle_Amount { get; set; }
+        public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
         public string? Status { get; set; }
         public string? LoanStatus { get; set; }
         public string? Created_By { get; set; }
-    }
-
-    public class UpdateWCWSSCStatusDto
-    {
-        public int Id { get; set; }
-        public string? Status { get; set; }
-        public string? Updated_By { get; set; }
-    }
-
-    public class CibilCorrectionLog
-    {
-        public int Id { get; set; }
-        public string TableName { get; set; } = string.Empty;
-        public int RecordId { get; set; }
-        public string? Account_Number { get; set; }
-        public string? LAN_Number { get; set; }
-        public string? Old_Status { get; set; }
-        public string? New_Status { get; set; }
-        public string? Remarks { get; set; }
-        public string? Updated_By { get; set; }
-        public DateTime? Updated_Dt { get; set; }
-    }
-    public class WCWSSCResponseDto
-    {
-        public CibilCorrectionWCWSSC? Record { get; set; }
-
-        public List<CibilCorrectionLog> Logs { get; set; } = new();
     }
 
     public class UpdateWCWSSCDto
@@ -332,17 +300,62 @@ namespace ProductivityApi.Models
         public decimal? Current_Balance { get; set; }
         public decimal? Amount_Overdue { get; set; }
         public DateTime? Date_Closed { get; set; }
-        public DateTime? Date_of_Last_Payment { get; set; }
+        public DateTime? Date_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
-        public decimal? High_credit_sanctioned_amount { get; set; }
-        public int? NDPD_for_latest_month { get; set; }
+        public decimal? Sanctioned_amount { get; set; }
+        public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
         public int? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
-        public decimal? Written_Off_Principle_Amount { get; set; }
+        public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
         public string? Updated_By { get; set; }
         public string? Remarks { get; set; }
+    }
+
+    public class UpdateWCWSSCStatusDto
+    {
+        public int Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Updated_By { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
+    }
+    //public class CibilCorrectionLog
+    //{
+    //    public int Id { get; set; }
+    //    public string TableName { get; set; } = string.Empty;
+    //    public int RecordId { get; set; }
+    //    public string? Account_Number { get; set; }
+    //    public string? LAN_Number { get; set; }
+    //    public string? Old_Status { get; set; }
+    //    public string? New_Status { get; set; }
+    //    public string? Remarks { get; set; }
+    //    public string? Updated_By { get; set; }
+    //    public DateTime? Updated_Dt { get; set; }
+    //}
+
+    public class CibilCorrectionLog
+    {
+        public int Id { get; set; }
+        public int ReqId { get; set; }
+        public string ReqType { get; set; } = string.Empty;
+        public string? Status { get; set; }
+        public string? Remarks { get; set; }
+        public string? UpdatedBy { get; set; }
+        public DateTime UpdatedDt { get; set; }
+    }
+    public class WCWSSCResponseDto
+    {
+        public CibilCorrectionWCWSSC? Record { get; set; }
+
+        public List<CibilCorrectionLog> Logs { get; set; } = new();
+    }
+
+    public class CibilCorrectionGetByStatusDto
+    {
+        public string? Status { get; set; }
+        public string? UserId { get; set; }
+        public string? Role { get; set; }
     }
 }

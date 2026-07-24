@@ -29,24 +29,23 @@ namespace ProductivityApi.Repository
                 new { Id = id });
         }
 
-        public async Task<LoanCancellationResponseDto?> GetLoanCancellationDetailsAsync(int id)
+        public async Task<LoanCancellationResponseDto?>
+            GetLoanCancellationDetailsAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                SELECT *
-                FROM CIBIL_Correction_LoanCancellation
-                WHERE Id = @Id;
+            const string sql = @"
+        SELECT *
+        FROM dbo.CIBIL_Correction_LoanCancellation
+        WHERE Id = @Id;
 
-                SELECT *
-                FROM CIBIL_Correction_Logs
-                WHERE TableName = 'LoanCancellation'
-                  AND RecordId = @Id
-                ORDER BY Updated_Dt DESC;
-            ";
+        SELECT *
+        FROM dbo.CIBIL_Correction_Logs
+        WHERE ReqType = 'LoanCancellation'
+          AND ReqId = @Id
+        ORDER BY UpdatedDt DESC;";
 
-            using var multi =
-                await conn.QueryMultipleAsync(sql, new { Id = id });
+            using var multi = await conn.QueryMultipleAsync(sql, new { Id = id });
 
             var record =
                 await multi.ReadFirstOrDefaultAsync<CibilCorrectionLoanCancellation>();
@@ -64,19 +63,43 @@ namespace ProductivityApi.Repository
                 Logs = logs
             };
         }
+        //public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
 
-        public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
+        //    string sql = @"
+        //        SELECT *
+        //        FROM CIBIL_Correction_LoanCancellation
+        //        WHERE (@Status IS NULL OR Status = @Status)";
+
+        //    return await conn.QueryAsync<CibilCorrectionLoanCancellation>(sql, new { Status = status });
+        //}
+
+        public async Task<IEnumerable<CibilCorrectionLoanCancellation>>
+            GetLoanCancellationByStatusAsync(
+                CibilCorrectionGetByStatusDto request)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                SELECT *
-                FROM CIBIL_Correction_LoanCancellation
-                WHERE (@Status IS NULL OR Status = @Status)";
+            var statuses = GetMappedStatuses(request);
 
-            return await conn.QueryAsync<CibilCorrectionLoanCancellation>(sql, new { Status = status });
+            if (statuses.Count == 0)
+            {
+                return Enumerable
+                    .Empty<CibilCorrectionLoanCancellation>();
+            }
+
+            const string sql = @"
+        SELECT *
+        FROM dbo.CIBIL_Correction_LoanCancellation
+        WHERE Status IN @Statuses
+        ORDER BY Created_Dt DESC;";
+
+            return await conn
+                .QueryAsync<CibilCorrectionLoanCancellation>(
+                    sql,
+                    new { Statuses = statuses });
         }
-
         public async Task<bool> UpdateLoanCancellationAsync(UpdateLoanCancellationDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -98,179 +121,65 @@ namespace ProductivityApi.Repository
             return rows > 0;
         }
 
-        public async Task<bool> UpdateLoanCancellationStatusAsync(UpdateLoanCancellationStatusDto dto)
+        public async Task<bool> UpdateLoanCancellationStatusAsync(
+            UpdateLoanCancellationStatusDto dto)
         {
-            using var conn = new SqlConnection(_conStr);
+            await using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            string sql = @"
-        UPDATE CIBIL_Correction_LoanCancellation
-        SET
-            Status = @Status,
-            Updated_By = @Updated_By,
-            Updated_Dt = GETDATE()
-        WHERE Id = @Id";
+            await using var transaction =
+                (SqlTransaction)await conn.BeginTransactionAsync();
 
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
+            try
+            {
+                const string updateSql = @"
+            UPDATE dbo.CIBIL_Correction_LoanCancellation
+            SET
+                Status = @Status,
+                Updated_By = @Updated_By,
+                Updated_Dt = SYSDATETIME()
+            WHERE Id = @Id;";
+
+                var rows = await conn.ExecuteAsync(
+                    updateSql,
+                    new
+                    {
+                        dto.Id,
+                        dto.Status,
+                        dto.Remarks,
+                        dto.Updated_By
+                    },
+                    transaction);
+
+                if (rows == 0)
                 {
-                    dto.Id,
-                    dto.Status,
-                    dto.Updated_By
-                });
+                    await transaction.RollbackAsync();
+                    return false;
+                }
 
-            return rows > 0;
-        }
+                await InsertLogAsync(
+                    conn,
+                    transaction,
+                    dto.Id,
+                    "LoanCancellation",
+                    dto.Status,
+                    dto.Remarks,
+                    dto.Updated_By);
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }        
         #endregion
 
+
+
         #region Non-Customer
-
-        //    public async Task<int> CreateNonCustomerAsync(CreateNonCustomerDto dto)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql = @"
-        //        INSERT INTO CIBIL_Correction_NonCustomer
-        //        (
-        //            Name,
-        //            DOB,
-        //            PAN,
-        //            Account_Number,
-        //            Mobile_Number,
-        //            Address,
-        //            ERN_No,
-        //            LAN_Number,
-        //            Details_of_Complainant,
-        //            Details_Actual_Customer,
-        //            Status,
-        //            Created_By,
-        //            Created_Dt
-        //        )
-        //        VALUES
-        //        (
-        //            @Name,
-        //            @DOB,
-        //            @PAN,
-        //            @Account_Number,
-        //            @Mobile_Number,
-        //            @Address,
-        //            @ERN_No,
-        //            @LAN_Number,
-        //            @Details_of_Complainant,
-        //            @Details_Actual_Customer,
-        //            @Status,
-        //            @Created_By,
-        //            GETDATE()
-        //        );
-
-        //        SELECT CAST(SCOPE_IDENTITY() AS INT);
-        //    ";
-
-        //        return await conn.ExecuteScalarAsync<int>(sql, dto);
-        //    }
-
-        //    public async Task<CibilCorrectionNonCustomer?> GetNonCustomerByIdAsync(int id)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql = @"
-        //        SELECT *
-        //        FROM CIBIL_Correction_NonCustomer
-        //        WHERE Id = @Id";
-
-        //        return await conn.QueryFirstOrDefaultAsync<CibilCorrectionNonCustomer>(
-        //            sql,
-        //            new { Id = id });
-        //    }
-
-        //    public async Task<bool> UpdateNonCustomerAsync(UpdateNonCustomerDto dto)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql = @"
-        //        UPDATE CIBIL_Correction_NonCustomer
-        //        SET
-        //            Name = @Name,
-        //            DOB = @DOB,
-        //            PAN = @PAN,
-        //            Account_Number = @Account_Number,
-        //            Mobile_Number = @Mobile_Number,
-        //            Address = @Address,
-        //            ERN_No = @ERN_No,
-        //            LAN_Number = @LAN_Number,
-        //            Details_of_Complainant = @Details_of_Complainant,
-        //            Details_Actual_Customer = @Details_Actual_Customer,
-        //            Updated_By = @Updated_By,
-        //            Updated_Dt = GETDATE()
-        //        WHERE Id = @Id";
-
-        //        var rows = await conn.ExecuteAsync(sql, dto);
-
-        //        return rows > 0;
-        //    }
-
-        //    public async Task<bool> UpdateNonCustomerStatusAsync(
-        //UpdateNonCustomerStatusDto dto)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql = @"
-        //        UPDATE CIBIL_Correction_NonCustomer
-        //        SET
-        //            Status = @Status,
-        //            Updated_By = @Updated_By,
-        //            Updated_Dt = GETDATE()
-        //        WHERE Id = @Id";
-
-        //        var rows = await conn.ExecuteAsync(
-        //            sql,
-        //            new
-        //            {
-        //                dto.Id,
-        //                dto.Status,
-        //                dto.Updated_By
-        //            });
-
-        //        return rows > 0;
-        //    }
-
-        //    public async Task<NonCustomerResponseDto?> GetNonCustomerDetailsAsync(int id)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql = @"
-        //    SELECT *
-        //    FROM CIBIL_Correction_NonCustomer
-        //    WHERE Id = @Id;
-
-        //    SELECT *
-        //    FROM CIBIL_Correction_Logs
-        //    WHERE TableName = 'NonCustomer'
-        //      AND RecordId = @Id
-        //    ORDER BY Updated_Dt DESC;
-        //";
-
-        //        using var multi = await conn.QueryMultipleAsync(
-        //            sql,
-        //            new { Id = id });
-
-        //        var record =
-        //            await multi.ReadFirstOrDefaultAsync<CibilCorrectionNonCustomer>();
-
-        //        if (record == null)
-        //            return null;
-
-        //        var logs =
-        //            (await multi.ReadAsync<CibilCorrectionLog>())
-        //            .ToList();
-
-        //        return new NonCustomerResponseDto
-        //        {
-        //            NonCustomer = record,
-        //            Logs = logs
-        //        };
-        //    }
-
         public async Task<int> CreateNonCustomerAsync(CreateNonCustomerDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -317,18 +226,43 @@ namespace ProductivityApi.Repository
             return await conn.QueryFirstOrDefaultAsync<CibilCorrectionNonCustomer>(sql, new { Id = id });
         }
 
-        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
+        //public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    string sql = @"
+        //        SELECT *
+        //        FROM CIBIL_Correction_NonCustomer
+        //        WHERE (@Status IS NULL OR Status = @Status)";
+
+        //    return await conn.QueryAsync<CibilCorrectionNonCustomer>(sql, new { Status = status });
+        //}
+
+        public async Task<IEnumerable<CibilCorrectionNonCustomer>>
+            GetNonCustomerByStatusAsync(
+                CibilCorrectionGetByStatusDto request)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            var statuses = GetMappedStatuses(request);
+
+            if (statuses.Count == 0)
+            {
+                return Enumerable
+                    .Empty<CibilCorrectionNonCustomer>();
+            }
+
+            const string sql = @"
                 SELECT *
-                FROM CIBIL_Correction_NonCustomer
-                WHERE (@Status IS NULL OR Status = @Status)";
+                FROM dbo.CIBIL_Correction_NonCustomer
+                WHERE Status IN @Statuses
+                ORDER BY Created_Dt DESC;";
 
-            return await conn.QueryAsync<CibilCorrectionNonCustomer>(sql, new { Status = status });
+            return await conn
+                .QueryAsync<CibilCorrectionNonCustomer>(
+                    sql,
+                    new { Statuses = statuses });
         }
-
         public async Task<bool> UpdateNonCustomerAsync(UpdateNonCustomerDto dto)
         {
             using var conn = new SqlConnection(_conStr);
@@ -357,44 +291,74 @@ namespace ProductivityApi.Repository
             return rows > 0;
         }
 
-        public async Task<bool> UpdateNonCustomerStatusAsync(UpdateNonCustomerStatusDto dto)
+        public async Task<bool> UpdateNonCustomerStatusAsync(
+            UpdateNonCustomerStatusDto dto)
         {
-            using var conn = new SqlConnection(_conStr);
+            await using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            string sql = @"
-                UPDATE CIBIL_Correction_NonCustomer
-                SET
-                    Status = @Status,
-                    Updated_By = @Updated_By,
-                    Updated_Dt = GETDATE()
-                WHERE Id = @Id";
+            await using var transaction =
+                (SqlTransaction)await conn.BeginTransactionAsync();
 
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
+            try
+            {
+                const string updateSql = @"
+            UPDATE dbo.CIBIL_Correction_NonCustomer
+            SET
+                Status = @Status,
+                Updated_By = @Updated_By,
+                Updated_Dt = SYSDATETIME()
+            WHERE Id = @Id;";
+
+                var rows = await conn.ExecuteAsync(
+                    updateSql,
+                    new
+                    {
+                        dto.Id,
+                        dto.Status,
+                        dto.Updated_By
+                    },
+                    transaction);
+
+                if (rows == 0)
                 {
-                    dto.Id,
-                    dto.Status,
-                    dto.Updated_By
-                });
+                    await transaction.RollbackAsync();
+                    return false;
+                }
 
-            return rows > 0;
+                await InsertLogAsync(
+                    conn,
+                    transaction,
+                    dto.Id,
+                    "NonCustomer",
+                    dto.Status,
+                    dto.Remarks,
+                    dto.Updated_By);
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
         public async Task<NonCustomerResponseDto?> GetNonCustomerDetailsAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
             string sql = @"
-        SELECT *
-        FROM CIBIL_Correction_NonCustomer
-        WHERE Id = @Id;
+                SELECT *
+                FROM CIBIL_Correction_NonCustomer
+                WHERE Id = @Id;
 
-        SELECT *
-        FROM CIBIL_Correction_Logs
-        WHERE TableName = 'NonCustomer'
-          AND RecordId = @Id
-        ORDER BY Updated_Dt DESC;
-    ";
+                SELECT *
+                FROM dbo.CIBIL_Correction_Logs
+                WHERE ReqType = 'NonCustomer'
+                  AND ReqId = @Id
+                ORDER BY UpdatedDt DESC;
+            ";
 
             using var multi = await conn.QueryMultipleAsync(sql, new { Id = id });
 
@@ -479,54 +443,54 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-            INSERT INTO CIBIL_Correction_WC_WS_SC
-            (
-                Consumer_Name,
-                Account_Number,
-                Current_Balance,
-                Amount_Overdue,
-                Date_Closed,
-                Date_of_Last_Payment,
-                Date_Reported,
-                [High_credit/sanctioned_amount],
-                NDPD_for_latest_month,
-                Account_Status,
-                Credit_Facility_Status,
-                Written_Off_Total_Amount,
-                Written_Off_Principle_Amount,
-                Settlement_Amount,
-                Amount_Received,
-                Status,
-                LoanStatus,
-                Created_By,
-                Created_Dt
-            )
-            VALUES
-            (
-                @Consumer_Name,
-                @Account_Number,
-                @Current_Balance,
-                @Amount_Overdue,
-                @Date_of_Last_Payment,
-                @Date_of_Last_Payment,
-                @Date_of_Last_Payment,
-                @High_credit_sanctioned_amount,
-                @NDPD_for_latest_month,
-                @Account_Status,
-                @Credit_Facility_Status,
-                @Written_Off_Total_Amount,
-                @Written_Off_Principle_Amount,
-                @Settlement_Amount,
-                @Amount_Received,
-                @Status,
-                @LoanStatus,
-                @Created_By,
-                GETDATE()
-            );
+            const string sql = @"
+                INSERT INTO CIBIL_Correction_WC_WS_SC
+                (
+                    Consumer_Name,
+                    Account_Number,
+                    Current_Balance,
+                    Amount_Overdue,
+                    Date_Closed,
+                    Date_Last_Payment,
+                    Date_Reported,
+                    Sanctioned_amount,
+                    NDPD_latest_month,
+                    Account_Status,
+                    Credit_Facility_Status,
+                    Written_Off_Total_Amount,
+                    Written_Off_Principal_Amount,
+                    Settlement_Amount,
+                    Amount_Received,
+                    Status,
+                    LoanStatus,
+                    Created_By,
+                    Created_Dt
+                )
+                VALUES
+                (
+                    @Consumer_Name,
+                    @Account_Number,
+                    @Current_Balance,
+                    @Amount_Overdue,
+                    @Date_Closed,
+                    @Date_Last_Payment,
+                    @Date_Reported,
+                    @Sanctioned_amount,
+                    @NDPD_latest_month,
+                    @Account_Status,
+                    @Credit_Facility_Status,
+                    @Written_Off_Total_Amount,
+                    @Written_Off_Principal_Amount,
+                    @Settlement_Amount,
+                    @Amount_Received,
+                    @Status,
+                    @LoanStatus,
+                    @Created_By,
+                    GETDATE()
+                );
 
-            SELECT CAST(SCOPE_IDENTITY() AS INT);
-        ";
+                SELECT CAST(SCOPE_IDENTITY() AS INT);
+            ";
 
             return await conn.ExecuteScalarAsync<int>(sql, dto);
         }
@@ -535,33 +499,11 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-            SELECT
-                Id,
-                Consumer_Name,
-                Account_Number,
-                Current_Balance,
-                Amount_Overdue,
-                Date_Closed,
-                Date_of_Last_Payment,
-                Date_Reported,
-                [High_credit/sanctioned_amount] AS High_credit_sanctioned_amount,
-                NDPD_for_latest_month,
-                Account_Status,
-                Credit_Facility_Status,
-                Written_Off_Total_Amount,
-                Written_Off_Principle_Amount,
-                Settlement_Amount,
-                Amount_Received,
-                Status,
-                LoanStatus,
-                Remarks,
-                Created_By,
-                Created_Dt,
-                Updated_By,
-                Updated_Dt
-            FROM CIBIL_Correction_WC_WS_SC
-            WHERE Id = @Id";
+            const string sql = @"
+                SELECT *
+                FROM CIBIL_Correction_WC_WS_SC
+                WHERE Id = @Id;
+            ";
 
             return await conn.QueryFirstOrDefaultAsync<CibilCorrectionWCWSSC>(
                 sql,
@@ -572,117 +514,160 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-            UPDATE CIBIL_Correction_WC_WS_SC
-            SET
-                Consumer_Name = @Consumer_Name,
-                Account_Number = @Account_Number,
-                Current_Balance = @Current_Balance,
-                Amount_Overdue = @Amount_Overdue,
-                Date_Closed = @Date_Closed,
-                Date_of_Last_Payment = @Date_of_Last_Payment,
-                Date_Reported = @Date_Reported,
-                [High_credit/sanctioned_amount] = @High_credit_sanctioned_amount,
-                NDPD_for_latest_month = @NDPD_for_latest_month,
-                Account_Status = @Account_Status,
-                Credit_Facility_Status = @Credit_Facility_Status,
-                Written_Off_Total_Amount = @Written_Off_Total_Amount,
-                Written_Off_Principle_Amount = @Written_Off_Principle_Amount,
-                Settlement_Amount = @Settlement_Amount,
-                Amount_Received = @Amount_Received,
-                Remarks = @Remarks,
-                Updated_By = @Updated_By,
-                Updated_Dt = GETDATE()
-            WHERE Id = @Id";
+            const string sql = @"
+                UPDATE CIBIL_Correction_WC_WS_SC
+                SET
+                    Consumer_Name = @Consumer_Name,
+                    Account_Number = @Account_Number,
+                    Current_Balance = @Current_Balance,
+                    Amount_Overdue = @Amount_Overdue,
+                    Date_Closed = @Date_Closed,
+                    Date_Last_Payment = @Date_Last_Payment,
+                    Date_Reported = @Date_Reported,
+                    Sanctioned_amount = @Sanctioned_amount,
+                    NDPD_latest_month = @NDPD_latest_month,
+                    Account_Status = @Account_Status,
+                    Credit_Facility_Status = @Credit_Facility_Status,
+                    Written_Off_Total_Amount = @Written_Off_Total_Amount,
+                    Written_Off_Principal_Amount = @Written_Off_Principal_Amount,
+                    Settlement_Amount = @Settlement_Amount,
+                    Amount_Received = @Amount_Received,
+                    Remarks = @Remarks,
+                    Updated_By = @Updated_By,
+                    Updated_Dt = GETDATE()
+                WHERE Id = @Id;
+            ";
 
             var rows = await conn.ExecuteAsync(sql, dto);
 
             return rows > 0;
         }
 
-        public async Task<bool> UpdateWCWSSCStatusAsync( UpdateWCWSSCStatusDto dto)
+        public async Task<bool> UpdateWCWSSCStatusAsync(
+            UpdateWCWSSCStatusDto dto)
         {
-            using var conn = new SqlConnection(_conStr);
+            await using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            string sql = @"
-        UPDATE CIBIL_Correction_WC_WS_SC
-        SET
-            Status = @Status,
-            Updated_By = @Updated_By,
-            Updated_Dt = GETDATE()
-        WHERE Id = @Id";
+            await using var transaction =
+                (SqlTransaction)await conn.BeginTransactionAsync();
 
-            var rows = await conn.ExecuteAsync(
-                sql,
-                new
+            try
+            {
+                const string updateSql = @"
+                    UPDATE dbo.CIBIL_Correction_WC_WS_SC
+                    SET
+                        Status = @Status,
+                        Updated_By = @Updated_By,
+                        Updated_Dt = SYSDATETIME()
+                    WHERE Id = @Id;";
+
+                var rows = await conn.ExecuteAsync(
+                    updateSql,
+                    new
+                    {
+                        dto.Id,
+                        dto.Status,
+                        dto.Remarks,
+                        dto.Updated_By
+                    },
+                    transaction);
+
+                if (rows == 0)
                 {
-                    dto.Id,
-                    dto.Status,
-                    dto.Updated_By
-                });
+                    await transaction.RollbackAsync();
+                    return false;
+                }
 
-            return rows > 0;
+                await InsertLogAsync(
+                    conn,
+                    transaction,
+                    dto.Id,
+                    "WCWSSC",
+                    dto.Status,
+                    dto.Remarks,
+                    dto.Updated_By);
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-        public async Task<IEnumerable<CibilCorrectionWCWSSC>> GetWCWSSCByStatusAsync(string status)
+
+        //public async Task<IEnumerable<CibilCorrectionWCWSSC>>
+        //    GetWCWSSCByStatusAsync(string? status)
+        //{
+        //    using var conn = new SqlConnection(_conStr);
+
+        //    const string sql = @"
+        //        SELECT *
+        //        FROM CIBIL_Correction_WC_WS_SC
+        //        WHERE @Status IS NULL OR Status = @Status
+        //        ORDER BY Created_Dt DESC;
+        //    ";
+
+        //    return await conn.QueryAsync<CibilCorrectionWCWSSC>(
+        //        sql,
+        //        new { Status = status });
+        //}
+
+        public async Task<IEnumerable<CibilCorrectionWCWSSC>>
+            GetWCWSSCByStatusAsync(
+                CibilCorrectionGetByStatusDto request)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-    SELECT *
-    FROM CIBIL_Correction_WC_WS_SC
-    WHERE (@Status IS NULL OR Status = @Status)";
+            var statuses = GetMappedStatuses(request);
 
-            return await conn.QueryAsync<CibilCorrectionWCWSSC>(sql, new { Status = status });
+            if (statuses.Count == 0)
+            {
+                return Enumerable
+                    .Empty<CibilCorrectionWCWSSC>();
+            }
+
+            const string sql = @"
+                SELECT *
+                FROM dbo.CIBIL_Correction_WC_WS_SC
+                WHERE Status IN @Statuses
+                ORDER BY Created_Dt DESC;";
+
+            return await conn
+                .QueryAsync<CibilCorrectionWCWSSC>(
+                    sql,
+                    new { Statuses = statuses });
         }
+
         public async Task<WCWSSCResponseDto?> GetWCWSSCDetailsAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-        SELECT
-            Id,
-            Consumer_Name,
-            Account_Number,
-            Current_Balance,
-            Amount_Overdue,
-            Date_Closed,
-            Date_of_Last_Payment,
-            Date_Reported,
-            [High_credit/sanctioned_amount] AS High_credit_sanctioned_amount,
-            NDPD_for_latest_month,
-            Account_Status,
-            Credit_Facility_Status,
-            Written_Off_Total_Amount,
-            Written_Off_Principle_Amount,
-            Settlement_Amount,
-            Amount_Received,
-            Status,
-            Remarks,
-            Created_By,
-            Created_Dt,
-            Updated_By,
-            Updated_Dt
-        FROM CIBIL_Correction_WC_WS_SC
-        WHERE Id = @Id;
+            const string sql = @"
+                SELECT *
+                FROM dbo.CIBIL_Correction_WC_WS_SC
+                WHERE Id = @Id;
 
-        SELECT *
-        FROM CIBIL_Correction_Logs
-        WHERE TableName = 'WCWSSC'
-          AND RecordId = @Id
-        ORDER BY Updated_Dt DESC;
-    ";
+                SELECT *
+                FROM dbo.CIBIL_Correction_Logs
+                WHERE ReqType = 'WCWSSC'
+                  AND ReqId = @Id
+                ORDER BY UpdatedDt DESC;
+            ";
 
-            using var multi =
-                await conn.QueryMultipleAsync(sql, new { Id = id });
+            using var multi = await conn.QueryMultipleAsync(
+                sql,
+                new { Id = id });
 
             var record =
                 await multi.ReadFirstOrDefaultAsync<CibilCorrectionWCWSSC>();
 
-            if (record == null)
+            if (record is null)
                 return null;
 
-            var logs =
-                (await multi.ReadAsync<CibilCorrectionLog>())
+            var logs = (await multi.ReadAsync<CibilCorrectionLog>())
                 .ToList();
 
             return new WCWSSCResponseDto
@@ -693,7 +678,6 @@ namespace ProductivityApi.Repository
         }
 
         #endregion
-
         public async Task<(IEnumerable<dynamic> LoanCancellation, IEnumerable<dynamic> NonCustomer, IEnumerable<dynamic> WCWSSC)> 
             GetCibilReportAsync(DateTime? fromDate, DateTime? toDate, string? type)
         {
@@ -747,54 +731,120 @@ namespace ProductivityApi.Repository
 
             return (loanCancellation, nonCustomer, wcwssc);
         }
-        public async Task<List<CibilCorrectionLog>> GetLogsAsync(string tableName, int recordId)
+        public async Task<List<CibilCorrectionLog>> GetLogsAsync(
+            string requestType,
+            int reqId)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
+            const string sql = @"
                 SELECT *
-                FROM CIBIL_Correction_Logs
-                WHERE TableName = @TableName
-                  AND RecordId = @RecordId
-                ORDER BY Updated_Dt DESC";
+                FROM dbo.CIBIL_Correction_Logs
+                WHERE ReqType = @RequestType
+                  AND ReqId = @ReqId
+                ORDER BY UpdatedDt DESC;";
 
             var logs = await conn.QueryAsync<CibilCorrectionLog>(
                 sql,
                 new
                 {
-                    TableName = tableName,
-                    RecordId = recordId
+                    RequestType = requestType,
+                    ReqId = reqId
                 });
 
             return logs.ToList();
         }
-
         public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
         {
             using var conn = new SqlConnection(_conStr);
 
             string sql = @"
-                SELECT
-                    Consumer_Name,
-                    Account_Number,
-                    Current_Balance,
-                    Amount_Overdue,
-                    Date_Closed_DD_MM_YYYY,
-                    Date_of_Last_Payment_DD_MM_YYYY,
-                    Date_Reported_DD_MM_YYYY,
-                    High_credit_sanctioned_amount,
-                    NDPD_for_latest_month,
-                    Account_Status_Suit_Filed_Wilful_Default_etc,
-                    Credit_Facility_Status,
-                    Written_Off_Total_Amount,
-                    Written_Off_Principle_Amount,
-                    Settlement_Amount
+                SELECT *
                 FROM Indus_Archived_Master
                 WHERE Account_Number = @Account_Number";
 
             return await conn.QueryAsync<IndusArchivedMaster>(
                 sql,
                 new { Account_Number = accountNumber });
+        }
+
+        private static async Task InsertLogAsync(
+    SqlConnection conn,
+    SqlTransaction transaction,
+    int reqId,
+    string requestType,
+    string? status,
+    string? remarks,
+    string? updatedBy)
+        {
+            const string sql = @"
+                INSERT INTO dbo.CIBIL_Correction_Logs
+                (
+                    ReqId,
+                    ReqType,
+                    Status,
+                    Remarks,
+                    UpdatedBy,
+                    UpdatedDt
+                )
+                VALUES
+                (
+                    @ReqId,
+                    @RequestType,
+                    @Status,
+                    @Remarks,
+                    @UpdatedBy,
+                    SYSDATETIME()
+                );";
+
+            await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    ReqId = reqId,
+                    RequestType = requestType,
+                    Status = status,
+                    Remarks = remarks,
+                    UpdatedBy = updatedBy
+                },
+                transaction);
+        }
+
+        private static IReadOnlyCollection<string> GetMappedStatuses(
+    CibilCorrectionGetByStatusDto request)
+        {
+            var role = request.Role?
+                .Trim()
+                .ToUpperInvariant();
+
+            var requestedStatus = request.Status?
+                .Trim()
+                .ToUpperInvariant();
+
+            return (role, requestedStatus) switch
+            {
+                // Maker mappings
+                ("MAKER", "PENDING") =>
+                    new[] { "SentBack" },
+
+                ("MAKER", "INPROGRESS") =>
+                    new[] { "Pending" },
+
+                ("MAKER", "COMPLETED") =>
+                    new[] { "Done", "Rejected" },
+
+                // Checker mappings
+                ("CHECKER", "PENDING") =>
+                    new[] { "Pending" },
+
+                ("CHECKER", "INPROGRESS") =>
+                    new[] { "SentBack" },
+
+                ("CHECKER", "COMPLETED") =>
+                    new[] { "Done", "Rejected" },
+
+                _ => Array.Empty<string>()
+            };
         }
 
     }
