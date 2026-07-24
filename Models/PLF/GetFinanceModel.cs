@@ -36,6 +36,7 @@
         public string gender { get; set; }
         public string maritalStatus { get; set; }
         public string phoneNumber { get; set; }
+        public string custCRCPR { get; set; }
     }
 
     public class Address
