@@ -7,6 +7,10 @@ using System.Net;
 
 namespace ProductivityApi.Jobs
 {
+    [AutomaticRetry(
+    Attempts = 3,
+    DelaysInSeconds = new[] { 3600, 3600, 3600 },
+    OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     public class FcRefundJob : IJob
     {
         public string JobId => "fc-refund-job";
@@ -48,9 +52,15 @@ namespace ProductivityApi.Jobs
                 await InsertLansAsync(ct);
                 _logger.Information("FcRefundJob completed at {Time}", DateTimeOffset.Now);
             }
+
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error in FcRefundJob.ExecuteAsync");
+                throw;
             }
         }
 
@@ -58,54 +68,45 @@ namespace ProductivityApi.Jobs
         {
             ct.ThrowIfCancellationRequested();
 
+            List<FcRefundAddLanDto> dtos;
+
             try
             {
-                //var dtos = await FetchLansFromPlfAsync(ct);
-
-                List<FcRefundAddLanDto> dtos;
-
-                try
-                {
-                    dtos = await FetchLansFromPlfAsync(ct);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Failed to fetch foreclosed LANs from PLF");
-
-                    await SendFailureAlertAsync("FetchLansFromPlfAsync", ex);
-
-                    return;
-                }
-
-                if (!dtos.Any())
-                {
-                    _logger.Information("No foreclosed LANs found");
-                    return;
-                }
-
-                _logger.Information("Fetched {Count} LAN(s) from PLF", dtos.Count);
-
-                var result = await _service.AddLanAsync(dtos);
-
-                _logger.Information(
-                    "LAN insert complete — Added: {Added}, Skipped: {Skipped}",
-                    result.Added, result.Skipped
-                );
-
-                if (result.AddedLans.Any())
-                    _logger.Information("Added LANs: {Lans}", string.Join(", ", result.AddedLans));
-
-                if (result.SkippedLans.Any())
-                    _logger.Information("Skipped LANs (already exist): {Lans}", string.Join(", ", result.SkippedLans));
+                dtos = await FetchLansFromPlfAsync(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to insert LANs");
+                _logger.Error(ex, "Failed to fetch foreclosed LANs from PLF");
+
+                await SendFailureAlertAsync("FetchLansFromPlfAsync", ex);
+
+                throw;
             }
+
+            if (!dtos.Any())
+            {
+                _logger.Information("No foreclosed LANs found");
+                return;
+            }
+
+            _logger.Information("Fetched {Count} LAN(s) from PLF", dtos.Count);
+
+            var result = await _service.AddLanAsync(dtos);
+
+            _logger.Information(
+                "LAN insert complete — Added: {Added}, Skipped: {Skipped}",
+                result.Added, result.Skipped
+            );
+
+            if (result.AddedLans.Any())
+                _logger.Information("Added LANs: {Lans}", string.Join(", ", result.AddedLans));
+
+            if (result.SkippedLans.Any())
+                _logger.Information("Skipped LANs (already exist): {Lans}", string.Join(", ", result.SkippedLans));
         }
 
         private async Task<List<FcRefundAddLanDto>> FetchLansFromPlfAsync(CancellationToken ct)
