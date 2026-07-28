@@ -174,7 +174,7 @@ namespace ProductivityApi.Repository
                 await transaction.RollbackAsync();
                 throw;
             }
-        }        
+        }
         #endregion
 
 
@@ -182,38 +182,69 @@ namespace ProductivityApi.Repository
         #region Non-Customer
         public async Task<int> CreateNonCustomerAsync(CreateNonCustomerDto dto)
         {
-            using var conn = new SqlConnection(_conStr);
+            await using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            string sql = @"
-                INSERT INTO CIBIL_Correction_NonCustomer
-                (
-                    ScenarioType,
-                    Complainant_Name, Complainant_DOB, Complainant_PAN, Complainant_Account_Number,
-                    Complainant_Mobile_Number, Complainant_Address, Complainant_ERN_No, Complainant_LAN_Number,
-                    ActualCustomer_Name, ActualCustomer_DOB, ActualCustomer_PAN, ActualCustomer_Account_Number,
-                    ActualCustomer_Mobile_Number, ActualCustomer_Address, ActualCustomer_ERN_No, ActualCustomer_LAN_Number,
-                    Status, Created_By, Created_Dt
-                )
-                VALUES
-                (
-                    @ScenarioType,
-                    @Complainant_Name, @Complainant_DOB, @Complainant_PAN, @Complainant_Account_Number,
-                    @Complainant_Mobile_Number, @Complainant_Address, @Complainant_ERN_No, @Complainant_LAN_Number,
-                    @ActualCustomer_Name, @ActualCustomer_DOB, @ActualCustomer_PAN, @ActualCustomer_Account_Number,
-                    @ActualCustomer_Mobile_Number, @ActualCustomer_Address, @ActualCustomer_ERN_No, @ActualCustomer_LAN_Number,
-                    @Status, @Created_By, GETDATE()
-                );
+            await using var transaction =
+                (SqlTransaction)await conn.BeginTransactionAsync();
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);
-            ";
+            try
+            {
+                const string sql = @"
+            INSERT INTO CIBIL_Correction_NonCustomer
+            (
+                ScenarioType,
+                Complainant_Name, Complainant_DOB, Complainant_PAN, Complainant_Account_Number,
+                Complainant_Mobile_Number, Complainant_Address, Complainant_ERN_No, Complainant_LAN_Number,
+                ActualCustomer_Name, ActualCustomer_DOB, ActualCustomer_PAN, ActualCustomer_Account_Number,
+                ActualCustomer_Mobile_Number, ActualCustomer_Address, ActualCustomer_ERN_No, ActualCustomer_LAN_Number,
+                Status, Created_By, Created_Dt
+            )
+            VALUES
+            (
+                @ScenarioType,
+                @Complainant_Name, @Complainant_DOB, @Complainant_PAN, @Complainant_Account_Number,
+                @Complainant_Mobile_Number, @Complainant_Address, @Complainant_ERN_No, @Complainant_LAN_Number,
+                @ActualCustomer_Name, @ActualCustomer_DOB, @ActualCustomer_PAN, @ActualCustomer_Account_Number,
+                @ActualCustomer_Mobile_Number, @ActualCustomer_Address, @ActualCustomer_ERN_No, @ActualCustomer_LAN_Number,
+                @Status, @Created_By, GETDATE()
+            );
 
-            var parameters = BuildNonCustomerParams(dto.ScenarioType, dto.Complainant, dto.ActualCustomer);
-            parameters.Add("Created_By", dto.Created_By);
-            parameters.Add("Status", dto.Status);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);
+        ";
 
-            return await conn.ExecuteScalarAsync<int>(sql, parameters);
+                var parameters = BuildNonCustomerParams(
+                    dto.ScenarioType,
+                    dto.Complainant,
+                    dto.ActualCustomer);
+
+                parameters.Add("Created_By", dto.Created_By);
+                parameters.Add("Status", dto.Status);
+
+                var id = await conn.ExecuteScalarAsync<int>(
+                    sql,
+                    parameters,
+                    transaction);
+
+                await InsertLogAsync(
+                    conn,
+                    transaction,
+                    id,
+                    "NonCustomer",
+                    dto.Status,
+                    "Request Created",
+                    dto.Created_By);
+
+                await transaction.CommitAsync();
+
+                return id;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
         public async Task<CibilCorrectionNonCustomer?> GetNonCustomerByIdAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
@@ -441,60 +472,87 @@ namespace ProductivityApi.Repository
 
         public async Task<int> CreateWCWSSCAsync(CreateWCWSSCDto dto)
         {
-            using var conn = new SqlConnection(_conStr);
+            await using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
 
-            const string sql = @"
-                INSERT INTO CIBIL_Correction_WC_WS_SC
-                (
-                    Consumer_Name,
-                    Account_Number,
-                    Current_Balance,
-                    Amount_Overdue,
-                    Date_Closed,
-                    Date_Last_Payment,
-                    Date_Reported,
-                    Sanctioned_amount,
-                    NDPD_latest_month,
-                    Account_Status,
-                    Credit_Facility_Status,
-                    Written_Off_Total_Amount,
-                    Written_Off_Principal_Amount,
-                    Settlement_Amount,
-                    Amount_Received,
-                    Status,
-                    LoanStatus,
-                    Created_By,
-                    Created_Dt
-                )
-                VALUES
-                (
-                    @Consumer_Name,
-                    @Account_Number,
-                    @Current_Balance,
-                    @Amount_Overdue,
-                    @Date_Closed,
-                    @Date_Last_Payment,
-                    @Date_Reported,
-                    @Sanctioned_amount,
-                    @NDPD_latest_month,
-                    @Account_Status,
-                    @Credit_Facility_Status,
-                    @Written_Off_Total_Amount,
-                    @Written_Off_Principal_Amount,
-                    @Settlement_Amount,
-                    @Amount_Received,
-                    @Status,
-                    @LoanStatus,
-                    @Created_By,
-                    GETDATE()
-                );
+            await using var transaction =
+                (SqlTransaction)await conn.BeginTransactionAsync();
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);
-            ";
+            try
+            {
+                const string sql = @"
+            INSERT INTO CIBIL_Correction_WC_WS_SC
+            (
+                Consumer_Name,
+                Account_Number,
+                Current_Balance,
+                Amount_Overdue,
+                Date_Closed,
+                Date_Last_Payment,
+                Date_Reported,
+                Sanctioned_amount,
+                NDPD_latest_month,
+                Account_Status,
+                Credit_Facility_Status,
+                Written_Off_Total_Amount,
+                Written_Off_Principal_Amount,
+                Settlement_Amount,
+                Amount_Received,
+                Status,
+                LoanStatus,
+                Created_By,
+                Created_Dt
+            )
+            VALUES
+            (
+                @Consumer_Name,
+                @Account_Number,
+                @Current_Balance,
+                @Amount_Overdue,
+                @Date_Closed,
+                @Date_Last_Payment,
+                @Date_Reported,
+                @Sanctioned_amount,
+                @NDPD_latest_month,
+                @Account_Status,
+                @Credit_Facility_Status,
+                @Written_Off_Total_Amount,
+                @Written_Off_Principal_Amount,
+                @Settlement_Amount,
+                @Amount_Received,
+                @Status,
+                @LoanStatus,
+                @Created_By,
+                GETDATE()
+            );
 
-            return await conn.ExecuteScalarAsync<int>(sql, dto);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);
+        ";
+
+                var id = await conn.ExecuteScalarAsync<int>(
+                    sql,
+                    dto,
+                    transaction);
+
+                await InsertLogAsync(
+                    conn,
+                    transaction,
+                    id,
+                    "WCWSSC",
+                    dto.Status,
+                    "Request Created",
+                    dto.Created_By);
+
+                await transaction.CommitAsync();
+
+                return id;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
         public async Task<CibilCorrectionWCWSSC?> GetWCWSSCByIdAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
@@ -825,23 +883,23 @@ namespace ProductivityApi.Repository
             {
                 // Maker mappings
                 ("MAKER", "PENDING") =>
-                    new[] { "SentBack" },
+                    new[] { "Send Back" },
 
                 ("MAKER", "INPROGRESS") =>
                     new[] { "Pending" },
 
                 ("MAKER", "COMPLETED") =>
-                    new[] { "Done", "Rejected" },
+                    new[] { "Done", "Reject" },
 
                 // Checker mappings
                 ("CHECKER", "PENDING") =>
                     new[] { "Pending" },
 
                 ("CHECKER", "INPROGRESS") =>
-                    new[] { "SentBack" },
+                    new[] { "Send Back" },
 
                 ("CHECKER", "COMPLETED") =>
-                    new[] { "Done", "Rejected" },
+                    new[] { "Done", "Reject" },
 
                 _ => Array.Empty<string>()
             };

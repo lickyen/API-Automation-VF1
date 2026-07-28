@@ -272,6 +272,19 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
+        [HttpPost("wcwsscFormat")]
+        public async Task<IActionResult> GetWCWSSCFormatData([FromBody] WCWSSCFormatRequestDto request)
+        {
+            var result = await _service.GetWCWSSCFormatDataAsync(request);
+
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false,message: result.Message));
+            }
+
+            return Ok(new Response(true, result.Data, result.Message));
+        }
+
         #endregion
 
         [HttpGet("archived/{accountNumber}")]

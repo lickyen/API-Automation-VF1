@@ -256,7 +256,7 @@ namespace ProductivityApi.Models
         public decimal? Sanctioned_amount { get; set; }
         public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public int? Credit_Facility_Status { get; set; }
+        public string? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -282,7 +282,7 @@ namespace ProductivityApi.Models
         public decimal? Sanctioned_amount { get; set; }
         public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public int? Credit_Facility_Status { get; set; }
+        public string? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -305,7 +305,7 @@ namespace ProductivityApi.Models
         public decimal? Sanctioned_amount { get; set; }
         public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
-        public int? Credit_Facility_Status { get; set; }
+        public string? Credit_Facility_Status { get; set; }
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -357,5 +357,56 @@ namespace ProductivityApi.Models
         public string? Status { get; set; }
         public string? UserId { get; set; }
         public string? Role { get; set; }
+    }
+
+    public class WCWSSCFormatRequestDto
+    {
+        [Required]
+        public string LAN { get; set; } = string.Empty;
+        [Required]
+        public string RequestType { get; set; } = string.Empty;
+        [Required]
+        public DateTime? Date_Last_Payment { get; set; }
+        [Required]
+        public decimal? Total_Outstanding { get; set; }
+        [Required]
+        public decimal? Principal_Outstanding { get; set; }
+        [Required]
+        public decimal? Settlement_Amount { get; set; }
+        [Required]
+        public decimal? Amount_Received { get; set; }
+    }
+
+    public class WCWSSCFormatResponseDto
+    {
+        public string Consumer_Name { get; set; } = string.Empty;
+
+        public string Account_Number { get; set; } = string.Empty;
+
+        public decimal Current_Balance { get; set; }
+
+        public decimal Amount_Overdue { get; set; }
+
+        public DateTime? Date_Closed { get; set; }
+
+        public DateTime? Date_Last_Payment { get; set; }
+
+        public DateTime? Date_Reported { get; set; }
+
+        public decimal? Sanctioned_amount { get; set; }
+
+        public int? NDPD_latest_month { get; set; }
+
+        public string Account_Status { get; set; } = string.Empty;
+
+        public string? Credit_Facility_Status { get; set; }
+
+        public decimal Written_Off_Total_Amount { get; set; }
+
+        public decimal Written_Off_Principal_Amount { get; set; }
+
+        public decimal? Settlement_Amount { get; set; }
+
+        public decimal? Amount_Received { get; set; }
     }
 }

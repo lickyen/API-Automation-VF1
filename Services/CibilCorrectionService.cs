@@ -7,10 +7,14 @@ namespace ProductivityApi.Services
     public class CibilCorrectionService
     {
         private readonly CibilCorrectionRepository _repository;
+        private readonly PLFService _pLFService;
+        private readonly SharedService _sharedService;
 
-        public CibilCorrectionService(CibilCorrectionRepository repository)
+        public CibilCorrectionService(CibilCorrectionRepository repository, PLFService pLFService, SharedService sharedService)
         {
             _repository = repository;
+            _pLFService = pLFService;
+            _sharedService = sharedService;
         }
 
         #region Loan Cancellation
@@ -219,6 +223,63 @@ UpdateNonCustomerStatusDto dto)
             GetWCWSSCByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
             return await _repository.GetWCWSSCByStatusAsync(request);
+        }
+
+    public async Task<(bool Success, IEnumerable<WCWSSCFormatResponseDto> Data, string Message)>
+        GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
+        {
+            var (lanDetails, lanMessage) =
+                await _sharedService.GetLanDetailsAsync(request.LAN);
+
+            if (lanDetails == null)
+                return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(), lanMessage);
+
+            var (applicants, applicantMessage) =
+                await _sharedService.GetApplicantsByLanAsync(request.LAN);
+
+            if (applicants == null || applicants.Count == 0)
+                return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
+                    applicantMessage == "Success"
+                        ? "No applicants found for the LAN."
+                        : applicantMessage);
+
+            //var creditFacilityStatus = GetCreditFacilityStatus(request.LoanStatus);
+
+            //if (creditFacilityStatus == null)
+            //    return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
+            //        "Invalid Loan Status. Allowed values are Writeoff to close, Writeoff to settled, and Settled to Close.");
+
+            var data = applicants
+                .Select(applicant => new WCWSSCFormatResponseDto
+                {
+                    Consumer_Name = applicant.CustName ?? string.Empty,
+                    Account_Number = request.LAN,
+                    Current_Balance = 0m,
+                    Amount_Overdue = 0m,
+                    Date_Closed = request.Date_Last_Payment,
+                    Date_Last_Payment = request.Date_Last_Payment,
+                    Date_Reported = request.Date_Last_Payment,
+                    Sanctioned_amount = lanDetails.LoanAmount,
+                    NDPD_latest_month = Convert.ToInt32(lanDetails.Dpd),
+                    Account_Status = string.Empty,
+                    Credit_Facility_Status = request.RequestType,
+
+                    Written_Off_Principal_Amount = Math.Max(
+                        0m,
+                        (request.Principal_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
+                    ),
+
+                    Written_Off_Total_Amount = Math.Max(
+                        0m,
+                        (request.Total_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
+                    ),
+
+                    Settlement_Amount = request.Settlement_Amount ?? 0m,
+                    Amount_Received = request.Amount_Received ?? 0m
+                })
+                .ToList();
+
+            return (true, data, "Records retrieved successfully.");
         }
 
         #endregion
