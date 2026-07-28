@@ -58,24 +58,16 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetClosedLansAsync()
         {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
+            var sql = $@"{NeolotexDisbColumns}
                 WHERE loan_status <> 'Active Loan'
                     AND loanclosure_date >= CURRENT_DATE - 1
                     AND loanclosure_date <  CURRENT_DATE
                     AND applicant_type = 'B';";
 
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql);
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching closed loans from PLF.");
-                return new List<NeolotexDisb>();
-            }
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            await connection.OpenAsync();
+            var result = await connection.QueryAsync<NeolotexDisb>(sql);
+            return result.ToList();
         }
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {

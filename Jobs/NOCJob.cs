@@ -1,8 +1,10 @@
 ﻿using Hangfire;
 using ProductivityApi.Models;
+using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
+using System.Net;
 
 namespace ProductivityApi.Jobs
 {
@@ -16,11 +18,17 @@ namespace ProductivityApi.Jobs
         private readonly Serilog.ILogger _logger;
         private readonly PLFRepository _plfRepository;
         private readonly NOCService _nocService;
+        private readonly TemplateService _templateService;
+        private readonly EmailService _emailService;
+        private readonly List<string> _failureAlertEmails;
 
-        public NOCJob(PLFRepository plfRepository, NOCService NOCService)
+        public NOCJob(AppSettings appSettings, PLFRepository plfRepository, NOCService NOCService, TemplateService templateService, EmailService emailService)
         {
             _plfRepository = plfRepository;
             _nocService = NOCService;
+            _templateService = templateService;
+            _emailService = emailService;
+            _failureAlertEmails = appSettings.JobFailureAlertEmails;
             _logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.Console()
@@ -34,6 +42,7 @@ namespace ProductivityApi.Jobs
         public async Task ExecuteAsync(CancellationToken ct)
         {
             _logger.Information("NOCJob started at {Time}", DateTimeOffset.Now);
+
             try
             {
                 await InsertLansAsync(ct);
@@ -52,7 +61,27 @@ namespace ProductivityApi.Jobs
             try
             {
                 // Step 1: Fetch yesterday's closed loans from PLF
-                var closedLans = await _plfRepository.GetClosedLansAsync();
+                //var closedLans = await _plfRepository.GetClosedLansAsync();
+
+                List<NeolotexDisb> closedLans;
+
+                try
+                {
+                    closedLans = await _plfRepository.GetClosedLansAsync();
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to fetch closed loans from PLF");
+
+                    await SendFailureAlertAsync("GetClosedLansAsync", ex);
+
+                    return;
+                }
+
                 if (!closedLans.Any())
                 {
                     _logger.Information("No closed loans found for yesterday. Skipping.");
@@ -134,6 +163,49 @@ namespace ProductivityApi.Jobs
             {
                 _logger.Error(ex, "Failed to insert LANs");
                 throw;
+            }
+        }
+
+        private async Task SendFailureAlertAsync(string source, Exception exception)
+        {
+            if (!_failureAlertEmails.Any())
+            {
+                _logger.Warning("Job failure alert email skipped because JobFailureAlertEmails is not configured");
+
+                return;
+            }
+
+            try
+            {
+                var template = _templateService.GetEmailTemplate("JobFailureAlertEmail");
+
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    new Dictionary<string, string>
+                    {
+                        ["JobName"] = nameof(NOCJob),
+                        ["Source"] = source,
+                        ["ErrorTime"] =
+                            DateTimeOffset.Now.ToString("dd-MMM-yyyy hh:mm:ss tt"),
+                        ["ErrorMessage"] =
+                            WebUtility.HtmlEncode(exception.Message)
+                    });
+
+                var result = await _emailService.SendEmail(
+                    subject: $"Job Failure Alert - {nameof(NOCJob)}",
+                    body: body,
+                    to: _failureAlertEmails,
+                    cc: new List<string>(),
+                    source: nameof(NOCJob));
+
+                if (result != "Success")
+                {
+                    _logger.Error("Failure alert email could not be sent. Result: {Result}", result);
+                }
+            }
+            catch (Exception emailException)
+            {
+                _logger.Error(emailException, "Error while sending NOCJob failure alert email");
             }
         }
 

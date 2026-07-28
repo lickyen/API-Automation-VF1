@@ -3,6 +3,7 @@ using Npgsql;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 using Serilog;
+using System.Net;
 
 namespace ProductivityApi.Jobs
 {
@@ -16,11 +17,17 @@ namespace ProductivityApi.Jobs
         private readonly Serilog.ILogger _logger;
         private readonly LcRefundService _service;
         private readonly string _plfConStr;
+        private readonly TemplateService _templateService;
+        private readonly EmailService _emailService;
+        private readonly List<string> _failureAlertEmails;
 
-        public LcRefundJob(LcRefundService service, IConfiguration configuration)
+        public LcRefundJob(LcRefundService service, AppSettings appSettings, IConfiguration configuration, TemplateService templateService, EmailService emailService)
         {
             _service = service;
             _plfConStr = configuration.GetConnectionString("PlfDBConn")!;
+            _templateService = templateService;
+            _emailService = emailService;
+            _failureAlertEmails = appSettings.JobFailureAlertEmails;
 
             _logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
@@ -53,7 +60,26 @@ namespace ProductivityApi.Jobs
 
             try
             {
-                var dtos = await FetchLansFromPlfAsync(ct);
+                //var dtos = await FetchLansFromPlfAsync(ct);
+
+                List<LcRefundAddLanDto> dtos;
+
+                try
+                {
+                    dtos = await FetchLansFromPlfAsync(ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to fetch cancelled LANs from PLF");
+
+                    await SendFailureAlertAsync("FetchLansFromPlfAsync", ex);
+
+                    return;
+                }
 
                 if (!dtos.Any())
                 {
@@ -102,27 +128,6 @@ namespace ProductivityApi.Jobs
                     finisactive = 0 AND
                     CLOSEDDATE = CURRENT_DATE - 1";
 
-            //const string query = @"
-            //    SELECT
-            //        F.finreference,
-            //        COALESCE(c.custfname, '') || ' ' ||
-            //        COALESCE(c.custmname, '') || ' ' ||
-            //        COALESCE(c.custlname, '') AS full_name,
-            //        D.disbdate,
-            //        F.CLOSEDDATE,
-            //        F.finbranch
-            //    FROM PLF.FINANCEMAIN F,
-            //         plf.customers c,
-            //         plf.findisbursementdetails d
-            //    WHERE
-            //        f.custid = c.custid
-            //        AND d.finreference = f.finreference
-            //        AND CLOSINGSTATUS = 'C'
-            //        AND d.disbseq = 1
-            //        AND finisactive = 0
-            //        AND CLOSEDDATE >= DATE_TRUNC('MONTH', CURRENT_DATE)
-            //        AND CLOSEDDATE < DATE_TRUNC('MONTH', CURRENT_DATE + INTERVAL '1 MONTH')";
-
             var dtos = new List<LcRefundAddLanDto>();
 
             using var connection = new NpgsqlConnection(_plfConStr);
@@ -145,6 +150,49 @@ namespace ProductivityApi.Jobs
             }
 
             return dtos;
+        }
+
+        private async Task SendFailureAlertAsync(string source, Exception exception)
+        {
+            if (!_failureAlertEmails.Any())
+            {
+                _logger.Warning("Job failure alert email skipped because JobFailureAlertEmails is not configured");
+
+                return;
+            }
+
+            try
+            {
+                var template = _templateService.GetEmailTemplate("JobFailureAlertEmail");
+
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    new Dictionary<string, string>
+                    {
+                        ["JobName"] = nameof(LcRefundJob),
+                        ["Source"] = source,
+                        ["ErrorTime"] =
+                            DateTimeOffset.Now.ToString("dd-MMM-yyyy hh:mm:ss tt"),
+                        ["ErrorMessage"] =
+                            WebUtility.HtmlEncode(exception.Message)
+                    });
+
+                var result = await _emailService.SendEmail(
+                    subject: $"Job Failure Alert - {nameof(LcRefundJob)}",
+                    body: body,
+                    to: _failureAlertEmails,
+                    cc: new List<string>(),
+                    source: nameof(LcRefundJob));
+
+                if (result != "Success")
+                {
+                    _logger.Error("Failure alert email could not be sent. Result: {Result}", result);
+                }
+            }
+            catch (Exception emailException)
+            {
+                _logger.Error(emailException, "Error while sending LcRefundJob failure alert email");
+            }
         }
     }
 }
