@@ -211,10 +211,16 @@ namespace ProductivityApi.Services
         public async Task<(bool Success, string Message)> UploadLanMappingAsync(SARFAESILanUploadDto dto)
         {
             if (dto.Mappings == null || dto.Mappings.Count == 0)
-                return (false, "No records found");
+                return (false, "No records found.");
+
+            dto.CreatedBy = dto.CreatedBy?.Trim() ?? string.Empty;
+            dto.SectionCode = dto.SectionCode?.Trim() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(dto.CreatedBy))
-                return (false, "CreatedBy is required");
+                return (false, "CreatedBy is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.SectionCode))
+                return (false, "Section Code is required.");
 
             for (var index = 0; index < dto.Mappings.Count; index++)
             {
@@ -224,7 +230,6 @@ namespace ProductivityApi.Services
                 item.Lan = item.Lan?.Trim() ?? string.Empty;
                 item.CustomerName = item.CustomerName?.Trim() ?? string.Empty;
                 item.EmpId = item.EmpId?.Trim() ?? string.Empty;
-                item.SectionCode = item.SectionCode?.Trim() ?? string.Empty;
 
                 if (string.IsNullOrWhiteSpace(item.Lan))
                     return (false, $"LAN is required at row {rowNumber}.");
@@ -234,19 +239,11 @@ namespace ProductivityApi.Services
 
                 if (string.IsNullOrWhiteSpace(item.EmpId))
                     return (false, $"Employee ID is required at row {rowNumber}.");
-
-                if (string.IsNullOrWhiteSpace(item.SectionCode))
-                    return (false, $"Section Code is required at row {rowNumber}.");
             }
 
-            var result = await _repository.BulkInsertLanMappingsAsync(dto.Mappings, dto.CreatedBy.Trim());
-
-            if (result <= 0)
-                return (false, "No records were uploaded.");
-
-            return (true, $"{result} records uploaded successfully.");
+            var result = await _repository.BulkInsertLanMappingsAsync(dto.Mappings, dto.CreatedBy, dto.SectionCode);
+            return result > 0 ? (true, $"{result} records uploaded successfully.") : (false, "No records were uploaded.");
         }
-
         public Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId, string? sectionCode)
         {
             return _repository.GetLansByEmpIdAsync(empId.Trim(), sectionCode?.Trim());

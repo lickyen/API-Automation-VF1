@@ -296,6 +296,7 @@ namespace ProductivityApi.Models
         public string SectionCode { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1)]
         public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
     }
 
