@@ -57,7 +57,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
         public string DocumentName { get; set; } = string.Empty;
-        public int DisplayOrder { get; set; }
+        //public int DisplayOrder { get; set; }
         public bool IsActive { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
@@ -70,7 +70,6 @@ namespace ProductivityApi.Models
         public int DocumentId { get; set; }
         public string DocumentName { get; set; } = string.Empty;
         public bool? LegalAvailable { get; set; }
-        public bool? LegalCouriered { get; set; }
         public bool? FieldReceived { get; set; }
         public string? LegalComments { get; set; }
         public string? FieldComments { get; set; }
@@ -82,7 +81,7 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        public int DisplayOrder { get; set; }
+        //public int DisplayOrder { get; set; }
 
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
@@ -96,7 +95,7 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        public int DisplayOrder { get; set; }
+        //public int DisplayOrder { get; set; }
 
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
@@ -120,9 +119,6 @@ namespace ProductivityApi.Models
 
         [Required]
         public bool? IsAvailable { get; set; }
-
-        [Required]
-        public bool? IsCouriered { get; set; }
 
         public string? Comments { get; set; }
     }
@@ -180,9 +176,6 @@ namespace ProductivityApi.Models
 
         [Required]
         public bool? IsAvailable { get; set; }
-
-        [Required]
-        public bool? IsCouriered { get; set; }
 
         [Required]
         public string Comments { get; set; } = string.Empty;

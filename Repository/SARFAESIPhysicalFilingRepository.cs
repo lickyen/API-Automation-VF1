@@ -14,23 +14,23 @@ namespace ProductivityApi.Repository
             _conStr = config.GetConnectionString("DBConn")!;
         }
 
-        public async Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetDocumentMasterAsync()
+        public async Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetDocumentMasterAsync(bool? isActive)
         {
             using var conn = new SqlConnection(_conStr);
-            return (await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>("sp_SARFAESIPhysicalFiling_GetDocumentMaster", commandType: CommandType.StoredProcedure)).ToList();
+
+            return (await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>("sp_SARFAESIPhysicalFiling_GetDocumentMaster", new { IsActive = isActive }, commandType: CommandType.StoredProcedure)).ToList();
+        }
+        public async Task<int> AddDocumentMasterAsync(string documentName, string createdBy)
+        {
+            using var conn = new SqlConnection(_conStr);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<int> AddDocumentMasterAsync(string documentName, int displayOrder, string createdBy)
-        {
-            using var conn = new SqlConnection(_conStr);
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, DisplayOrder = displayOrder, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
-        }
-
-        public async Task<int> EditDocumentMasterAsync(int id, string documentName, int displayOrder, string updatedBy)
+        public async Task<int> EditDocumentMasterAsync(int id, string documentName, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, DisplayOrder = displayOrder, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<bool> UpdateDocumentMasterStatusAsync(int id, bool isActive, string updatedBy)
@@ -67,12 +67,10 @@ namespace ProductivityApi.Repository
             var table = new DataTable();
             table.Columns.Add("DocumentId", typeof(int));
             table.Columns.Add("IsAvailable", typeof(bool));
-            table.Columns.Add("IsCouriered", typeof(bool));
             table.Columns.Add("Comments", typeof(string));
 
             foreach (var item in dto.Checklist)
-                table.Rows.Add(item.DocumentId, item.IsAvailable!.Value, item.IsCouriered!.Value, (object?)item.Comments ?? DBNull.Value);
-
+                table.Rows.Add(item.DocumentId, item.IsAvailable!.Value, (object?)item.Comments ?? DBNull.Value);
             var parameters = new DynamicParameters();
             parameters.Add("@Lan", dto.Lan.Trim());
             parameters.Add("@DispatchDate", dto.DispatchDate);
@@ -105,12 +103,10 @@ namespace ProductivityApi.Repository
             var table = new DataTable();
             table.Columns.Add("ChecklistItemId", typeof(int));
             table.Columns.Add("IsAvailable", typeof(bool));
-            table.Columns.Add("IsCouriered", typeof(bool));
             table.Columns.Add("Comments", typeof(string));
 
             foreach (var item in dto.Checklist)
-                table.Rows.Add(item.ChecklistItemId, item.IsAvailable!.Value, item.IsCouriered!.Value, item.Comments.Trim());
-
+                table.Rows.Add(item.ChecklistItemId, item.IsAvailable!.Value,  item.Comments.Trim());
             var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitLegalReview", new { dto.CaseId, Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalReview"), SubmittedBy = dto.SubmittedBy.Trim() }, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }

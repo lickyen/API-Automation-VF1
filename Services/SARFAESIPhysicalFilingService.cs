@@ -13,21 +13,21 @@ namespace ProductivityApi.Services
             _repository = repository;
         }
 
-        public Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetDocumentMasterAsync()
+        public Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetDocumentMasterAsync(bool? isActive)
         {
-            return _repository.GetDocumentMasterAsync();
+            return _repository.GetDocumentMasterAsync(isActive);
         }
 
         public async Task<(bool Success, int? Id, string Message)> AddDocumentMasterAsync(SARFAESIPhysicalFilingDocumentMasterAddDto dto)
         {
-            var id = await _repository.AddDocumentMasterAsync(dto.DocumentName.Trim(), dto.DisplayOrder, dto.CreatedBy.Trim());
+            var id = await _repository.AddDocumentMasterAsync(dto.DocumentName.Trim(), dto.CreatedBy.Trim());
 
             return id > 0 ? (true, id, "Document added successfully.") : (false, null, "Document already exists.");
         }
 
         public async Task<(bool Success, string Message)> EditDocumentMasterAsync(SARFAESIPhysicalFilingDocumentMasterEditDto dto)
         {
-            var result = await _repository.EditDocumentMasterAsync(dto.Id, dto.DocumentName.Trim(), dto.DisplayOrder, dto.UpdatedBy.Trim());
+            var result = await _repository.EditDocumentMasterAsync(dto.Id, dto.DocumentName.Trim(), dto.UpdatedBy.Trim());
 
             return result switch
             {

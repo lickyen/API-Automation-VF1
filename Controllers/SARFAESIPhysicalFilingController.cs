@@ -16,9 +16,9 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("documentMaster")]
-        public async Task<IActionResult> GetDocumentMaster()
+        public async Task<IActionResult> GetDocumentMaster([FromQuery] bool? isActive)
         {
-            var data = await _service.GetDocumentMasterAsync();
+            var data = await _service.GetDocumentMasterAsync(isActive);
 
             return Ok(new Response(true, data, "Success"));
         }
