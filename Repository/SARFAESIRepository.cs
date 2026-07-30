@@ -267,7 +267,7 @@ namespace ProductivityApi.Repository
         //        return rowsAffected > 0;
         //    }
 
-        public async Task<int> BulkInsertLanMappingsAsync(List<SARFAESILanMappingDto> mappings, string createdBy)
+        public async Task<int> BulkInsertLanMappingsAsync(List<SARFAESILanMappingDto> mappings, string createdBy, string sectionCode)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -279,7 +279,7 @@ namespace ProductivityApi.Repository
             table.Columns.Add("SectionCode", typeof(string));
 
             foreach (var item in mappings)
-                table.Rows.Add(item.Lan, item.CustomerName, item.EmpId, item.SectionCode);
+                table.Rows.Add(item.Lan, item.CustomerName, item.EmpId, sectionCode);
 
             var parameters = new DynamicParameters();
 

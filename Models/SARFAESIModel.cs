@@ -285,14 +285,15 @@ namespace ProductivityApi.Models
         [Required]
         public string EmpId { get; set; } = string.Empty;
 
-        [Required]
-        public string SectionCode { get; set; } = string.Empty;
     }
 
     public class SARFAESILanUploadDto
     {
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
+
+        [Required]
+        public string SectionCode { get; set; } = string.Empty;
 
         [Required]
         public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
