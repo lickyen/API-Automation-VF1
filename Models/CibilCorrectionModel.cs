@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace ProductivityApi.Models
@@ -8,12 +9,20 @@ namespace ProductivityApi.Models
     // =========================================================
     public class IndusArchivedMaster
     {
-        public string LAN { get; set; } = string.Empty;
-        public string CustName { get; set; } = string.Empty;
-        public decimal LoanAmount { get; set; }
-        public decimal TotalOutstanding { get; set; }
-        public decimal PrincipalOutstanding { get; set; }
-        public int DPD { get; set; }
+        public string? LoanAccountNo { get; set; }
+        public string? ApplicantType { get; set; }
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? ClusterName { get; set; }
+        public string? StateName { get; set; }
+        public string? CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CollateralId { get; set; }
+        public string? LoanStatus { get; set; }
+        public string? LoanClosureDate { get; set; }
+        public string? DisbursementDate { get; set; }
+        public string? CorrectionDate { get; set; }
+        public string? NocStatus { get; set; }
     }
 
     // =========================================================
@@ -287,6 +296,9 @@ namespace ProductivityApi.Models
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
+
+        public decimal? Total_Outstanding { get; set; }
+        public decimal? Principal_Outstanding { get; set; }
         public string? Status { get; set; }
         public string? LoanStatus { get; set; }
         public string? Created_By { get; set; }
@@ -310,6 +322,9 @@ namespace ProductivityApi.Models
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
         public decimal? Amount_Received { get; set; }
+
+        public decimal? Total_Outstanding { get; set; }
+        public decimal? Principal_Outstanding { get; set; }
         public string? Updated_By { get; set; }
         public string? Remarks { get; set; }
     }
@@ -359,54 +374,49 @@ namespace ProductivityApi.Models
         public string? Role { get; set; }
     }
 
-    public class WCWSSCFormatRequestDto
-    {
-        [Required]
-        public string LAN { get; set; } = string.Empty;
-        [Required]
-        public string RequestType { get; set; } = string.Empty;
-        [Required]
-        public DateTime? Date_Last_Payment { get; set; }
-        [Required]
-        public decimal? Total_Outstanding { get; set; }
-        [Required]
-        public decimal? Principal_Outstanding { get; set; }
-        [Required]
-        public decimal? Settlement_Amount { get; set; }
-        [Required]
-        public decimal? Amount_Received { get; set; }
-    }
+    //public class WCWSSCFormatRequestDto
+    //{
+    //    [Required]
+    //    public string LAN { get; set; } = string.Empty;
+    //    [Required]
+    //    public string RequestType { get; set; } = string.Empty;
+    //    [Required]
+    //    public DateTime? Date_Last_Payment { get; set; }
+    //    [Required]
+    //    public decimal? Total_Outstanding { get; set; }
+    //    [Required]
+    //    public decimal? Principal_Outstanding { get; set; }
+    //    [Required]
+    //    public decimal? Settlement_Amount { get; set; }
+    //    [Required]
+    //    public decimal? Amount_Received { get; set; }
+    //}
 
     public class WCWSSCFormatResponseDto
     {
         public string Consumer_Name { get; set; } = string.Empty;
-
         public string Account_Number { get; set; } = string.Empty;
-
         public decimal Current_Balance { get; set; }
-
         public decimal Amount_Overdue { get; set; }
-
-        public DateTime? Date_Closed { get; set; }
-
-        public DateTime? Date_Last_Payment { get; set; }
-
-        public DateTime? Date_Reported { get; set; }
-
-        public decimal? Sanctioned_amount { get; set; }
-
         public int? NDPD_latest_month { get; set; }
-
         public string Account_Status { get; set; } = string.Empty;
-
         public string? Credit_Facility_Status { get; set; }
+        public decimal? Sanctioned_amount { get; set; }
+        public decimal? Total_Outstanding { get; set; }
+        public decimal? Principal_Outstanding { get; set; }
+    }
 
-        public decimal Written_Off_Total_Amount { get; set; }
+    public class WCWSSCFormatRequestDto
+    {
+        public string LAN { get; set; } = string.Empty;
+        public string RequestType { get; set; } = string.Empty;
+    }
 
-        public decimal Written_Off_Principal_Amount { get; set; }
-
-        public decimal? Settlement_Amount { get; set; }
-
-        public decimal? Amount_Received { get; set; }
+    public class WCWSSCApplicantResponseDto
+    {
+        public string? Customer_Id { get; set; }
+        public string? Consumer_Name { get; set; }
+        public string? Applicant_Type { get; set; }
+        public string? Collateral_Id { get; set; }
     }
 }

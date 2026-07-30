@@ -272,15 +272,27 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
+        //[HttpPost("wcwsscFormat")]
+        //public async Task<IActionResult> GetWCWSSCFormatData([FromBody] WCWSSCFormatRequestDto request)
+        //{
+        //    var result = await _service.GetWCWSSCFormatDataAsync(request);
+
+        //    if (!result.Success)
+        //    {
+        //        return BadRequest(new Response(false,message: result.Message));
+        //    }
+
+        //    return Ok(new Response(true, result.Data, result.Message));
+        //}
+
         [HttpPost("wcwsscFormat")]
-        public async Task<IActionResult> GetWCWSSCFormatData([FromBody] WCWSSCFormatRequestDto request)
+        public async Task<IActionResult> GetWCWSSCFormatData(
+            [FromBody] WCWSSCFormatRequestDto request)
         {
             var result = await _service.GetWCWSSCFormatDataAsync(request);
 
             if (!result.Success)
-            {
-                return BadRequest(new Response(false,message: result.Message));
-            }
+                return BadRequest(new Response(false, message: result.Message));
 
             return Ok(new Response(true, result.Data, result.Message));
         }
@@ -300,6 +312,17 @@ namespace ProductivityApi.Controllers
                 await _service.GetArchivedByAccountNumberAsync(accountNumber);
 
             return Ok(new Response(true, result));
+        }
+
+        [HttpGet("applicants/{lan}")]
+        public async Task<IActionResult> GetArchivedApplicants(string lan)
+        {
+            var result = await _service.GetArchivedApplicantsAsync(lan);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, result.Data, result.Message));
         }
 
 

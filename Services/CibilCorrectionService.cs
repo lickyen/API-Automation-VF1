@@ -154,6 +154,11 @@ UpdateNonCustomerStatusDto dto)
 
         #region WC / WS / SC
 
+        public async Task<WCWSSCResponseDto?> GetWCWSSCByIdAsync(int id)
+        {
+            return await _repository.GetWCWSSCDetailsAsync(id);
+        }
+
         public async Task<(bool Success, int Id, string Message)> CreateWCWSSCAsync(
             CreateWCWSSCDto dto)
         {
@@ -167,11 +172,6 @@ UpdateNonCustomerStatusDto dto)
                 await _repository.CreateWCWSSCAsync(dto);
 
             return (true, id, "Record created successfully.");
-        }
-
-        public async Task<WCWSSCResponseDto?> GetWCWSSCByIdAsync(int id)
-        {
-            return await _repository.GetWCWSSCDetailsAsync(id);
         }
 
         public async Task<(bool Success, string Message)> UpdateWCWSSCAsync(
@@ -225,63 +225,97 @@ UpdateNonCustomerStatusDto dto)
             return await _repository.GetWCWSSCByStatusAsync(request);
         }
 
-    public async Task<(bool Success, IEnumerable<WCWSSCFormatResponseDto> Data, string Message)>
-        GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
+        //public async Task<(bool Success, IEnumerable<WCWSSCFormatResponseDto> Data, string Message)>
+        //    GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
+        //    {
+        //        var (lanDetails, lanMessage) =
+        //            await _sharedService.GetLanDetailsAsync(request.LAN);
+
+        //        if (lanDetails == null)
+        //            return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(), lanMessage);
+
+        //        var (applicants, applicantMessage) =
+        //            await _sharedService.GetApplicantsByLanAsync(request.LAN);
+
+        //        if (applicants == null || applicants.Count == 0)
+        //            return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
+        //                applicantMessage == "Success"
+        //                    ? "No applicants found for the LAN."
+        //                    : applicantMessage);
+
+        //        //var creditFacilityStatus = GetCreditFacilityStatus(request.LoanStatus);
+
+        //        //if (creditFacilityStatus == null)
+        //        //    return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
+        //        //        "Invalid Loan Status. Allowed values are Writeoff to close, Writeoff to settled, and Settled to Close.");
+
+        //        var data = applicants
+        //            .Select(applicant => new WCWSSCFormatResponseDto
+        //            {
+        //                Consumer_Name = applicant.CustName ?? string.Empty,
+        //                Account_Number = request.LAN,
+        //                Current_Balance = 0m,
+        //                Amount_Overdue = 0m,
+        //                Date_Closed = request.Date_Last_Payment,
+        //                Date_Last_Payment = request.Date_Last_Payment,
+        //                Date_Reported = request.Date_Last_Payment,
+        //                Sanctioned_amount = lanDetails.LoanAmount,
+        //                NDPD_latest_month = Convert.ToInt32(lanDetails.Dpd),
+        //                Account_Status = string.Empty,
+        //                Credit_Facility_Status = request.RequestType,
+
+        //                Written_Off_Principal_Amount = Math.Max(
+        //                    0m,
+        //                    (request.Principal_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
+        //                ),
+
+        //                Written_Off_Total_Amount = Math.Max(
+        //                    0m,
+        //                    (request.Total_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
+        //                ),
+
+        //                Settlement_Amount = request.Settlement_Amount ?? 0m,
+        //                Amount_Received = request.Amount_Received ?? 0m
+        //            })
+        //            .ToList();
+
+        //        return (true, data, "Records retrieved successfully.");
+        //    }
+
+        public async Task<(bool Success, WCWSSCFormatResponseDto? Data, string Message)>
+            GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
         {
-            var (lanDetails, lanMessage) =
-                await _sharedService.GetLanDetailsAsync(request.LAN);
+            if (request == null)
+                return (false, null, "Request cannot be null.");
 
-            if (lanDetails == null)
-                return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(), lanMessage);
+            if (string.IsNullOrWhiteSpace(request.LAN))
+                return (false, null, "LAN is required.");
 
-            var (applicants, applicantMessage) =
-                await _sharedService.GetApplicantsByLanAsync(request.LAN);
+            if (string.IsNullOrWhiteSpace(request.RequestType))
+                return (false, null, "Request type is required.");
 
-            if (applicants == null || applicants.Count == 0)
-                return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
-                    applicantMessage == "Success"
-                        ? "No applicants found for the LAN."
-                        : applicantMessage);
+            var lan = request.LAN.Trim();
 
-            //var creditFacilityStatus = GetCreditFacilityStatus(request.LoanStatus);
+            var archivedRecords = await _repository.GetArchivedByAccountNumberAsync(lan);
 
-            //if (creditFacilityStatus == null)
-            //    return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
-            //        "Invalid Loan Status. Allowed values are Writeoff to close, Writeoff to settled, and Settled to Close.");
+            var loanRecord = archivedRecords.FirstOrDefault();
 
-            var data = applicants
-                .Select(applicant => new WCWSSCFormatResponseDto
-                {
-                    Consumer_Name = applicant.CustName ?? string.Empty,
-                    Account_Number = request.LAN,
-                    Current_Balance = 0m,
-                    Amount_Overdue = 0m,
-                    Date_Closed = request.Date_Last_Payment,
-                    Date_Last_Payment = request.Date_Last_Payment,
-                    Date_Reported = request.Date_Last_Payment,
-                    Sanctioned_amount = lanDetails.LoanAmount,
-                    NDPD_latest_month = Convert.ToInt32(lanDetails.Dpd),
-                    Account_Status = string.Empty,
-                    Credit_Facility_Status = request.RequestType,
+            var response = new WCWSSCFormatResponseDto
+            {
+                Consumer_Name = loanRecord?.CustomerName ?? string.Empty,
+                Account_Number = loanRecord?.LoanAccountNo ?? lan,
+                Current_Balance = 0m,
+                Amount_Overdue = 0m,
+                NDPD_latest_month = null,
+                Account_Status = loanRecord?.LoanStatus ?? string.Empty,
+                Credit_Facility_Status = request.RequestType.Trim(),
+                Sanctioned_amount = null,
+                Total_Outstanding = null,
+                Principal_Outstanding = null
+            };
 
-                    Written_Off_Principal_Amount = Math.Max(
-                        0m,
-                        (request.Principal_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
-                    ),
-
-                    Written_Off_Total_Amount = Math.Max(
-                        0m,
-                        (request.Total_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
-                    ),
-
-                    Settlement_Amount = request.Settlement_Amount ?? 0m,
-                    Amount_Received = request.Amount_Received ?? 0m
-                })
-                .ToList();
-
-            return (true, data, "Records retrieved successfully.");
+            return (true, response, loanRecord != null ? "Record retrieved successfully." : "No archived record found. Blank values returned.");
         }
-
         #endregion
 
         public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
@@ -290,6 +324,27 @@ UpdateNonCustomerStatusDto dto)
                 return Enumerable.Empty<IndusArchivedMaster>();
 
             return await _repository.GetArchivedByAccountNumberAsync(accountNumber);
+        }
+
+        public async Task<(bool Success, IReadOnlyList<WCWSSCApplicantResponseDto> Data, string Message)>
+            GetArchivedApplicantsAsync(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return (false, Array.Empty<WCWSSCApplicantResponseDto>(), "LAN is required.");
+
+            var archivedRecords = await _repository.GetArchivedByAccountNumberAsync(lan.Trim());
+
+            var applicants = archivedRecords
+                .Select(x => new WCWSSCApplicantResponseDto
+                {
+                    Customer_Id = x.CustomerId ?? string.Empty,
+                    Consumer_Name = x.CustomerName ?? string.Empty,
+                    Applicant_Type = x.ApplicantType ?? string.Empty,
+                    Collateral_Id = x.CollateralId ?? string.Empty
+                })
+                .ToList();
+
+            return (true, applicants, applicants.Count > 0 ? "Applicants retrieved successfully." : "No applicants found for the provided LAN.");
         }
 
         public async Task<byte[]?> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)

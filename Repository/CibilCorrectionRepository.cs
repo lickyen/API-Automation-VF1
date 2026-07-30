@@ -1,7 +1,8 @@
-using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
+using System.Data;
+using System.Data.Common;
 
 namespace ProductivityApi.Repository
 {
@@ -11,6 +12,39 @@ namespace ProductivityApi.Repository
         public CibilCorrectionRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn");
+        }
+
+        public async Task<IReadOnlyList<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string lan)
+        {
+            const string query = @"
+            SELECT
+                SZ_LOAN_ACCOUNT_NO AS LoanAccountNo,
+                APPLICANT_TYPE AS ApplicantType,
+                BRANCH_ID AS BranchCode,
+                BRANCH_NAME AS BranchName,
+                CLUSTER_NAME AS ClusterName,
+                STATE_NAME AS StateName,
+                CUSOMER_ID AS CustomerId,
+                CUSTOMER_NAME AS CustomerName,
+                SZ_COLLATERAL_ID AS CollateralId,
+                LOAN_STATUS AS LoanStatus,
+                CLOSURE_DATE AS LoanClosureDate,
+                DISB_DATE AS DisbursementDate,
+                DT_CORRECTION AS CorrectionDate,
+                NOC_STATUS AS NocStatus
+            FROM INDUS_ARCHIVED_MASTER
+            WHERE LTRIM(RTRIM(SZ_LOAN_ACCOUNT_NO)) = LTRIM(RTRIM(@LAN));";
+
+            using var conn = new SqlConnection(_conStr);
+
+            var records = await conn.QueryAsync<IndusArchivedMaster>(
+                query,
+                new
+                {
+                    LAN = lan
+                });
+
+            return records.ToList();
         }
 
         #region Loan Cancellation
@@ -470,6 +504,22 @@ namespace ProductivityApi.Repository
 
         #region WC / WS / SC
 
+        public async Task<CibilCorrectionWCWSSC?> GetWCWSSCByIdAsync(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            const string sql = @"
+                SELECT *
+                FROM CIBIL_Correction_WC_WS_SC
+                WHERE Id = @Id;
+            ";
+
+            return await conn.QueryFirstOrDefaultAsync<CibilCorrectionWCWSSC>(
+                sql,
+                new { Id = id });
+        }
+
+
         public async Task<int> CreateWCWSSCAsync(CreateWCWSSCDto dto)
         {
             await using var conn = new SqlConnection(_conStr);
@@ -494,6 +544,8 @@ namespace ProductivityApi.Repository
                 NDPD_latest_month,
                 Account_Status,
                 Credit_Facility_Status,
+                Total_Outstanding,
+                Principal_Outstanding,
                 Written_Off_Total_Amount,
                 Written_Off_Principal_Amount,
                 Settlement_Amount,
@@ -516,6 +568,8 @@ namespace ProductivityApi.Repository
                 @NDPD_latest_month,
                 @Account_Status,
                 @Credit_Facility_Status,
+                @Total_Outstanding,
+                @Principal_Outstanding,
                 @Written_Off_Total_Amount,
                 @Written_Off_Principal_Amount,
                 @Settlement_Amount,
@@ -526,8 +580,7 @@ namespace ProductivityApi.Repository
                 GETDATE()
             );
 
-            SELECT CAST(SCOPE_IDENTITY() AS INT);
-        ";
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                 var id = await conn.ExecuteScalarAsync<int>(
                     sql,
@@ -553,54 +606,39 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
-        public async Task<CibilCorrectionWCWSSC?> GetWCWSSCByIdAsync(int id)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            const string sql = @"
-                SELECT *
-                FROM CIBIL_Correction_WC_WS_SC
-                WHERE Id = @Id;
-            ";
-
-            return await conn.QueryFirstOrDefaultAsync<CibilCorrectionWCWSSC>(
-                sql,
-                new { Id = id });
-        }
-
         public async Task<bool> UpdateWCWSSCAsync(UpdateWCWSSCDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
             const string sql = @"
-                UPDATE CIBIL_Correction_WC_WS_SC
-                SET
-                    Consumer_Name = @Consumer_Name,
-                    Account_Number = @Account_Number,
-                    Current_Balance = @Current_Balance,
-                    Amount_Overdue = @Amount_Overdue,
-                    Date_Closed = @Date_Closed,
-                    Date_Last_Payment = @Date_Last_Payment,
-                    Date_Reported = @Date_Reported,
-                    Sanctioned_amount = @Sanctioned_amount,
-                    NDPD_latest_month = @NDPD_latest_month,
-                    Account_Status = @Account_Status,
-                    Credit_Facility_Status = @Credit_Facility_Status,
-                    Written_Off_Total_Amount = @Written_Off_Total_Amount,
-                    Written_Off_Principal_Amount = @Written_Off_Principal_Amount,
-                    Settlement_Amount = @Settlement_Amount,
-                    Amount_Received = @Amount_Received,
-                    Remarks = @Remarks,
-                    Updated_By = @Updated_By,
-                    Updated_Dt = GETDATE()
-                WHERE Id = @Id;
-            ";
+        UPDATE CIBIL_Correction_WC_WS_SC
+        SET
+            Consumer_Name = @Consumer_Name,
+            Account_Number = @Account_Number,
+            Current_Balance = @Current_Balance,
+            Amount_Overdue = @Amount_Overdue,
+            Date_Closed = @Date_Closed,
+            Date_Last_Payment = @Date_Last_Payment,
+            Date_Reported = @Date_Reported,
+            Sanctioned_amount = @Sanctioned_amount,
+            NDPD_latest_month = @NDPD_latest_month,
+            Account_Status = @Account_Status,
+            Credit_Facility_Status = @Credit_Facility_Status,
+            Total_Outstanding = @Total_Outstanding,
+            Principal_Outstanding = @Principal_Outstanding,
+            Written_Off_Total_Amount = @Written_Off_Total_Amount,
+            Written_Off_Principal_Amount = @Written_Off_Principal_Amount,
+            Settlement_Amount = @Settlement_Amount,
+            Amount_Received = @Amount_Received,
+            Remarks = @Remarks,
+            Updated_By = @Updated_By,
+            Updated_Dt = GETDATE()
+        WHERE Id = @Id;";
 
             var rows = await conn.ExecuteAsync(sql, dto);
 
             return rows > 0;
         }
-
         public async Task<bool> UpdateWCWSSCStatusAsync(
             UpdateWCWSSCStatusDto dto)
         {
@@ -811,19 +849,6 @@ namespace ProductivityApi.Repository
                 });
 
             return logs.ToList();
-        }
-        public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            string sql = @"
-                SELECT *
-                FROM Indus_Archived_Master
-                WHERE Account_Number = @Account_Number";
-
-            return await conn.QueryAsync<IndusArchivedMaster>(
-                sql,
-                new { Account_Number = accountNumber });
         }
 
         private static async Task InsertLogAsync(
