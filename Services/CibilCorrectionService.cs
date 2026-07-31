@@ -9,13 +9,54 @@ namespace ProductivityApi.Services
         private readonly CibilCorrectionRepository _repository;
         private readonly PLFService _pLFService;
         private readonly SharedService _sharedService;
+        private readonly EmailService _emailService;
+        private readonly TemplateService _templateService;
 
-        public CibilCorrectionService(CibilCorrectionRepository repository, PLFService pLFService, SharedService sharedService)
+        public CibilCorrectionService(CibilCorrectionRepository repository, PLFService pLFService, SharedService sharedService, EmailService emailService, TemplateService templateService)
         {
             _repository = repository;
             _pLFService = pLFService;
             _sharedService = sharedService;
+            _emailService = emailService;
+            _templateService = templateService;
+            _sharedService = sharedService;
         }
+
+        #region Indus Archived
+
+        public async Task<IndusArchivedMaster?> GetArchivedByAccountNumberAsync(string accountNumber)
+        {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+                return null;
+
+            return await _repository.GetArchivedByAccountNumberAsync(accountNumber.Trim());
+        }
+
+        public async Task<(bool Success, IReadOnlyList<WCWSSCApplicantResponseDto> Data, string Message)>
+            GetArchivedApplicantsAsync(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return (false, Array.Empty<WCWSSCApplicantResponseDto>(), "LAN is required.");
+
+            var archivedRecords = await _repository.GetApplicantsByAccountNumberAsync(lan.Trim());
+
+            var applicants = archivedRecords
+                .Select(x => new WCWSSCApplicantResponseDto
+                {
+                    Customer_Id = x.CustomerId ?? string.Empty,
+                    Consumer_Name = x.CustomerName ?? string.Empty,
+                    Applicant_Type = x.ApplicantType ?? string.Empty,
+                    Collateral_Id = x.CollateralId ?? string.Empty
+                })
+                .ToList();
+
+            if (applicants.Count == 0)
+                return (false, Array.Empty<WCWSSCApplicantResponseDto>(), "No applicants found for the provided LAN.");
+
+            return (true, applicants, "Applicants retrieved successfully.");
+        }
+
+        #endregion
 
         #region Loan Cancellation
 
@@ -26,11 +67,6 @@ namespace ProductivityApi.Services
 
             return await _repository.GetLoanCancellationDetailsAsync(id);
         }
-
-        //public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
-        //{
-        //    return await _repository.GetLoanCancellationByStatusAsync(status);
-        //}
 
         public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
@@ -63,23 +99,33 @@ namespace ProductivityApi.Services
         }
 
         public async Task<(bool Success, string Message)> UpdateLoanCancellationStatusAsync(
-    UpdateLoanCancellationStatusDto dto)
+            UpdateLoanCancellationStatusDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
 
-            var existing =
-                await _repository.GetLoanCancellationByIdAsync(dto.Id);
+            if (string.IsNullOrWhiteSpace(dto.Status))
+                return (false, "Status is required.");
+
+            var existing = await _repository.GetLoanCancellationByIdAsync(dto.Id);
 
             if (existing == null)
                 return (false, "Record not found.");
 
-            var result =
-                await _repository.UpdateLoanCancellationStatusAsync(dto);
+            var result = await _repository.UpdateLoanCancellationStatusAsync(dto);
 
-            return result
+            if (!result)
+                return (false, "Status update failed.");
+
+            var emailResult = await SendStatusUpdateEmailAsync(
+                "CIBIL Correction - Loan Cancellation",
+                existing.LAN,
+                dto.Status);
+
+            return emailResult == "Success" ||
+                   emailResult == "Email not required for this status."
                 ? (true, "Status updated successfully.")
-                : (false, "Status update failed.");
+                : (true, $"Status updated successfully, but email failed: {emailResult}");
         }
 
 
@@ -113,23 +159,38 @@ namespace ProductivityApi.Services
         }
 
         public async Task<(bool Success, string Message)> UpdateNonCustomerStatusAsync(
-UpdateNonCustomerStatusDto dto)
+            UpdateNonCustomerStatusDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
 
-            var existing =
-                await _repository.GetNonCustomerByIdAsync(dto.Id);
+            if (string.IsNullOrWhiteSpace(dto.Status))
+                return (false, "Status is required.");
+
+            var existing = await _repository.GetNonCustomerByIdAsync(dto.Id);
 
             if (existing == null)
                 return (false, "Record not found.");
 
-            var result =
-                await _repository.UpdateNonCustomerStatusAsync(dto);
+            var result = await _repository.UpdateNonCustomerStatusAsync(dto);
 
-            return result
+            if (!result)
+                return (false, "Status update failed.");
+
+            var referenceNumber =
+                existing.Complainant_LAN_Number ??
+                existing.Complainant_Account_Number ??
+                dto.Id.ToString();
+
+            var emailResult = await SendStatusUpdateEmailAsync(
+                "CIBIL Correction - Non Customer",
+                referenceNumber,
+                dto.Status);
+
+            return emailResult == "Success" ||
+                   emailResult == "Email not required for this status."
                 ? (true, "Status updated successfully.")
-                : (false, "Status update failed.");
+                : (true, $"Status updated successfully, but email failed: {emailResult}");
         }
 
         public async Task<NonCustomerResponseDto?> GetNonCustomerByIdAsync(int id)
@@ -195,92 +256,40 @@ UpdateNonCustomerStatusDto dto)
         }
 
         public async Task<(bool Success, string Message)> UpdateWCWSSCStatusAsync(
-    UpdateWCWSSCStatusDto dto)
+            UpdateWCWSSCStatusDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
 
-            var existing =
-                await _repository.GetWCWSSCByIdAsync(dto.Id);
+            if (string.IsNullOrWhiteSpace(dto.Status))
+                return (false, "Status is required.");
+
+            var existing = await _repository.GetWCWSSCByIdAsync(dto.Id);
 
             if (existing == null)
                 return (false, "Record not found.");
 
-            var result =
-                await _repository.UpdateWCWSSCStatusAsync(dto);
+            var result = await _repository.UpdateWCWSSCStatusAsync(dto);
 
-            return result
+            if (!result)
+                return (false, "Status update failed.");
+
+            var emailResult = await SendStatusUpdateEmailAsync(
+                "CIBIL Correction - WC/WS/SC",
+                existing.Account_Number,
+                dto.Status);
+
+            return emailResult == "Success" ||
+                   emailResult == "Email not required for this status."
                 ? (true, "Status updated successfully.")
-                : (false, "Status update failed.");
+                : (true, $"Status updated successfully, but email failed: {emailResult}");
         }
-
-        //public async Task<IEnumerable<CibilCorrectionWCWSSC>> GetWCWSSCByStatusAsync(string status)
-        //{
-        //    return await _repository.GetWCWSSCByStatusAsync(status);
-        //}
 
         public async Task<IEnumerable<CibilCorrectionWCWSSC>>
             GetWCWSSCByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
             return await _repository.GetWCWSSCByStatusAsync(request);
         }
-
-        //public async Task<(bool Success, IEnumerable<WCWSSCFormatResponseDto> Data, string Message)>
-        //    GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
-        //    {
-        //        var (lanDetails, lanMessage) =
-        //            await _sharedService.GetLanDetailsAsync(request.LAN);
-
-        //        if (lanDetails == null)
-        //            return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(), lanMessage);
-
-        //        var (applicants, applicantMessage) =
-        //            await _sharedService.GetApplicantsByLanAsync(request.LAN);
-
-        //        if (applicants == null || applicants.Count == 0)
-        //            return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
-        //                applicantMessage == "Success"
-        //                    ? "No applicants found for the LAN."
-        //                    : applicantMessage);
-
-        //        //var creditFacilityStatus = GetCreditFacilityStatus(request.LoanStatus);
-
-        //        //if (creditFacilityStatus == null)
-        //        //    return (false, Enumerable.Empty<WCWSSCFormatResponseDto>(),
-        //        //        "Invalid Loan Status. Allowed values are Writeoff to close, Writeoff to settled, and Settled to Close.");
-
-        //        var data = applicants
-        //            .Select(applicant => new WCWSSCFormatResponseDto
-        //            {
-        //                Consumer_Name = applicant.CustName ?? string.Empty,
-        //                Account_Number = request.LAN,
-        //                Current_Balance = 0m,
-        //                Amount_Overdue = 0m,
-        //                Date_Closed = request.Date_Last_Payment,
-        //                Date_Last_Payment = request.Date_Last_Payment,
-        //                Date_Reported = request.Date_Last_Payment,
-        //                Sanctioned_amount = lanDetails.LoanAmount,
-        //                NDPD_latest_month = Convert.ToInt32(lanDetails.Dpd),
-        //                Account_Status = string.Empty,
-        //                Credit_Facility_Status = request.RequestType,
-
-        //                Written_Off_Principal_Amount = Math.Max(
-        //                    0m,
-        //                    (request.Principal_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
-        //                ),
-
-        //                Written_Off_Total_Amount = Math.Max(
-        //                    0m,
-        //                    (request.Total_Outstanding ?? 0m) - (request.Amount_Received ?? 0m)
-        //                ),
-
-        //                Settlement_Amount = request.Settlement_Amount ?? 0m,
-        //                Amount_Received = request.Amount_Received ?? 0m
-        //            })
-        //            .ToList();
-
-        //        return (true, data, "Records retrieved successfully.");
-        //    }
 
         public async Task<(bool Success, WCWSSCFormatResponseDto? Data, string Message)>
             GetWCWSSCFormatDataAsync(WCWSSCFormatRequestDto request)
@@ -296,75 +305,125 @@ UpdateNonCustomerStatusDto dto)
 
             var lan = request.LAN.Trim();
 
-            var archivedRecords = await _repository.GetArchivedByAccountNumberAsync(lan);
+            var loanRecord = await _repository.GetArchivedByAccountNumberAsync(lan);
 
-            var loanRecord = archivedRecords.FirstOrDefault();
+            if (loanRecord == null)
+                return (false, null, "No records found.");
 
             var response = new WCWSSCFormatResponseDto
             {
-                Consumer_Name = loanRecord?.CustomerName ?? string.Empty,
-                Account_Number = loanRecord?.LoanAccountNo ?? lan,
+                Consumer_Name = loanRecord.CustomerName ?? string.Empty,
+                Account_Number = loanRecord.LoanAccountNo ?? lan,
                 Current_Balance = 0m,
                 Amount_Overdue = 0m,
-                NDPD_latest_month = null,
-                Account_Status = loanRecord?.LoanStatus ?? string.Empty,
+                NDPD_latest_month = 0,
+                Account_Status = loanRecord.LoanStatus ?? string.Empty,
                 Credit_Facility_Status = request.RequestType.Trim(),
                 Sanctioned_amount = null,
                 Total_Outstanding = null,
                 Principal_Outstanding = null
             };
 
-            return (true, response, loanRecord != null ? "Record retrieved successfully." : "No archived record found. Blank values returned.");
+            return (true, response, "Record retrieved successfully.");
         }
         #endregion
 
-        public async Task<IEnumerable<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string accountNumber)
-        {
-            if (string.IsNullOrWhiteSpace(accountNumber))
-                return Enumerable.Empty<IndusArchivedMaster>();
-
-            return await _repository.GetArchivedByAccountNumberAsync(accountNumber);
-        }
-
-        public async Task<(bool Success, IReadOnlyList<WCWSSCApplicantResponseDto> Data, string Message)>
-            GetArchivedApplicantsAsync(string lan)
-        {
-            if (string.IsNullOrWhiteSpace(lan))
-                return (false, Array.Empty<WCWSSCApplicantResponseDto>(), "LAN is required.");
-
-            var archivedRecords = await _repository.GetArchivedByAccountNumberAsync(lan.Trim());
-
-            var applicants = archivedRecords
-                .Select(x => new WCWSSCApplicantResponseDto
-                {
-                    Customer_Id = x.CustomerId ?? string.Empty,
-                    Consumer_Name = x.CustomerName ?? string.Empty,
-                    Applicant_Type = x.ApplicantType ?? string.Empty,
-                    Collateral_Id = x.CollateralId ?? string.Empty
-                })
-                .ToList();
-
-            return (true, applicants, applicants.Count > 0 ? "Applicants retrieved successfully." : "No applicants found for the provided LAN.");
-        }
-
-        public async Task<byte[]?> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
+        public async Task<byte[]?> GetCibilReportExcelAsync(
+            CibilReportRequestDto request)
         {
             var (loan, nonCustomer, wcwssc) =
-                await _repository.GetCibilReportAsync(fromDate, toDate, type);
+                await _repository.GetCibilReportAsync(request);
 
             var sheets = new List<(IEnumerable<dynamic>, string)>();
 
-            if (string.IsNullOrWhiteSpace(type) || type == "LoanCancellation")
+            if (string.IsNullOrWhiteSpace(request.Type) ||
+                request.Type.Equals("LoanCancellation", StringComparison.OrdinalIgnoreCase))
+            {
                 sheets.Add((loan, "LoanCancellation"));
+            }
 
-            if (string.IsNullOrWhiteSpace(type) || type == "NonCustomer")
+            if (string.IsNullOrWhiteSpace(request.Type) ||
+                request.Type.Equals("NonCustomer", StringComparison.OrdinalIgnoreCase))
+            {
                 sheets.Add((nonCustomer, "NonCustomer"));
+            }
 
-            if (string.IsNullOrWhiteSpace(type) || type == "WCWSSC")
+            if (string.IsNullOrWhiteSpace(request.Type) ||
+                request.Type.Equals("WCWSSC", StringComparison.OrdinalIgnoreCase))
+            {
                 sheets.Add((wcwssc, "WCWSSC"));
+            }
 
             return ExcelHelper.GenerateExcel(sheets.ToArray());
         }
 
+        private async Task<string> SendStatusUpdateEmailAsync(string module, string referenceNumber,string status)
+        {
+            var normalizedStatus = status.Trim();
+
+            var checkerEmails = new List<string>
+            {
+                "analytics@vistaarfinance.com"
+            };
+
+            var makerEmails = new List<string>
+            {
+                "cops.disbursement@vistaarfinance.com",
+                "cops.disbursement1@vistaarfinance.com"
+            };
+
+            List<string> recipients;
+            string templateKey;
+            string subject;
+
+            switch (normalizedStatus.ToUpperInvariant())
+            {
+                case "PENDING":
+                case "RESUBMITTED":
+                    recipients = checkerEmails;
+                    templateKey = "MovedToQEmail";
+                    subject = $"{module} request moved to Checker queue - {referenceNumber}";
+                    break;
+
+                case "SEND BACK":
+                    recipients = makerEmails;
+                    templateKey = "MovedToQEmail";
+                    subject = $"{module} request sent back to Maker - {referenceNumber}";
+                    break;
+
+                case "DONE":
+                    recipients = makerEmails;
+                    templateKey = "ProcessedEmail";
+                    subject = $"{module} request processed - {referenceNumber}";
+                    break;
+
+                case "REJECT":
+                case "REJECTED":
+                    recipients = makerEmails;
+                    templateKey = "RejectedEmail";
+                    subject = $"{module} request rejected - {referenceNumber}";
+                    break;
+
+                default:
+                    return "Email not required for this status.";
+            }
+
+            var template = _templateService.GetEmailTemplate(templateKey);
+
+            var body = _templateService.ReplacePlaceholders(
+                template.Body,
+                new Dictionary<string, string>
+                {
+                    ["LAN"] = referenceNumber,
+                    ["Module"] = module
+                });
+
+            return await _emailService.SendEmail(
+                subject,
+                body,
+                recipients,
+                new List<string>(),
+                source: "CibilCorrection");
+        }
     }
 }

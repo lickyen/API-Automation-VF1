@@ -14,39 +14,68 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn");
         }
 
-        public async Task<IReadOnlyList<IndusArchivedMaster>> GetArchivedByAccountNumberAsync(string lan)
+        #region Indus Archived
+
+        public async Task<IndusArchivedMaster?> GetArchivedByAccountNumberAsync(string lan)
         {
             const string query = @"
-            SELECT
-                SZ_LOAN_ACCOUNT_NO AS LoanAccountNo,
-                APPLICANT_TYPE AS ApplicantType,
-                BRANCH_ID AS BranchCode,
-                BRANCH_NAME AS BranchName,
-                CLUSTER_NAME AS ClusterName,
-                STATE_NAME AS StateName,
-                CUSOMER_ID AS CustomerId,
-                CUSTOMER_NAME AS CustomerName,
-                SZ_COLLATERAL_ID AS CollateralId,
-                LOAN_STATUS AS LoanStatus,
-                CLOSURE_DATE AS LoanClosureDate,
-                DISB_DATE AS DisbursementDate,
-                DT_CORRECTION AS CorrectionDate,
-                NOC_STATUS AS NocStatus
-            FROM INDUS_ARCHIVED_MASTER
-            WHERE LTRIM(RTRIM(SZ_LOAN_ACCOUNT_NO)) = LTRIM(RTRIM(@LAN));";
+        SELECT TOP (1)
+            SZ_LOAN_ACCOUNT_NO AS LoanAccountNo,
+            APPLICANT_TYPE AS ApplicantType,
+            BRANCH_ID AS BranchCode,
+            BRANCH_NAME AS BranchName,
+            CLUSTER_NAME AS ClusterName,
+            STATE_NAME AS StateName,
+            CUSOMER_ID AS CustomerId,
+            CUSTOMER_NAME AS CustomerName,
+            SZ_COLLATERAL_ID AS CollateralId,
+            LOAN_STATUS AS LoanStatus,
+            CLOSURE_DATE AS LoanClosureDate,
+            DISB_DATE AS DisbursementDate,
+            DT_CORRECTION AS CorrectionDate,
+            NOC_STATUS AS NocStatus
+        FROM INDUS_ARCHIVED_MASTER
+        WHERE LTRIM(RTRIM(SZ_LOAN_ACCOUNT_NO)) = LTRIM(RTRIM(@LAN))
+          AND LTRIM(RTRIM(APPLICANT_TYPE)) = 'B';";
+
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<IndusArchivedMaster>(
+                query,
+                new { LAN = lan });
+        }
+
+        public async Task<IReadOnlyList<IndusArchivedMaster>> GetApplicantsByAccountNumberAsync(string lan)
+        {
+            const string query = @"
+        SELECT
+            SZ_LOAN_ACCOUNT_NO AS LoanAccountNo,
+            APPLICANT_TYPE AS ApplicantType,
+            BRANCH_ID AS BranchCode,
+            BRANCH_NAME AS BranchName,
+            CLUSTER_NAME AS ClusterName,
+            STATE_NAME AS StateName,
+            CUSOMER_ID AS CustomerId,
+            CUSTOMER_NAME AS CustomerName,
+            SZ_COLLATERAL_ID AS CollateralId,
+            LOAN_STATUS AS LoanStatus,
+            CLOSURE_DATE AS LoanClosureDate,
+            DISB_DATE AS DisbursementDate,
+            DT_CORRECTION AS CorrectionDate,
+            NOC_STATUS AS NocStatus
+        FROM INDUS_ARCHIVED_MASTER
+        WHERE LTRIM(RTRIM(SZ_LOAN_ACCOUNT_NO)) = LTRIM(RTRIM(@LAN));";
 
             using var conn = new SqlConnection(_conStr);
 
             var records = await conn.QueryAsync<IndusArchivedMaster>(
                 query,
-                new
-                {
-                    LAN = lan
-                });
+                new { LAN = lan });
 
             return records.ToList();
         }
 
+        #endregion
         #region Loan Cancellation
 
         public async Task<CibilCorrectionLoanCancellation?> GetLoanCancellationByIdAsync(int id)
@@ -62,9 +91,7 @@ namespace ProductivityApi.Repository
                 sql,
                 new { Id = id });
         }
-
-        public async Task<LoanCancellationResponseDto?>
-            GetLoanCancellationDetailsAsync(int id)
+        public async Task<LoanCancellationResponseDto?>GetLoanCancellationDetailsAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -97,21 +124,7 @@ namespace ProductivityApi.Repository
                 Logs = logs
             };
         }
-        //public async Task<IEnumerable<CibilCorrectionLoanCancellation>> GetLoanCancellationByStatusAsync(string status)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql = @"
-        //        SELECT *
-        //        FROM CIBIL_Correction_LoanCancellation
-        //        WHERE (@Status IS NULL OR Status = @Status)";
-
-        //    return await conn.QueryAsync<CibilCorrectionLoanCancellation>(sql, new { Status = status });
-        //}
-
-        public async Task<IEnumerable<CibilCorrectionLoanCancellation>>
-            GetLoanCancellationByStatusAsync(
-                CibilCorrectionGetByStatusDto request)
+        public async Task<IEnumerable<CibilCorrectionLoanCancellation>>GetLoanCancellationByStatusAsync(CibilCorrectionGetByStatusDto request)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -145,7 +158,6 @@ namespace ProductivityApi.Repository
                 LAN = @LAN,
                 Customer_Name = @Customer_Name,
                 PENNANT_Status = @PENNANT_Status,
-                Remarks = @Remarks,
                 Updated_By = @Updated_By,
                 Updated_Dt = GETDATE()
             WHERE Id = @Id";
@@ -154,9 +166,7 @@ namespace ProductivityApi.Repository
 
             return rows > 0;
         }
-
-        public async Task<bool> UpdateLoanCancellationStatusAsync(
-            UpdateLoanCancellationStatusDto dto)
+        public async Task<bool> UpdateLoanCancellationStatusAsync(UpdateLoanCancellationStatusDto dto)
         {
             await using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -199,7 +209,7 @@ namespace ProductivityApi.Repository
                     dto.Status,
                     dto.Remarks,
                     dto.Updated_By);
-
+        
                 await transaction.CommitAsync();
                 return true;
             }
@@ -209,9 +219,7 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
-        #endregion
-
-
+#endregion
 
         #region Non-Customer
         public async Task<int> CreateNonCustomerAsync(CreateNonCustomerDto dto)
@@ -290,18 +298,6 @@ namespace ProductivityApi.Repository
 
             return await conn.QueryFirstOrDefaultAsync<CibilCorrectionNonCustomer>(sql, new { Id = id });
         }
-
-        //public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql = @"
-        //        SELECT *
-        //        FROM CIBIL_Correction_NonCustomer
-        //        WHERE (@Status IS NULL OR Status = @Status)";
-
-        //    return await conn.QueryAsync<CibilCorrectionNonCustomer>(sql, new { Status = status });
-        //}
 
         public async Task<IEnumerable<CibilCorrectionNonCustomer>>
             GetNonCustomerByStatusAsync(
@@ -694,23 +690,6 @@ namespace ProductivityApi.Repository
             }
         }
 
-        //public async Task<IEnumerable<CibilCorrectionWCWSSC>>
-        //    GetWCWSSCByStatusAsync(string? status)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    const string sql = @"
-        //        SELECT *
-        //        FROM CIBIL_Correction_WC_WS_SC
-        //        WHERE @Status IS NULL OR Status = @Status
-        //        ORDER BY Created_Dt DESC;
-        //    ";
-
-        //    return await conn.QueryAsync<CibilCorrectionWCWSSC>(
-        //        sql,
-        //        new { Status = status });
-        //}
-
         public async Task<IEnumerable<CibilCorrectionWCWSSC>>
             GetWCWSSCByStatusAsync(
                 CibilCorrectionGetByStatusDto request)
@@ -774,55 +753,72 @@ namespace ProductivityApi.Repository
         }
 
         #endregion
-        public async Task<(IEnumerable<dynamic> LoanCancellation, IEnumerable<dynamic> NonCustomer, IEnumerable<dynamic> WCWSSC)> 
-            GetCibilReportAsync(DateTime? fromDate, DateTime? toDate, string? type)
+
+        public async Task<(
+            IEnumerable<dynamic> LoanCancellation,
+            IEnumerable<dynamic> NonCustomer,
+            IEnumerable<dynamic> WCWSSC)>
+            GetCibilReportAsync(CibilReportRequestDto request)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
 
-            DateTime? from = fromDate?.Date;
-            DateTime? to = toDate?.Date;
+            DateTime? from = request.FromDate?.Date;
+            DateTime? to = request.ToDate?.Date.AddDays(1);
+            var type = request.Type?.Trim();
 
-            // =========================================================
-            // LOAN CANCELLATION
-            // =========================================================
             var loanCancellation = Enumerable.Empty<dynamic>();
-            if (string.IsNullOrWhiteSpace(type) || type == "LoanCancellation")
+
+            if (string.IsNullOrWhiteSpace(type) ||
+                type.Equals("LoanCancellation", StringComparison.OrdinalIgnoreCase))
             {
                 loanCancellation = await conn.QueryAsync(@"
             SELECT *
-            FROM CIBIL_Correction_LoanCancellation
+            FROM dbo.CIBIL_Correction_LoanCancellation
             WHERE (@FromDate IS NULL OR Created_Dt >= @FromDate)
-              AND (@ToDate IS NULL OR Created_Dt <= @ToDate)
-        ", new { FromDate = from, ToDate = to });
+              AND (@ToDate IS NULL OR Created_Dt < @ToDate)
+            ORDER BY Created_Dt DESC;",
+                    new
+                    {
+                        FromDate = from,
+                        ToDate = to
+                    });
             }
 
-            // =========================================================
-            // NON CUSTOMER
-            // =========================================================
             var nonCustomer = Enumerable.Empty<dynamic>();
-            if (string.IsNullOrWhiteSpace(type) || type == "NonCustomer")
+
+            if (string.IsNullOrWhiteSpace(type) ||
+                type.Equals("NonCustomer", StringComparison.OrdinalIgnoreCase))
             {
                 nonCustomer = await conn.QueryAsync(@"
             SELECT *
-            FROM CIBIL_Correction_NonCustomer
+            FROM dbo.CIBIL_Correction_NonCustomer
             WHERE (@FromDate IS NULL OR Created_Dt >= @FromDate)
-              AND (@ToDate IS NULL OR Created_Dt <= @ToDate)
-        ", new { FromDate = from, ToDate = to });
+              AND (@ToDate IS NULL OR Created_Dt < @ToDate)
+            ORDER BY Created_Dt DESC;",
+                    new
+                    {
+                        FromDate = from,
+                        ToDate = to
+                    });
             }
 
-            // =========================================================
-            // WC / WS / SC
-            // =========================================================
             var wcwssc = Enumerable.Empty<dynamic>();
-            if (string.IsNullOrWhiteSpace(type) || type == "WCWSSC")
+
+            if (string.IsNullOrWhiteSpace(type) ||
+                type.Equals("WCWSSC", StringComparison.OrdinalIgnoreCase))
             {
                 wcwssc = await conn.QueryAsync(@"
             SELECT *
-            FROM CIBIL_Correction_WC_WS_SC
+            FROM dbo.CIBIL_Correction_WC_WS_SC
             WHERE (@FromDate IS NULL OR Created_Dt >= @FromDate)
-              AND (@ToDate IS NULL OR Created_Dt <= @ToDate)
-        ", new { FromDate = from, ToDate = to });
+              AND (@ToDate IS NULL OR Created_Dt < @ToDate)
+            ORDER BY Created_Dt DESC;",
+                    new
+                    {
+                        FromDate = from,
+                        ToDate = to
+                    });
             }
 
             return (loanCancellation, nonCustomer, wcwssc);
@@ -911,14 +907,14 @@ namespace ProductivityApi.Repository
                     new[] { "Send Back" },
 
                 ("MAKER", "INPROGRESS") =>
-                    new[] { "Pending" },
+                    new[] { "Pending", "ReSubmitted" },
 
                 ("MAKER", "COMPLETED") =>
                     new[] { "Done", "Reject" },
 
                 // Checker mappings
                 ("CHECKER", "PENDING") =>
-                    new[] { "Pending" },
+                    new[] { "Pending", "ReSubmitted" },
 
                 ("CHECKER", "INPROGRESS") =>
                     new[] { "Send Back" },

@@ -77,15 +77,6 @@ namespace ProductivityApi.Controllers
                 new Response(true, message: result.Message));
         }
 
-        // Get by Status
-
-        //[HttpGet("loanCancellationbyStatus")]
-        //public async Task<IActionResult> GetLoanCancellation([FromQuery] string? status)
-        //{
-        //    var data = await _service.GetLoanCancellationByStatusAsync(status);
-        //    return Ok(new Response(true, data));
-        //}
-
         [HttpGet("loanCancellationbyStatus")]
         public async Task<IActionResult> GetLoanCancellation([FromQuery] CibilCorrectionGetByStatusDto request)
         {
@@ -148,15 +139,6 @@ namespace ProductivityApi.Controllers
             }
             return Ok(new Response(true, message: result.Message));
         }
-
-        // Get by Status
-
-        //[HttpGet("nonCustomerbyStatus")]
-        //public async Task<IActionResult> GetNonCustomer([FromQuery] string? status)
-        //{
-        //    var data = await _service.GetNonCustomerByStatusAsync(status);
-        //    return Ok(new Response(true, data));
-        //}
 
         [HttpGet("nonCustomerbyStatus")]
         public async Task<IActionResult> GetNonCustomer([FromQuery] CibilCorrectionGetByStatusDto request)
@@ -255,14 +237,6 @@ namespace ProductivityApi.Controllers
                 new Response(true, message: result.Message));
         }
 
-        // Get by Status
-
-        //[HttpGet("wcwsscbyStatus")]
-        //public async Task<IActionResult> GetWCWSSC([FromQuery] string? status)
-        //{
-        //    var data = await _service.GetWCWSSCByStatusAsync(status);
-        //    return Ok(new Response(true, data));
-        //}
 
         [HttpGet("wcwsscbyStatus")]
         public async Task<IActionResult> GetWCWSSC(
@@ -272,18 +246,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data));
         }
 
-        //[HttpPost("wcwsscFormat")]
-        //public async Task<IActionResult> GetWCWSSCFormatData([FromBody] WCWSSCFormatRequestDto request)
-        //{
-        //    var result = await _service.GetWCWSSCFormatDataAsync(request);
-
-        //    if (!result.Success)
-        //    {
-        //        return BadRequest(new Response(false,message: result.Message));
-        //    }
-
-        //    return Ok(new Response(true, result.Data, result.Message));
-        //}
 
         [HttpPost("wcwsscFormat")]
         public async Task<IActionResult> GetWCWSSCFormatData(
@@ -326,10 +288,10 @@ namespace ProductivityApi.Controllers
         }
 
 
-        [HttpGet("downloadReport")]
-        public async Task<IActionResult> DownloadReport([FromQuery] DateTime? fromDate,[FromQuery] DateTime? toDate,[FromQuery] string? type)
+        [HttpGet("report")]
+        public async Task<IActionResult> DownloadReport([FromQuery] CibilReportRequestDto request)
         {
-            var fileBytes = await _service.GetCibilReportExcelAsync(fromDate, toDate, type);
+            var fileBytes = await _service.GetCibilReportExcelAsync(request);
 
             if (fileBytes == null || fileBytes.Length == 0)
                 return BadRequest("No data found for selected filters.");
@@ -337,8 +299,7 @@ namespace ProductivityApi.Controllers
             return File(
                 fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Cibil_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
-            );
+                $"Cibil_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
         }
 
     }

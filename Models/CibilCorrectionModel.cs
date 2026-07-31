@@ -71,72 +71,6 @@ namespace ProductivityApi.Models
     // =========================================================
     // NON CUSTOMER
     // =========================================================
-    //public class CibilCorrectionNonCustomer
-    //{
-    //    public int Id { get; set; }
-    //    public string Name { get; set; } = string.Empty;
-    //    public DateTime? DOB { get; set; }
-    //    public string? PAN { get; set; }
-    //    public string? Account_Number { get; set; }
-    //    public string? Mobile_Number { get; set; }
-    //    public string? Address { get; set; }
-    //    public string? ERN_No { get; set; }
-    //    public string? LAN_Number { get; set; }
-    //    public string? Details_of_Complainant { get; set; }
-    //    public string? Details_Actual_Customer { get; set; }
-    //    public string? Status { get; set; }
-    //    public string? Created_By { get; set; }
-    //    public DateTime? Created_Dt { get; set; }
-    //    public string? Updated_By { get; set; }
-    //    public DateTime? Updated_Dt { get; set; }
-    //}
-
-    //public class CreateNonCustomerDto
-    //{
-    //    public string Name { get; set; } = string.Empty;
-    //    public DateTime? DOB { get; set; }
-    //    public string? PAN { get; set; }
-    //    public string? Account_Number { get; set; }
-    //    public string? Mobile_Number { get; set; }
-    //    public string? Address { get; set; }
-    //    public string? ERN_No { get; set; }
-    //    public string? LAN_Number { get; set; }
-    //    public string? Details_of_Complainant { get; set; }
-    //    public string? Details_Actual_Customer { get; set; }
-    //    public string? Status { get; set; }
-    //    public string? Created_By { get; set; }
-    //}
-
-    //public class UpdateNonCustomerDto
-    //{
-    //    public int Id { get; set; }
-    //    public string Name { get; set; } = string.Empty;
-    //    public DateTime? DOB { get; set; }
-    //    public string? PAN { get; set; }
-    //    public string? Account_Number { get; set; }
-    //    public string? Mobile_Number { get; set; }
-    //    public string? Address { get; set; }
-    //    public string? ERN_No { get; set; }
-    //    public string? LAN_Number { get; set; }
-    //    public string? Details_of_Complainant { get; set; }
-    //    public string? Details_Actual_Customer { get; set; }
-    //    public string? Updated_By { get; set; }
-    //}
-
-    //public class UpdateNonCustomerStatusDto
-    //{
-    //    public int Id { get; set; }
-    //    public string? Status { get; set; }
-    //    public string? Updated_By { get; set; }
-    //}
-
-    //public class NonCustomerResponseDto
-    //{
-    //    public CibilCorrectionNonCustomer? NonCustomer { get; set; }
-
-    //    public List<CibilCorrectionLog> Logs { get; set; } = new();
-    //}
-
     public class PersonDetailDto
     {
         [Required]
@@ -263,6 +197,8 @@ namespace ProductivityApi.Models
         public DateTime? Date_Last_Payment { get; set; }
         public DateTime? Date_Reported { get; set; }
         public decimal? Sanctioned_amount { get; set; }
+        public decimal? Total_Outstanding { get; set; }
+        public decimal? Principal_Outstanding { get; set; }
         public int? NDPD_latest_month { get; set; }
         public string? Account_Status { get; set; }
         public string? Credit_Facility_Status { get; set; }
@@ -336,19 +272,6 @@ namespace ProductivityApi.Models
         public string Updated_By { get; set; } = string.Empty;
         public string? Remarks { get; set; }
     }
-    //public class CibilCorrectionLog
-    //{
-    //    public int Id { get; set; }
-    //    public string TableName { get; set; } = string.Empty;
-    //    public int RecordId { get; set; }
-    //    public string? Account_Number { get; set; }
-    //    public string? LAN_Number { get; set; }
-    //    public string? Old_Status { get; set; }
-    //    public string? New_Status { get; set; }
-    //    public string? Remarks { get; set; }
-    //    public string? Updated_By { get; set; }
-    //    public DateTime? Updated_Dt { get; set; }
-    //}
 
     public class CibilCorrectionLog
     {
@@ -373,24 +296,6 @@ namespace ProductivityApi.Models
         public string? UserId { get; set; }
         public string? Role { get; set; }
     }
-
-    //public class WCWSSCFormatRequestDto
-    //{
-    //    [Required]
-    //    public string LAN { get; set; } = string.Empty;
-    //    [Required]
-    //    public string RequestType { get; set; } = string.Empty;
-    //    [Required]
-    //    public DateTime? Date_Last_Payment { get; set; }
-    //    [Required]
-    //    public decimal? Total_Outstanding { get; set; }
-    //    [Required]
-    //    public decimal? Principal_Outstanding { get; set; }
-    //    [Required]
-    //    public decimal? Settlement_Amount { get; set; }
-    //    [Required]
-    //    public decimal? Amount_Received { get; set; }
-    //}
 
     public class WCWSSCFormatResponseDto
     {
@@ -418,5 +323,12 @@ namespace ProductivityApi.Models
         public string? Consumer_Name { get; set; }
         public string? Applicant_Type { get; set; }
         public string? Collateral_Id { get; set; }
+    }
+
+    public class CibilReportRequestDto
+    {
+        public string Type { get; set; } = string.Empty;
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 }
