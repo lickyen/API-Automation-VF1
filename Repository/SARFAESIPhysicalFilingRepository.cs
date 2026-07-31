@@ -100,14 +100,25 @@ namespace ProductivityApi.Repository
         public async Task<bool> SubmitLegalReviewAsync(SARFAESIPhysicalFilingLegalReviewSubmitDto dto)
         {
             using var conn = new SqlConnection(_conStr);
+
             var table = new DataTable();
             table.Columns.Add("ChecklistItemId", typeof(int));
             table.Columns.Add("IsAvailable", typeof(bool));
             table.Columns.Add("Comments", typeof(string));
 
             foreach (var item in dto.Checklist)
-                table.Rows.Add(item.ChecklistItemId, item.IsAvailable!.Value,  item.Comments.Trim());
-            var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitLegalReview", new { dto.CaseId, Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalReview"), SubmittedBy = dto.SubmittedBy.Trim() }, commandType: CommandType.StoredProcedure);
+                table.Rows.Add(item.ChecklistItemId, item.IsAvailable!.Value, string.IsNullOrWhiteSpace(item.Comments) ? DBNull.Value : item.Comments.Trim());
+
+            var rowsAffected = await conn.ExecuteScalarAsync<int>(
+                "dbo.sp_SARFAESIPhysicalFiling_SubmitLegalReview",
+                new
+                {
+                    dto.CaseId,
+                    Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalReview"),
+                    SubmittedBy = dto.SubmittedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
             return rowsAffected > 0;
         }
 

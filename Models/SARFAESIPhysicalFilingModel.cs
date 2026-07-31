@@ -176,9 +176,7 @@ namespace ProductivityApi.Models
 
         [Required]
         public bool? IsAvailable { get; set; }
-
-        [Required]
-        public string Comments { get; set; } = string.Empty;
+        public string? Comments { get; set; }
     }
 
     public class SARFAESIPhysicalFilingLegalReviewSubmitDto
