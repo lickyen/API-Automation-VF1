@@ -1,6 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Services
 {
@@ -99,6 +100,21 @@ namespace ProductivityApi.Services
 
             var updated = await _repository.SubmitFilingDetailsAsync(dto);
             return updated ? (true, "Filing details submitted successfully.") : (false, "Case not found or Advocate Assignment is incomplete.");
+        }
+
+        public Task<List<SARFAESIPhysicalFilingReportItem>> GetReportDataAsync(SARFAESIPhysicalFilingReportFilterDto dto)
+        {
+            return _repository.GetReportDataAsync(dto);
+        }
+
+        public async Task<byte[]?> GetReportExcelAsync(SARFAESIPhysicalFilingReportFilterDto dto)
+        {
+            var data = await _repository.GetReportDataAsync(dto);
+
+            if (data.Count == 0)
+                return null;
+
+            return ExcelHelper.GenerateExcel(data, "Physical Filing Report");
         }
     }
 }

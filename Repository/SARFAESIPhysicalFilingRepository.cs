@@ -142,5 +142,25 @@ namespace ProductivityApi.Repository
 
             return (await conn.QueryAsync<SARFAESIPhysicalFilingLog>("dbo.sp_SARFAESIPhysicalFiling_GetLogs", new { CaseId = caseId }, commandType: CommandType.StoredProcedure)).ToList();
         }
+
+        public async Task<List<SARFAESIPhysicalFilingReportItem>> GetReportDataAsync(SARFAESIPhysicalFilingReportFilterDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var parameters = new
+            {
+                MegaZone = dto.MegaZone?.Trim(),
+                Poc = dto.Poc?.Trim(),
+                dto.AdvocateId,
+                WorkflowStage = dto.WorkflowStage?.Trim(),
+                FilingType = dto.FilingType?.Trim(),
+                dto.FromDate,
+                dto.ToDate,
+                CaseStatus = dto.CaseStatus?.Trim(),
+                Lan = dto.Lan?.Trim()
+            };
+
+            return (await conn.QueryAsync<SARFAESIPhysicalFilingReportItem>("dbo.sp_SARFAESIPhysicalFiling_Report", parameters, commandType: CommandType.StoredProcedure)).ToList();
+        }
     }
 }

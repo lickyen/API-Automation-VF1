@@ -258,4 +258,36 @@ namespace ProductivityApi.Models
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
     }
+
+    public class SARFAESIPhysicalFilingReportFilterDto
+    {
+        public string? MegaZone { get; set; }
+        public string? Poc { get; set; }
+        public int? AdvocateId { get; set; }
+        public string? WorkflowStage { get; set; }
+        public string? FilingType { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string? CaseStatus { get; set; }
+        public string? Lan { get; set; }
+    }
+
+    public class SARFAESIPhysicalFilingReportItem
+    {
+        public string Lan { get; set; } = string.Empty;
+        public string? MegaZone { get; set; }
+        public string? AssignedPoc { get; set; }
+        public string? AdvocateName { get; set; }
+        public string CurrentWorkflowStage { get; set; } = string.Empty;
+        public string CurrentCaseStatus { get; set; } = string.Empty;
+        public string? LegalChecklistStatus { get; set; }
+        public string? FieldReceiptStatus { get; set; }
+        public DateTime? AssignmentDate { get; set; }
+        public string? FilingType { get; set; }
+        public DateTime? EFilingDate { get; set; }
+        public DateTime? PhysicalFilingDate { get; set; }
+        public string? CaseNumber { get; set; }
+        public string? LastUpdatedBy { get; set; }
+        public DateTime? LastUpdatedDateTime { get; set; }
+    }
 }

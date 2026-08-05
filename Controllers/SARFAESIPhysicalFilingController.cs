@@ -108,5 +108,27 @@ namespace ProductivityApi.Controllers
             var result = await _service.SubmitFilingDetailsAsync(dto);
             return result.Success ? Ok(new Response(true, null, result.Message)) : BadRequest(new Response(false, null, result.Message));
         }
+
+        [HttpPost("report/data")]
+        public async Task<IActionResult> GetReportData([FromBody] SARFAESIPhysicalFilingReportFilterDto dto)
+        {
+            var data = await _service.GetReportDataAsync(dto);
+
+            if (data.Count == 0)
+                return Ok(new Response(true, data, "No records found."));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPost("report/excel")]
+        public async Task<IActionResult> GetReportExcel([FromBody] SARFAESIPhysicalFilingReportFilterDto dto)
+        {
+            var bytes = await _service.GetReportExcelAsync(dto);
+
+            if (bytes == null)
+                return NotFound(new Response(false, null, "No data found for report."));
+
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"SARFAESI_PhysicalFiling_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        }
     }
 }
