@@ -135,5 +135,12 @@ namespace ProductivityApi.Repository
             var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitFilingDetails", new { dto.CaseId, FilingType = dto.FilingType.Trim(), CourtName = dto.CourtName.Trim(), dto.EFilingDate, EFilingCaseNumber = dto.EFilingCaseNumber?.Trim(), dto.PhysicalFilingDate, PhysicalFilingCaseNumber = dto.PhysicalFilingCaseNumber?.Trim(), UpdatedBy = dto.UpdatedBy.Trim() }, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }
+
+        public async Task<List<SARFAESIPhysicalFilingLog>> GetLogsAsync(int caseId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return (await conn.QueryAsync<SARFAESIPhysicalFilingLog>("dbo.sp_SARFAESIPhysicalFiling_GetLogs", new { CaseId = caseId }, commandType: CommandType.StoredProcedure)).ToList();
+        }
     }
 }

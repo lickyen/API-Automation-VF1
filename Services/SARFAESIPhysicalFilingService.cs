@@ -51,6 +51,7 @@ namespace ProductivityApi.Services
                 return null;
 
             data.Checklist = await _repository.GetChecklistAsync(caseId);
+            data.Logs = await _repository.GetLogsAsync(caseId);
             return data;
         }
 

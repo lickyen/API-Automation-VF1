@@ -51,6 +51,8 @@ namespace ProductivityApi.Models
         public string? UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
         public List<SARFAESIPhysicalFilingChecklistItem> Checklist { get; set; } = [];
+
+        public List<SARFAESIPhysicalFilingLog> Logs { get; set; } = [];
     }
 
     public class SARFAESIPhysicalFilingDocumentMaster
@@ -244,5 +246,16 @@ namespace ProductivityApi.Models
         public string? CourtName { get; set; }
         public DateTime CreatedDt { get; set; }
         public DateTime? UpdatedDt { get; set; }
+    }
+
+    public class SARFAESIPhysicalFilingLog
+    {
+        public int Id { get; set; }
+        public int CaseId { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string Stage { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime CreatedDt { get; set; }
     }
 }
