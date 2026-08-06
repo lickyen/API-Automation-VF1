@@ -268,7 +268,6 @@ namespace ProductivityApi.Models
         public string? FilingType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
-        public string? CaseStatus { get; set; }
         public string? Lan { get; set; }
     }
 
@@ -277,9 +276,9 @@ namespace ProductivityApi.Models
         public string Lan { get; set; } = string.Empty;
         public string? MegaZone { get; set; }
         public string? AssignedPoc { get; set; }
+        public int? AdvocateId { get; set; }
         public string? AdvocateName { get; set; }
-        public string CurrentWorkflowStage { get; set; } = string.Empty;
-        public string CurrentCaseStatus { get; set; } = string.Empty;
+        public string WorkflowStage { get; set; } = string.Empty;
         public string? LegalChecklistStatus { get; set; }
         public string? FieldReceiptStatus { get; set; }
         public DateTime? AssignmentDate { get; set; }

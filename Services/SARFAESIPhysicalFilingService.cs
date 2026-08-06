@@ -106,15 +106,5 @@ namespace ProductivityApi.Services
         {
             return _repository.GetReportDataAsync(dto);
         }
-
-        public async Task<byte[]?> GetReportExcelAsync(SARFAESIPhysicalFilingReportFilterDto dto)
-        {
-            var data = await _repository.GetReportDataAsync(dto);
-
-            if (data.Count == 0)
-                return null;
-
-            return ExcelHelper.GenerateExcel(data, "Physical Filing Report");
-        }
     }
 }

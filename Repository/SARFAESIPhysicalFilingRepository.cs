@@ -156,7 +156,6 @@ namespace ProductivityApi.Repository
                 FilingType = dto.FilingType?.Trim(),
                 dto.FromDate,
                 dto.ToDate,
-                CaseStatus = dto.CaseStatus?.Trim(),
                 Lan = dto.Lan?.Trim()
             };
 
