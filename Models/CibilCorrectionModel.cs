@@ -5,27 +5,6 @@ using System.Text.Json.Serialization;
 namespace ProductivityApi.Models
 {
     // =========================================================
-    // INDUS ARCHIVED MASTER
-    // =========================================================
-    public class IndusArchivedMaster
-    {
-        public string? LoanAccountNo { get; set; }
-        public string? ApplicantType { get; set; }
-        public string? BranchCode { get; set; }
-        public string? BranchName { get; set; }
-        public string? ClusterName { get; set; }
-        public string? StateName { get; set; }
-        public string? CustomerId { get; set; }
-        public string? CustomerName { get; set; }
-        public string? CollateralId { get; set; }
-        public string? LoanStatus { get; set; }
-        public string? LoanClosureDate { get; set; }
-        public string? DisbursementDate { get; set; }
-        public string? CorrectionDate { get; set; }
-        public string? NocStatus { get; set; }
-    }
-
-    // =========================================================
     // LOAN CANCELLATION
     // =========================================================
     public class CibilCorrectionLoanCancellation

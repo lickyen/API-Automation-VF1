@@ -108,6 +108,7 @@ builder.Services.AddScoped<DmsDocsService>();
 builder.Services.AddScoped<BulkDocsService>();
 builder.Services.AddScoped<BulkFclService>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
+builder.Services.AddScoped<IndusArchivedRepository>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -144,6 +145,7 @@ builder.Services.AddScoped<DmsDocsRepository>();
 builder.Services.AddScoped<BulkDocsRepository>();
 builder.Services.AddScoped<BulkFclRepository>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
+builder.Services.AddScoped<IndusArchivedService>();
 
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();

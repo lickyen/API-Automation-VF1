@@ -13,6 +13,7 @@ namespace ProductivityApi.Services
     {
         private readonly NOCRepository _repository;
         private readonly PLFRepository _plfRepository;
+        private readonly IndusArchivedRepository _indusArchivedRepository;
         private readonly BranchServices _branchService;
 
         private readonly EmailService _emailService;
@@ -26,6 +27,7 @@ namespace ProductivityApi.Services
         public NOCService(
             NOCRepository repository,
             PLFRepository plfRepository,
+            IndusArchivedRepository indusArchivedRepository,
             EmailService emailService,
             SmsService smsService,
             IConfiguration configuration,
@@ -37,6 +39,7 @@ namespace ProductivityApi.Services
         {
             _repository = repository;
             _plfRepository = plfRepository;
+            _indusArchivedRepository = indusArchivedRepository;
             _emailService = emailService;
             _smsService = smsService;
             _configuration = configuration;
@@ -56,26 +59,88 @@ namespace ProductivityApi.Services
             return await _repository.GetClosedLansAsync(isEligible);
         }
 
+        //public async Task<object> GetLinkedLoansByLanAsync(string lan)
+        //{
+        //    // Step 1: Get linked loans
+        //    var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
+
+        //    if (!loans.Any())
+        //        return Enumerable.Empty<object>();
+
+        //    // Step 2: Fetch applicants/co-applicants for all linked loans
+        //    var loanAccountNos = loans
+        //        .Select(x => x.LoanAccountNo)
+        //        .Distinct()
+        //        .ToArray();
+
+        //    var applicants = await _plfRepository.GetApplicantsByLansAsync(loanAccountNos);
+
+        //    // Step 3: Attach applicants to each loan
+        //    var applicantsLookup = applicants.ToLookup(a => a.LoanAccountNo);
+
+        //    var result = loans.Select(loan => new
+        //    {
+        //        LoanAccountNo = loan.LoanAccountNo,
+        //        BranchCode = loan.BranchCode,
+        //        LoanStatus = loan.LoanStatus,
+        //        NocStatus = loan.NocStatus,
+        //        DisbDate = loan.DisbursementDate,
+        //        ClosureDate = loan.LoanClosureDate,
+        //        CustomerId = loan.CustomerId,
+        //        CustomerName = loan.CustomerName,
+        //        CollateralId = loan.CollateralId,
+
+        //        Customers = applicantsLookup[loan.LoanAccountNo]
+        //            .Select(a => new
+        //            {
+        //                CustId = a.CustomerId,
+        //                CustName = a.CustomerName,
+        //                ApplicantType = a.ApplicantType
+        //            })
+        //            .ToList()
+        //    });
+
+        //    return result;
+        //}
+
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
-            // Step 1: Get linked loans
-            var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
+            // Step 1: Get linked loans from PLF and INDUS
+            var plfLoans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
+            var indusLoans = await _indusArchivedRepository.GetLinkedLoansByLanAsync(lan);
 
-            if (!loans.Any())
+            if (!plfLoans.Any() && !indusLoans.Any())
                 return Enumerable.Empty<object>();
 
-            // Step 2: Fetch applicants/co-applicants for all linked loans
-            var loanAccountNos = loans
+            // Step 2: Get all linked LANs from PLF
+            var plfLoanAccountNos = plfLoans
                 .Select(x => x.LoanAccountNo)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct()
                 .ToArray();
 
-            var applicants = await _plfRepository.GetApplicantsByLansAsync(loanAccountNos);
+            // Step 3: Get all linked LANs from INDUS
+            var indusLoanAccountNos = indusLoans
+                .Select(x => x.LoanAccountNo)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToArray();
 
-            // Step 3: Attach applicants to each loan
-            var applicantsLookup = applicants.ToLookup(a => a.LoanAccountNo);
+            // Step 4: Fetch PLF applicants
+            var plfApplicants = plfLoanAccountNos.Any()
+                ? await _plfRepository.GetApplicantsByLansAsync(plfLoanAccountNos)
+                : [];
 
-            var result = loans.Select(loan => new
+            // Step 5: Fetch INDUS applicants
+            var indusApplicants = indusLoanAccountNos.Any()
+                ? await _indusArchivedRepository.GetApplicantsByLansAsync(indusLoanAccountNos)
+                : [];
+
+            var plfApplicantsLookup = plfApplicants.ToLookup(x => x.LoanAccountNo);
+            var indusApplicantsLookup = indusApplicants.ToLookup(x => x.LoanAccountNo);
+
+            // Step 6: Map PLF loans
+            var plfResult = plfLoans.Select(loan => new
             {
                 LoanAccountNo = loan.LoanAccountNo,
                 BranchCode = loan.BranchCode,
@@ -86,8 +151,9 @@ namespace ProductivityApi.Services
                 CustomerId = loan.CustomerId,
                 CustomerName = loan.CustomerName,
                 CollateralId = loan.CollateralId,
+                Source = "PLF",
 
-                Customers = applicantsLookup[loan.LoanAccountNo]
+                Customers = plfApplicantsLookup[loan.LoanAccountNo]
                     .Select(a => new
                     {
                         CustId = a.CustomerId,
@@ -97,9 +163,36 @@ namespace ProductivityApi.Services
                     .ToList()
             });
 
-            return result;
-        }
+            // Step 7: Map INDUS loans
+            var indusResult = indusLoans.Select(loan => new
+            {
+                LoanAccountNo = loan.LoanAccountNo,
+                BranchCode = loan.BranchId,
+                LoanStatus = loan.LoanStatus,
+                NocStatus = loan.NocStatus,
+                DisbDate = loan.DisbursementDate,
+                ClosureDate = loan.ClosureDate,
+                CustomerId = loan.CustomerId,
+                CustomerName = loan.CustomerName,
+                CollateralId = loan.CollateralId,
+                Source = "INDUS",
 
+                Customers = indusApplicantsLookup[loan.LoanAccountNo]
+                    .Select(a => new
+                    {
+                        CustId = a.CustomerId,
+                        CustName = a.CustomerName,
+                        ApplicantType = a.ApplicantType
+                    })
+                    .ToList()
+            });
+
+            // Step 8: Merge both sources
+            return plfResult
+                .Cast<object>()
+                .Concat(indusResult.Cast<object>())
+                .ToList();
+        }
         public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
         {
             await _repository.InsertTransactionAsync(dto);

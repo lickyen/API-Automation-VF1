@@ -116,6 +116,7 @@ namespace ProductivityApi.Jobs
                 else
                 {
                     // Step 3: Check for active loans on same collateral ID
+                    // No need to check in Indus Archived since we are looking only for active loans
                     var collLoans = await _plfRepository.GetLoansByCollIdAsync(lan.CollateralId);
                     var hasActiveLoan = collLoans.Any(x => x.LoanStatus == "Active Loan");
 
