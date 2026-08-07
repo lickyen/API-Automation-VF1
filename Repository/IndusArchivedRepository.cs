@@ -31,6 +31,57 @@ namespace ProductivityApi.Repository
                 PRINCIPAL_OUTSTANDING AS PrincipalOutstanding
             FROM INDUS_ARCHIVED_MASTER";
 
+        private const string IndusArchivedDistinctColumns = @"
+            SELECT
+                LoanAccountNo,
+                ApplicantType,
+                BranchId,
+                BranchName,
+                ClusterName,
+                StateName,
+                CustomerId,
+                CustomerName,
+                CollateralId,
+                LoanStatus,
+                ClosureDate,
+                DisbursementDate,
+                CorrectionDate,
+                NocStatus,
+                CreatedBy,
+                CreatedDate,
+                LoanAmount,
+                TotalOutstanding,
+                PrincipalOutstanding
+            FROM
+            (
+                SELECT
+                    SZ_LOAN_ACCOUNT_NO AS LoanAccountNo,
+                    APPLICANT_TYPE AS ApplicantType,
+                    BRANCH_ID AS BranchId,
+                    BRANCH_NAME AS BranchName,
+                    CLUSTER_NAME AS ClusterName,
+                    STATE_NAME AS StateName,
+                    CUSOMER_ID AS CustomerId,
+                    CUSTOMER_NAME AS CustomerName,
+                    SZ_COLLATERAL_ID AS CollateralId,
+                    LOAN_STATUS AS LoanStatus,
+                    CLOSURE_DATE AS ClosureDate,
+                    DISB_DATE AS DisbursementDate,
+                    DT_CORRECTION AS CorrectionDate,
+                    NOC_STATUS AS NocStatus,
+                    CREATED_BY AS CreatedBy,
+                    CREATED_DT AS CreatedDate,
+                    LOAN_AMOUNT AS LoanAmount,
+                    TOTAL_OUTSTANDING AS TotalOutstanding,
+                    PRINCIPAL_OUTSTANDING AS PrincipalOutstanding,
+                    ROW_NUMBER() OVER
+                    (
+                        PARTITION BY SZ_LOAN_ACCOUNT_NO
+                        ORDER BY CASE WHEN APPLICANT_TYPE = 'B' THEN 0 ELSE 1 END
+                    ) AS RowNum
+                FROM INDUS_ARCHIVED_MASTER
+            ) X";
+
         public IndusArchivedRepository(IConfiguration config)
         {
             _conStr = config.GetConnectionString("DBConn")!;
@@ -39,7 +90,12 @@ namespace ProductivityApi.Repository
         public async Task<IEnumerable<IndusArchivedMaster>> GetAllAsync()
         {
             using var conn = new SqlConnection(_conStr);
-            return await conn.QueryAsync<IndusArchivedMaster>(IndusArchivedColumns);
+
+            var sql = $@"
+                {IndusArchivedDistinctColumns}
+                WHERE RowNum = 1";
+
+            return await conn.QueryAsync<IndusArchivedMaster>(sql);
         }
 
         public async Task<IndusArchivedMaster?> GetByLanAsync(string lan)
@@ -47,9 +103,9 @@ namespace ProductivityApi.Repository
             using var conn = new SqlConnection(_conStr);
 
             var sql = $@"
-                {IndusArchivedColumns}
-                WHERE SZ_LOAN_ACCOUNT_NO = @lan
-                AND APPLICANT_TYPE = 'B'";
+                {IndusArchivedDistinctColumns}
+                WHERE RowNum = 1
+                AND LoanAccountNo = @lan";
 
             return await conn.QueryFirstOrDefaultAsync<IndusArchivedMaster>(sql, new { lan });
         }
@@ -59,14 +115,14 @@ namespace ProductivityApi.Repository
             using var conn = new SqlConnection(_conStr);
 
             var sql = $@"
-                {IndusArchivedColumns}
-                WHERE CUSOMER_ID IN
+                {IndusArchivedDistinctColumns}
+                WHERE RowNum = 1
+                AND CustomerId IN
                 (
                     SELECT CUSOMER_ID
                     FROM INDUS_ARCHIVED_MASTER
                     WHERE SZ_LOAN_ACCOUNT_NO = @lan
-                )
-                AND APPLICANT_TYPE = 'B'";
+                )";
 
             var result = await conn.QueryAsync<IndusArchivedMaster>(sql, new { lan });
             return result.ToList();
