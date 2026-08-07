@@ -140,53 +140,71 @@ namespace ProductivityApi.Services
             var indusApplicantsLookup = indusApplicants.ToLookup(x => x.LoanAccountNo);
 
             // Step 6: Map PLF loans
-            var plfResult = plfLoans.Select(loan => new
+            var plfResult = plfLoans.Select(loan =>
             {
-                LoanAccountNo = loan.LoanAccountNo,
-                BranchCode = loan.BranchCode,
-                LoanStatus = loan.LoanStatus,
-                NocStatus = loan.NocStatus,
-                DisbDate = loan.DisbursementDate,
-                ClosureDate = loan.LoanClosureDate,
-                CustomerId = loan.CustomerId,
-                CustomerName = loan.CustomerName,
-                CollateralId = loan.CollateralId,
-                Source = "PLF",
+                var loanApplicants = plfApplicantsLookup[loan.LoanAccountNo].ToList();
 
-                Customers = plfApplicantsLookup[loan.LoanAccountNo]
-                    .Select(a => new
-                    {
-                        CustId = a.CustomerId,
-                        CustName = a.CustomerName,
-                        ApplicantType = a.ApplicantType
-                    })
-                    .ToList()
+                var borrower = loanApplicants
+                    .FirstOrDefault(x => x.ApplicantType?.Trim() == "B");
+
+                return new
+                {
+                    LoanAccountNo = loan.LoanAccountNo,
+                    BranchCode = loan.BranchCode,
+                    LoanStatus = loan.LoanStatus,
+                    NocStatus = loan.NocStatus,
+                    DisbDate = loan.DisbursementDate,
+                    ClosureDate = loan.LoanClosureDate,
+
+                    CustomerId = borrower?.CustomerId ?? loan.CustomerId,
+                    CustomerName = borrower?.CustomerName ?? loan.CustomerName,
+
+                    CollateralId = loan.CollateralId,
+                    Source = "PLF",
+
+                    Customers = loanApplicants
+                        .Select(a => new
+                        {
+                            CustId = a.CustomerId,
+                            CustName = a.CustomerName,
+                            ApplicantType = a.ApplicantType
+                        })
+                        .ToList()
+                };
             });
-
             // Step 7: Map INDUS loans
-            var indusResult = indusLoans.Select(loan => new
+            var indusResult = indusLoans.Select(loan =>
             {
-                LoanAccountNo = loan.LoanAccountNo,
-                BranchCode = loan.BranchId,
-                LoanStatus = loan.LoanStatus,
-                NocStatus = loan.NocStatus,
-                DisbDate = loan.DisbursementDate,
-                ClosureDate = loan.ClosureDate,
-                CustomerId = loan.CustomerId,
-                CustomerName = loan.CustomerName,
-                CollateralId = loan.CollateralId,
-                Source = "INDUS",
+                var loanApplicants = indusApplicantsLookup[loan.LoanAccountNo].ToList();
 
-                Customers = indusApplicantsLookup[loan.LoanAccountNo]
-                    .Select(a => new
-                    {
-                        CustId = a.CustomerId,
-                        CustName = a.CustomerName,
-                        ApplicantType = a.ApplicantType
-                    })
-                    .ToList()
+                var borrower = loanApplicants
+                    .FirstOrDefault(x => x.ApplicantType?.Trim() == "B");
+
+                return new
+                {
+                    LoanAccountNo = loan.LoanAccountNo,
+                    BranchCode = loan.BranchId,
+                    LoanStatus = loan.LoanStatus,
+                    NocStatus = loan.NocStatus,
+                    DisbDate = loan.DisbursementDate,
+                    ClosureDate = loan.ClosureDate,
+
+                    CustomerId = borrower?.CustomerId ?? loan.CustomerId,
+                    CustomerName = borrower?.CustomerName ?? loan.CustomerName,
+
+                    CollateralId = loan.CollateralId,
+                    Source = "INDUS",
+
+                    Customers = loanApplicants
+                        .Select(a => new
+                        {
+                            CustId = a.CustomerId,
+                            CustName = a.CustomerName,
+                            ApplicantType = a.ApplicantType
+                        })
+                        .ToList()
+                };
             });
-
             // Step 8: Merge both sources
             return plfResult
                 .Cast<object>()
