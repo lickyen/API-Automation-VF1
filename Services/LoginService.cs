@@ -143,7 +143,9 @@ namespace ProductivityApi.Services
                     profile.State = result.Properties["st"].Count > 0 ? result.Properties["st"][0].ToString() : "";
 
                     // Get flattened manager chain (L1/L2/L3)
-                    var managers = GetManagerChain(result);
+                    //
+                    //var managers = GetManagerChain(result);
+                    var managers = new List<ManagerInfo>();
                     if (managers.Count > 0) profile.L1Manager = managers[0];
                     if (managers.Count > 1) profile.L2Manager = managers[1];
                     if (managers.Count > 2) profile.L3Manager = managers[2];

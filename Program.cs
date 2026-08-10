@@ -208,12 +208,12 @@ app.UseCors("AllowFrontend");
 
 app.UseStaticFiles(); // keeps default wwwroot working
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.WebRootPath, "wb")),
-    RequestPath = "/wb"
-});
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider(
+//        Path.Combine(builder.Environment.WebRootPath, "wb")),
+//    RequestPath = "/wb"
+//});
 
 
 
