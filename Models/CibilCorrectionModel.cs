@@ -64,6 +64,15 @@ namespace ProductivityApi.Models
         [Required]
         public string PAN { get; set; } = string.Empty;
 
+        // Optional
+        public string? Aadhar_No { get; set; }
+
+        // Optional
+        public string? Voter_Id { get; set; }
+
+        // Optional
+        public string? Driving_License_No { get; set; }
+
         [Required]
         public string Account_Number { get; set; } = string.Empty;
 
@@ -86,6 +95,9 @@ namespace ProductivityApi.Models
         public string Complainant_Name { get; set; } = string.Empty;
         public DateTime? Complainant_DOB { get; set; }
         public string? Complainant_PAN { get; set; }
+        public string? Complainant_Aadhar_No { get; set; }
+        public string? Complainant_Voter_Id { get; set; }
+        public string? Complainant_Driving_License_No { get; set; }
         public string? Complainant_Account_Number { get; set; }
         public string? Complainant_Mobile_Number { get; set; }
         public string? Complainant_Address { get; set; }
@@ -95,6 +107,9 @@ namespace ProductivityApi.Models
         public string ActualCustomer_Name { get; set; } = string.Empty;
         public DateTime? ActualCustomer_DOB { get; set; }
         public string? ActualCustomer_PAN { get; set; }
+        public string? ActualCustomer_Aadhar_No { get; set; }
+        public string? ActualCustomer_Voter_Id { get; set; }
+        public string? ActualCustomer_Driving_License_No { get; set; }
         public string? ActualCustomer_Account_Number { get; set; }
         public string? ActualCustomer_Mobile_Number { get; set; }
         public string? ActualCustomer_Address { get; set; }

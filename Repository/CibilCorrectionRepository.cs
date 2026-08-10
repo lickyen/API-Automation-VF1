@@ -242,6 +242,9 @@ namespace ProductivityApi.Repository
             Complainant_Name,
             Complainant_DOB,
             Complainant_PAN,
+            Complainant_Aadhar_No,
+            Complainant_Voter_Id,
+            Complainant_Driving_License_No,
             Complainant_Account_Number,
             Complainant_Mobile_Number,
             Complainant_Address,
@@ -251,6 +254,9 @@ namespace ProductivityApi.Repository
             ActualCustomer_Name,
             ActualCustomer_DOB,
             ActualCustomer_PAN,
+            ActualCustomer_Aadhar_No,
+            ActualCustomer_Voter_Id,
+            ActualCustomer_Driving_License_No,
             ActualCustomer_Account_Number,
             ActualCustomer_Mobile_Number,
             ActualCustomer_Address,
@@ -268,6 +274,9 @@ namespace ProductivityApi.Repository
             @Complainant_Name,
             @Complainant_DOB,
             @Complainant_PAN,
+            @Complainant_Aadhar_No,
+            @Complainant_Voter_Id,
+            @Complainant_Driving_License_No,
             @Complainant_Account_Number,
             @Complainant_Mobile_Number,
             @Complainant_Address,
@@ -277,6 +286,9 @@ namespace ProductivityApi.Repository
             @ActualCustomer_Name,
             @ActualCustomer_DOB,
             @ActualCustomer_PAN,
+            @ActualCustomer_Aadhar_No,
+            @ActualCustomer_Voter_Id,
+            @ActualCustomer_Driving_License_No,
             @ActualCustomer_Account_Number,
             @ActualCustomer_Mobile_Number,
             @ActualCustomer_Address,
@@ -483,6 +495,9 @@ namespace ProductivityApi.Repository
             Complainant_Account_Number = @Complainant_Account_Number,
             Complainant_Mobile_Number = @Complainant_Mobile_Number,
             Complainant_Address = @Complainant_Address,
+            Complainant_Aadhar_No = @Complainant_Aadhar_No,
+            Complainant_Voter_Id = @Complainant_Voter_Id,
+            Complainant_Driving_License_No = @Complainant_Driving_License_No,
             Complainant_ERN_No = @Complainant_ERN_No,
             Complainant_LAN_Number = @Complainant_LAN_Number,
 
@@ -492,6 +507,9 @@ namespace ProductivityApi.Repository
             ActualCustomer_Account_Number = @ActualCustomer_Account_Number,
             ActualCustomer_Mobile_Number = @ActualCustomer_Mobile_Number,
             ActualCustomer_Address = @ActualCustomer_Address,
+            ActualCustomer_Aadhar_No = @ActualCustomer_Aadhar_No,
+            ActualCustomer_Voter_Id = @ActualCustomer_Voter_Id,
+            ActualCustomer_Driving_License_No = @ActualCustomer_Driving_License_No,
             ActualCustomer_ERN_No = @ActualCustomer_ERN_No,
             ActualCustomer_LAN_Number = @ActualCustomer_LAN_Number,
 
@@ -511,7 +529,6 @@ namespace ProductivityApi.Repository
 
             return rows > 0;
         }
-
         public async Task<bool> UpdateNonCustomerStatusAsync(
             UpdateNonCustomerStatusDto dto)
         {
@@ -777,6 +794,11 @@ namespace ProductivityApi.Repository
             p.Add($"{prefix}_Account_Number", person.Account_Number);
             p.Add($"{prefix}_Mobile_Number", person.Mobile_Number);
             p.Add($"{prefix}_Address", person.Address);
+
+            p.Add($"{prefix}_Aadhar_No", person.Aadhar_No);
+            p.Add($"{prefix}_Voter_Id", person.Voter_Id);
+            p.Add($"{prefix}_Driving_License_No", person.Driving_License_No);
+
             p.Add($"{prefix}_ERN_No", person.ERN_No);
             p.Add($"{prefix}_LAN_Number", person.LAN_Number);
         }
@@ -801,6 +823,9 @@ namespace ProductivityApi.Repository
                     Name = record.Complainant_Name,
                     DOB = record.Complainant_DOB ?? default,
                     PAN = record.Complainant_PAN ?? string.Empty,
+                    Aadhar_No = record.Complainant_Aadhar_No,
+                    Voter_Id = record.Complainant_Voter_Id,
+                    Driving_License_No = record.Complainant_Driving_License_No,
                     Account_Number = record.Complainant_Account_Number ?? string.Empty,
                     Mobile_Number = record.Complainant_Mobile_Number,
                     Address = record.Complainant_Address ?? string.Empty,
@@ -813,6 +838,9 @@ namespace ProductivityApi.Repository
                     Name = record.ActualCustomer_Name,
                     DOB = record.ActualCustomer_DOB ?? default,
                     PAN = record.ActualCustomer_PAN ?? string.Empty,
+                    Aadhar_No = record.ActualCustomer_Aadhar_No,
+                    Voter_Id = record.ActualCustomer_Voter_Id,
+                    Driving_License_No = record.ActualCustomer_Driving_License_No,
                     Account_Number = record.ActualCustomer_Account_Number ?? string.Empty,
                     Mobile_Number = record.ActualCustomer_Mobile_Number,
                     Address = record.ActualCustomer_Address ?? string.Empty,
