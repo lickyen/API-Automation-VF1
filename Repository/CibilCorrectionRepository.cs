@@ -315,15 +315,15 @@ namespace ProductivityApi.Repository
                     parameters,
                     transaction);
 
-                foreach (var report in dto.BureauReports)
-                {
-                    await InsertNonCustomerBureauReportAsync(
-                        conn,
-                        transaction,
-                        id,
-                        report,
-                        dto.Created_By);
-                }
+                //foreach (var report in dto.BureauReports)
+                //{
+                //    await InsertNonCustomerBureauReportAsync(
+                //        conn,
+                //        transaction,
+                //        id,
+                //        report,
+                //        dto.Created_By);
+                //}
 
                 await InsertLogAsync(
                     conn,
@@ -343,56 +343,6 @@ namespace ProductivityApi.Repository
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
-
-        private static async Task InsertNonCustomerBureauReportAsync(
-            SqlConnection conn,
-            SqlTransaction transaction,
-            int nonCustomerId,
-            NonCustomerBureauReportDto report,
-            string? createdBy)
-        {
-            await using var memoryStream = new MemoryStream();
-
-            await report.Attachment.CopyToAsync(memoryStream);
-
-            const string sql = @"
-    INSERT INTO dbo.CIBIL_Correction_NonCustomer_BureauReport
-    (
-        NonCustomerId,
-        Bureau,
-        ERN,
-        FileName,
-        ContentType,
-        FileData,
-        Created_By,
-        Created_Dt
-    )
-    VALUES
-    (
-        @NonCustomerId,
-        @Bureau,
-        @ERN,
-        @FileName,
-        @ContentType,
-        @FileData,
-        @Created_By,
-        SYSDATETIME()
-    );";
-
-            await conn.ExecuteAsync(
-                sql,
-                new
-                {
-                    NonCustomerId = nonCustomerId,
-                    Bureau = report.Bureau.ToString(),
-                    ERN = report.ERN.Trim(),
-                    FileName = Path.GetFileName(report.Attachment.FileName),
-                    ContentType = report.Attachment.ContentType,
-                    FileData = memoryStream.ToArray(),
-                    Created_By = createdBy
-                },
-                transaction);
         }
 
         public async Task<int> AddNonCustomerBureauReportAsync(

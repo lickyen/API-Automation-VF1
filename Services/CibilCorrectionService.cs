@@ -133,31 +133,15 @@ namespace ProductivityApi.Services
 
         #region Non Customer
         public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(
-            CreateNonCustomerDto dto)
+    CreateNonCustomerDto dto)
         {
             if (!Enum.IsDefined(typeof(NonCustomerScenarioType), dto.ScenarioType))
                 return (false, 0, "ScenarioType must be NON_CUSTOMER or CUSTOMER_MISMATCH.");
-
-            if (dto.BureauReports == null || dto.BureauReports.Count == 0)
-                return (false, 0, "At least one Bureau Report is required.");
-
-            foreach (var report in dto.BureauReports)
-            {
-                if (!Enum.IsDefined(typeof(BureauType), report.Bureau))
-                    return (false, 0, "Invalid Bureau.");
-
-                if (string.IsNullOrWhiteSpace(report.ERN))
-                    return (false, 0, $"ERN is required for {report.Bureau}.");
-
-                if (report.Attachment == null || report.Attachment.Length == 0)
-                    return (false, 0, $"Attachment is required for {report.Bureau}.");
-            }
 
             var id = await _repository.CreateNonCustomerAsync(dto);
 
             return (true, id, "Record created successfully.");
         }
-
         public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(
             UpdateNonCustomerDto dto)
         {

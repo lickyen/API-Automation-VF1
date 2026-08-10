@@ -91,27 +91,15 @@ namespace ProductivityApi.Controllers
         // Create
 
         [HttpPost("nonCustomer")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> CreateNonCustomer([FromForm] CreateNonCustomerDto dto)
+        public async Task<IActionResult> CreateNonCustomer([FromBody] CreateNonCustomerDto dto)
         {
             var result = await _service.CreateNonCustomerAsync(dto);
-
             if (!result.Success)
+            {
                 return BadRequest(new Response(false, message: result.Message));
-
+            }
             return Ok(new Response(true, new { Id = result.Id }, result.Message));
         }
-
-        //[HttpPost("nonCustomer")]
-        //public async Task<IActionResult> CreateNonCustomer([FromBody] CreateNonCustomerDto dto)
-        //{
-        //    var result = await _service.CreateNonCustomerAsync(dto);
-        //    if (!result.Success)
-        //    {
-        //        return BadRequest(new Response(false, message: result.Message));
-        //    }
-        //    return Ok(new Response(true, new { Id = result.Id }, result.Message));
-        //}
 
         // Get By Id
         [HttpGet("nonCustomer/{id}")]

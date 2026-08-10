@@ -134,10 +134,6 @@ namespace ProductivityApi.Models
         [Required]
         public PersonDetailDto ActualCustomer { get; set; } = new();
 
-        [Required]
-        [MinLength(1, ErrorMessage = "At least one Bureau Report is required.")]
-        public List<NonCustomerBureauReportDto> BureauReports { get; set; } = new();
-
         public string Created_By { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
     }
