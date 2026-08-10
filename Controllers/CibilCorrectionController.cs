@@ -89,16 +89,29 @@ namespace ProductivityApi.Controllers
         #region Non Customer
 
         // Create
+
         [HttpPost("nonCustomer")]
-        public async Task<IActionResult> CreateNonCustomer([FromBody] CreateNonCustomerDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreateNonCustomer([FromForm] CreateNonCustomerDto dto)
         {
             var result = await _service.CreateNonCustomerAsync(dto);
+
             if (!result.Success)
-            {
                 return BadRequest(new Response(false, message: result.Message));
-            }
+
             return Ok(new Response(true, new { Id = result.Id }, result.Message));
         }
+
+        //[HttpPost("nonCustomer")]
+        //public async Task<IActionResult> CreateNonCustomer([FromBody] CreateNonCustomerDto dto)
+        //{
+        //    var result = await _service.CreateNonCustomerAsync(dto);
+        //    if (!result.Success)
+        //    {
+        //        return BadRequest(new Response(false, message: result.Message));
+        //    }
+        //    return Ok(new Response(true, new { Id = result.Id }, result.Message));
+        //}
 
         // Get By Id
         [HttpGet("nonCustomer/{id}")]
@@ -145,6 +158,62 @@ namespace ProductivityApi.Controllers
         {
             var data = await _service.GetNonCustomerByStatusAsync(request);
             return Ok(new Response(true, data));
+        }
+
+
+        [HttpPost("nonCustomer/bureauReport")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> AddNonCustomerBureauReport(
+    [FromForm] AddNonCustomerBureauReportDto dto)
+        {
+            var result = await _service.AddNonCustomerBureauReportAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, new { Id = result.Id }, result.Message));
+        }
+
+        [HttpPut("nonCustomer/bureauReport")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateNonCustomerBureauReport(
+    [FromForm] UpdateNonCustomerBureauReportDto dto)
+        {
+            var result = await _service.UpdateNonCustomerBureauReportAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, message: result.Message));
+        }
+
+        [HttpGet("nonCustomer/bureauReport/{reportId}/download")]
+        public async Task<IActionResult> DownloadNonCustomerBureauReport(int reportId)
+        {
+            if (reportId <= 0)
+                return BadRequest(new Response(false, message: "Invalid Bureau Report Id."));
+
+            var result = await _service.GetNonCustomerBureauReportAsync(reportId);
+
+            if (result == null)
+                return NotFound(new Response(false, message: "Bureau Report not found."));
+
+            return File(
+                result.FileData,
+                string.IsNullOrWhiteSpace(result.ContentType)
+                    ? "application/octet-stream"
+                    : result.ContentType,
+                result.FileName);
+        }
+        [HttpDelete("nonCustomer/bureauReport/{id}")]
+        public async Task<IActionResult> DeleteNonCustomerBureauReport(int id)
+        {
+            var result = await _service.DeleteNonCustomerBureauReportAsync(id);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return Ok(new Response(true, message: result.Message));
         }
 
         #endregion

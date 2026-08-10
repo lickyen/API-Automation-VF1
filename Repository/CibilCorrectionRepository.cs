@@ -219,9 +219,11 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
-#endregion
 
-        #region Non-Customer
+        #endregion
+
+        #region Non Customer
+
         public async Task<int> CreateNonCustomerAsync(CreateNonCustomerDto dto)
         {
             await using var conn = new SqlConnection(_conStr);
@@ -233,27 +235,60 @@ namespace ProductivityApi.Repository
             try
             {
                 const string sql = @"
-            INSERT INTO CIBIL_Correction_NonCustomer
-            (
-                ScenarioType,
-                Complainant_Name, Complainant_DOB, Complainant_PAN, Complainant_Account_Number,
-                Complainant_Mobile_Number, Complainant_Address, Complainant_ERN_No, Complainant_LAN_Number,
-                ActualCustomer_Name, ActualCustomer_DOB, ActualCustomer_PAN, ActualCustomer_Account_Number,
-                ActualCustomer_Mobile_Number, ActualCustomer_Address, ActualCustomer_ERN_No, ActualCustomer_LAN_Number,
-                Status, Created_By, Created_Dt
-            )
-            VALUES
-            (
-                @ScenarioType,
-                @Complainant_Name, @Complainant_DOB, @Complainant_PAN, @Complainant_Account_Number,
-                @Complainant_Mobile_Number, @Complainant_Address, @Complainant_ERN_No, @Complainant_LAN_Number,
-                @ActualCustomer_Name, @ActualCustomer_DOB, @ActualCustomer_PAN, @ActualCustomer_Account_Number,
-                @ActualCustomer_Mobile_Number, @ActualCustomer_Address, @ActualCustomer_ERN_No, @ActualCustomer_LAN_Number,
-                @Status, @Created_By, GETDATE()
-            );
+        INSERT INTO CIBIL_Correction_NonCustomer
+        (
+            ScenarioType,
 
-            SELECT CAST(SCOPE_IDENTITY() AS INT);
-        ";
+            Complainant_Name,
+            Complainant_DOB,
+            Complainant_PAN,
+            Complainant_Account_Number,
+            Complainant_Mobile_Number,
+            Complainant_Address,
+            Complainant_ERN_No,
+            Complainant_LAN_Number,
+
+            ActualCustomer_Name,
+            ActualCustomer_DOB,
+            ActualCustomer_PAN,
+            ActualCustomer_Account_Number,
+            ActualCustomer_Mobile_Number,
+            ActualCustomer_Address,
+            ActualCustomer_ERN_No,
+            ActualCustomer_LAN_Number,
+
+            Status,
+            Created_By,
+            Created_Dt
+        )
+        VALUES
+        (
+            @ScenarioType,
+
+            @Complainant_Name,
+            @Complainant_DOB,
+            @Complainant_PAN,
+            @Complainant_Account_Number,
+            @Complainant_Mobile_Number,
+            @Complainant_Address,
+            @Complainant_ERN_No,
+            @Complainant_LAN_Number,
+
+            @ActualCustomer_Name,
+            @ActualCustomer_DOB,
+            @ActualCustomer_PAN,
+            @ActualCustomer_Account_Number,
+            @ActualCustomer_Mobile_Number,
+            @ActualCustomer_Address,
+            @ActualCustomer_ERN_No,
+            @ActualCustomer_LAN_Number,
+
+            @Status,
+            @Created_By,
+            GETDATE()
+        );
+
+        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                 var parameters = BuildNonCustomerParams(
                     dto.ScenarioType,
@@ -267,6 +302,16 @@ namespace ProductivityApi.Repository
                     sql,
                     parameters,
                     transaction);
+
+                foreach (var report in dto.BureauReports)
+                {
+                    await InsertNonCustomerBureauReportAsync(
+                        conn,
+                        transaction,
+                        id,
+                        report,
+                        dto.Created_By);
+                }
 
                 await InsertLogAsync(
                     conn,
@@ -287,16 +332,118 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
+
+        private static async Task InsertNonCustomerBureauReportAsync(
+            SqlConnection conn,
+            SqlTransaction transaction,
+            int nonCustomerId,
+            NonCustomerBureauReportDto report,
+            string? createdBy)
+        {
+            await using var memoryStream = new MemoryStream();
+
+            await report.Attachment.CopyToAsync(memoryStream);
+
+            const string sql = @"
+    INSERT INTO dbo.CIBIL_Correction_NonCustomer_BureauReport
+    (
+        NonCustomerId,
+        Bureau,
+        ERN,
+        FileName,
+        ContentType,
+        FileData,
+        Created_By,
+        Created_Dt
+    )
+    VALUES
+    (
+        @NonCustomerId,
+        @Bureau,
+        @ERN,
+        @FileName,
+        @ContentType,
+        @FileData,
+        @Created_By,
+        SYSDATETIME()
+    );";
+
+            await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    NonCustomerId = nonCustomerId,
+                    Bureau = report.Bureau.ToString(),
+                    ERN = report.ERN.Trim(),
+                    FileName = Path.GetFileName(report.Attachment.FileName),
+                    ContentType = report.Attachment.ContentType,
+                    FileData = memoryStream.ToArray(),
+                    Created_By = createdBy
+                },
+                transaction);
+        }
+
+        public async Task<int> AddNonCustomerBureauReportAsync(
+            AddNonCustomerBureauReportDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await using var memoryStream = new MemoryStream();
+
+            await dto.Attachment.CopyToAsync(memoryStream);
+
+            const string sql = @"
+    INSERT INTO dbo.CIBIL_Correction_NonCustomer_BureauReport
+    (
+        NonCustomerId,
+        Bureau,
+        ERN,
+        FileName,
+        ContentType,
+        FileData,
+        Created_By,
+        Created_Dt
+    )
+    VALUES
+    (
+        @NonCustomerId,
+        @Bureau,
+        @ERN,
+        @FileName,
+        @ContentType,
+        @FileData,
+        @Created_By,
+        SYSDATETIME()
+    );
+
+    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await conn.ExecuteScalarAsync<int>(
+                sql,
+                new
+                {
+                    dto.NonCustomerId,
+                    Bureau = dto.Bureau.ToString(),
+                    ERN = dto.ERN.Trim(),
+                    FileName = Path.GetFileName(dto.Attachment.FileName),
+                    ContentType = dto.Attachment.ContentType,
+                    FileData = memoryStream.ToArray(),
+                    dto.Created_By
+                });
+        }
+
         public async Task<CibilCorrectionNonCustomer?> GetNonCustomerByIdAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                SELECT *
-                FROM CIBIL_Correction_NonCustomer
-                WHERE Id = @Id";
+            const string sql = @"
+        SELECT *
+        FROM CIBIL_Correction_NonCustomer
+        WHERE Id = @Id;";
 
-            return await conn.QueryFirstOrDefaultAsync<CibilCorrectionNonCustomer>(sql, new { Id = id });
+            return await conn.QueryFirstOrDefaultAsync<CibilCorrectionNonCustomer>(
+                sql,
+                new { Id = id });
         }
 
         public async Task<IEnumerable<CibilCorrectionNonCustomer>>
@@ -308,47 +455,60 @@ namespace ProductivityApi.Repository
             var statuses = GetMappedStatuses(request);
 
             if (statuses.Count == 0)
-            {
-                return Enumerable
-                    .Empty<CibilCorrectionNonCustomer>();
-            }
+                return Enumerable.Empty<CibilCorrectionNonCustomer>();
 
             const string sql = @"
-                SELECT *
-                FROM dbo.CIBIL_Correction_NonCustomer
-                WHERE Status IN @Statuses
-                ORDER BY Created_Dt DESC;";
+        SELECT *
+        FROM dbo.CIBIL_Correction_NonCustomer
+        WHERE Status IN @Statuses
+        ORDER BY Created_Dt DESC;";
 
-            return await conn
-                .QueryAsync<CibilCorrectionNonCustomer>(
-                    sql,
-                    new { Statuses = statuses });
+            return await conn.QueryAsync<CibilCorrectionNonCustomer>(
+                sql,
+                new { Statuses = statuses });
         }
+
         public async Task<bool> UpdateNonCustomerAsync(UpdateNonCustomerDto dto)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                UPDATE CIBIL_Correction_NonCustomer
-                SET
-                    ScenarioType = @ScenarioType,
-                    Complainant_Name = @Complainant_Name, Complainant_DOB = @Complainant_DOB,
-                    Complainant_PAN = @Complainant_PAN, Complainant_Account_Number = @Complainant_Account_Number,
-                    Complainant_Mobile_Number = @Complainant_Mobile_Number, Complainant_Address = @Complainant_Address,
-                    Complainant_ERN_No = @Complainant_ERN_No, Complainant_LAN_Number = @Complainant_LAN_Number,
-                    ActualCustomer_Name = @ActualCustomer_Name, ActualCustomer_DOB = @ActualCustomer_DOB,
-                    ActualCustomer_PAN = @ActualCustomer_PAN, ActualCustomer_Account_Number = @ActualCustomer_Account_Number,
-                    ActualCustomer_Mobile_Number = @ActualCustomer_Mobile_Number, ActualCustomer_Address = @ActualCustomer_Address,
-                    ActualCustomer_ERN_No = @ActualCustomer_ERN_No, ActualCustomer_LAN_Number = @ActualCustomer_LAN_Number,
-                    Updated_By = @Updated_By,
-                    Updated_Dt = GETDATE()
-                WHERE Id = @Id";
+            const string sql = @"
+        UPDATE CIBIL_Correction_NonCustomer
+        SET
+            ScenarioType = @ScenarioType,
 
-            var parameters = BuildNonCustomerParams(dto.ScenarioType, dto.Complainant, dto.ActualCustomer);
+            Complainant_Name = @Complainant_Name,
+            Complainant_DOB = @Complainant_DOB,
+            Complainant_PAN = @Complainant_PAN,
+            Complainant_Account_Number = @Complainant_Account_Number,
+            Complainant_Mobile_Number = @Complainant_Mobile_Number,
+            Complainant_Address = @Complainant_Address,
+            Complainant_ERN_No = @Complainant_ERN_No,
+            Complainant_LAN_Number = @Complainant_LAN_Number,
+
+            ActualCustomer_Name = @ActualCustomer_Name,
+            ActualCustomer_DOB = @ActualCustomer_DOB,
+            ActualCustomer_PAN = @ActualCustomer_PAN,
+            ActualCustomer_Account_Number = @ActualCustomer_Account_Number,
+            ActualCustomer_Mobile_Number = @ActualCustomer_Mobile_Number,
+            ActualCustomer_Address = @ActualCustomer_Address,
+            ActualCustomer_ERN_No = @ActualCustomer_ERN_No,
+            ActualCustomer_LAN_Number = @ActualCustomer_LAN_Number,
+
+            Updated_By = @Updated_By,
+            Updated_Dt = GETDATE()
+        WHERE Id = @Id;";
+
+            var parameters = BuildNonCustomerParams(
+                dto.ScenarioType,
+                dto.Complainant,
+                dto.ActualCustomer);
+
             parameters.Add("Id", dto.Id);
             parameters.Add("Updated_By", dto.Updated_By);
 
             var rows = await conn.ExecuteAsync(sql, parameters);
+
             return rows > 0;
         }
 
@@ -397,6 +557,7 @@ namespace ProductivityApi.Repository
                     dto.Updated_By);
 
                 await transaction.CommitAsync();
+
                 return true;
             }
             catch
@@ -405,31 +566,185 @@ namespace ProductivityApi.Repository
                 throw;
             }
         }
+
         public async Task<NonCustomerResponseDto?> GetNonCustomerDetailsAsync(int id)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql = @"
-                SELECT *
-                FROM CIBIL_Correction_NonCustomer
-                WHERE Id = @Id;
+            const string sql = @"
+        SELECT *
+        FROM dbo.CIBIL_Correction_NonCustomer
+        WHERE Id = @Id;
 
-                SELECT *
-                FROM dbo.CIBIL_Correction_Logs
-                WHERE ReqType = 'NonCustomer'
-                  AND ReqId = @Id
-                ORDER BY UpdatedDt DESC;
-            ";
+        SELECT *
+        FROM dbo.CIBIL_Correction_Logs
+        WHERE ReqType = 'NonCustomer'
+          AND ReqId = @Id
+        ORDER BY UpdatedDt DESC;
 
-            using var multi = await conn.QueryMultipleAsync(sql, new { Id = id });
+        SELECT
+            Id,
+            NonCustomerId,
+            Bureau,
+            ERN,
+            FileName,
+            ContentType,
+            Created_By,
+            Created_Dt,
+            Updated_By,
+            Updated_Dt
+        FROM dbo.CIBIL_Correction_NonCustomer_BureauReport
+        WHERE NonCustomerId = @Id
+        ORDER BY Created_Dt DESC;";
 
-            var record = await multi.ReadFirstOrDefaultAsync<CibilCorrectionNonCustomer>();
+            using var multi = await conn.QueryMultipleAsync(
+                sql,
+                new { Id = id });
+
+            var record =
+                await multi.ReadFirstOrDefaultAsync<CibilCorrectionNonCustomer>();
+
             if (record == null)
                 return null;
 
-            var logs = (await multi.ReadAsync<CibilCorrectionLog>()).ToList();
+            var logs =
+                (await multi.ReadAsync<CibilCorrectionLog>())
+                .ToList();
 
-            return MapToResponseDto(record, logs);
+            var bureauReports =
+                (await multi.ReadAsync<NonCustomerBureauReportResponseDto>())
+                .ToList();
+
+            return MapToResponseDto(
+                record,
+                logs,
+                bureauReports);
+        }
+        public async Task<NonCustomerBureauReportInfoDto?> GetNonCustomerBureauReportInfoAsync(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            const string sql = @"
+        SELECT
+            Id,
+            NonCustomerId,
+            Bureau,
+            ERN,
+            FileName
+        FROM dbo.CIBIL_Correction_NonCustomer_BureauReport
+        WHERE Id = @Id;";
+
+            return await conn.QueryFirstOrDefaultAsync<NonCustomerBureauReportInfoDto>(
+                sql,
+                new { Id = id });
+        }
+
+        public async Task<bool> UpdateNonCustomerBureauReportAsync(
+            UpdateNonCustomerBureauReportDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            if (dto.Attachment != null && dto.Attachment.Length > 0)
+            {
+                await using var memoryStream = new MemoryStream();
+
+                await dto.Attachment.CopyToAsync(memoryStream);
+
+                const string sqlWithAttachment = @"
+            UPDATE dbo.CIBIL_Correction_NonCustomer_BureauReport
+            SET
+                Bureau = @Bureau,
+                ERN = @ERN,
+                FileName = @FileName,
+                ContentType = @ContentType,
+                FileData = @FileData,
+                Updated_By = @Updated_By,
+                Updated_Dt = SYSDATETIME()
+            WHERE Id = @Id;";
+
+                var rows = await conn.ExecuteAsync(
+                    sqlWithAttachment,
+                    new
+                    {
+                        dto.Id,
+                        Bureau = dto.Bureau.ToString(),
+                        ERN = dto.ERN.Trim(),
+                        FileName = Path.GetFileName(dto.Attachment.FileName),
+                        ContentType = dto.Attachment.ContentType,
+                        FileData = memoryStream.ToArray(),
+                        dto.Updated_By
+                    });
+
+                return rows > 0;
+            }
+
+            const string sql = @"
+        UPDATE dbo.CIBIL_Correction_NonCustomer_BureauReport
+        SET
+            Bureau = @Bureau,
+            ERN = @ERN,
+            Updated_By = @Updated_By,
+            Updated_Dt = SYSDATETIME()
+        WHERE Id = @Id;";
+
+            var result = await conn.ExecuteAsync(
+                sql,
+                new
+                {
+                    dto.Id,
+                    Bureau = dto.Bureau.ToString(),
+                    ERN = dto.ERN.Trim(),
+                    dto.Updated_By
+                });
+
+            return result > 0;
+        }
+
+        public async Task<int> GetNonCustomerBureauReportCountAsync(int nonCustomerId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            const string sql = @"
+        SELECT COUNT(1)
+        FROM dbo.CIBIL_Correction_NonCustomer_BureauReport
+        WHERE NonCustomerId = @NonCustomerId;";
+
+            return await conn.ExecuteScalarAsync<int>(
+                sql,
+                new { NonCustomerId = nonCustomerId });
+        }
+
+        public async Task<bool> DeleteNonCustomerBureauReportAsync(int id)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            const string sql = @"
+        DELETE FROM dbo.CIBIL_Correction_NonCustomer_BureauReport
+        WHERE Id = @Id;";
+
+            var rows = await conn.ExecuteAsync(
+                sql,
+                new { Id = id });
+
+            return rows > 0;
+        }
+
+        public async Task<NonCustomerBureauReportFileDto?> GetNonCustomerBureauReportAsync(
+            int reportId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            const string sql = @"
+        SELECT
+            FileName,
+            ContentType,
+            FileData
+        FROM dbo.CIBIL_Correction_NonCustomer_BureauReport
+        WHERE Id = @ReportId;";
+
+            return await conn.QueryFirstOrDefaultAsync<NonCustomerBureauReportFileDto>(
+                sql,
+                new { ReportId = reportId });
         }
 
         // ------------------------------------------------------------
@@ -437,16 +752,24 @@ namespace ProductivityApi.Repository
         // ------------------------------------------------------------
 
         private static DynamicParameters BuildNonCustomerParams(
-            NonCustomerScenarioType scenarioType, PersonDetailDto complainant, PersonDetailDto actualCustomer)
+            NonCustomerScenarioType scenarioType,
+            PersonDetailDto complainant,
+            PersonDetailDto actualCustomer)
         {
             var p = new DynamicParameters();
-            p.Add("ScenarioType", scenarioType.ToString());   // stores "NON_CUSTOMER" / "CUSTOMER_MISMATCH"
+
+            p.Add("ScenarioType", scenarioType.ToString());
+
             AddPersonParams(p, "Complainant", complainant);
             AddPersonParams(p, "ActualCustomer", actualCustomer);
+
             return p;
         }
 
-        private static void AddPersonParams(DynamicParameters p, string prefix, PersonDetailDto person)
+        private static void AddPersonParams(
+            DynamicParameters p,
+            string prefix,
+            PersonDetailDto person)
         {
             p.Add($"{prefix}_Name", person.Name);
             p.Add($"{prefix}_DOB", person.DOB);
@@ -459,7 +782,9 @@ namespace ProductivityApi.Repository
         }
 
         private static NonCustomerResponseDto MapToResponseDto(
-            CibilCorrectionNonCustomer record, List<CibilCorrectionLog> logs)
+            CibilCorrectionNonCustomer record,
+            List<CibilCorrectionLog> logs,
+            List<NonCustomerBureauReportResponseDto> bureauReports)
         {
             return new NonCustomerResponseDto
             {
@@ -470,6 +795,7 @@ namespace ProductivityApi.Repository
                 Created_Dt = record.Created_Dt,
                 Updated_By = record.Updated_By,
                 Updated_Dt = record.Updated_Dt,
+
                 Complainant = new PersonDetailDto
                 {
                     Name = record.Complainant_Name,
@@ -481,6 +807,7 @@ namespace ProductivityApi.Repository
                     ERN_No = record.Complainant_ERN_No ?? string.Empty,
                     LAN_Number = record.Complainant_LAN_Number ?? string.Empty
                 },
+
                 ActualCustomer = new PersonDetailDto
                 {
                     Name = record.ActualCustomer_Name,
@@ -492,11 +819,14 @@ namespace ProductivityApi.Repository
                     ERN_No = record.ActualCustomer_ERN_No ?? string.Empty,
                     LAN_Number = record.ActualCustomer_LAN_Number ?? string.Empty
                 },
+
+                BureauReports = bureauReports,
                 Logs = logs
             };
         }
 
         #endregion
+
 
         #region WC / WS / SC
 

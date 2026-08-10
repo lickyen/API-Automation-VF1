@@ -132,22 +132,40 @@ namespace ProductivityApi.Services
         #endregion
 
         #region Non Customer
-        public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(CreateNonCustomerDto dto)
+        public async Task<(bool Success, int Id, string Message)> CreateNonCustomerAsync(
+            CreateNonCustomerDto dto)
         {
             if (!Enum.IsDefined(typeof(NonCustomerScenarioType), dto.ScenarioType))
                 return (false, 0, "ScenarioType must be NON_CUSTOMER or CUSTOMER_MISMATCH.");
+
+            if (dto.BureauReports == null || dto.BureauReports.Count == 0)
+                return (false, 0, "At least one Bureau Report is required.");
+
+            foreach (var report in dto.BureauReports)
+            {
+                if (!Enum.IsDefined(typeof(BureauType), report.Bureau))
+                    return (false, 0, "Invalid Bureau.");
+
+                if (string.IsNullOrWhiteSpace(report.ERN))
+                    return (false, 0, $"ERN is required for {report.Bureau}.");
+
+                if (report.Attachment == null || report.Attachment.Length == 0)
+                    return (false, 0, $"Attachment is required for {report.Bureau}.");
+            }
 
             var id = await _repository.CreateNonCustomerAsync(dto);
 
             return (true, id, "Record created successfully.");
         }
 
-        public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(UpdateNonCustomerDto dto)
+        public async Task<(bool Success, string Message)> UpdateNonCustomerAsync(
+            UpdateNonCustomerDto dto)
         {
             if (dto.Id <= 0)
                 return (false, "Invalid Id.");
 
             var existing = await _repository.GetNonCustomerByIdAsync(dto.Id);
+
             if (existing == null)
                 return (false, "Record not found.");
 
@@ -201,17 +219,101 @@ namespace ProductivityApi.Services
             return await _repository.GetNonCustomerDetailsAsync(id);
         }
 
-        //public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(string status)
-        //{
-        //    return await _repository.GetNonCustomerByStatusAsync(status);
-        //}
-
-        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(CibilCorrectionGetByStatusDto request)
+        public async Task<IEnumerable<CibilCorrectionNonCustomer>> GetNonCustomerByStatusAsync(
+            CibilCorrectionGetByStatusDto request)
         {
             return await _repository.GetNonCustomerByStatusAsync(request);
         }
 
+        public async Task<(bool Success, int Id, string Message)> AddNonCustomerBureauReportAsync(
+            AddNonCustomerBureauReportDto dto)
+        {
+            if (dto.NonCustomerId <= 0)
+                return (false, 0, "Invalid Non Customer Id.");
+
+            if (!Enum.IsDefined(typeof(BureauType), dto.Bureau))
+                return (false, 0, "Invalid Bureau.");
+
+            if (string.IsNullOrWhiteSpace(dto.ERN))
+                return (false, 0, "ERN is required.");
+
+            if (dto.Attachment == null || dto.Attachment.Length == 0)
+                return (false, 0, "Attachment is required.");
+
+            var nonCustomer = await _repository.GetNonCustomerByIdAsync(dto.NonCustomerId);
+
+            if (nonCustomer == null)
+                return (false, 0, "Non Customer record not found.");
+
+            var id = await _repository.AddNonCustomerBureauReportAsync(dto);
+
+            return id > 0
+                ? (true, id, "Bureau Report added successfully.")
+                : (false, 0, "Unable to add Bureau Report.");
+        }
+
+        public async Task<(bool Success, string Message)> UpdateNonCustomerBureauReportAsync(
+            UpdateNonCustomerBureauReportDto dto)
+        {
+            if (dto.Id <= 0)
+                return (false, "Invalid Bureau Report Id.");
+
+            if (!Enum.IsDefined(typeof(BureauType), dto.Bureau))
+                return (false, "Invalid Bureau.");
+
+            if (string.IsNullOrWhiteSpace(dto.ERN))
+                return (false, "ERN is required.");
+
+            var existing = await _repository.GetNonCustomerBureauReportInfoAsync(dto.Id);
+
+            if (existing == null)
+                return (false, "Bureau Report not found.");
+
+            if (dto.Attachment != null && dto.Attachment.Length == 0)
+                return (false, "Invalid attachment.");
+
+            var result = await _repository.UpdateNonCustomerBureauReportAsync(dto);
+
+            return result
+                ? (true, "Bureau Report updated successfully.")
+                : (false, "Bureau Report update failed.");
+        }
+
+        public async Task<(bool Success, string Message)> DeleteNonCustomerBureauReportAsync(
+            int id)
+        {
+            if (id <= 0)
+                return (false, "Invalid Bureau Report Id.");
+
+            var existing = await _repository.GetNonCustomerBureauReportInfoAsync(id);
+
+            if (existing == null)
+                return (false, "Bureau Report not found.");
+
+            var count = await _repository.GetNonCustomerBureauReportCountAsync(
+                existing.NonCustomerId);
+
+            if (count <= 1)
+                return (false, "At least one Bureau Report is mandatory and cannot be deleted.");
+
+            var result = await _repository.DeleteNonCustomerBureauReportAsync(id);
+
+            return result
+                ? (true, "Bureau Report deleted successfully.")
+                : (false, "Bureau Report deletion failed.");
+        }
+
+        public async Task<NonCustomerBureauReportFileDto?> GetNonCustomerBureauReportAsync(
+            int reportId)
+        {
+            if (reportId <= 0)
+                return null;
+
+            return await _repository.GetNonCustomerBureauReportAsync(reportId);
+        }
+
         #endregion
+
 
         #region WC / WS / SC
 

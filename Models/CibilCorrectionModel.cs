@@ -47,24 +47,33 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
     }
 
+    #region Non Customer
+
     // =========================================================
     // NON CUSTOMER
     // =========================================================
+
     public class PersonDetailDto
     {
         [Required]
         public string Name { get; set; } = string.Empty;
+
         [Required]
         public DateTime DOB { get; set; }
+
         [Required]
         public string PAN { get; set; } = string.Empty;
+
         [Required]
         public string Account_Number { get; set; } = string.Empty;
-        public string? Mobile_Number { get; set; } // optional
+
+        public string? Mobile_Number { get; set; }
+
         [Required]
         public string Address { get; set; } = string.Empty;
-        [Required]
-        public string ERN_No { get; set; } = string.Empty;
+
+        public string?  ERN_No { get; set; } = string.Empty;
+
         [Required]
         public string LAN_Number { get; set; } = string.Empty;
     }
@@ -110,13 +119,18 @@ namespace ProductivityApi.Models
         [Required]
         public PersonDetailDto ActualCustomer { get; set; } = new();
 
-        public string Created_By { get; set; } = String.Empty;
-        public string Status { get; set; } = String.Empty;
+        [Required]
+        [MinLength(1, ErrorMessage = "At least one Bureau Report is required.")]
+        public List<NonCustomerBureauReportDto> BureauReports { get; set; } = new();
+
+        public string Created_By { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
     }
 
     public class UpdateNonCustomerDto
     {
         public int Id { get; set; }
+
         public NonCustomerScenarioType ScenarioType { get; set; }
 
         [Required]
@@ -131,14 +145,20 @@ namespace ProductivityApi.Models
     public class NonCustomerResponseDto
     {
         public int Id { get; set; }
+
         public NonCustomerScenarioType ScenarioType { get; set; }
+
         public PersonDetailDto Complainant { get; set; } = new();
+
         public PersonDetailDto ActualCustomer { get; set; } = new();
+
         public string? Status { get; set; }
         public string? Created_By { get; set; }
         public DateTime? Created_Dt { get; set; }
         public string? Updated_By { get; set; }
         public DateTime? Updated_Dt { get; set; }
+
+        public List<NonCustomerBureauReportResponseDto> BureauReports { get; set; } = new();
 
         public List<CibilCorrectionLog> Logs { get; set; } = new();
     }
@@ -146,21 +166,128 @@ namespace ProductivityApi.Models
     public class UpdateNonCustomerStatusDto
     {
         public int Id { get; set; }
+
         public string Status { get; set; } = string.Empty;
+
         public string Updated_By { get; set; } = string.Empty;
+
         public string? Remarks { get; set; }
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum NonCustomerScenarioType
     {
-        /// <summary>Bureau showing a Vistaar account for a non customer.</summary>
+        /// <summary>
+        /// Bureau showing a Vistaar account for a non customer.
+        /// </summary>
         NON_CUSTOMER,
 
-        /// <summary>Bureau showing Customer 1's account against Customer 2.</summary>
+        /// <summary>
+        /// Bureau showing Customer 1's account against Customer 2.
+        /// </summary>
         CUSTOMER_MISMATCH
     }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum BureauType
+    {
+        CIBIL,
+        HIGHMARK,
+        EQUIFAX,
+        EXPERIAN
+    }
+
+    public class NonCustomerBureauReportDto
+    {
+        [Required]
+        public BureauType Bureau { get; set; }
+
+        [Required]
+        public string ERN { get; set; } = string.Empty;
+
+        [Required]
+        public IFormFile Attachment { get; set; } = default!;
+    }
+
+    public class AddNonCustomerBureauReportDto
+    {
+        [Required]
+        public int NonCustomerId { get; set; }
+
+        [Required]
+        public BureauType Bureau { get; set; }
+
+        [Required]
+        public string ERN { get; set; } = string.Empty;
+
+        [Required]
+        public IFormFile Attachment { get; set; } = default!;
+
+        public string? Created_By { get; set; }
+    }
+
+    public class UpdateNonCustomerBureauReportDto
+    {
+        [Required]
+        public int Id { get; set; }
+
+        [Required]
+        public BureauType Bureau { get; set; }
+
+        [Required]
+        public string ERN { get; set; } = string.Empty;
+
+        public IFormFile? Attachment { get; set; }
+
+        public string? Updated_By { get; set; }
+    }
+
+    public class NonCustomerBureauReportResponseDto
+    {
+        public int Id { get; set; }
+
+        public int NonCustomerId { get; set; }
+
+        public string Bureau { get; set; } = string.Empty;
+
+        public string ERN { get; set; } = string.Empty;
+
+        public string FileName { get; set; } = string.Empty;
+
+        public string? ContentType { get; set; }
+
+        public string? Created_By { get; set; }
+
+        public DateTime? Created_Dt { get; set; }
+
+        public string? Updated_By { get; set; }
+
+        public DateTime? Updated_Dt { get; set; }
+    }
+
+    public class NonCustomerBureauReportFileDto
+    {
+        public string FileName { get; set; } = string.Empty;
+
+        public string? ContentType { get; set; }
+
+        public byte[] FileData { get; set; } = Array.Empty<byte>();
+    }
+
+    public class NonCustomerBureauReportInfoDto
+    {
+        public int Id { get; set; }
+
+        public int NonCustomerId { get; set; }
+
+        public string Bureau { get; set; } = string.Empty;
+
+        public string ERN { get; set; } = string.Empty;
+
+        public string FileName { get; set; } = string.Empty;
+    }
+
+    #endregion
     // =========================================================
     // WC / WS / SC
     // =========================================================
