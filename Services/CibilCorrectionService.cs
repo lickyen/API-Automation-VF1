@@ -396,18 +396,47 @@ namespace ProductivityApi.Services
             if (loanRecord == null)
                 return (false, null, "No records found.");
 
+            //var response = new WCWSSCFormatResponseDto {
+            //    Consumer_Name = loanRecord.CustomerName ?? string.Empty, 
+            //    Account_Number = loanRecord.LoanAccountNo ?? lan,
+            //    Current_Balance = 0m, 
+            //    Amount_Overdue = 0m, 
+            //    NDPD_latest_month = 0, 
+            //    Account_Status = loanRecord.LoanStatus ?? string.Empty, 
+            //    Credit_Facility_Status = request.RequestType.Trim(),
+            //    Sanctioned_amount = null, 
+            //    Total_Outstanding = null,
+            //    Principal_Outstanding = null 
+            //};
+
+            var requestType = request.RequestType.Trim().ToUpperInvariant();
+
             var response = new WCWSSCFormatResponseDto
             {
                 Consumer_Name = loanRecord.CustomerName ?? string.Empty,
                 Account_Number = loanRecord.LoanAccountNo ?? lan,
+
                 Current_Balance = 0m,
                 Amount_Overdue = 0m,
+
+                Date_Closed = null,
+                Date_Last_Payment = null,
+                Date_Reported = null,
+
+                Sanctioned_amount = loanRecord.LoanAmount,
+
                 NDPD_latest_month = 0,
-                Account_Status = loanRecord.LoanStatus ?? string.Empty,
-                Credit_Facility_Status = request.RequestType.Trim(),
-                Sanctioned_amount = null,
-                Total_Outstanding = null,
-                Principal_Outstanding = null
+
+                Account_Status = string.Empty,
+                Credit_Facility_Status = requestType == "Writeoff-Settled" ? "04" : "99",
+
+                Total_Outstanding = loanRecord.TotalOutstanding,
+                Principal_Outstanding = loanRecord.PrincipalOutstanding,
+                Settlement_Amount = loanRecord.SettlementAmount,
+                Amount_Received = null,
+
+                Written_Off_Total_Amount = null,
+                Written_Off_Principal_Amount = null
             };
 
             return (true, response, "Record retrieved successfully.");

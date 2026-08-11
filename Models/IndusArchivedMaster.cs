@@ -21,5 +21,6 @@
         public decimal? LoanAmount { get; set; }
         public decimal? TotalOutstanding { get; set; }
         public decimal? PrincipalOutstanding { get; set; }
+        public decimal? SettlementAmount { get; set; }
     }
 }

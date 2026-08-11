@@ -336,15 +336,15 @@ namespace ProductivityApi.Models
     {
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public decimal? Current_Balance { get; set; }
-        public decimal? Amount_Overdue { get; set; }
-        public DateTime? Date_Closed { get; set; }
-        public DateTime? Date_Last_Payment { get; set; }
-        public DateTime? Date_Reported { get; set; }
-        public decimal? Sanctioned_amount { get; set; }
-        public int? NDPD_latest_month { get; set; }
-        public string? Account_Status { get; set; }
-        public string? Credit_Facility_Status { get; set; }
+        public decimal Current_Balance { get; set; }
+        public decimal Amount_Overdue { get; set; }
+        public DateTime Date_Closed { get; set; }
+        public DateTime Date_Last_Payment { get; set; }
+        public DateTime Date_Reported { get; set; }
+        public decimal Sanctioned_amount { get; set; }
+        public int NDPD_latest_month { get; set; }
+        public string Account_Status { get; set; } = string.Empty;
+        public string Credit_Facility_Status { get; set; } = string.Empty;
         public decimal? Written_Off_Total_Amount { get; set; }
         public decimal? Written_Off_Principal_Amount { get; set; }
         public decimal? Settlement_Amount { get; set; }
@@ -352,9 +352,9 @@ namespace ProductivityApi.Models
 
         public decimal? Total_Outstanding { get; set; }
         public decimal? Principal_Outstanding { get; set; }
-        public string? Status { get; set; }
-        public string? LoanStatus { get; set; }
-        public string? Created_By { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string LoanStatus { get; set; } = string.Empty;
+        public string Created_By { get; set; } = string.Empty;
     }
 
     public class UpdateWCWSSCDto
@@ -414,18 +414,47 @@ namespace ProductivityApi.Models
         public string? Role { get; set; }
     }
 
+    //public class WCWSSCFormatResponseDto
+    //{
+    //    public string Consumer_Name { get; set; } = string.Empty;
+    //    public string Account_Number { get; set; } = string.Empty;
+    //    public decimal Current_Balance { get; set; } = 0;
+    //    public decimal Amount_Overdue { get; set; } = 0;
+    //    public int NDPD_latest_month { get; set; } = 0;
+    //    public string Account_Status { get; set; } = string.Empty;
+    //    public string Credit_Facility_Status { get; set; } = string.Empty;
+    //    public decimal? Sanctioned_amount { get; set; }
+    //    public decimal? Total_Outstanding { get; set; }
+    //    public decimal? Principal_Outstanding { get; set; }
+    //}
+
     public class WCWSSCFormatResponseDto
     {
         public string Consumer_Name { get; set; } = string.Empty;
         public string Account_Number { get; set; } = string.Empty;
-        public decimal Current_Balance { get; set; }
-        public decimal Amount_Overdue { get; set; }
-        public int? NDPD_latest_month { get; set; }
-        public string Account_Status { get; set; } = string.Empty;
-        public string? Credit_Facility_Status { get; set; }
+
+        public decimal Current_Balance { get; set; } = 0;
+        public decimal Amount_Overdue { get; set; } = 0;
+
+        public DateTime? Date_Closed { get; set; }
+        public DateTime? Date_Last_Payment { get; set; }
+        public DateTime? Date_Reported { get; set; }
+
         public decimal? Sanctioned_amount { get; set; }
+
+        public int NDPD_latest_month { get; set; } = 0;
+
+        public string Account_Status { get; set; } = string.Empty;
+
+        public string Credit_Facility_Status { get; set; } = string.Empty;
+
+        public decimal? Written_Off_Total_Amount { get; set; }
+        public decimal? Written_Off_Principal_Amount { get; set; }
+        public decimal? Settlement_Amount { get; set; }
+
         public decimal? Total_Outstanding { get; set; }
         public decimal? Principal_Outstanding { get; set; }
+        public decimal? Amount_Received { get; set; }
     }
 
     public class WCWSSCFormatRequestDto
