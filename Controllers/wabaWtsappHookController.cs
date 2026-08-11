@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
+using ProductivityApi.Repository;
 using ProductivityApi.Services;
+using System.Text.Json;
 
 namespace ProductivityApi.Controllers
 {
@@ -16,17 +18,25 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SaveMessage([FromBody] MessageModel request)
+        public async Task<IActionResult> Receive(
+         [FromBody] WebhookPayload payload,
+         CancellationToken cancellationToken)
         {
-            var id = await _service.SaveMessageAsync(request);
+            var result = await _service.SaveAsync(
+                payload,
+                cancellationToken);
 
-            return StatusCode( StatusCodes.Status201Created,
-                new
-                {
-                    id,
-                    messageId = request.MessageId,
-                    message = "Message saved successfully."
-                });
+            if (!result.Success)
+            {
+                return BadRequest(result.Error);
+            }
+
+            return Ok(new
+            {
+                received = true,
+                duplicate = result.Duplicate,
+                databaseId = result.DatabaseId
+            });
         }
     }
 }

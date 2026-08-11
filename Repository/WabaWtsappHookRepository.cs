@@ -13,104 +13,169 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn");
         }
-        public async Task<long> InsertAsync(MessageModel request, DateTimeOffset createdAtUtc)
+  
+
+
+
+        public async Task<long?> InsertAsync(
+            WebhookMessageRecord record,
+            CancellationToken cancellationToken = default)
         {
-            await using var connection =new SqlConnection(_conStr);
-            //var createdAtUtc = DateTimeOffset.UtcNow;
+            const string sql = """
+            INSERT INTO dbo.WABAWebhookMessages
+            (
+                WebhookEventId,
+                CreatedAt,
+                Topic,
+                ProjectId,
+                DeliveryAttempt,
+                ExternalMessageId,
+                ProviderMessageId,
+                ContactId,
+                PhoneNumber,
+                UserName,
+                Sender,
+                MessageType,
+                Status,
+                MessageText,
+                IsHsm,
+                SentAt,
+                DeliveredAt,
+                ReadAt,
+                MessagePrice,
+                RawPayload,
+                ReceivedAt
+            )
+            OUTPUT INSERTED.Id
+            VALUES
+            (
+                @WebhookEventId,
+                @CreatedAt,
+                @Topic,
+                @ProjectId,
+                @DeliveryAttempt,
+                @ExternalMessageId,
+                @ProviderMessageId,
+                @ContactId,
+                @PhoneNumber,
+                @UserName,
+                @Sender,
+                @MessageType,
+                @Status,
+                @MessageText,
+                @IsHsm,
+                @SentAt,
+                @DeliveredAt,
+                @ReadAt,
+                @MessagePrice,
+                @RawPayload,
+                @ReceivedAt
+            );
+            """;
 
+            await using var connection =
+                new SqlConnection(_conStr);
 
-            await using var command = new SqlCommand( "dbo.usp_WabaWtsappLogs_Insert",connection)
+            await connection.OpenAsync(cancellationToken);
+
+            await using var command =
+                new SqlCommand(sql, connection);
+
+            AddParameter(command, "@WebhookEventId",
+                SqlDbType.NVarChar, record.WebhookEventId, 100);
+
+            AddParameter(command, "@CreatedAt",
+                SqlDbType.DateTimeOffset, record.CreatedAt);
+
+            AddParameter(command, "@Topic",
+                SqlDbType.NVarChar, record.Topic, 100);
+
+            AddParameter(command, "@ProjectId",
+                SqlDbType.NVarChar, record.ProjectId, 100);
+
+            AddParameter(command, "@DeliveryAttempt",
+                SqlDbType.Int, record.DeliveryAttempt);
+
+            AddParameter(command, "@ExternalMessageId",
+                SqlDbType.NVarChar, record.ExternalMessageId, 100);
+
+            AddParameter(command, "@ProviderMessageId",
+                SqlDbType.NVarChar, record.ProviderMessageId, 250);
+
+            AddParameter(command, "@ContactId",
+                SqlDbType.NVarChar, record.ContactId, 100);
+
+            AddParameter(command, "@PhoneNumber",
+                SqlDbType.NVarChar, record.PhoneNumber, 32);
+
+            AddParameter(command, "@UserName",
+                SqlDbType.NVarChar, record.UserName, 250);
+
+            AddParameter(command, "@Sender",
+                SqlDbType.NVarChar, record.Sender, 50);
+
+            AddParameter(command, "@MessageType",
+                SqlDbType.NVarChar, record.MessageType, 50);
+
+            AddParameter(command, "@Status",
+                SqlDbType.NVarChar, record.Status, 50);
+
+            AddParameter(command, "@MessageText",
+                SqlDbType.NVarChar, record.MessageText, -1);
+
+            AddParameter(command, "@IsHsm",
+                SqlDbType.Bit, record.IsHsm);
+
+            AddParameter(command, "@SentAt",
+                SqlDbType.DateTimeOffset, record.SentAt);
+
+            AddParameter(command, "@DeliveredAt",
+                SqlDbType.DateTimeOffset, record.DeliveredAt);
+
+            AddParameter(command, "@ReadAt",
+                SqlDbType.DateTimeOffset, record.ReadAt);
+
+            var priceParameter =
+                command.Parameters.Add("@MessagePrice", SqlDbType.Decimal);
+
+            priceParameter.Precision = 18;
+            priceParameter.Scale = 6;
+            priceParameter.Value = record.MessagePrice;
+
+            AddParameter(command, "@RawPayload",
+                SqlDbType.NVarChar, record.RawPayload, -1);
+
+            AddParameter(command, "@ReceivedAt",
+                SqlDbType.DateTimeOffset, record.ReceivedAt);
+
+            try
             {
-                CommandType = CommandType.StoredProcedure
-            };
+                var result =
+                    await command.ExecuteScalarAsync(cancellationToken);
 
-            AddNullable(command, "@Type",SqlDbType.NVarChar, request.Type, 50);
-
-            AddNullable(command, "@ExternalId",SqlDbType.NVarChar, request.Id, 200);
-
-            AddNullable(command, "@ProjectId",SqlDbType.NVarChar, request.ProjectId, 200);
-
-            AddNullable(command, "@PhoneNumber",SqlDbType.NVarChar, request.PhoneNumber, 50);
-
-            AddNullable(command, "@ContactId",SqlDbType.NVarChar, request.ContactId, 200);
-
-            AddNullable(command, "@CampaignName",SqlDbType.NVarChar, request.Campaign?.Name, 200);
-
-            AddNullable(command, "@CampaignSentAt",SqlDbType.DateTimeOffset, request.Campaign?.SentAt);
-
-            AddNullable(command, "@Sender",SqlDbType.NVarChar, request.Sender, 200);
-
-            command.Parameters.Add( "@MessageContent",
-                SqlDbType.NVarChar,-1).Value = SerializeMessageContent(request.MessageContent);
-
-            AddNullable(command, "@MessageType",SqlDbType.NVarChar, request.MessageType, 50);
-
-            AddNullable(command, "@Status",SqlDbType.NVarChar, request.Status, 50);
-
-            command.Parameters.Add( "@IsHsm",SqlDbType.Bit).Value = request.IsHsm;
-
-            AddNullable(
-                command, "@ChatbotQueryText",SqlDbType.NVarChar,request.ChatbotResponse?.QueryText,-1);
-
-            AddNullable(
-                command, "@ChatbotIntent",SqlDbType.NVarChar,request.ChatbotResponse?.Intent,200);
-
-            AddNullable(command, "@DeliveredAt",SqlDbType.DateTimeOffset, request.DeliveredAt);
-
-            AddNullable(command, "@ReadAt",SqlDbType.DateTimeOffset, request.ReadAt);
-
-            AddNullable( command, "@SentAt",SqlDbType.DateTimeOffset, request.SentAt);
-
-            AddNullable(command, "@FailedAt",SqlDbType.DateTimeOffset, request.FailedAt);
-
-            AddNullable(command, "@AgentId",SqlDbType.NVarChar, request.AgentId, 200);
-
-            AddNullable(
-                command, "@FailureCode",SqlDbType.NVarChar,request.FailureResponse?.Code,100);
-
-            AddNullable(
-                command, "@FailureReason",SqlDbType.NVarChar,request.FailureResponse?.Reason, -1);
-
-            AddNullable(command, "@MessageId",SqlDbType.NVarChar, request.MessageId, 200);
-
-            command.Parameters.Add(
-               "@CreatedAtUtc",
-                SqlDbType.DateTimeOffset).Value = createdAtUtc;
-
-            var result = await command.ExecuteScalarAsync();
-
-            if (result is null || result == DBNull.Value)
-            {
-                throw new InvalidOperationException(
-                    "Stored procedure did not return the inserted ID.");
+                return Convert.ToInt64(result);
             }
-
-            return Convert.ToInt64(result);
+            catch (SqlException exception)
+                when (exception.Number is 2601 or 2627)
+            {
+                // Duplicate WebhookEventId
+                return null;
+            }
         }
 
-        private static void AddNullable(
+        private static void AddParameter(
             SqlCommand command,
-            string parameterName,
+            string name,
             SqlDbType type,
             object? value,
             int? size = null)
         {
             var parameter = size.HasValue
-                ? command.Parameters.Add(parameterName, type, size.Value)
-                : command.Parameters.Add(parameterName, type);
+                ? command.Parameters.Add(name, type, size.Value)
+                : command.Parameters.Add(name, type);
 
             parameter.Value = value ?? DBNull.Value;
         }
-
-        private static string SerializeMessageContent(
-            JsonElement messageContent)
-        {
-            return messageContent.ValueKind switch
-            {
-                JsonValueKind.Undefined => "{}",
-                JsonValueKind.Null => "null",
-                _ => messageContent.GetRawText()
-            };
-        }
     }
 }
+

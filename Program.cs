@@ -108,6 +108,7 @@ builder.Services.AddScoped<DmsDocsService>();
 builder.Services.AddScoped<BulkDocsService>();
 builder.Services.AddScoped<VendorService>();
 builder.Services.AddScoped<PurchaseOrderService>();
+builder.Services.AddScoped<WabaWtsappHookService>();
 
 
 builder.Services.AddScoped<UserRepository>();
@@ -145,6 +146,7 @@ builder.Services.AddScoped<DmsDocsRepository>();
 builder.Services.AddScoped<BulkDocsRepository>();
 builder.Services.AddScoped<VendorRepository>();
 builder.Services.AddScoped<PurchaseOrderRepository>();
+builder.Services.AddScoped<WabaWtsappHookRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
