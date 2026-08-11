@@ -299,22 +299,6 @@ namespace ProductivityApi.Controllers
             return Ok(data);
         }
 
-        [HttpGet("downloadUserAllocation")]
-        public async Task<IActionResult> DownloadAllocationExcel()
-        {
-            var bytes = await _service.GetAllocationExcelAsync();
-
-            if (bytes is null)
-                return NotFound(new Response(false, null, "No data found"));
-
-            return File(
-                bytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"CDSM_ZDSH_Allocation_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
-            );
-        }
-
-
         [HttpPost("updateUserAllocation")]
         public async Task<IActionResult> UpdateAllocation([FromBody] List<CollectionUserMappingUpdateDto> dtos)
         {

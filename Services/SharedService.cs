@@ -341,6 +341,8 @@ namespace ProductivityApi.Services
                                         .OrderByDescending(p => p.priority)
                                         .Select(p => p.GetFullAddress())
                                         .FirstOrDefault(),
+                    DOB = customer.PersonalInfo?.dateOfBirth,
+                    PAN = customer.PersonalInfo?.custCRCPR,
                     ApplicantType = type
                 });
             }

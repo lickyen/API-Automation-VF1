@@ -807,5 +807,8 @@ namespace ProductivityApi.Services
             }
         }
 
+        public Task<PagedResult<SOADashboard>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
+
     }
 }

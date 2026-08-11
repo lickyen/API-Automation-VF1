@@ -47,6 +47,7 @@ namespace ProductivityApi.Models
         public int? TurnaroundTime { get; set; }
         public string? CancelledChequeFilePath { get; set; }
         public string? InvoiceFilePath { get; set; }
+        public decimal? DeductedGstAmount { get; set; }
 
     }
 
@@ -196,6 +197,7 @@ namespace ProductivityApi.Models
         public string? Utr { get; set; }
         public decimal? UtrAmount { get; set; }
         public decimal? InvoiceAmount { get; set; }
+        public decimal? DeductedGstAmount { get; set; }
         public FileUploadBase64? InvoiceFile { get; set; }
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
@@ -286,6 +288,7 @@ namespace ProductivityApi.Models
         public string CdsmId { get; set; } = string.Empty;
         public string ZdshId { get; set; } = string.Empty;
         public string MzdshId { get; set; } = string.Empty;
+        public string ZlmId { get; set; } = string.Empty;
     }
 
     public class CollectionUserMappingUpdateDto
@@ -295,6 +298,7 @@ namespace ProductivityApi.Models
         public string CdsmId { get; set; } = string.Empty;
         public string ZdshId { get; set; } = string.Empty;
         public string MzdshId { get; set; } = string.Empty;
+        public string ZlmId { get; set; } = string.Empty;
         [Required]
         public string ModifiedBy { get; set; } = string.Empty;
     }

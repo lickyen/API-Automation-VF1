@@ -132,5 +132,19 @@ namespace ProductivityApi.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"LoanCancel_{DateTime.Now:yyyyMMdd}.xlsx");
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto dto)
+        {
+            if (dto.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (dto.PageSize < 1 || dto.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllAsync(dto);
+
+            return Ok(new Response(true, result, result.TotalRecords > 0 ? "Success" : "No records found"));
+        }
     }
 }

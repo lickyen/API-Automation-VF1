@@ -521,5 +521,8 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetByUserAsync(dto);
         }
+
+        public Task<PagedResult<DeathClaimMaster>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

@@ -125,5 +125,11 @@ namespace ProductivityApi.Services
                 (logs, "Logs")
             );
         }
+
+        //Get All Records with pagination
+        public Task<PagedResult<SettlementDashboard>> GetAllSettlementsAsync(PaginationRequestDto dto)
+        {
+            return _repository.GetAllSettlementsAsync(dto);
+        }
     }
 }

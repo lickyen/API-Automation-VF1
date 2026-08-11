@@ -11,18 +11,37 @@ namespace ProductivityApi.Repository
         private readonly ILogger<PLFRepository> _logger;
 
         private const string NeolotexDisbColumns = @"
-            SELECT
-                sz_loan_account_no   AS LoanAccountNo,
-                applicant_type       AS ApplicantType,
-                branch_code          AS BranchCode,
-                customerid           AS CustomerId,
-                customer_name        AS CustomerName,
-                sz_collateral_id     AS CollateralId,
-                loan_status          AS LoanStatus,
-                loanclosure_date     AS LoanClosureDate,
-                disbursement_date    AS DisbursementDate,
-                noc_status           AS NocStatus
-            FROM plf.neolotex_disb";
+        SELECT
+            sz_loan_account_no   AS LoanAccountNo,
+            applicant_type       AS ApplicantType,
+            branch_code          AS BranchCode,
+            customerid           AS CustomerId,
+            customer_name        AS CustomerName,
+            sz_collateral_id     AS CollateralId,
+            loan_status          AS LoanStatus,
+            loanclosure_date     AS LoanClosureDate,
+            disbursement_date    AS DisbursementDate,
+            noc_status           AS NocStatus
+        FROM plf.neolotex_disb";
+
+        private const string NeolotexDisbDistinctColumns = @"
+        SELECT DISTINCT ON (sz_loan_account_no)
+            sz_loan_account_no   AS LoanAccountNo,
+            applicant_type       AS ApplicantType,
+            branch_code          AS BranchCode,
+            customerid           AS CustomerId,
+            customer_name        AS CustomerName,
+            sz_collateral_id     AS CollateralId,
+            loan_status          AS LoanStatus,
+            loanclosure_date     AS LoanClosureDate,
+            disbursement_date    AS DisbursementDate,
+            noc_status           AS NocStatus
+        FROM plf.neolotex_disb";
+
+        private const string DistinctLoanOrderBy = @"
+        ORDER BY
+            sz_loan_account_no,
+            CASE WHEN applicant_type = 'B' THEN 0 ELSE 1 END";
 
         public PLFRepository(IConfiguration configuration, ILogger<PLFRepository> logger)
         {
@@ -58,28 +77,32 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetClosedLansAsync()
         {
-            try
-            {
-                var sql = $@"{NeolotexDisbColumns}
-                WHERE loan_status <> 'Active Loan'
-                    AND loanclosure_date >= CURRENT_DATE - 1
-                    AND loanclosure_date <  CURRENT_DATE;";
+            //var sql = $@"{NeolotexDisbDistinctColumns}
+            //    WHERE loan_status <> 'Active Loan'
+            //        AND loanclosure_date >= CURRENT_DATE - 1
+            //        AND loanclosure_date <  CURRENT_DATE;";
 
-                await using var connection = new NpgsqlConnection(_plfConStr);
-                await connection.OpenAsync();
-                var result = await connection.QueryAsync<NeolotexDisb>(sql);
-                return result.ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching closed loans from PLF.");
-                return new List<NeolotexDisb>();
-            }
+            var sql = $@"
+                {NeolotexDisbDistinctColumns}
+                WHERE loan_status <> 'Active Loan'
+                  AND loanclosure_date >= CURRENT_DATE - 1
+                  AND loanclosure_date < CURRENT_DATE
+                {DistinctLoanOrderBy}";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            await connection.OpenAsync();
+            var result = await connection.QueryAsync<NeolotexDisb>(sql);
+            return result.ToList();
         }
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
-            var sql = $@"{NeolotexDisbColumns}
-                    WHERE sz_collateral_id = @collId;";
+            //var sql = $@"{NeolotexDisbDistinctColumns}
+            //        WHERE sz_collateral_id = @collId;";
+
+            var sql = $@"
+                {NeolotexDisbDistinctColumns}
+                WHERE sz_collateral_id = @collId
+                {DistinctLoanOrderBy}";
 
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
@@ -88,8 +111,13 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
-            var sql = $@"{NeolotexDisbColumns}
-                    WHERE customerid = @custId;";
+            //var sql = $@"{NeolotexDisbDistinctColumns}
+            //        WHERE customerid = @custId;";
+
+            var sql = $@"
+                {NeolotexDisbDistinctColumns}
+                WHERE customerid = @custId
+                {DistinctLoanOrderBy}";
 
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
@@ -100,13 +128,22 @@ namespace ProductivityApi.Repository
         {
             try
             {
-                var sql = $@"{NeolotexDisbColumns}
-                WHERE customerid IN (
-                    SELECT customerid
-                    FROM plf.neolotex_disb
-                    WHERE sz_loan_account_no = @lan
-                )
-                AND applicant_type = 'B';";
+                //var sql = $@"{NeolotexDisbDistinctColumns}
+                //WHERE customerid IN (
+                //    SELECT customerid
+                //    FROM plf.neolotex_disb
+                //    WHERE sz_loan_account_no = @lan
+                //);";
+
+                var sql = $@"
+                    {NeolotexDisbDistinctColumns}
+                    WHERE customerid IN
+                    (
+                        SELECT customerid
+                        FROM plf.neolotex_disb
+                        WHERE sz_loan_account_no = @lan
+                    )
+                    {DistinctLoanOrderBy}";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
@@ -190,17 +227,26 @@ namespace ProductivityApi.Repository
                 return null;
             }
         }
+
         //added by Harika
         public async Task<PlFLoanStatusModel?> GetLoanStatusByLanAsync(string lan)
         {
             try
             {
                 var sql = @"
-                    select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
-                    group by sz_loan_account_no,loan_status";
+            SELECT DISTINCT ON (sz_loan_account_no)
+                sz_loan_account_no AS LoanNumber,
+                loan_status AS LoanStatus,
+                customer_name
+            FROM plf.neolotex_disb
+            WHERE sz_loan_account_no = @lan
+            ORDER BY
+                sz_loan_account_no,
+                CASE WHEN applicant_type = 'B' THEN 0 ELSE 1 END;";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
+
                 return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { lan });
             }
             catch (Exception ex)
@@ -208,7 +254,35 @@ namespace ProductivityApi.Repository
                 _logger.LogError(ex, "Error fetching Lan status by lan: {Lan}", lan);
                 return null;
             }
-        } 
+        }
+
+        //public async Task<PlFLoanStatusModel?> GetLoanStatusByLanAsync(string lan)
+        //{
+        //    try
+        //    {
+        //        //var sql = @"
+        //        //    select distinct sz_loan_account_no as LoanNumber,loan_status as LoanStatus from plf.neolotex_disb where sz_loan_account_no=@lan
+        //        //    group by sz_loan_account_no,loan_status";
+
+        //        var sql = @"
+        //             select distinct sz_loan_account_no as LoanNumber,
+        //        loan_status as LoanStatus, customer_name
+        //        from plf.neolotex_disb
+        //        where sz_loan_account_no = @lan and applicant_type = 'B'
+        //        group by sz_loan_account_no,loan_status,customer_name";
+
+
+
+        //        await using var connection = new NpgsqlConnection(_plfConStr);
+        //        await connection.OpenAsync();
+        //        return await connection.QueryFirstOrDefaultAsync<PlFLoanStatusModel>(sql, new { lan });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error fetching Lan status by lan: {Lan}", lan);
+        //        return null;
+        //    }
+        //} 
 
         //added by Harika
         public async Task<PlfCashByCIFModel?> GetCashPayemntsByCIFAsync(string cif)
@@ -229,12 +303,13 @@ namespace ProductivityApi.Repository
             where CC.CUSTCIF=@cif
             and FP.receiptmode='CASH'
             AND FP.RECEIPTMODESTATUS='R'
-            AND RECEIPTDATE='2026-06-05'
+            AND RECEIPTDATE=@ReceiptDate
             GROUP BY CC.CUSTID";
 
                 await using var connection = new NpgsqlConnection(_plfConStr);
                 await connection.OpenAsync();
-                return await connection.QueryFirstOrDefaultAsync<PlfCashByCIFModel>(sql, new { cif });
+                return await connection.QueryFirstOrDefaultAsync<PlfCashByCIFModel>(sql, 
+                    new { cif, ReceiptDate = DateTime.Today });
             }
             catch (Exception ex)
             {

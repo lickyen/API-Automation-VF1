@@ -508,6 +508,9 @@ namespace ProductivityApi.Services
             return ExcelHelper.GenerateExcel(
                 (data, "Data"));
         }
+
+        public async Task<PagedResult<FcRefundModel>> GetAllAsync(PaginationRequestDto request)
+            => await _repository.GetAllAsync(request);
     }
 
 }

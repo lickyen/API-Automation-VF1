@@ -4,6 +4,7 @@
     {
         public string? LoanNumber { get; set; }
         public string? LoanStatus { get; set; }
+        public string? customer_name { get; set; }
     }
     public class PlfCashByCIFModel
     {

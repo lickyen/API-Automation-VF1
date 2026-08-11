@@ -231,5 +231,34 @@ namespace ProductivityApi.Repository
             };
         }
 
+        public async Task<PagedResult<LcRefundModel>> GetAllAsync(PaginationRequestDto request)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            using var multi = await conn.QueryMultipleAsync(
+                "dbo.sp_LcRefund_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<LcRefundModel>()).ToList();
+
+            return new PagedResult<LcRefundModel>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
+        }
+
+
     }
 }

@@ -26,8 +26,8 @@ namespace ProductivityApi.Services
             _filePath = appSettings.FilePaths.ClosureFilePath;
         }
 
-        public static bool IsCritical(string? action)
-            => action == "Critical" || action == "High Critical";
+        public static bool IsCritical(string? criticality)
+            => criticality == "Critical" || criticality == "High Critical";
 
         public static bool IsBucket(string? bucket)
             => bucket == "B1-B3" || bucket == "NPA";
@@ -36,7 +36,7 @@ namespace ProductivityApi.Services
         {
             string status = string.Empty;
 
-            if (IsCritical(dto.Action) || IsBucket(dto.Bucket))
+            if (IsCritical(dto.Criticality) || IsBucket(dto.Bucket) || dto.LetterId is not null)
             {
                 if (dto.IsWaiver)
                 {
@@ -55,21 +55,24 @@ namespace ProductivityApi.Services
             var id = await _repository.AddRequestAsync(dto, status);
             if (id > 0)
             {
-                // Handle file uploads
-                string? ackPath = null, checklistPath = null, fcLetterPath = null;
 
                 if (dto.AckFile != null)
-                    ackPath = await UploadFileAsync(id, dto.AckFile, "Ack");
+                {
+                    var ackPath = await UploadFileAsync(id, dto.AckFile, "Ack");
+                    await _repository.UpdateFilePathAsync(id, "ACK", ackPath);
+                }
 
                 if (dto.ChecklistFile != null)
-                    checklistPath = await UploadFileAsync(id, dto.ChecklistFile, "Checklist");
+                {
+                    var checklistPath = await UploadFileAsync(id, dto.ChecklistFile, "Checklist");
+                    await _repository.UpdateFilePathAsync(id, "CHECKLIST", checklistPath);
+                }
 
                 if (dto.FCLetterFile != null)
-                    fcLetterPath = await UploadFileAsync(id, dto.FCLetterFile, "FCLetter");
-
-                // Update file paths in DB if any file was uploaded
-                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
-                    await _repository.UpdateFilePathsAsync(id, ackPath, checklistPath, fcLetterPath);
+                {
+                    var fcLetterPath = await UploadFileAsync(id, dto.FCLetterFile, "FCLetter");
+                    await _repository.UpdateFilePathAsync(id, "FCLETTER", fcLetterPath);
+                }
 
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
@@ -110,7 +113,7 @@ namespace ProductivityApi.Services
         {
             string status = string.Empty;
 
-            if ((IsCritical(dto.Action) || IsBucket(dto.Bucket)) && !dto.IsWaiver)
+            if ((IsCritical(dto.Criticality) || IsBucket(dto.Bucket)) && !dto.IsWaiver)
             {
                 status = ClosureStatus.AutoApproved;
             }
@@ -122,20 +125,25 @@ namespace ProductivityApi.Services
             var result = await _repository.ReinitiateRequestAsync(dto, status);
             if (result > 0)
             {
-                // Handle file uploads
-                string? ackPath = null, checklistPath = null, fcLetterPath = null;
 
                 if (dto.AckFile != null)
-                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                {
+                    var ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                    await _repository.UpdateFilePathAsync(dto.Id, "ACK", ackPath);
+                }
 
                 if (dto.ChecklistFile != null)
-                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                {
+                    var checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                    await _repository.UpdateFilePathAsync(dto.Id, "CHECKLIST", checklistPath);
+                }
 
                 if (dto.FCLetterFile != null)
-                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+                {
+                    var fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+                    await _repository.UpdateFilePathAsync(dto.Id, "FCLETTER", fcLetterPath);
+                }
 
-                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
-                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
 
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
@@ -163,8 +171,10 @@ namespace ProductivityApi.Services
                     await NotifyBranchAsync(dto.Id, "Approved");
                 }
 
-                await NotifyPendingUserAsync(dto.Id);
-
+                else
+                {
+                    await NotifyPendingUserAsync(dto.Id);
+                }
             }
 
             return result;
@@ -177,20 +187,24 @@ namespace ProductivityApi.Services
             var result = await _repository.UpdateAmountCollectedAsync(dto, status);
             if (result > 0)
             {
-                // Handle file uploads
-                string? ackPath = null, checklistPath = null, fcLetterPath = null;
 
                 if (dto.AckFile != null)
-                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                {
+                    var ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                    await _repository.UpdateFilePathAsync(dto.Id, "ACK", ackPath);
+                }
 
                 if (dto.ChecklistFile != null)
-                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                {
+                    var checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                    await _repository.UpdateFilePathAsync(dto.Id, "CHECKLIST", checklistPath);
+                }
 
                 if (dto.FCLetterFile != null)
-                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
-
-                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
-                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
+                {
+                    var fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+                    await _repository.UpdateFilePathAsync(dto.Id, "FCLETTER", fcLetterPath);
+                }
 
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
@@ -215,20 +229,24 @@ namespace ProductivityApi.Services
             var result = await _repository.ResubmitRequestAsync(dto, status);
             if (result > 0)
             {
-                // Handle file uploads
-                string? ackPath = null, checklistPath = null, fcLetterPath = null;
 
                 if (dto.AckFile != null)
-                    ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                {
+                    var ackPath = await UploadFileAsync(dto.Id, dto.AckFile, "Ack");
+                    await _repository.UpdateFilePathAsync(dto.Id, "ACK", ackPath);
+                }
 
                 if (dto.ChecklistFile != null)
-                    checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                {
+                    var checklistPath = await UploadFileAsync(dto.Id, dto.ChecklistFile, "Checklist");
+                    await _repository.UpdateFilePathAsync(dto.Id, "CHECKLIST", checklistPath);
+                }
 
                 if (dto.FCLetterFile != null)
-                    fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
-
-                if (dto.AckFile != null || dto.ChecklistFile != null || dto.FCLetterFile != null)
-                    await _repository.UpdateFilePathsAsync(dto.Id, ackPath, checklistPath, fcLetterPath);
+                {
+                    var fcLetterPath = await UploadFileAsync(dto.Id, dto.FCLetterFile, "FCLetter");
+                    await _repository.UpdateFilePathAsync(dto.Id, "FCLETTER", fcLetterPath);
+                }
 
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
@@ -251,31 +269,43 @@ namespace ProductivityApi.Services
             var result = await _repository.ApproveAsync(dto);
             if (result > 0)
             {
-                await _repository.AddLogAsync(new AddClosureLogDto
-                {
-                    ReqId = dto.Id,
-                    Role = dto.Role,
-                    Action = dto.Status,
-                    Status = $"{dto.Role}-{dto.Status}",
-                    Remarks = dto.Remarks,
-                    TotalOutstanding = dto.TotalOutstanding,
-                    POS = dto.POS,
-                    Interest = dto.Interest,
-                    Charges = dto.Charges,
-                    AmountProposed = dto.AmountProposed,
-                    POSProposed = dto.POSProposed,
-                    InterestProposed = dto.InterestProposed,
-                    ChargesProposed = dto.ChargesProposed,
-                    POSWaiverPer = dto.POSWaiverPer,
-                    InterestWaiverPer = dto.InterestWaiverPer,
-                    ChargesWaiverPer = dto.ChargesWaiverPer,
-                    CreatedBy = dto.UserId
-                });
+                //logs added from sp
+
+                //await _repository.AddLogAsync(new AddClosureLogDto
+                //{
+                //    ReqId = dto.Id,
+                //    Role = dto.Role,
+                //    Action = dto.Status,
+                //    Status = $"{dto.Role}-{dto.Status}",
+                //    Remarks = dto.Remarks,
+                //    TotalOutstanding = dto.TotalOutstanding,
+                //    POS = dto.POS,
+                //    Interest = dto.Interest,
+                //    Charges = dto.Charges,
+                //    AmountProposed = dto.AmountProposed,
+                //    POSProposed = dto.POSProposed,
+                //    InterestProposed = dto.InterestProposed,
+                //    ChargesProposed = dto.ChargesProposed,
+                //    POSWaiverPer = dto.POSWaiverPer,
+                //    InterestWaiverPer = dto.InterestWaiverPer,
+                //    ChargesWaiverPer = dto.ChargesWaiverPer,
+                //    CreatedBy = dto.UserId
+                //});
 
                 await NotifyBranchAsync(dto.Id, dto.Status);
 
                 await NotifyPendingUserAsync(dto.Id);
 
+            }
+            return result;
+        }
+
+        public async Task<int> CopsApprovalAsync(ClosureCopsApprovalDto dto)
+        {
+            var result = await _repository.CopsApprovalAsync(dto);
+            if (result > 0)
+            {
+                await NotifyBranchAsync(dto.Id, dto.Status);
             }
             return result;
         }
@@ -287,25 +317,17 @@ namespace ProductivityApi.Services
             // First, save any questionnaire responses provided in the request
             if (dto.Responses != null && dto.Responses.Any())
             {
-                foreach (var r in dto.Responses)
-                {
-                    var addDto = new AddQuestionnaireResponseDto
-                    {
-                        ReqId = dto.Id,
-                        ReqSource = dto.Source,
-                        QuestionId = r.QuestionId,
-                        QuestionCode = r.QuestionCode,
-                        ResponseValue = r.ResponseValue,
-                        CreatedBy = dto.CreatedBy
-                    };
-
-                    await _repository.AddQuestionnaireResponseAsync(addDto);
-                }
+                await _repository.AddQuestionnaireResponseAsync(
+                    dto.Id,
+                    dto.Source,
+                    dto.Responses,
+                    dto.CreatedBy
+                );
             }
 
             var result = await _repository.SubmitQuestionnaireAsync(dto, status);
 
-            if (result == 0 && dto.Source == REQ_SOURCE)
+            if (result > 0 && dto.Source == REQ_SOURCE)
             {
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
@@ -325,10 +347,11 @@ namespace ProductivityApi.Services
         private async Task NotifyPendingUserAsync(int reqId)
         {
             var transaction = await _repository.GetByIdAsync(reqId);
+            if (transaction == null || string.IsNullOrWhiteSpace(transaction.PendingUser))
+                return;
 
             var user = _userService.GetUser(transaction.PendingUser);
-
-            if (user == null || string.IsNullOrEmpty(user.Email))
+            if (user == null || string.IsNullOrWhiteSpace(user.Email))
                 return;
 
             var placeholders = new Dictionary<string, string>
@@ -352,6 +375,8 @@ namespace ProductivityApi.Services
         private async Task NotifyBranchAsync(int reqId, string action)
         {
             var transaction = await _repository.GetByIdAsync(reqId);
+            if (transaction == null)
+                return;
 
             var placeholders = new Dictionary<string, string>
             {
@@ -433,24 +458,13 @@ namespace ProductivityApi.Services
             return txn;
         }
 
-        public async Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string status)
+        public Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string? status)
         {
-            var s = (status ?? string.Empty).Trim().ToUpper();
-
-            if (s == "P")
-            {
-                return await _repository.GetPendingByUserAsync(userId, role);
-            }
-            else if (s == "C")
-            {
-                return await _repository.GetCompletedByUserAsync(userId, role);
-            }
-
-            return await _repository.GetPendingByUserAsync(userId, role);
+            return _repository.GetByUserAsync(userId, role, status);
         }
 
-        public async Task<List<ClosureTransaction>> SearchByLanAsync(string lan)
-            => await _repository.SearchByLanAsync(lan);
+        public async Task<List<ClosureTransaction>> GetByLanAsync(string lan)
+            => await _repository.GetByLanAsync(lan);
 
         public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto)
         {
@@ -472,9 +486,6 @@ namespace ProductivityApi.Services
 
         public async Task<int> DeletePaymentAsync(int id, string deletedBy)
             => await _repository.DeletePaymentAsync(id, deletedBy);
-
-        public async Task<int> AddQuestionnaireResponseAsync(AddQuestionnaireResponseDto dto)
-            => await _repository.AddQuestionnaireResponseAsync(dto);
 
         public async Task<string?> GetWaiverApproverAsync(GetWaiverApproverDto dto)
             => await _repository.GetWaiverApproverAsync(dto);
@@ -508,8 +519,60 @@ namespace ProductivityApi.Services
         {
             return await FileHelper.ReadFileAsync(_filePath, fileName);
         }
-
         public async Task<List<ClosureQuestionnaireMaster>> GetQuestionnaireMasterAsync()
-             => await _repository.GetQuestionnaireMasterAsync();
+        {
+            return await _repository.GetQuestionnaireMasterAsync();
+        }
+
+        public async Task<int> CancelRequestAsync(CancelClosureRequestDto dto)
+        {
+            var result = await _repository.CancelRequestAsync(dto);
+
+            if (result > 0)
+            {
+                await _repository.AddLogAsync(new AddClosureLogDto
+                {
+                    ReqId = dto.Id,
+                    Role = "OPS",
+                    Action = ClosureStatus.Cancelled,
+                    Status = ClosureStatus.Cancelled,
+                    Remarks = dto.Remarks,
+                    CreatedBy = dto.CancelledBy
+                });
+            }
+
+            return result;
+        }
+
+        public static ClosureShortfallResultDto CalculateShortfall(CalculateShortfallDto dto)
+        {
+            // Shortfall = Live – Approved (only if Live > 0, matching the VB guard)
+            decimal diffAmount = dto.InterestLive > 0m
+                ? dto.InterestLive - dto.InterestApproved
+                : 0m;
+
+            // Updated Total (before waiver)
+            decimal updatedTotal = dto.TotalProposedAmount + diffAmount;
+
+            // Shortfall after waiver
+            decimal diffAmountIncWaiver = diffAmount - (diffAmount * (dto.InterestWaiverPer / 100m));
+
+            // Updated total after waiver
+            decimal updatedTotalIncWaiver = dto.TotalProposedAmount + diffAmountIncWaiver;
+
+            return new ClosureShortfallResultDto
+            {
+                DiffAmount = Math.Round(diffAmount, 2),
+                UpdatedTotal = Math.Round(updatedTotal, 2),
+                DiffAmountIncWaiver = Math.Round(diffAmountIncWaiver, 2),
+                UpdatedTotalIncWaiver = Math.Round(updatedTotalIncWaiver, 2)
+            };
+        }
+
+        public async Task<int?> GetLetterIdAsync(string lan)
+            => await _repository.GetLetterIdAsync(lan);
+
+        public Task<PagedResult<ClosureTransaction>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

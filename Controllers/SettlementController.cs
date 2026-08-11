@@ -154,6 +154,21 @@ namespace ProductivityApi.Controllers
             );
         }
 
+        // GET: api/settlements?pageNumber=1&pageSize=20&search=LAN001
+        [HttpGet]
+        public async Task<IActionResult> GetAllSettlements([FromQuery] PaginationRequestDto dto)
+        {
+            if (dto.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (dto.PageSize < 1 || dto.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllSettlementsAsync(dto);
+
+            return Ok(new Response(true, result, result.TotalRecords == 0 ? "No records found" : "Success"));
+        }
+
 
 
     }

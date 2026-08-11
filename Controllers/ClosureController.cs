@@ -23,7 +23,7 @@ namespace ProductivityApi.Controllers
             return result switch
             {
                 > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
+                -1 => Conflict(new Response(false, null, "An active request exists for the same LAN")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -77,6 +77,18 @@ namespace ProductivityApi.Controllers
             };
         }
 
+        [HttpPost("copsApproval")]
+        public async Task<IActionResult> CopsApproval([FromBody] ClosureCopsApprovalDto dto)
+        {
+            var result = await _service.CopsApprovalAsync(dto);
+            return result switch
+            {
+                1 => Ok(new Response(true, null, "Action completed successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
         [HttpGet("getById/{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -86,20 +98,20 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("getListByUser")]
-        public async Task<IActionResult> GetList([FromQuery] string userId, [FromQuery] string role, [FromQuery] string status)
-        {
-            var data = await _service.GetListByUserAsync(userId, role, status);
-            return Ok(new Response(true, data, "Success"));
-        }
-
-        [HttpGet("searchByLan/{lan}")]
-        public async Task<IActionResult> SearchByLan(string lan)
+        [HttpGet("getByLan/{lan}")]
+        public async Task<IActionResult> GetByLan(string lan)
         {
             if (string.IsNullOrWhiteSpace(lan))
                 return BadRequest(new Response(false, null, "LAN is required"));
 
-            var data = await _service.SearchByLanAsync(lan);
+            var data = await _service.GetByLanAsync(lan);
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getByUser")]
+        public async Task<IActionResult> GetListByUser([FromQuery] string userId, [FromQuery] string role, [FromQuery] string? status)
+        {
+            var data = await _service.GetListByUserAsync(userId, role, status);
             return Ok(new Response(true, data, "Success"));
         }
 
@@ -158,6 +170,15 @@ namespace ProductivityApi.Controllers
             return File(fileBytes, contentType, fileName);
         }
 
+        //[HttpPost("upload")]
+        //public async Task<IActionResult> UploadDoc([FromForm] UploadFileRequestDto dto)
+        //{
+        //    var result = await _service.UploadFileAsync(dto);
+        //    return result.Success
+        //        ? Ok(new Response(true, result.FilePath, "File uploaded successfully"))
+        //        : BadRequest(new Response(false, null, result.Error));
+        //}
+
         [HttpGet("getQuestionnaire")]
         public async Task<IActionResult> GetQuestionnaireMaster()
         {
@@ -171,12 +192,71 @@ namespace ProductivityApi.Controllers
             var result = await _service.SubmitQuestionnaireAsync(dto);
             return result switch
             {
-                0 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
+                1 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
                 -1 => NotFound(new Response(false, null, "Request not found")),
                 -2 => BadRequest(new Response(false, null, "Invalid source")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
+        [HttpPost("getWaiverApprover")]
+        public async Task<IActionResult> GetWaiverApprover([FromBody] GetWaiverApproverDto dto)
+        {
+            var result = await _service.GetWaiverApproverAsync(dto);
+
+            return string.IsNullOrWhiteSpace(result)
+                ? StatusCode(500, new Response(false, null, "Unable to determine a waiver approver for the given inputs"))
+                : Ok(new Response(true, new { finalApprover = result }, "Success"));
+        }
+
+        [HttpPut("cancel")]
+        public async Task<IActionResult> Cancel([FromBody] CancelClosureRequestDto dto)
+        {
+            var result = await _service.CancelRequestAsync(dto);
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Request cancelled successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
+                -2 => BadRequest(new Response(false, null, "Request is already closed/cancelled/rejected")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("calculateShortfall")]
+        public IActionResult CalculateShortfall([FromBody] CalculateShortfallDto dto)
+        {
+            var result = ClosureService.CalculateShortfall(dto);
+            return Ok(new Response(true, result, "Success"));
+        }
+
+        [HttpGet("getLetterId/{lan}")]
+        public async Task<IActionResult> GetLetterId(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest(new Response(false, null, "LAN is required"));
+
+            var letterId = await _service.GetLetterIdAsync(lan);
+
+            return Ok(new Response(true, new { letterId }, "Success"));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
+        {
+            if (request.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (request.PageSize < 1 || request.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllAsync(request);
+
+            return Ok(new Response(
+                true,
+                result,
+                result.TotalRecords == 0 ? "No records found" : "Success"));
+        }
+
     }
 }
 

@@ -61,9 +61,6 @@ namespace ProductivityApi.Controllers
         [HttpGet("getLansByUser")]
         public async Task<IActionResult> GetLansByUser([FromQuery] GetLanByUserRequestDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new Response(false, "UserId is required."));
-
             var result = await _service.GetLansByUserAsync(dto);
 
             if (result.Error != null)
@@ -138,13 +135,8 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getAllowedStatuses")]
-        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string role)
+        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string? role)
         {
-            if (string.IsNullOrWhiteSpace(role))
-            {
-                return BadRequest(new Response(false, message: "Role is required."));
-            }
-
             var statuses = await _service.GetAllowedStatusesAsync(role);
 
             return Ok(new Response(true, statuses));

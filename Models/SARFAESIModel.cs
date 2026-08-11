@@ -218,4 +218,98 @@ namespace ProductivityApi.Models
     }
 
     #endregion
+
+    //public class SARFAESILanMapping
+    //{
+    //    public int Id { get; set; }
+    //    public string Lan { get; set; } = string.Empty;
+    //    public string CustomerName { get; set; } = string.Empty;
+    //    public string EmpId { get; set; } = string.Empty;
+    //    public string CreatedBy { get; set; } = string.Empty;
+    //    public DateTime? CreatedDt { get; set; }
+    //    public string UpdatedBy { get; set; } = string.Empty;
+    //    public DateTime? UpdatedDt { get; set; }
+    //}
+
+    //public class SARFAESILanMappingDto
+    //{
+    //    public string Lan { get; set; } = string.Empty;
+    //    public string CustomerName { get; set; } = string.Empty;
+    //    public string EmpId { get; set; } = string.Empty;
+    //}
+    //public class SARFAESILanUploadDto
+    //{
+    //    [Required]
+    //    public string CreatedBy { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
+    //}
+    //public class SARFAESIUpdateMappedLanRequest
+    //{
+    //    [Required]
+    //    public int Id { get; set; }
+    //    public string EmpID { get; set; }
+    //    public string UpdatedBy { get; set; }
+    //}
+
+    public class SARFAESILanMapping
+    {
+        public int Id { get; set; }
+
+        public string Lan { get; set; } = string.Empty;
+
+        public string CustomerName { get; set; } = string.Empty;
+
+        public string EmpId { get; set; } = string.Empty;
+
+        public string SectionCode { get; set; } = string.Empty;
+
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime? CreatedDt { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public DateTime? UpdatedDt { get; set; }
+    }
+
+    public class SARFAESILanMappingDto
+    {
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+
+        [Required]
+        public string CustomerName { get; set; } = string.Empty;
+
+        [Required]
+        public string EmpId { get; set; } = string.Empty;
+
+    }
+
+    public class SARFAESILanUploadDto
+    {
+        [Required]
+        [MinLength(1)]
+        public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+        public string? SectionCode { get; set; }
+    }
+
+    public class SARFAESIUpdateMappedLanRequest
+    {
+        [Required]
+        public int Id { get; set; }
+
+        public string? EmpID { get; set; }
+
+        public string? CustomerName { get; set; }
+
+        public string? SectionCode { get; set; }
+
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
 }

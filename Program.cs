@@ -105,7 +105,10 @@ builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
 builder.Services.AddScoped<DmsDocsService>();
-
+builder.Services.AddScoped<BulkDocsService>();
+builder.Services.AddScoped<BulkFclService>();
+builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
+builder.Services.AddScoped<IndusArchivedRepository>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -139,6 +142,11 @@ builder.Services.AddScoped<AxisRepository>();
 builder.Services.AddScoped<BTLettersRepository>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
 builder.Services.AddScoped<DmsDocsRepository>();
+builder.Services.AddScoped<BulkDocsRepository>();
+builder.Services.AddScoped<BulkFclRepository>();
+builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
+builder.Services.AddScoped<IndusArchivedService>();
+
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
@@ -199,8 +207,6 @@ app.UseSerilogRequestLogging(options =>
     };
 });
 
-//app.UseMiddleware<LoggingMiddleware>();
-
 app.UseHttpsRedirection(); //HTTPS Only
 app.UseHsts(); // enables HTTP Strict Transport Security (HSTS).
 
@@ -208,14 +214,12 @@ app.UseCors("AllowFrontend");
 
 app.UseStaticFiles(); // keeps default wwwroot working
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.WebRootPath, "wb")),
-    RequestPath = "/wb"
-});
-
-
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider(
+//        Path.Combine(builder.Environment.WebRootPath, "wb")),
+//    RequestPath = "/wb"
+//});
 
 if (!app.Environment.IsDevelopment())
 {

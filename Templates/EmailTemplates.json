@@ -103,5 +103,8 @@
   },
   "NewBranchMovedToQEmail": {
     "Body": "<p>Dear Team,</p><p>A new branch workflow task has been assigned to your queue.</p><p><b>Branch Name:</b> <<BranchName>></p><p><b>Checklist Item:</b> <<ChecklistName>></p><p><b>Assigned Team:</b> <<Team>></p><p>Please take the necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "JobFailureAlertEmail": {
+    "Body": "<p>Hi Team,</p><p>The background job encountered an error while processing.</p><ul><li><b>Job Name:</b> <<JobName>></li><li><b>Source:</b> <<Source>></li><li><b>Error Time:</b> <<ErrorTime>></li><li><b>Error Message:</b> <<ErrorMessage>></li></ul><p>Please check the application logs for more details.</p><p>Regards,<br/>Vistaar Finance</p>"
   }
 }
