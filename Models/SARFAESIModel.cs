@@ -290,14 +290,11 @@ namespace ProductivityApi.Models
     public class SARFAESILanUploadDto
     {
         [Required]
-        public string CreatedBy { get; set; } = string.Empty;
-
-        [Required]
-        public string SectionCode { get; set; } = string.Empty;
-
-        [Required]
         [MinLength(1)]
         public List<SARFAESILanMappingDto> Mappings { get; set; } = [];
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+        public string? SectionCode { get; set; }
     }
 
     public class SARFAESIUpdateMappedLanRequest

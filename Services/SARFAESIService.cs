@@ -214,13 +214,14 @@ namespace ProductivityApi.Services
                 return (false, "No records found.");
 
             dto.CreatedBy = dto.CreatedBy?.Trim() ?? string.Empty;
-            dto.SectionCode = dto.SectionCode?.Trim() ?? string.Empty;
+            //dto.SectionCode = dto.SectionCode?.Trim() ?? string.Empty;
+            dto.SectionCode = string.IsNullOrWhiteSpace(dto.SectionCode) ? "13(4)" : dto.SectionCode.Trim();
 
             if (string.IsNullOrWhiteSpace(dto.CreatedBy))
                 return (false, "CreatedBy is required.");
 
-            if (string.IsNullOrWhiteSpace(dto.SectionCode))
-                return (false, "Section Code is required.");
+            //if (string.IsNullOrWhiteSpace(dto.SectionCode))
+            //    return (false, "Section Code is required.");
 
             for (var index = 0; index < dto.Mappings.Count; index++)
             {
