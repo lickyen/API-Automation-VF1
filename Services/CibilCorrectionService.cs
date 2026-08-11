@@ -274,11 +274,11 @@ namespace ProductivityApi.Services
             if (existing == null)
                 return (false, "Bureau Report not found.");
 
-            var count = await _repository.GetNonCustomerBureauReportCountAsync(
-                existing.NonCustomerId);
+            //var count = await _repository.GetNonCustomerBureauReportCountAsync(
+            //    existing.NonCustomerId);
 
-            if (count <= 1)
-                return (false, "At least one Bureau Report is mandatory and cannot be deleted.");
+            //if (count <= 1)
+            //    return (false, "At least one Bureau Report is mandatory and cannot be deleted.");
 
             var result = await _repository.DeleteNonCustomerBureauReportAsync(id);
 
