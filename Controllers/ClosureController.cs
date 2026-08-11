@@ -23,7 +23,7 @@ namespace ProductivityApi.Controllers
             return result switch
             {
                 > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
-                -1 => NotFound(new Response(false, null, "An active request exists for the same LAN")),
+                -1 => Conflict(new Response(false, null, "An active request exists for the same LAN")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -73,6 +73,18 @@ namespace ProductivityApi.Controllers
                 1 => Ok(new Response(true, null, "Action completed successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 -2 => BadRequest(new Response(false, null, "Invalid role")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("copsApproval")]
+        public async Task<IActionResult> CopsApproval([FromBody] ClosureCopsApprovalDto dto)
+        {
+            var result = await _service.CopsApprovalAsync(dto);
+            return result switch
+            {
+                1 => Ok(new Response(true, null, "Action completed successfully")),
+                -1 => NotFound(new Response(false, null, "Record not found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -227,6 +239,24 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, new { letterId }, "Success"));
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
+        {
+            if (request.PageNumber < 1)
+                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
+
+            if (request.PageSize < 1 || request.PageSize > 100)
+                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
+
+            var result = await _service.GetAllAsync(request);
+
+            return Ok(new Response(
+                true,
+                result,
+                result.TotalRecords == 0 ? "No records found" : "Success"));
+        }
+
     }
 }
 

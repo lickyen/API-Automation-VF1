@@ -36,6 +36,7 @@
         public string gender { get; set; }
         public string maritalStatus { get; set; }
         public string phoneNumber { get; set; }
+        public string custCRCPR { get; set; }
     }
 
     public class Address
@@ -62,9 +63,24 @@
         public string cityName { get; set; }
         public bool sameAsPermanentAddress { get; set; }
 
+        //public string GetFullAddress()
+        //{
+        //    return $"{buildingNo}-{flatNo}, {street}, {addrLine1}, {addrLine2}, {cityName}, {stateName}, {pinCode}";
+        //}
+
         public string GetFullAddress()
         {
-            return $"{buildingNo}-{flatNo}, {street}, {addrLine1}, {addrLine2}, {cityName}, {stateName}, {pinCode}";
+            return string.Join(", ",
+                new[]
+                {
+                    buildingNo,
+                    street,
+                    addrLine1,
+                    addrLine2,
+                    cityName,
+                    stateName,
+                    pinCode
+                }.Where(x => !string.IsNullOrWhiteSpace(x)));
         }
     }
 

@@ -143,7 +143,8 @@ namespace ProductivityApi.Services
                     profile.State = result.Properties["st"].Count > 0 ? result.Properties["st"][0].ToString() : "";
 
                     // Get flattened manager chain (L1/L2/L3)
-                    var managers = GetManagerChain(result);
+                    //var managers = GetManagerChain(result);
+                    var managers = new List<ManagerInfo>();
                     if (managers.Count > 0) profile.L1Manager = managers[0];
                     if (managers.Count > 1) profile.L2Manager = managers[1];
                     if (managers.Count > 2) profile.L3Manager = managers[2];
@@ -189,48 +190,64 @@ namespace ProductivityApi.Services
             return managers;
         }
 
-        //public bool ResetPassword(string userId, string newPassword)
+        //public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
         //{
+        //    bool success = false;
+        //    string? message = null;
+
         //    try
         //    {
-        //        using (var entry = new DirectoryEntry(
+        //        using var entry = new DirectoryEntry(
         //            _settings.LDAPPath,
         //            _settings.ServiceAccountUser,
-        //            _settings.ServiceAccountPassword))
+        //            _settings.ServiceAccountPassword);
+
+        //        using var searcher = new DirectorySearcher(entry);
+        //        searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
+        //        searcher.SearchScope = SearchScope.Subtree;
+
+        //        var result = searcher.FindOne();
+        //        if (result == null)
         //        {
-        //            using (var searcher = new DirectorySearcher(entry))
-        //            {
-        //                searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
-        //                searcher.SearchScope = SearchScope.Subtree;
-
-        //                var result = searcher.FindOne();
-        //                if (result == null)
-        //                    return false; // User not found
-
-        //                using (var userEntry = result.GetDirectoryEntry())
-        //                {
-        //                    // Reset password
-        //                    userEntry.Invoke("SetPassword", new object[] { newPassword });
-
-        //                    // Unlock account (if locked)
-        //                    userEntry.Properties["lockoutTime"].Value = 0;
-
-        //                    userEntry.CommitChanges();
-
-        //                    return true;
-        //                }
-        //            }
+        //            message = "User not found in directory";
+        //            return false;
         //        }
+
+        //        using var userEntry = result.GetDirectoryEntry();
+        //        userEntry.Invoke("SetPassword", new object[] { newPassword });
+        //        userEntry.Properties["lockoutTime"].Value = 0;
+        //        userEntry.CommitChanges();
+
+        //        success = true;
         //    }
-        //    catch (System.Runtime.InteropServices.COMException ex)
+        //    catch (COMException ex)
         //    {
-        //        // Password policy violation or permission issue
-        //        return false;
+        //        message = $"COMException: {ex.GetType().Name} — {ex.Message} (HRESULT: {ex.ErrorCode:X})";
+        //        Log.Error(ex, "LDAP password reset COMException for UserId={UserId}", userId);
         //    }
-        //    catch
+        //    catch (Exception ex)
         //    {
-        //        return false;
+        //        message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+        //        Log.Error(ex, "Password reset error for UserId={UserId}", userId);
         //    }
+        //    finally
+        //    {
+        //        await _userLogRepository.AddAsync(new UserLog
+        //        {
+        //            UserId = userId,
+        //            Action = "PASSWORD_RESET",
+        //            Response = success ? "SUCCESS" : "FAILURE",
+        //            Message = message
+        //        });
+
+        //        Log.Information(
+        //            "Password reset UserId={UserId} Success={Success}",
+        //            userId,
+        //            success
+        //        );
+        //    }
+
+        //    return success;
         //}
 
         public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
@@ -240,38 +257,17 @@ namespace ProductivityApi.Services
 
             try
             {
-                using var entry = new DirectoryEntry(
-                    _settings.LDAPPath,
-                    _settings.ServiceAccountUser,
-                    _settings.ServiceAccountPassword);
+                success = _env.IsProduction()
+                    ? await ResetAdPasswordAsync(userId, newPassword)
+                    : ResetDbPassword(userId, newPassword);
 
-                using var searcher = new DirectorySearcher(entry);
-                searcher.Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})";
-                searcher.SearchScope = SearchScope.Subtree;
-
-                var result = searcher.FindOne();
-                if (result == null)
-                {
-                    message = "User not found in directory";
-                    return false;
-                }
-
-                using var userEntry = result.GetDirectoryEntry();
-                userEntry.Invoke("SetPassword", new object[] { newPassword });
-                userEntry.Properties["lockoutTime"].Value = 0;
-                userEntry.CommitChanges();
-
-                success = true;
-            }
-            catch (COMException ex)
-            {
-                message = $"COMException: {ex.GetType().Name} — {ex.Message} (HRESULT: {ex.ErrorCode:X})";
-                Log.Error(ex, "LDAP password reset COMException for UserId={UserId}", userId);
+                message = success ? null : "Password reset failed";
             }
             catch (Exception ex)
             {
                 message = $"Exception: {ex.GetType().Name} — {ex.Message}";
                 Log.Error(ex, "Password reset error for UserId={UserId}", userId);
+                throw;
             }
             finally
             {
@@ -284,13 +280,44 @@ namespace ProductivityApi.Services
                 });
 
                 Log.Information(
-                    "Password reset UserId={UserId} Success={Success}",
+                    "Password reset UserId={UserId} Env={Env} Success={Success}",
                     userId,
-                    success
-                );
+                    _env.EnvironmentName,
+                    success);
             }
 
             return success;
+        }
+
+        private Task<bool> ResetAdPasswordAsync(string userId, string newPassword)
+        {
+            using var entry = new DirectoryEntry(
+                _settings.LDAPPath,
+                _settings.ServiceAccountUser,
+                _settings.ServiceAccountPassword);
+
+            using var searcher = new DirectorySearcher(entry)
+            {
+                Filter = $"(sAMAccountName={EscapeLdapSearchFilter(userId)})",
+                SearchScope = SearchScope.Subtree
+            };
+
+            var result = searcher.FindOne();
+            if (result == null)
+                return Task.FromResult(false);
+
+            using var userEntry = result.GetDirectoryEntry();
+
+            userEntry.Invoke("SetPassword", new object[] { newPassword });
+            userEntry.Properties["lockoutTime"].Value = 0;
+            userEntry.CommitChanges();
+
+            return Task.FromResult(true);
+        }
+
+        private bool ResetDbPassword(string userId, string newPassword)
+        {
+            return _userRepository.UpdatePassword(userId, newPassword) == 1;
         }
 
         private string EscapeLdapSearchFilter(string dn)

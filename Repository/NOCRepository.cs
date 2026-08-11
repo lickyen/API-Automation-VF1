@@ -100,8 +100,8 @@ namespace ProductivityApi.Repository
 
         public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
             string userId,
-            string role,
-            string status
+            string? role,
+            string? status
         )
         {
             try
@@ -329,24 +329,32 @@ namespace ProductivityApi.Repository
 
             return await conn.QueryAsync<NocTransaction>(sql);
         }
-
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string role)
+        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
         {
             using var conn = new SqlConnection(_conStr);
 
-            string sql =
-                @"
+            //const string sql = @"
+            //    SELECT Status
+            //    FROM NOC_RoleStatusMap
+            //    WHERE IsActive = 1
+            //      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
+            //    ORDER BY Id;";
+
+            const string sql = @"
                 SELECT Status
-                FROM NOC_RoleStatusMap
-                WHERE Role = @Role AND ActiveStatus = 'Active'
-                ORDER BY Id
-            ";
+                FROM
+                (
+                    SELECT Status, MIN(Id) AS Id
+                    FROM NOC_RoleStatusMap
+                    WHERE IsActive = 1
+                      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
+                    GROUP BY Status
+                ) AS T
+                ORDER BY Id;";
 
-            var result = await conn.QueryAsync<string>(sql, new { Role = role });
 
-            return result;
+            return await conn.QueryAsync<string>(sql, new { Role = role });
         }
-
         public async Task<IEnumerable<dynamic>> GetOneilReportDataAsync(List<int> ids)
         {
             using var conn = new SqlConnection(_conStr);

@@ -223,5 +223,8 @@ namespace ProductivityApi.Services
                 (utrs, "UTR")
             );
         }
+
+        public Task<PagedResult<LcRefundModel>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

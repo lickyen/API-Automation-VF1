@@ -9,7 +9,7 @@
         public string? SystemGeneratedNo { get; set; }
         public DateTime? CoverExpiredDate { get; set; }
         public int? Age { get; set; }
-        public DateTime? Dob { get; set; }
+        public string? Dob { get; set; }
         public string? InsurerName { get; set; }
     }
 }

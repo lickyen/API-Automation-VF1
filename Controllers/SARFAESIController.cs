@@ -128,6 +128,55 @@ namespace ProductivityApi.Controllers
             return Ok(data);
         }
 
+        //[HttpPost("uploadLanMapping")]
+        //public async Task<IActionResult> UploadLanMapping([FromBody] SARFAESILanUploadDto dto)
+        //{
+        //    var result = await _service.UploadLanMappingAsync(dto);
+
+        //    if (!result.Success)
+        //        return BadRequest(new Response(false, null, result.Message));
+
+        //    return Ok(new Response(true, null, result.Message));
+        //}
+
+        //[HttpGet("getMappedLans")]
+        //public async Task<IActionResult> GetLansByEmpId([FromQuery] string empId)
+        //{
+        //    var data = await _service.GetLansByEmpIdAsync(empId);
+
+        //    return Ok(new Response(true, data, "Success"));
+        //}
+
+        //[HttpGet("getAllMappedLans")]
+        //public async Task<IActionResult> GetAllMappedLans()
+        //{
+        //    var data = await _service.GetAllMappedLansAsync();
+
+        //    return Ok(new Response(true, data, "Success"));
+        //}
+
+        //[HttpDelete("deleteMappedLan/{id}")]
+        //public async Task<IActionResult> DeleteMappedLan(int id)
+        //{
+        //    var deleted = await _service.DeleteMappedLanAsync(id);
+
+        //    if (!deleted)
+        //        return NotFound(new Response(false, null, "Record not found."));
+
+        //    return Ok(new Response(true, null, "Record deleted successfully."));
+        //}
+
+        //[HttpPost("updateMappedLan")]
+        //public async Task<IActionResult> UpdateMappedLan([FromBody] SARFAESIUpdateMappedLanRequest request)
+        //{
+        //    var updated = await _service.UpdateMappedLanAsync(request);
+
+        //    if (!updated)
+        //        return NotFound(new Response(false, null, "Record not found."));
+
+        //    return Ok(new Response(true, null, "Record updated successfully."));
+        //}
+
         [HttpPost("uploadLanMapping")]
         public async Task<IActionResult> UploadLanMapping([FromBody] SARFAESILanUploadDto dto)
         {
@@ -140,17 +189,17 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getMappedLans")]
-        public async Task<IActionResult> GetLansByEmpId([FromQuery] string? empId)
+        public async Task<IActionResult> GetLansByEmpId([FromQuery] string empId, [FromQuery] string? sectionCode)
         {
-            var data = await _service.GetLansByEmpIdAsync(empId);
+            var data = await _service.GetLansByEmpIdAsync(empId, sectionCode);
 
             return Ok(new Response(true, data, "Success"));
         }
 
         [HttpGet("getAllMappedLans")]
-        public async Task<IActionResult> GetAllMappedLans()
+        public async Task<IActionResult> GetAllMappedLans([FromQuery] string? sectionCode)
         {
-            var data = await _service.GetAllMappedLansAsync();
+            var data = await _service.GetAllMappedLansAsync(sectionCode);
 
             return Ok(new Response(true, data, "Success"));
         }
@@ -167,14 +216,14 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("updateMappedLan")]
-        public async Task<IActionResult> UpdateMappedLan([FromBody] UpdateMappedLanRequest request)
+        public async Task<IActionResult> UpdateMappedLan([FromBody] SARFAESIUpdateMappedLanRequest request)
         {
-            var updated = await _service.UpdateMappedLanAsync(request.Id, request.EmpID);
+            var result = await _service.UpdateMappedLanAsync(request);
 
-            if (!updated)
-                return NotFound(new Response(false, null, "Record not found."));
+            if (!result.Success)
+                return BadRequest(new Response(false, null, result.Message));
 
-            return Ok(new Response(true, null, "Record updated successfully."));
+            return Ok(new Response(true, null, result.Message));
         }
 
     }

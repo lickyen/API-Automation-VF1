@@ -7,6 +7,7 @@ namespace ProductivityApi.Services
     public class SARFAESIService
     {
         private readonly SARFAESIRepository _repository;
+        private readonly PLFService _plfService;
         private readonly string _filePath;
 
         private static readonly HashSet<string> AllowedExtensions = new()
@@ -23,10 +24,11 @@ namespace ProductivityApi.Services
             public const long Video = (long)(100 * 1024 * 1024);   // 100 MB
         }
 
-        public SARFAESIService(SARFAESIRepository repository, AppSettings appSettings)
+        public SARFAESIService(SARFAESIRepository repository, AppSettings appSettings, PLFService plfService)
         {
             _repository = repository;
             _filePath = appSettings.FilePaths.SARFAESIFilePath;
+            _plfService = plfService;
         }
 
         public Task<int> CreateAsync(SARFAESICreateDto dto)
@@ -178,25 +180,79 @@ namespace ProductivityApi.Services
             return ExcelHelper.GenerateExcel(data, "Data");
         }
 
+        //public async Task<(bool Success, string Message)> UploadLanMappingAsync(SARFAESILanUploadDto dto)
+        //{
+        //    if (dto.Mappings == null || dto.Mappings.Count == 0)
+        //        return (false, "No records found");
+
+        //    var result = await _repository.BulkInsertLanMappingsAsync(
+        //        dto.Mappings,
+        //        dto.CreatedBy);
+
+        //    return (true, $"{result} records uploaded successfully.");
+        //}
+        //public Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId)
+        //{
+        //    return _repository.GetLansByEmpIdAsync(empId);
+        //}
+        //public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
+        //{
+        //    return _repository.GetAllMappedLansAsync();
+        //}
+        //public Task<bool> DeleteMappedLanAsync(int id)
+        //{
+        //    return _repository.DeleteMappedLanAsync(id);
+        //}
+        //public Task<bool> UpdateMappedLanAsync(SARFAESIUpdateMappedLanRequest request)
+        //{
+        //    return _repository.UpdateMappedLanAsync(request.Id, request.EmpID, request.UpdatedBy);
+        //}
+
         public async Task<(bool Success, string Message)> UploadLanMappingAsync(SARFAESILanUploadDto dto)
         {
             if (dto.Mappings == null || dto.Mappings.Count == 0)
-                return (false, "No records found");
+                return (false, "No records found.");
 
-            var result = await _repository.BulkInsertLanMappingsAsync(
-                dto.Mappings,
-                dto.CreatedBy);
+            dto.CreatedBy = dto.CreatedBy?.Trim() ?? string.Empty;
+            //dto.SectionCode = dto.SectionCode?.Trim() ?? string.Empty;
+            dto.SectionCode = string.IsNullOrWhiteSpace(dto.SectionCode) ? "13(4)" : dto.SectionCode.Trim();
 
-            return (true, $"{result} records uploaded successfully.");
+            if (string.IsNullOrWhiteSpace(dto.CreatedBy))
+                return (false, "CreatedBy is required.");
+
+            //if (string.IsNullOrWhiteSpace(dto.SectionCode))
+            //    return (false, "Section Code is required.");
+
+            for (var index = 0; index < dto.Mappings.Count; index++)
+            {
+                var item = dto.Mappings[index];
+                var rowNumber = index + 2;
+
+                item.Lan = item.Lan?.Trim() ?? string.Empty;
+                item.CustomerName = item.CustomerName?.Trim() ?? string.Empty;
+                item.EmpId = item.EmpId?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(item.Lan))
+                    return (false, $"LAN is required at row {rowNumber}.");
+
+                if (string.IsNullOrWhiteSpace(item.CustomerName))
+                    return (false, $"Customer Name is required at row {rowNumber}.");
+
+                if (string.IsNullOrWhiteSpace(item.EmpId))
+                    return (false, $"Employee ID is required at row {rowNumber}.");
+            }
+
+            var result = await _repository.BulkInsertLanMappingsAsync(dto.Mappings, dto.CreatedBy, dto.SectionCode);
+            return result > 0 ? (true, $"{result} records uploaded successfully.") : (false, "No records were uploaded.");
         }
-        public Task<List<string>> GetLansByEmpIdAsync(string? empId)
+        public Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId, string? sectionCode)
         {
-            return _repository.GetLansByEmpIdAsync(empId);
+            return _repository.GetLansByEmpIdAsync(empId.Trim(), sectionCode?.Trim());
         }
 
-        public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
+        public Task<List<SARFAESILanMapping>> GetAllMappedLansAsync(string? sectionCode)
         {
-            return _repository.GetAllMappedLansAsync();
+            return _repository.GetAllMappedLansAsync(sectionCode?.Trim());
         }
 
         public Task<bool> DeleteMappedLanAsync(int id)
@@ -204,9 +260,22 @@ namespace ProductivityApi.Services
             return _repository.DeleteMappedLanAsync(id);
         }
 
-        public Task<bool> UpdateMappedLanAsync(int id, string empId)
+        public async Task<(bool Success, string Message)> UpdateMappedLanAsync(SARFAESIUpdateMappedLanRequest request)
         {
-            return _repository.UpdateMappedLanAsync(id, empId);
+            if (request.Id <= 0)
+                return (false, "Invalid record ID.");
+
+            if (string.IsNullOrWhiteSpace(request.UpdatedBy))
+                return (false, "UpdatedBy is required.");
+
+            if (string.IsNullOrWhiteSpace(request.EmpID) &&
+                string.IsNullOrWhiteSpace(request.CustomerName) &&
+                string.IsNullOrWhiteSpace(request.SectionCode))
+                return (false, "At least one field must be provided for update.");
+
+            var updated = await _repository.UpdateMappedLanAsync(request.Id, request.EmpID?.Trim(), request.CustomerName?.Trim(), request.SectionCode?.Trim(), request.UpdatedBy.Trim());
+
+            return updated ? (true, "Record updated successfully.") : (false, "Record not found.");
         }
 
         private string GetFileCategory(string extension)

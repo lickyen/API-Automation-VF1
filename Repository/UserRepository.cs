@@ -350,6 +350,32 @@ namespace ProductivityApi.Repository
             return roles;
         }
 
+        public int UpdatePassword(string userId, string password)
+        {
+            using (var connection = new SqlConnection(_conStr))
+            using (var command = new SqlCommand("sp_updatePassword", connection))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.AddWithValue("@UserID", userId);
+                command.Parameters.AddWithValue("@Password", password);
+
+                var outputParam = new SqlParameter("@Output", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+
+                command.Parameters.Add(outputParam);
+
+                connection.Open();
+                command.ExecuteNonQuery();
+
+                return outputParam.Value != DBNull.Value
+                    ? Convert.ToInt32(outputParam.Value)
+                    : 0;
+            }
+        }
+
     }
 
 }

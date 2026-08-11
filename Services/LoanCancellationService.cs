@@ -525,5 +525,10 @@ namespace ProductivityApi.Services
 
             return dbResult;
         }
+
+        public Task<PagedResult<LoanCancelRequest>> GetAllAsync(PaginationRequestDto dto)
+        {
+            return _repository.GetAllRequestsAsync(dto);
+        }
     }
 }

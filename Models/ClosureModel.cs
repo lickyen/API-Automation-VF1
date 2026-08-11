@@ -266,8 +266,16 @@
     {
         public int Id { get; set; }
         public string Role { get; set; }
-        public string ApprovalType { get; set; }    // Waiver / Retention
+        public string? ApprovalType { get; set; }    // Waiver / Retention
         public string Status { get; set; }          // Approved / Rejected / SentBack
+        public string Remarks { get; set; }
+        public string UserId { get; set; }
+    }
+
+    public class ClosureCopsApprovalDto
+    {
+        public int Id { get; set; }
+        public string Status { get; set; }    
         public string Remarks { get; set; }
         public string UserId { get; set; }
     }
@@ -291,8 +299,8 @@
     public class UpdateClosurePaymentDto
     {
         public int Id { get; set; }
-        public string PaymentMode { get; set; }
-        public decimal Amount { get; set; }
+        public string? PaymentMode { get; set; }
+        public decimal? Amount { get; set; }
         public string? PaymentDetails { get; set; }
         public string? BankDetails { get; set; }
         public string? TransactionRef { get; set; }

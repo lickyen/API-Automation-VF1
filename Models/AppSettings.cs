@@ -12,6 +12,7 @@ namespace ProductivityApi.Models
         public ADSettings ADSettings { get; set; } = new ADSettings();
         public FilePaths FilePaths { get; set; } = new FilePaths();
         public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
+        public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
     }
 
     public class EmailSettings
@@ -69,6 +70,7 @@ namespace ProductivityApi.Models
         public string VCPAgreementFilePath { get; set; } = string.Empty;
         public string BTFilePath { get; set; } = string.Empty;
         public string NOCFilePath { get; set; } = string.Empty;
+        public string BulkFclFilePath { get; set; } = string.Empty;
     }
     public class RazorPaySettings
     {

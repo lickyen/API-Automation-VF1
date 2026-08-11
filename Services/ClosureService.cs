@@ -171,8 +171,10 @@ namespace ProductivityApi.Services
                     await NotifyBranchAsync(dto.Id, "Approved");
                 }
 
-                await NotifyPendingUserAsync(dto.Id);
-
+                else
+                {
+                    await NotifyPendingUserAsync(dto.Id);
+                }
             }
 
             return result;
@@ -294,6 +296,16 @@ namespace ProductivityApi.Services
 
                 await NotifyPendingUserAsync(dto.Id);
 
+            }
+            return result;
+        }
+
+        public async Task<int> CopsApprovalAsync(ClosureCopsApprovalDto dto)
+        {
+            var result = await _repository.CopsApprovalAsync(dto);
+            if (result > 0)
+            {
+                await NotifyBranchAsync(dto.Id, dto.Status);
             }
             return result;
         }
@@ -559,5 +571,8 @@ namespace ProductivityApi.Services
 
         public async Task<int?> GetLetterIdAsync(string lan)
             => await _repository.GetLetterIdAsync(lan);
+
+        public Task<PagedResult<ClosureTransaction>> GetAllAsync(PaginationRequestDto request)
+            => _repository.GetAllAsync(request);
     }
 }

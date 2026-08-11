@@ -176,63 +176,147 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> BulkInsertLanMappingsAsync(
-    List<SARFAESILanMappingDto> mappings,
-    string createdBy)
+        //    public async Task<int> BulkInsertLanMappingsAsync(
+        //List<SARFAESILanMappingDto> mappings,
+        //string createdBy)
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        var table = new DataTable();
+
+        //        table.Columns.Add("LAN", typeof(string));
+        //        table.Columns.Add("CustomerName", typeof(string));
+        //        table.Columns.Add("EmpID", typeof(string));
+
+        //        foreach (var item in mappings)
+        //        {
+        //            table.Rows.Add(item.Lan, item.CustomerName, item.EmpId);
+        //        }
+
+        //        var parameters = new DynamicParameters();
+
+        //        parameters.Add(
+        //            "@Mappings",
+        //            table.AsTableValuedParameter("TVP_SARFAESI_LAN_Master"));
+
+        //        parameters.Add("@CreatedBy", createdBy);
+
+        //        parameters.Add(
+        //            "@RowsAffected",
+        //            dbType: DbType.Int32,
+        //            direction: ParameterDirection.Output);
+
+        //        await conn.ExecuteAsync(
+        //            "sp_SARFAESI_BulkUploadLAN",
+        //            parameters,
+        //            commandType: CommandType.StoredProcedure);
+
+        //        return parameters.Get<int>("@RowsAffected");
+        //    }
+
+        //    public async Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId)
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        return (await conn.QueryAsync<SARFAESILanMapping>(
+        //            "sp_SARFAESI_GetMappedLans",
+        //            new
+        //            {
+        //                EmpID = empId
+        //            },
+        //            commandType: CommandType.StoredProcedure
+        //        )).ToList();
+        //    }
+
+        //    public async Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        return (await conn.QueryAsync<SARFAESILanMapping>(
+        //            "sp_SARFAESI_GetAllMappedLans",
+        //            commandType: CommandType.StoredProcedure
+        //        )).ToList();
+        //    }
+
+        //    public async Task<bool> DeleteMappedLanAsync(int id)
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        var rowsAffected = await conn.ExecuteScalarAsync<int>(
+        //            "sp_SARFAESI_DeleteMappedLan",
+        //            new { Id = id },
+        //            commandType: CommandType.StoredProcedure);
+
+        //        return rowsAffected > 0;
+        //    }
+
+        //    public async Task<bool> UpdateMappedLanAsync(int id, string empId, string updatedBy)
+        //    {
+        //        using var conn = new SqlConnection(_conStr);
+
+        //        var rowsAffected = await conn.ExecuteScalarAsync<int>(
+        //            "sp_SARFAESI_UpdateMappedLan",
+        //            new
+        //            {
+        //                Id = id,
+        //                EmpID = empId,
+        //                UpdatedBy = updatedBy
+        //            },
+        //            commandType: CommandType.StoredProcedure);
+
+        //        return rowsAffected > 0;
+        //    }
+
+        public async Task<int> BulkInsertLanMappingsAsync(List<SARFAESILanMappingDto> mappings, string createdBy, string sectionCode)
         {
             using var conn = new SqlConnection(_conStr);
 
             var table = new DataTable();
 
             table.Columns.Add("LAN", typeof(string));
+            table.Columns.Add("CustomerName", typeof(string));
             table.Columns.Add("EmpID", typeof(string));
+            table.Columns.Add("SectionCode", typeof(string));
 
             foreach (var item in mappings)
-            {
-                table.Rows.Add(item.Lan, item.EmpId);
-            }
+                table.Rows.Add(item.Lan, item.CustomerName, item.EmpId, sectionCode);
 
             var parameters = new DynamicParameters();
 
-            parameters.Add(
-                "@Mappings",
-                table.AsTableValuedParameter("TVP_SARFAESI_LAN_Master"));
-
+            parameters.Add("@Mappings", table.AsTableValuedParameter("TVP_SARFAESI_LAN_Master"));
             parameters.Add("@CreatedBy", createdBy);
+            parameters.Add("@RowsAffected", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
-            parameters.Add(
-                "@RowsAffected",
-                dbType: DbType.Int32,
-                direction: ParameterDirection.Output);
-
-            await conn.ExecuteAsync(
-                "sp_SARFAESI_BulkUploadLAN",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+            await conn.ExecuteAsync("sp_SARFAESI_BulkUploadLAN", parameters, commandType: CommandType.StoredProcedure);
 
             return parameters.Get<int>("@RowsAffected");
         }
 
-        public async Task<List<string>> GetLansByEmpIdAsync(string? empId)
+        public async Task<List<SARFAESILanMapping>> GetLansByEmpIdAsync(string empId, string? sectionCode)
         {
             using var conn = new SqlConnection(_conStr);
 
-            return (await conn.QueryAsync<string>(
+            return (await conn.QueryAsync<SARFAESILanMapping>(
                 "sp_SARFAESI_GetMappedLans",
                 new
                 {
-                    EmpID = empId
+                    EmpID = empId,
+                    SectionCode = sectionCode
                 },
                 commandType: CommandType.StoredProcedure
             )).ToList();
         }
 
-        public async Task<List<SARFAESILanMapping>> GetAllMappedLansAsync()
+        public async Task<List<SARFAESILanMapping>> GetAllMappedLansAsync(string? sectionCode)
         {
             using var conn = new SqlConnection(_conStr);
 
             return (await conn.QueryAsync<SARFAESILanMapping>(
                 "sp_SARFAESI_GetAllMappedLans",
+                new
+                {
+                    SectionCode = sectionCode
+                },
                 commandType: CommandType.StoredProcedure
             )).ToList();
         }
@@ -249,7 +333,7 @@ namespace ProductivityApi.Repository
             return rowsAffected > 0;
         }
 
-        public async Task<bool> UpdateMappedLanAsync(int id, string empId)
+        public async Task<bool> UpdateMappedLanAsync(int id, string? empId, string? customerName, string? sectionCode, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -258,7 +342,10 @@ namespace ProductivityApi.Repository
                 new
                 {
                     Id = id,
-                    EmpID = empId
+                    EmpID = empId,
+                    CustomerName = customerName,
+                    SectionCode = sectionCode,
+                    UpdatedBy = updatedBy
                 },
                 commandType: CommandType.StoredProcedure);
 

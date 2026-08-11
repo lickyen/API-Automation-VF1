@@ -211,6 +211,32 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> CopsApprovalAsync(ClosureCopsApprovalDto dto)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+
+                var parameters = new
+                {
+                    dto.Id,
+                    dto.Status,
+                    dto.Remarks,
+                    dto.UserId
+                };
+
+                return await connection.ExecuteScalarAsync<int>(
+                    "sp_newClosure_CopsApproval",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("DB Error.", ex);
+            }
+        }
         public async Task<ClosureTransaction?> GetByIdAsync(int id)
         {
             using var connection = new SqlConnection(_conStr);
@@ -450,6 +476,34 @@ namespace ProductivityApi.Repository
                 "sp_newClosure_getLetterId",
                 new { LAN = lan },
                 commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<PagedResult<ClosureTransaction>> GetAllAsync(PaginationRequestDto request)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            using var multi = await connection.QueryMultipleAsync(
+                "dbo.sp_newClosure_GetAll",
+                new
+                {
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<ClosureTransaction>()).ToList();
+
+            return new PagedResult<ClosureTransaction>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
 
     }
