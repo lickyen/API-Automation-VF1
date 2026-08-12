@@ -160,6 +160,8 @@
         public DateTime? CoverExpiredDate { get; set; }
         public string? SgNo { get; set; }
         public string? InsurerName { get; set; }
+        public string? ClientName { get; set; } = "Vistaar Financial Services Pvt. Ltd.";
+        public string? PayoutLevel { get; set; } = "Member";
     }
 
     public class FcRefundBranchSubmitEBDto
