@@ -12,7 +12,8 @@ namespace ProductivityApi.Middlewares
         {
             "/swagger",
             "/hangfire",
-            "/wb"
+            "/wb",
+            "/api/Waba/Webhook"
         };
 
         public ApiKeyMiddleware(RequestDelegate next, AppSettings appSettings)

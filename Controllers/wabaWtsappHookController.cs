@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace ProductivityApi.Controllers
 {
-    [Route("api/Waba")]
+    [Route("api/Waba/Webhook")]
     [ApiController]
     public class wabaWtsappHookController : ControllerBase
     {
