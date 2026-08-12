@@ -84,6 +84,21 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        //[HttpPost("triggerMail")]
+        //public async Task<IActionResult> TriggerMail([FromBody] FcRefundTriggerMailDto dto)
+        //{
+        //    if (dto == null || dto.Lans == null || dto.Lans.Count == 0)
+        //        return BadRequest(new Response(false, null, "Select at least one LAN"));
+
+        //    var updatedCount = await _service.TriggerMailAsync(dto);
+
+        //    return updatedCount switch
+        //    {
+        //        >= 0 => Ok(new Response(true, null, "Mail sent successfully")),
+        //        _ => StatusCode(500, new Response(false, null, "An error occurred"))
+        //    };
+        //}
+
         [HttpPost("triggerMail")]
         public async Task<IActionResult> TriggerMail([FromBody] FcRefundTriggerMailDto dto)
         {
@@ -94,10 +109,12 @@ namespace ProductivityApi.Controllers
 
             return updatedCount switch
             {
-                >= 0 => Ok(new Response(true, null, "Mail sent successfully")),
+                > 0 => Ok(new Response(true, null, "Mail sent successfully")),
+                0 => Ok(new Response(false, null, "No eligible LANs found")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
+
         [HttpPost("updateRefund")]
         public async Task<IActionResult> UpdateRefund([FromBody] List<FcRefundUpdateRefundDto> dtos)
         {
@@ -173,6 +190,37 @@ namespace ProductivityApi.Controllers
                 true,
                 result,
                 result.TotalRecords == 0 ? "No records found" : "Success"));
+        }
+
+        //Added on 12-08-26
+        //EB Foreclose
+
+        [HttpGet("searchLan/{lan}")]
+        public async Task<IActionResult> SearchLan(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest(new Response(false, null, "LAN is required"));
+
+            var result = await _service.SearchLanAsync(lan);
+
+            if (!result.Success)
+                return Ok(new Response(false, null, result.Message));
+
+            return Ok(new Response(true, result.Data, result.Message));
+        }
+
+        [HttpPost("branchSubmitEB")]
+        public async Task<IActionResult> BranchSubmitEB([FromBody] FcRefundBranchSubmitEBDto dto)
+        {
+            var result = await _service.BranchSubmitEBAsync(dto);
+
+            return result switch
+            {
+                > 0 => Ok(new Response(true, null, "Submitted successfully")),
+                -1 => Conflict(new Response(false, null, "LAN already exists")),
+                -2 => NotFound(new Response(false, null, "LAN not found in finance")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
         }
     }
 }
