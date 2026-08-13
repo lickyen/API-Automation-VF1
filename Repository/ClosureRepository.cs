@@ -52,7 +52,28 @@ namespace ProductivityApi.Repository
                 dto.ChargesProposed,
                 dto.POSWaiverPer,
                 dto.InterestWaiverPer,
-                dto.ChargesWaiverPer
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
             };
 
             return await connection.ExecuteScalarAsync<int>(
@@ -93,7 +114,28 @@ namespace ProductivityApi.Repository
                 dto.ChargesProposed,
                 dto.POSWaiverPer,
                 dto.InterestWaiverPer,
-                dto.ChargesWaiverPer
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
             };
 
             return await connection.ExecuteScalarAsync<int>(

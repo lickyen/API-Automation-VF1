@@ -36,6 +36,27 @@
         public decimal UpdatedTotalIncWaiver { get; set; }
         public decimal TotalPaidAmount { get; set; }
 
+        public string? BusinessProfile { get; set; }
+        public decimal? CurrentPOS { get; set; }
+        public int? CurrentMOB { get; set; }
+        public string? ProductDesc { get; set; }
+        public string? PromotionDesc { get; set; }
+        public decimal? DisbursedAmt { get; set; }
+        public decimal? TranchePendingAmount { get; set; }
+        public decimal? CurrentLTVPer { get; set; }
+        public decimal? CurrentLTVAmt { get; set; }
+        public decimal? CurrentDSR { get; set; }
+        public decimal? Income { get; set; }
+        public int? CIBILScore { get; set; }
+        public decimal? Obligation { get; set; }
+        public int? Tenure { get; set; }
+        public decimal? Valuation { get; set; }
+        public string? EndUseDesc { get; set; }
+        public string? TypeOfProperty { get; set; }
+        public decimal? CurrentROI { get; set; }
+        public DateTime? LastEMIPaid { get; set; }
+        public int? EMIPending { get; set; }
+
         public string Status { get; set; }
         public string PendingRole { get; set; }
         public string PendingUser { get; set; }
@@ -170,15 +191,10 @@
         public decimal? InterestWaiverPer { get; set; }
         public decimal? ChargesWaiverPer { get; set; }
     }
-    // ── Add Request ─────────────────────────────────────────────────────
-    public class AddClosureRequestDto : ClosureFinancialDto
+
+    // ── Shared initiate/reinitiate request fields ───────────────────────
+    public class ClosureRequestFieldsDto : ClosureFinancialDto
     {
-        public string Lan { get; set; }
-        public string BranchCode { get; set; }
-        public string BranchName { get; set; }
-        public string Region { get; set; }
-        public string Zone { get; set; }
-        public string MegaZone { get; set; }
         public int DPD { get; set; }
         public decimal LoanAmount { get; set; }
         public string Criticality { get; set; }
@@ -187,35 +203,52 @@
         public bool IsAmountCollected { get; set; }
         public string? ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public int? LetterId { get; set; }
         public string FinalApprover { get; set; }
         public string Remarks { get; set; }
-        public string CreatedBy { get; set; }
         public decimal? TotalPaidAmount { get; set; }
+        public string? BusinessProfile { get; set; }
+        public decimal? CurrentPOS { get; set; }
+        public int? CurrentMOB { get; set; }
+        public string? ProductDesc { get; set; }
+        public string? PromotionDesc { get; set; }
+        public decimal? DisbursedAmt { get; set; }
+        public decimal? TranchePendingAmount { get; set; }
+        public decimal? CurrentLTVPer { get; set; }
+        public decimal? CurrentLTVAmt { get; set; }
+        public decimal? CurrentDSR { get; set; }
+        public decimal? Income { get; set; }
+        public int? CIBILScore { get; set; }
+        public decimal? Obligation { get; set; }
+        public int? Tenure { get; set; }
+        public decimal? Valuation { get; set; }
+        public string? EndUseDesc { get; set; }
+        public string? TypeOfProperty { get; set; }
+        public decimal? CurrentROI { get; set; }
+        public DateTime? LastEMIPaid { get; set; }
+        public int? EMIPending { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
     }
 
+    // ── Add Request ─────────────────────────────────────────────────────
+    public class AddClosureRequestDto : ClosureRequestFieldsDto
+    {
+        public string Lan { get; set; }
+        public string BranchCode { get; set; }
+        public string BranchName { get; set; }
+        public string Region { get; set; }
+        public string Zone { get; set; }
+        public string MegaZone { get; set; }
+        public int? LetterId { get; set; }
+        public string CreatedBy { get; set; }
+    }
+
     // ── Reinitiate Request ──────────────────────────────────────────────
-    public class ReinitiateClosureRequestDto : ClosureFinancialDto
+    public class ReinitiateClosureRequestDto : ClosureRequestFieldsDto
     {
         public int Id { get; set; }
-        public int DPD { get; set; }
-        public decimal LoanAmount { get; set; }
-        public string Criticality { get; set; }
-        public string Allocation { get; set; }
-        public string Bucket { get; set; }
-        public bool IsAmountCollected { get; set; }
-        public string ReasonAmountCollected { get; set; }
-        public bool IsWaiver { get; set; }
-        public string FinalApprover { get; set; }
-        public string Remarks { get; set; }
         public string UpdatedBy { get; set; }
-        public decimal? TotalPaidAmount { get; set; }
-        public FileUploadBase64? AckFile { get; set; }
-        public FileUploadBase64? ChecklistFile { get; set; }
-        public FileUploadBase64? FCLetterFile { get; set; }
     }
 
     // ── Update Amount Collected ─────────────────────────────────────────
