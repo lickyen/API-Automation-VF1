@@ -33,6 +33,7 @@ namespace ProductivityApi.Services
                 payload.DeliveryAttempt,
                 out var deliveryAttempt);
 
+
             var record = new WebhookMessageRecord
             {
                 WebhookEventId = payload.Id,
@@ -49,20 +50,21 @@ namespace ProductivityApi.Services
                 Sender = message.Sender,
                 MessageType = message.MessageType,
                 Status = message.Status,
-                MessageText = message.MessageContent.Text,
-                IsHsm = message.IsHsm,
 
+                MessageText = GetMessageText(message.MessageContent),
+
+                IsHsm = message.IsHsm,
                 SentAt = ConvertUnixTime(message.SentAt),
                 DeliveredAt = ConvertUnixTime(message.DeliveredAt),
                 ReadAt = ConvertUnixTime(message.ReadAt),
-
                 MessagePrice = message.MessagePrice,
                 RawPayload = JsonSerializer.Serialize(payload),
                 ReceivedAt = DateTimeOffset.UtcNow
             };
 
             var databaseId = await _repository.InsertAsync(
-                record);
+                record,
+                cancellationToken);
 
             return new WebhookSaveResult
             {
@@ -78,9 +80,50 @@ namespace ProductivityApi.Services
                 ? DateTimeOffset.FromUnixTimeMilliseconds(timestamp.Value)
                 : null;
         }
-    
+        private static string? GetMessageText(JsonElement content)
+        {
+            if (content.ValueKind != JsonValueKind.Object)
+                return null;
 
-}
+            // Standard text:
+            // { "type": "text", "text": "Hello" }
+            if (content.TryGetProperty("text", out var textElement) &&
+                textElement.ValueKind == JsonValueKind.String)
+            {
+                return textElement.GetString();
+            }
+
+            // Button reply:
+            // { "title": "YES", "id": "..." }
+            if (content.TryGetProperty("title", out var titleElement) &&
+                titleElement.ValueKind == JsonValueKind.String)
+            {
+                return titleElement.GetString();
+            }
+
+            // Interactive message:
+            // { "interactive": { "body": { "text": "Question" } } }
+            if (content.TryGetProperty("interactive", out var interactive) &&
+                interactive.ValueKind == JsonValueKind.Object &&
+                interactive.TryGetProperty("body", out var body) &&
+                body.ValueKind == JsonValueKind.Object &&
+                body.TryGetProperty("text", out var bodyText) &&
+                bodyText.ValueKind == JsonValueKind.String)
+            {
+                return bodyText.GetString();
+            }
+
+            // Media messages may contain a caption.
+            if (content.TryGetProperty("caption", out var captionElement) &&
+                captionElement.ValueKind == JsonValueKind.String)
+            {
+                return captionElement.GetString();
+            }
+
+            return null;
+        }
+
+    }
 
 
 }

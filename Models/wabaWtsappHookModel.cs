@@ -62,8 +62,11 @@ namespace ProductivityApi.Models
         [JsonPropertyName("sender")]
         public string Sender { get; set; } = string.Empty;
 
+        //[JsonPropertyName("message_content")]
+        //public MessageContent MessageContent { get; set; } = new();
+
         [JsonPropertyName("message_content")]
-        public MessageContent MessageContent { get; set; } = new();
+        public JsonElement MessageContent { get; set; }
 
         [JsonPropertyName("message_type")]
         public string MessageType { get; set; } = string.Empty;
@@ -135,8 +138,41 @@ namespace ProductivityApi.Models
 
     public sealed class MessageContent
     {
+        //[JsonPropertyName("text")]
+        //public string Text { get; set; } = string.Empty;
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
+
+        // Normal text message
         [JsonPropertyName("text")]
-        public string Text { get; set; } = string.Empty;
+        public string? Text { get; set; }
+
+        // Button-reply message
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        // Interactive assistant message
+        [JsonPropertyName("interactive")]
+        public InteractiveContent? Interactive { get; set; }
+    }
+    public sealed class InteractiveContent
+    {
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
+
+        [JsonPropertyName("body")]
+        public InteractiveBody? Body { get; set; }
+
+        [JsonPropertyName("action")]
+        public JsonElement? Action { get; set; }
+    }
+    public sealed class InteractiveBody
+    {
+        [JsonPropertyName("text")]
+        public string? Text { get; set; }
     }
 
     public sealed class WebhookSaveResult
