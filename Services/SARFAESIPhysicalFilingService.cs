@@ -99,7 +99,13 @@ namespace ProductivityApi.Services
                 return (false, "Invalid filing type.");
 
             var updated = await _repository.SubmitFilingDetailsAsync(dto);
-            return updated ? (true, "Filing details submitted successfully.") : (false, "Case not found or Advocate Assignment is incomplete.");
+
+            if (!updated)
+                return (false, "Case not found or Advocate Assignment is incomplete.");
+
+            return dto.FilingType.Equals(SARFAESIPhysicalFilingFilingType.EFiling, StringComparison.OrdinalIgnoreCase)
+                ? (true, "E-Filing details submitted successfully.")
+                : (true, "Physical Filing completed successfully.");
         }
 
         public Task<List<SARFAESIPhysicalFilingReportItem>> GetReportDataAsync(SARFAESIPhysicalFilingReportFilterDto dto)

@@ -106,8 +106,10 @@ builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
 builder.Services.AddScoped<DmsDocsService>();
 builder.Services.AddScoped<BulkDocsService>();
+builder.Services.AddScoped<BulkFclService>();
+builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
+builder.Services.AddScoped<IndusArchivedService>();
 builder.Services.AddScoped<WabaWtsappHookService>();
-builder.Services.AddScoped<NOCService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -142,8 +144,10 @@ builder.Services.AddScoped<BTLettersRepository>();
 builder.Services.AddScoped<TrainingDashboardRepository>();
 builder.Services.AddScoped<DmsDocsRepository>();
 builder.Services.AddScoped<BulkDocsRepository>();
-builder.Services.AddScoped<WabaWtsappHookRepository>();
+builder.Services.AddScoped<BulkFclRepository>();
+builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
 builder.Services.AddScoped<IndusArchivedRepository>();
+builder.Services.AddScoped<WabaWtsappHookRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
