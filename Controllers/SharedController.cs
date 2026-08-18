@@ -60,6 +60,20 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, msg));
         }
 
+        [HttpGet("getClosureCamLms/{lan}")]
+        public async Task<IActionResult> GetClosureCamLms(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest(new Response(false, null, "LAN is required"));
+
+            var data = await _service.GetClosureCamLmsAsync(lan);
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpGet("getForeclosureStatement/{lan}")]
         public async Task<IActionResult> GetForeclosureStatement(string lan)
         {

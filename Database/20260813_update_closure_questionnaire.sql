@@ -13,6 +13,57 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH('dbo.Closure_Questionnaire_Response', 'RetentionId') IS NULL
+    ALTER TABLE [dbo].[Closure_Questionnaire_Response] ADD [RetentionId] INT NULL;
+GO
+
+ALTER TABLE [dbo].[Closure_Questionnaire_Response] ALTER COLUMN [Req_Id] INT NULL;
+GO
+
+ALTER TABLE [dbo].[Closure_Questionnaire_Response] ALTER COLUMN [Req_Source] VARCHAR(20) NULL;
+GO
+
+IF OBJECT_ID('dbo.Closure_Retention', 'U') IS NOT NULL
+   AND EXISTS
+   (
+        SELECT 1
+        FROM sys.indexes i
+        INNER JOIN sys.index_columns ic
+            ON i.object_id = ic.object_id
+           AND i.index_id = ic.index_id
+        INNER JOIN sys.columns c
+            ON ic.object_id = c.object_id
+           AND ic.column_id = c.column_id
+        WHERE i.object_id = OBJECT_ID('dbo.Closure_Retention')
+          AND i.is_unique = 1
+          AND c.name = 'Id'
+   )
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_Closure_Questionnaire_Response_Retention'
+          AND parent_object_id = OBJECT_ID('dbo.Closure_Questionnaire_Response')
+   )
+BEGIN
+    ALTER TABLE [dbo].[Closure_Questionnaire_Response] WITH CHECK ADD CONSTRAINT [FK_Closure_Questionnaire_Response_Retention]
+        FOREIGN KEY ([RetentionId]) REFERENCES [dbo].[Closure_Retention]([Id]);
+END
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Closure_Questionnaire_Response_RetentionId'
+      AND object_id = OBJECT_ID('dbo.Closure_Questionnaire_Response')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Closure_Questionnaire_Response_RetentionId]
+    ON [dbo].[Closure_Questionnaire_Response] ([RetentionId], [Question_Id]);
+END
+GO
+
 DECLARE @Sql nvarchar(max) = N'';
 
 SELECT @Sql = @Sql + N'ALTER TABLE [dbo].[Closure_Questionnaire_Master] DROP CONSTRAINT ' + QUOTENAME(name) + N';'
@@ -177,56 +228,178 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_GetQuestionnaire]
 (
-    @ReqId      INT,
-    @ReqSource  VARCHAR(10) = NULL
+    @RetentionId INT = NULL,
+    @ReqId       INT = NULL,
+    @ReqSource   VARCHAR(20) = NULL
 )
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @LetterId INT;
-
-    IF @ReqSource = 'FC'
-        SELECT @LetterId = Letter_Id
-        FROM [dbo].[Closure_Transactions]
-        WHERE Id = @ReqId;
-
     SELECT
          r.Id
-        ,r.Req_Id
-        ,r.Req_Source
-        ,r.Question_Id
-        ,r.Question_Code
-        ,r.Response_Value
+        ,r.RetentionId
+        ,r.Req_Id AS ReqId
+        ,r.Req_Source AS ReqSource
+        ,r.Question_Id AS QuestionId
+        ,r.Question_Code AS QuestionCode
+        ,r.Response_Value AS ResponseValue
         ,r.CreatedBy
         ,r.CreatedDt
-        ,m.Question_Text
-        ,m.Section_Name
-        ,m.Input_Type
-        ,m.Options_Json
-        ,m.Parent_Question_Code
-        ,m.Trigger_Operator
-        ,m.Trigger_Value
-        ,m.Display_Order
-        ,m.Is_Mandatory
+        ,m.Question_Text AS QuestionText
+        ,m.Section_Name AS SectionName
+        ,m.Input_Type AS InputType
+        ,m.Options_Json AS OptionsJson
+        ,m.Parent_Question_Code AS ParentQuestionCode
+        ,m.Trigger_Operator AS TriggerOperator
+        ,m.Trigger_Value AS TriggerValue
+        ,m.Display_Order AS DisplayOrder
+        ,m.Is_Mandatory AS IsMandatory
     FROM [dbo].[Closure_Questionnaire_Response] r
     INNER JOIN [dbo].[Closure_Questionnaire_Master] m
         ON r.Question_Id = m.Id
     WHERE
         (
-            @ReqSource = 'FC'
-            AND (
-                (r.Req_Source = 'FC' AND r.Req_Id = @ReqId)
-             OR (@LetterId IS NOT NULL AND r.Req_Source = 'SOA/LOD/FCL' AND r.Req_Id = @LetterId)
-            )
+            @RetentionId IS NOT NULL
+            AND r.RetentionId = @RetentionId
         )
         OR
         (
-            @ReqSource = 'SOA/LOD/FCL'
-            AND r.Req_Source = 'SOA/LOD/FCL'
-            AND r.Req_Id = @ReqId
+            @RetentionId IS NULL
+            AND
+            (
+                (
+                    @ReqSource = 'FC'
+                    AND
+                    r.Req_Source = 'FC'
+                    AND r.Req_Id = @ReqId
+                )
+                OR
+                (
+                    @ReqSource = 'SOA/LOD/FCL'
+                    AND r.Req_Source = 'SOA/LOD/FCL'
+                    AND r.Req_Id = @ReqId
+                )
+            )
         )
     ORDER BY m.Display_Order;
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_AddQuestionnaireResponse]
+(
+    @RetentionId INT = NULL,
+    @ReqId       INT = NULL,
+    @ReqSource   VARCHAR(20) = NULL,
+    @Responses   [dbo].[QuestionnaireResponseType] READONLY,
+    @CreatedBy   VARCHAR(100)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @RetentionId IS NULL AND (@ReqId IS NULL OR NULLIF(@ReqSource, '') IS NULL)
+    BEGIN
+        SELECT -2;
+        RETURN;
+    END
+
+    IF @RetentionId IS NOT NULL
+       AND OBJECT_ID('dbo.Closure_Retention', 'U') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM [dbo].[Closure_Retention] WHERE Id = @RetentionId)
+    BEGIN
+        SELECT -1;
+        RETURN;
+    END
+
+    DELETE target
+    FROM [dbo].[Closure_Questionnaire_Response] target
+    INNER JOIN @Responses source
+        ON source.QuestionId = target.Question_Id
+    WHERE
+        (@RetentionId IS NOT NULL AND target.RetentionId = @RetentionId)
+        OR
+        (@RetentionId IS NULL AND target.Req_Id = @ReqId AND target.Req_Source = @ReqSource);
+
+    INSERT INTO [dbo].[Closure_Questionnaire_Response]
+    (
+        RetentionId,
+        Req_Id,
+        Req_Source,
+        Question_Id,
+        Question_Code,
+        Response_Value,
+        CreatedBy,
+        CreatedDt
+    )
+    SELECT
+        @RetentionId,
+        CASE WHEN @RetentionId IS NULL THEN @ReqId ELSE NULL END,
+        CASE WHEN @RetentionId IS NULL THEN @ReqSource ELSE NULL END,
+        QuestionId,
+        QuestionCode,
+        ResponseValue,
+        @CreatedBy,
+        GETDATE()
+    FROM @Responses;
+
+    SELECT 1;
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_SubmitQuestionnaire]
+(
+    @Id          INT = NULL,
+    @RetentionId INT = NULL,
+    @Source      VARCHAR(20) = NULL,
+    @CreatedBy   VARCHAR(100),
+    @Status      VARCHAR(20) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @RetentionId IS NOT NULL
+    BEGIN
+        IF OBJECT_ID('dbo.Closure_Retention', 'U') IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM [dbo].[Closure_Retention] WHERE Id = @RetentionId)
+        BEGIN
+            SELECT -1;
+            RETURN;
+        END
+
+        SELECT 1;
+        RETURN;
+    END
+
+    IF @Source = 'FC'
+    BEGIN
+        IF @Id IS NULL OR NOT EXISTS (SELECT 1 FROM [dbo].[Closure_Transactions] WHERE Id = @Id)
+        BEGIN
+            SELECT -1;
+            RETURN;
+        END
+
+        UPDATE [dbo].[Closure_Transactions]
+        SET
+            Status = ISNULL(@Status, Status),
+            UpdatedBy = @CreatedBy,
+            UpdatedDt = GETDATE()
+        WHERE Id = @Id;
+
+        EXEC [dbo].[sp_newClosure_updatePendingQueue] @id = @Id;
+
+        SELECT 1;
+        RETURN;
+    END
+
+    IF @Source = 'SOA/LOD/FCL'
+    BEGIN
+        SELECT 1;
+        RETURN;
+    END
+
+    SELECT -2;
 END
 GO
 

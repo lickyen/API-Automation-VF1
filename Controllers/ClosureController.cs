@@ -16,52 +16,99 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
+        private static IActionResult FileUploadError(Exception ex)
+            => new BadRequestObjectResult(new Response(false, null, ex.Message));
+
         [HttpPost("create")]
         public async Task<IActionResult> Add([FromBody] AddClosureRequestDto dto)
         {
-            var result = await _service.AddRequestAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
-                -1 => Conflict(new Response(false, null, "An active request exists for the same LAN")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.AddRequestAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, new { id = result }, "Request created successfully")),
+                    -1 => Conflict(new Response(false, null, "An active request exists for the same LAN")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpPut("reinitiate")]
         public async Task<IActionResult> Reinitiate([FromBody] ReinitiateClosureRequestDto dto)
         {
-            var result = await _service.ReinitiateRequestAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, null, "Request reinitiated successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.ReinitiateRequestAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, null, "Request reinitiated successfully")),
+                    -1 => NotFound(new Response(false, null, "Record not found")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpPut("updateAmountCollected")]
         public async Task<IActionResult> UpdateAmountCollected([FromBody] UpdateAmountCollectedDto dto)
         {
-            var result = await _service.UpdateAmountCollectedAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, null, "Amount collected updated successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.UpdateAmountCollectedAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, null, "Amount collected updated successfully")),
+                    -1 => NotFound(new Response(false, null, "Record not found")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpPut("resubmit")]
         public async Task<IActionResult> Resubmit([FromBody] ResubmitClosureRequestDto dto)
         {
-            var result = await _service.ResubmitRequestAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, null, "Request resubmitted successfully")),
-                -1 => NotFound(new Response(false, null, "Record not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.ResubmitRequestAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, null, "Request resubmitted successfully")),
+                    -1 => NotFound(new Response(false, null, "Record not found")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpPost("approval")]
@@ -73,6 +120,22 @@ namespace ProductivityApi.Controllers
                 1 => Ok(new Response(true, null, "Action completed successfully")),
                 -1 => NotFound(new Response(false, null, "Record not found")),
                 -2 => BadRequest(new Response(false, null, "Invalid role")),
+                _ => StatusCode(500, new Response(false, null, "An error occurred"))
+            };
+        }
+
+        [HttpPost("retentionApproval")]
+        public async Task<IActionResult> RetentionApproval([FromBody] ClosureRetentionApprovalDto dto)
+        {
+            var result = await _service.RetentionApprovalAsync(dto);
+            return result switch
+            {
+                1 => Ok(new Response(true, null, "Action completed successfully")),
+                -1 => NotFound(new Response(false, null, "Retention record not found")),
+                -2 => BadRequest(new Response(false, null, "Invalid role")),
+                -3 => BadRequest(new Response(false, null, "CAM must be submitted before retention approval")),
+                -4 => BadRequest(new Response(false, null, "Retention approval is already completed")),
+                -5 => BadRequest(new Response(false, null, "Invalid status")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -119,25 +182,47 @@ namespace ProductivityApi.Controllers
         [HttpPost("addPayment")]
         public async Task<IActionResult> AddPayment([FromBody] AddClosurePaymentDto dto)
         {
-            var result = await _service.AddPaymentAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, new { id = result }, "Payment added successfully")),
-                -1 => NotFound(new Response(false, null, "Request not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.AddPaymentAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, new { id = result }, "Payment added successfully")),
+                    -1 => NotFound(new Response(false, null, "Request not found")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpPut("updatePayment")]
         public async Task<IActionResult> UpdatePayment([FromBody] UpdateClosurePaymentDto dto)
         {
-            var result = await _service.UpdatePaymentAsync(dto);
-            return result switch
+            try
             {
-                > 0 => Ok(new Response(true, null, "Payment updated successfully")),
-                -1 => NotFound(new Response(false, null, "Payment not found")),
-                _ => StatusCode(500, new Response(false, null, "An error occurred"))
-            };
+                var result = await _service.UpdatePaymentAsync(dto);
+                return result switch
+                {
+                    > 0 => Ok(new Response(true, null, "Payment updated successfully")),
+                    -1 => NotFound(new Response(false, null, "Payment not found")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return FileUploadError(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return FileUploadError(ex);
+            }
         }
 
         [HttpDelete("deletePayment/{id}")]
@@ -170,31 +255,67 @@ namespace ProductivityApi.Controllers
             return File(fileBytes, contentType, fileName);
         }
 
-        //[HttpPost("upload")]
-        //public async Task<IActionResult> UploadDoc([FromForm] UploadFileRequestDto dto)
-        //{
-        //    var result = await _service.UploadFileAsync(dto);
-        //    return result.Success
-        //        ? Ok(new Response(true, result.FilePath, "File uploaded successfully"))
-        //        : BadRequest(new Response(false, null, result.Error));
-        //}
-
-        [HttpGet("getQuestionnaire")]
+        [HttpGet("getQuestionnaireMaster")]
         public async Task<IActionResult> GetQuestionnaireMaster()
         {
             var data = await _service.GetQuestionnaireMasterAsync();
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("getQuestionnaire/{retentionId}")]
+        public async Task<IActionResult> GetQuestionnaire(int retentionId)
+        {
+            var data = await _service.GetQuestionnaireByRetentionIdAsync(retentionId);
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("submitQuestionnaire")]
         public async Task<IActionResult> SubmitQuestionnaire([FromBody] SubmitQuestionnaireDto dto)
         {
-            var result = await _service.SubmitQuestionnaireAsync(dto);
+            try
+            {
+                var result = await _service.SubmitQuestionnaireAsync(dto);
+                return result.Result switch
+                {
+                    1 => Ok(new Response(true, result.Responses, "Questionnaire submitted successfully")),
+                    -1 => NotFound(new Response(false, null, "Request not found")),
+                    -2 => BadRequest(new Response(false, null, "Invalid source")),
+                    _ => StatusCode(500, new Response(false, null, "An error occurred"))
+                };
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+        }
+
+        [HttpGet("getCamMaster")]
+        public async Task<IActionResult> GetCAMMaster()
+        {
+            var data = await _service.GetCAMMasterAsync();
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpGet("getCam/{retentionId}")]
+        public async Task<IActionResult> GetCAM(int retentionId)
+        {
+            var data = await _service.GetCAMAsync(retentionId);
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPost("submitCam")]
+        public async Task<IActionResult> SubmitCAM([FromBody] SubmitClosureCamDto dto)
+        {
+            var result = await _service.SubmitCAMAsync(dto);
             return result switch
             {
-                1 => Ok(new Response(true, null, "Questionnaire submitted successfully")),
-                -1 => NotFound(new Response(false, null, "Request not found")),
-                -2 => BadRequest(new Response(false, null, "Invalid source")),
+                1 => Ok(new Response(true, null, "CAM submitted successfully")),
+                -1 => NotFound(new Response(false, null, "Retention record not found")),
+                -2 => BadRequest(new Response(false, null, "Invalid CAM field")),
                 _ => StatusCode(500, new Response(false, null, "An error occurred"))
             };
         }
@@ -227,17 +348,6 @@ namespace ProductivityApi.Controllers
         {
             var result = ClosureService.CalculateShortfall(dto);
             return Ok(new Response(true, result, "Success"));
-        }
-
-        [HttpGet("getLetterId/{lan}")]
-        public async Task<IActionResult> GetLetterId(string lan)
-        {
-            if (string.IsNullOrWhiteSpace(lan))
-                return BadRequest(new Response(false, null, "LAN is required"));
-
-            var letterId = await _service.GetLetterIdAsync(lan);
-
-            return Ok(new Response(true, new { letterId }, "Success"));
         }
 
         [HttpGet]

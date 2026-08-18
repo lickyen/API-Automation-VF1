@@ -1,6 +1,61 @@
 USE [UATProductivity]
 GO
 
+IF OBJECT_ID('dbo.Closure_Retention', 'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Closure_Retention](
+        [Id] [int] IDENTITY(1,1) NOT NULL,
+        [LAN] [varchar](50) NOT NULL,
+        [Origin_Source] [varchar](20) NOT NULL,
+        [Origin_ReqId] [int] NULL,
+        [IsApproved] [bit] NULL,
+        [ApprovedDt] [datetime] NULL,
+        [ExpiredDt] AS (DATEADD(DAY, 30, [ApprovedDt])),
+        [CreatedBy] [varchar](20) NULL,
+        [CreatedDt] [datetime] NULL,
+        [UpdatedBy] [varchar](20) NULL,
+        [UpdatedDt] [datetime] NULL,
+    PRIMARY KEY CLUSTERED
+    (
+        [Id] ASC
+    )
+    );
+END
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes i
+    INNER JOIN sys.index_columns ic
+        ON i.object_id = ic.object_id
+       AND i.index_id = ic.index_id
+    INNER JOIN sys.columns c
+        ON ic.object_id = c.object_id
+       AND ic.column_id = c.column_id
+    WHERE i.object_id = OBJECT_ID('dbo.Closure_Retention')
+      AND i.is_unique = 1
+      AND c.name = 'Id'
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX [UX_Closure_Retention_Id]
+    ON [dbo].[Closure_Retention]([Id]);
+END
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Closure_Retention_LAN_ApprovedDt'
+      AND object_id = OBJECT_ID('dbo.Closure_Retention')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Closure_Retention_LAN_ApprovedDt]
+    ON [dbo].[Closure_Retention]([LAN], [ApprovedDt], [Id]);
+END
+GO
+
 IF COL_LENGTH('dbo.Closure_Transactions', 'Business_Profile') IS NULL
     ALTER TABLE dbo.Closure_Transactions ADD Business_Profile VARCHAR(100) NULL;
 GO
@@ -81,9 +136,64 @@ IF COL_LENGTH('dbo.Closure_Transactions', 'EMI_Pending') IS NULL
     ALTER TABLE dbo.Closure_Transactions ADD EMI_Pending INT NULL;
 GO
 
+IF COL_LENGTH('dbo.Closure_Transactions', 'RetentionId') IS NULL
+    ALTER TABLE dbo.Closure_Transactions ADD RetentionId INT NULL;
+GO
+
+IF COL_LENGTH('dbo.Closure_Transactions', 'Cust_Id') IS NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions)
+        THROW 51001, 'Cannot add NOT NULL Cust_Id because Closure_Transactions has existing rows. Backfill/create the column intentionally first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ADD Cust_Id VARCHAR(50) NOT NULL;
+END
+ELSE
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions WHERE Cust_Id IS NULL)
+        THROW 51002, 'Cannot alter Cust_Id to NOT NULL because NULL values exist. Backfill them first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ALTER COLUMN Cust_Id VARCHAR(50) NOT NULL;
+END
+GO
+
+IF COL_LENGTH('dbo.Closure_Transactions', 'Cust_Name') IS NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions)
+        THROW 51003, 'Cannot add NOT NULL Cust_Name because Closure_Transactions has existing rows. Backfill/create the column intentionally first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ADD Cust_Name VARCHAR(200) NOT NULL;
+END
+ELSE
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions WHERE Cust_Name IS NULL)
+        THROW 51004, 'Cannot alter Cust_Name to NOT NULL because NULL values exist. Backfill them first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ALTER COLUMN Cust_Name VARCHAR(200) NOT NULL;
+END
+GO
+
+IF COL_LENGTH('dbo.Closure_Transactions', 'Cust_Mobile') IS NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions)
+        THROW 51005, 'Cannot add NOT NULL Cust_Mobile because Closure_Transactions has existing rows. Backfill/create the column intentionally first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ADD Cust_Mobile VARCHAR(20) NOT NULL;
+END
+ELSE
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Closure_Transactions WHERE Cust_Mobile IS NULL)
+        THROW 51006, 'Cannot alter Cust_Mobile to NOT NULL because NULL values exist. Backfill them first.', 1;
+
+    ALTER TABLE dbo.Closure_Transactions ALTER COLUMN Cust_Mobile VARCHAR(20) NOT NULL;
+END
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_AddRequest]
 (
      @Lan                     VARCHAR(30)
+    ,@CustId                  VARCHAR(50)
+    ,@CustName                VARCHAR(200)
+    ,@CustMobile              VARCHAR(20)
     ,@BranchCode              VARCHAR(10)
     ,@BranchName              VARCHAR(50)
     ,@Region                  VARCHAR(50)
@@ -130,7 +240,8 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_AddRequest]
     ,@LastEMIPaid             DATE = NULL
     ,@EMIPending              INT = NULL
     ,@IsWaiver                BIT
-    ,@LetterId                INT = NULL
+    ,@IsRetention             BIT
+    ,@RetentionId             INT = NULL
     ,@Status                  VARCHAR(20)
     ,@FinalApprover           VARCHAR(20)
     ,@CreatedBy               VARCHAR(10)
@@ -156,8 +267,6 @@ BEGIN
         END
 
         DECLARE @NewId INT;
-        DECLARE @IsRetention BIT = 0;
-        DECLARE @IsQuestionnaire BIT = 0;
         DECLARE @IsApproved BIT = 0;
         DECLARE @Approved_Date DATE = NULL;
         DECLARE @Branch_InitiatedBy VARCHAR(10) = NULL;
@@ -165,12 +274,27 @@ BEGIN
         DECLARE @Branch_AmountCollectedBy VARCHAR(10) = NULL;
         DECLARE @Branch_AmountCollectedDt DATETIME = NULL;
 
-        IF @Status = 'New'
+        IF @IsRetention = 0
         BEGIN
-            SET @IsRetention = 1;
-            SET @IsQuestionnaire = 1;
+            SET @RetentionId = NULL;
         END
-        ELSE
+
+        IF @IsRetention = 1 AND @RetentionId IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -2;
+            RETURN;
+        END
+
+        IF @IsRetention = 1
+           AND NOT EXISTS (SELECT 1 FROM dbo.Closure_Retention WHERE Id = @RetentionId)
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -3;
+            RETURN;
+        END
+
+        IF @Status <> 'New'
         BEGIN
             SET @Branch_InitiatedBy = @CreatedBy;
             SET @Branch_InitiatedDt = GETDATE();
@@ -191,6 +315,9 @@ BEGIN
         INSERT INTO dbo.Closure_Transactions
         (
             Lan,
+            Cust_Id,
+            Cust_Name,
+            Cust_Mobile,
             Branch_Code,
             Branch_Name,
             Region,
@@ -236,12 +363,11 @@ BEGIN
             Last_EMI_Paid,
             EMI_Pending,
             IsWaiver,
-            Letter_Id,
+            RetentionId,
             Status,
             Final_Approver,
             Loan_Amount,
             IsRetention,
-            IsQuestionnaire,
             IsApproved,
             Approved_Date,
             Branch_InitiatedBy,
@@ -256,6 +382,9 @@ BEGIN
         VALUES
         (
             @Lan,
+            @CustId,
+            @CustName,
+            @CustMobile,
             @BranchCode,
             @BranchName,
             @Region,
@@ -301,12 +430,11 @@ BEGIN
             @LastEMIPaid,
             @EMIPending,
             @IsWaiver,
-            @LetterId,
+            @RetentionId,
             @Status,
             @FinalApprover,
             @LoanAmount,
             @IsRetention,
-            @IsQuestionnaire,
             @IsApproved,
             @Approved_Date,
             @Branch_InitiatedBy,
@@ -320,6 +448,17 @@ BEGIN
         );
 
         SET @NewId = CAST(SCOPE_IDENTITY() AS INT);
+
+        IF @RetentionId IS NOT NULL
+        BEGIN
+            UPDATE dbo.Closure_Retention
+            SET
+                Origin_ReqId = ISNULL(Origin_ReqId, @NewId),
+                UpdatedBy = @CreatedBy,
+                UpdatedDt = GETDATE()
+            WHERE Id = @RetentionId
+              AND Origin_Source = 'FC';
+        END
 
         COMMIT TRANSACTION;
 
@@ -339,6 +478,14 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_ReInitiateRequest]
 (
      @Id                     INT
+    ,@CustId                 VARCHAR(50)
+    ,@CustName               VARCHAR(200)
+    ,@CustMobile             VARCHAR(20)
+    ,@BranchCode             VARCHAR(10) = NULL
+    ,@BranchName             VARCHAR(50) = NULL
+    ,@Region                 VARCHAR(50) = NULL
+    ,@Zone                   VARCHAR(50) = NULL
+    ,@MegaZone               VARCHAR(50) = NULL
     ,@DPD                    INT
     ,@LoanAmount             DECIMAL(18,2)
     ,@Criticality            VARCHAR(50)
@@ -380,6 +527,8 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_ReInitiateRequest]
     ,@LastEMIPaid            DATE = NULL
     ,@EMIPending             INT = NULL
     ,@IsWaiver               BIT
+    ,@IsRetention            BIT
+    ,@RetentionId            INT = NULL
     ,@Remarks                VARCHAR(1000) = NULL
     ,@FinalApprover          VARCHAR(20)
     ,@UpdatedBy              VARCHAR(100)
@@ -399,9 +548,37 @@ BEGIN
             RETURN;
         END
 
+        IF @IsRetention = 0
+        BEGIN
+            SET @RetentionId = NULL;
+        END
+
+        IF @IsRetention = 1 AND @RetentionId IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -2;
+            RETURN;
+        END
+
+        IF @IsRetention = 1
+           AND NOT EXISTS (SELECT 1 FROM dbo.Closure_Retention WHERE Id = @RetentionId)
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -3;
+            RETURN;
+        END
+
         UPDATE dbo.Closure_Transactions
         SET
-             DPD                     = @DPD
+             Cust_Id                 = @CustId
+            ,Cust_Name               = @CustName
+            ,Cust_Mobile             = @CustMobile
+            ,Branch_Code             = ISNULL(@BranchCode, Branch_Code)
+            ,Branch_Name             = ISNULL(@BranchName, Branch_Name)
+            ,Region                  = ISNULL(@Region, Region)
+            ,Zone                    = ISNULL(@Zone, Zone)
+            ,MegaZone                = ISNULL(@MegaZone, MegaZone)
+            ,DPD                     = @DPD
             ,Loan_Amount             = @LoanAmount
             ,Total_Outstanding       = @TotalOutstanding
             ,Excess_Amount           = @ExcessAmount
@@ -442,11 +619,24 @@ BEGIN
             ,Last_EMI_Paid           = ISNULL(@LastEMIPaid, Last_EMI_Paid)
             ,EMI_Pending             = ISNULL(@EMIPending, EMI_Pending)
             ,IsWaiver                = @IsWaiver
+            ,RetentionId             = @RetentionId
             ,Status                  = @Status
             ,Final_Approver          = @FinalApprover
+            ,IsRetention             = @IsRetention
             ,UpdatedBy               = @UpdatedBy
             ,UpdatedDt               = GETDATE()
         WHERE Id = @Id;
+
+        IF @RetentionId IS NOT NULL
+        BEGIN
+            UPDATE dbo.Closure_Retention
+            SET
+                Origin_ReqId = ISNULL(Origin_ReqId, @Id),
+                UpdatedBy = @UpdatedBy,
+                UpdatedDt = GETDATE()
+            WHERE Id = @RetentionId
+              AND Origin_Source = 'FC';
+        END
 
         COMMIT TRANSACTION;
 

@@ -32,6 +32,9 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        public Task<List<ClosureCamLmsValues>> GetClosureCamLmsAsync(string lan)
+            => _plfRepository.GetClosureCamLmsAsync(lan);
+
         public async Task<(LanDetailsPlf? Data, string Message)> GetLanDetailsAsync(string lan)
         {
             var loan = await _plfService.GetFinance(lan);
