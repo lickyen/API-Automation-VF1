@@ -149,6 +149,7 @@
     public class FcRefundLanSearchDto
     {
         public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
         public string? Lan { get; set; }
         public string? FullName { get; set; }
         public DateTime? DisbDate { get; set; }

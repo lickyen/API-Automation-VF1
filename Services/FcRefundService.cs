@@ -20,10 +20,11 @@ namespace ProductivityApi.Services
         private readonly UserService _userService;
         private readonly SharedService _sharedService;
         private readonly PLFService _plfService;
+        private readonly BranchServices _branchService;
 
         private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService, PLFService plfService)
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService, PLFService plfService, BranchServices branchService)
         {
             _repository = repository;
             _emailService = emailService;
@@ -32,6 +33,7 @@ namespace ProductivityApi.Services
             _userService = userService;
             _sharedService = sharedService;
             _plfService = plfService;
+            _branchService = branchService;
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
@@ -624,9 +626,13 @@ namespace ProductivityApi.Services
             personalInfo?.lastName
                 }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
+            var branchCode = finance.financeSchedule.financeDetail.finBranch;
+            var branch = _branchService.GetBranchByID(branchCode);
+
             var data = new FcRefundLanSearchDto
             {
-                BranchCode = finance.financeSchedule.financeDetail.finBranch,
+                BranchCode = branchCode,
+                BranchName = branch?.BranchName,
                 Lan = lan,
                 FullName = fullName,
                 DisbDate = finance.financeSchedule.financeDetail.firstDisbDate,
@@ -638,7 +644,6 @@ namespace ProductivityApi.Services
                 SgNo = insurer?.SgNo,
                 InsurerName = insurer?.InsurerName
             };
-
             return (true, data, "Success");
         }
 
