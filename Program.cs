@@ -158,6 +158,12 @@ builder.Services.AddScoped<IJob, CustEmailUpdateJob>();
 builder.Services.AddScoped<IJob, LegalBillingJob>();
 builder.Services.AddScoped<IJob, NOCJob>();
 builder.Services.AddScoped<IJob, NOC_SMS_Job>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayNotificationEmailJob>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1000Job>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1100Job>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1130Job>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1155Job>();
+builder.Services.AddScoped<IJob, ZeroBalanceDayRchZchEscalationJob>();
 
 builder.Services.AddScoped<CibilCorrectionRepository>();
 builder.Services.AddScoped<CibilCorrectionService>();
