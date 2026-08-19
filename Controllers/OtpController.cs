@@ -24,7 +24,7 @@ namespace ProductivityApi.Controllers
 
             try
             {
-                var mobile = await _otpService.SendOtp(request.UserId);
+                var mobile = await _otpService.SendOtp(request.UserId, request.Source);
 
                 return Ok(new Response(
                     true,
@@ -43,7 +43,7 @@ namespace ProductivityApi.Controllers
             if (string.IsNullOrWhiteSpace(request.UserId) || string.IsNullOrWhiteSpace(request.Otp))
                 return BadRequest(new Response(false, null, "Invalid request"));
 
-            bool result = await _otpService.VerifyOtp(request.UserId, request.Otp);
+            bool result = await _otpService.VerifyOtp(request.UserId, request.Otp, request.Source);
 
             if (result)
                 return Ok(new Response(true, null, "OTP verified successfully"));

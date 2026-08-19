@@ -21,7 +21,13 @@ namespace ProductivityApi.Controllers
             bool success = await _loginService.ValidateLoginAsync(loginRequest);
 
             if (success)
-                return Ok(new Response(true, null, "Success"));
+                return Ok(new Response(
+                    true,
+                    new LoginResponse
+                    {
+                        TwoFactorEnabled = _loginService.IsTwoFactorAuthEnabled
+                    },
+                    "Success"));
             else
                 return Unauthorized(new Response(false, null, "Invalid username or password"));
         }

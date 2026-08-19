@@ -8,6 +8,7 @@ namespace ProductivityApi.Repository
     public class UserLogRepository 
     {
         private readonly string _conStr;
+        private const string AppName = "Productivity";
 
         public UserLogRepository(IConfiguration configuration)
         {
@@ -24,6 +25,7 @@ namespace ProductivityApi.Repository
                 new
                 {
                     log.UserId,
+                    Source = ResolveSource(log.Source),
                     log.Action,
                     log.Response,
                     log.Message
@@ -32,6 +34,11 @@ namespace ProductivityApi.Repository
             );
 
             return result; 
+        }
+
+        private static string ResolveSource(string? source)
+        {
+            return string.IsNullOrWhiteSpace(source) ? AppName : source.Trim();
         }
     }
 }

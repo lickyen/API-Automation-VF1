@@ -13,7 +13,13 @@ namespace ProductivityApi.Models
         public FilePaths FilePaths { get; set; } = new FilePaths();
         public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
         public ZeroBalanceDayEmails ZeroBalanceDayEmails { get; set; } = new ZeroBalanceDayEmails();
+        public AuthSettings AuthSettings { get; set; } = new AuthSettings();
         public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
+    }
+
+    public class AuthSettings
+    {
+        public bool EnableTwoFactorAuth { get; set; } = false;
     }
 
     public class EmailSettings

@@ -9,6 +9,13 @@ namespace ProductivityApi.Models
 
         [Required(ErrorMessage = "Password is required.")]
         public string Password { get; set; }
+
+        public string? Source { get; set; }
+    }
+
+    public class LoginResponse
+    {
+        public bool TwoFactorEnabled { get; set; }
     }
 
     public class ADProfile

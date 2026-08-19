@@ -10,6 +10,7 @@ namespace ProductivityApi.Services
     public class LoginService
     {
         private readonly ADSettings _settings;
+        private readonly AuthSettings _authSettings;
         private readonly UserRepository _userRepository;
         private readonly UserLogRepository _userLogRepository;
         private readonly IWebHostEnvironment _env;
@@ -17,10 +18,13 @@ namespace ProductivityApi.Services
         public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
+            _authSettings = appSettings.AuthSettings;
             _userRepository = userRepository;
             _userLogRepository = userLogRepository;
             _env = env;
         }
+
+        public bool IsTwoFactorAuthEnabled => _authSettings.EnableTwoFactorAuth;
 
         public async Task<bool> ValidateLoginAsync(LoginRequest login)
         {
@@ -36,7 +40,7 @@ namespace ProductivityApi.Services
             catch (Exception ex)
             {
                 message = $"Exception: {ex.GetType().Name} — {ex.Message}";
-                Log.Error(ex, "Login validation error for UserId={UserId}", login.UserId);
+                Log.Error(ex, "Login validation error for UserId={UserId} Source={Source}", login.UserId, login.Source);
                 throw;
             }
             finally
@@ -44,14 +48,16 @@ namespace ProductivityApi.Services
                 await _userLogRepository.AddAsync(new UserLog
                 {
                     UserId = login.UserId,
+                    Source = login.Source,
                     Action = "LOGIN",
                     Response = success ? "SUCCESS" : "FAILURE",
                     Message = message
                 });
 
                 Log.Information(
-                    "Login attempt UserId={UserId} Env={Env} Success={Success}",
+                    "Login attempt UserId={UserId} Source={Source} Env={Env} Success={Success}",
                     login.UserId,
+                    login.Source,
                     _env.EnvironmentName,
                     success
                 );
@@ -274,6 +280,7 @@ namespace ProductivityApi.Services
                 await _userLogRepository.AddAsync(new UserLog
                 {
                     UserId = userId,
+                    Source = "ProductivityApi",
                     Action = "PASSWORD_RESET",
                     Response = success ? "SUCCESS" : "FAILURE",
                     Message = message
