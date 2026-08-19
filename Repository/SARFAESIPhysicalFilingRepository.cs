@@ -79,6 +79,7 @@ namespace ProductivityApi.Repository
             parameters.Add("@Checklist", table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalChecklist"));
             parameters.Add("@SubmittedBy", dto.SubmittedBy.Trim());
             parameters.Add("@CaseId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+            parameters.Add("@Remarks", dto.Remarks?.Trim());
             await conn.ExecuteAsync("sp_SARFAESIPhysicalFiling_SubmitLegalChecklist", parameters, commandType: CommandType.StoredProcedure);
             return parameters.Get<int>("@CaseId");
         }
@@ -94,7 +95,7 @@ namespace ProductivityApi.Repository
             foreach (var item in dto.Checklist)
                 table.Rows.Add(item.ChecklistItemId, item.IsReceived!.Value, (object?)item.Comments ?? DBNull.Value);
 
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitFieldChecklist", new { dto.CaseId, Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_FieldChecklist"), SubmittedBy = dto.SubmittedBy.Trim() }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitFieldChecklist", new { dto.CaseId, Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_FieldChecklist"), SubmittedBy = dto.SubmittedBy.Trim(), Remarks = dto.Remarks?.Trim() }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<bool> SubmitLegalReviewAsync(SARFAESIPhysicalFilingLegalReviewSubmitDto dto)
@@ -115,7 +116,8 @@ namespace ProductivityApi.Repository
                 {
                     dto.CaseId,
                     Checklist = table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalReview"),
-                    SubmittedBy = dto.SubmittedBy.Trim()
+                    SubmittedBy = dto.SubmittedBy.Trim(),
+                    Remarks = dto.Remarks
                 },
                 commandType: CommandType.StoredProcedure);
 
@@ -125,14 +127,14 @@ namespace ProductivityApi.Repository
         public async Task<bool> AssignAdvocateAsync(SARFAESIPhysicalFilingAdvocateAssignmentDto dto)
         {
             using var conn = new SqlConnection(_conStr);
-            var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AssignAdvocate", new { dto.CaseId, dto.AdvocateId, dto.AssignmentDate, UpdatedBy = dto.UpdatedBy.Trim() }, commandType: CommandType.StoredProcedure);
+            var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AssignAdvocate", new { dto.CaseId, dto.AdvocateId, dto.AssignmentDate, UpdatedBy = dto.UpdatedBy.Trim(), Remarks = dto.Remarks?.Trim() }, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }
 
         public async Task<bool> SubmitFilingDetailsAsync(SARFAESIPhysicalFilingFilingDetailsDto dto)
         {
             using var conn = new SqlConnection(_conStr);
-            var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitFilingDetails", new { dto.CaseId, FilingType = dto.FilingType.Trim(), CourtName = dto.CourtName.Trim(), dto.EFilingDate, EFilingCaseNumber = dto.EFilingCaseNumber?.Trim(), dto.PhysicalFilingDate, PhysicalFilingCaseNumber = dto.PhysicalFilingCaseNumber?.Trim(), UpdatedBy = dto.UpdatedBy.Trim() }, commandType: CommandType.StoredProcedure);
+            var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_SubmitFilingDetails", new { dto.CaseId, FilingType = dto.FilingType.Trim(), CourtName = dto.CourtName.Trim(), dto.EFilingDate, EFilingCaseNumber = dto.EFilingCaseNumber?.Trim(), dto.PhysicalFilingDate, PhysicalFilingCaseNumber = dto.PhysicalFilingCaseNumber?.Trim(), UpdatedBy = dto.UpdatedBy.Trim(), Remarks = dto.Remarks?.Trim() }, commandType: CommandType.StoredProcedure);
             return rowsAffected > 0;
         }
 

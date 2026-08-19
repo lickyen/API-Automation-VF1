@@ -5,7 +5,7 @@ namespace ProductivityApi.Models
     public static class SARFAESIPhysicalFilingStage
     {
         public const string DocumentChecklist = "Section 14 - Document Checklist";
-        public const string TaskAssignmentToFieldUser = "Section 14 - Task Assignment to ZLM/ZDSH";
+        public const string TaskAssignmentToFieldUser = "Section 14 - Task Assignment to Field User";
         public const string AssignedToAdvocate = "Section 14 - Assigned to Advocate";
         public const string FilingDetails = "Section 14 - Filing Details";
         public const string FiledEFiling = "Section 14 Filed - E-Filing";
@@ -145,6 +145,8 @@ namespace ProductivityApi.Models
 
         [Required]
         public string SubmittedBy { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
     }
 
     public class SARFAESIPhysicalFilingFieldChecklistItemDto
@@ -169,6 +171,7 @@ namespace ProductivityApi.Models
 
         [Required]
         public string SubmittedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
     }
 
     public class SARFAESIPhysicalFilingLegalReviewItemDto
@@ -192,6 +195,7 @@ namespace ProductivityApi.Models
 
         [Required]
         public string SubmittedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
     }
 
     public class SARFAESIPhysicalFilingAdvocateAssignmentDto
@@ -207,6 +211,8 @@ namespace ProductivityApi.Models
 
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
+
     }
 
     public class SARFAESIPhysicalFilingFilingDetailsDto
@@ -227,6 +233,8 @@ namespace ProductivityApi.Models
 
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
+
     }
 
     public class SARFAESIPhysicalFilingCaseListItem
