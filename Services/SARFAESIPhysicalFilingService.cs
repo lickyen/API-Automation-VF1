@@ -8,10 +8,17 @@ namespace ProductivityApi.Services
     public class SARFAESIPhysicalFilingService
     {
         private readonly SARFAESIPhysicalFilingRepository _repository;
+        private readonly PLFService _plfService;
+        private readonly BranchServices _branchService;
 
-        public SARFAESIPhysicalFilingService(SARFAESIPhysicalFilingRepository repository)
+        public SARFAESIPhysicalFilingService(
+            SARFAESIPhysicalFilingRepository repository,
+            PLFService plfService,
+            BranchServices branchService)
         {
             _repository = repository;
+            _plfService = plfService;
+            _branchService = branchService;
         }
 
         public Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetDocumentMasterAsync(bool? isActive)
@@ -71,7 +78,11 @@ namespace ProductivityApi.Services
             if (!SARFAESIPhysicalFilingCourierName.All.Contains(dto.CourierName, StringComparer.OrdinalIgnoreCase))
                 return (false, null, "Invalid Courier Name.");
 
-            var caseId = await _repository.SubmitLegalChecklistAsync(dto);
+            var branchResult = await GetBranchDetailsAsync(dto.Lan);
+            if (!branchResult.Success)
+                return (false, null, branchResult.Message);
+
+            var caseId = await _repository.SubmitLegalChecklistAsync(dto, branchResult.Data!);
             return caseId > 0 ? (true, caseId, "Checklist submitted and assigned to the Field User.") : (false, null, "Unable to submit checklist.");
         }
 
@@ -111,6 +122,28 @@ namespace ProductivityApi.Services
         public Task<List<SARFAESIPhysicalFilingReportItem>> GetReportDataAsync(SARFAESIPhysicalFilingReportFilterDto dto)
         {
             return _repository.GetReportDataAsync(dto);
+        }
+
+        private async Task<(bool Success, SARFAESIPhysicalFilingBranchDetails? Data, string Message)> GetBranchDetailsAsync(string lan)
+        {
+            var finance = await _plfService.GetFinance(lan.Trim());
+            if (finance?.financeSchedule?.financeDetail == null)
+                return (false, null, "LAN not found in finance.");
+
+            var branchCode = finance.financeSchedule.financeDetail.finBranch?.Trim();
+            if (string.IsNullOrWhiteSpace(branchCode))
+                return (false, null, "Branch code not found in finance.");
+
+            var branch = _branchService.GetBranchByID(branchCode);
+
+            return (true, new SARFAESIPhysicalFilingBranchDetails
+            {
+                BranchCode = branchCode,
+                BranchName = branch?.BranchName?.Trim(),
+                Region = branch?.Region?.Trim(),
+                Zone = branch?.Zone?.Trim(),
+                MegaZone = branch?.MegaZone?.Trim()
+            }, "Success");
         }
     }
 }

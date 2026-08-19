@@ -33,6 +33,11 @@ namespace ProductivityApi.Models
         public int Id { get; set; }
 
         public string Lan { get; set; } = string.Empty;
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? Region { get; set; }
+        public string? Zone { get; set; }
+        public string? MegaZone { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime? DispatchDate { get; set; }
         public string? PodNumber { get; set; }
@@ -53,6 +58,15 @@ namespace ProductivityApi.Models
         public List<SARFAESIPhysicalFilingChecklistItem> Checklist { get; set; } = [];
 
         public List<SARFAESIPhysicalFilingLog> Logs { get; set; } = [];
+    }
+
+    public class SARFAESIPhysicalFilingBranchDetails
+    {
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? Region { get; set; }
+        public string? Zone { get; set; }
+        public string? MegaZone { get; set; }
     }
 
     public class SARFAESIPhysicalFilingDocumentMaster
@@ -282,19 +296,23 @@ namespace ProductivityApi.Models
     public class SARFAESIPhysicalFilingReportItem
     {
         public string Lan { get; set; } = string.Empty;
+        public string? Zone { get; set; }
         public string? MegaZone { get; set; }
-        public string? AssignedPoc { get; set; }
-        public int? AdvocateId { get; set; }
+        public string CurrentWorkflowStage { get; set; } = string.Empty;
+        public DateTime? DocumentDispatchDate { get; set; }
+        public string? PodNumber { get; set; }
+        public string? CourierName { get; set; }
+        public DateTime? FinalFieldUserAcknowledgementDate { get; set; }
+        public DateTime? AdvocateAssignmentDate { get; set; }
         public string? AdvocateName { get; set; }
-        public string WorkflowStage { get; set; } = string.Empty;
-        public string? LegalChecklistStatus { get; set; }
-        public string? FieldReceiptStatus { get; set; }
-        public DateTime? AssignmentDate { get; set; }
         public string? FilingType { get; set; }
         public DateTime? EFilingDate { get; set; }
+        public string? EFilingCaseNumber { get; set; }
+        public string? CourtName { get; set; }
         public DateTime? PhysicalFilingDate { get; set; }
-        public string? CaseNumber { get; set; }
-        public string? LastUpdatedBy { get; set; }
-        public DateTime? LastUpdatedDateTime { get; set; }
+        public string? PhysicalFilingCaseNumber { get; set; }
+        public string? LegalTeamId { get; set; }
+        public DateTime? LegalTeamLastUpdatedDateTime { get; set; }
+        public int? UserMappingId { get; set; }
     }
 }

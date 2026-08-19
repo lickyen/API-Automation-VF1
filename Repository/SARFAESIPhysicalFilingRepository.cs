@@ -61,7 +61,9 @@ namespace ProductivityApi.Repository
             return (await conn.QueryAsync<SARFAESIPhysicalFilingChecklistItem>("sp_SARFAESIPhysicalFiling_GetChecklist", new { CaseId = caseId }, commandType: CommandType.StoredProcedure)).ToList();
         }
 
-        public async Task<int> SubmitLegalChecklistAsync(SARFAESIPhysicalFilingLegalChecklistSubmitDto dto)
+        public async Task<int> SubmitLegalChecklistAsync(
+            SARFAESIPhysicalFilingLegalChecklistSubmitDto dto,
+            SARFAESIPhysicalFilingBranchDetails branchDetails)
         {
             using var conn = new SqlConnection(_conStr);
             var table = new DataTable();
@@ -80,6 +82,11 @@ namespace ProductivityApi.Repository
             parameters.Add("@SubmittedBy", dto.SubmittedBy.Trim());
             parameters.Add("@CaseId", dbType: DbType.Int32, direction: ParameterDirection.Output);
             parameters.Add("@Remarks", dto.Remarks?.Trim());
+            parameters.Add("@BranchCode", branchDetails.BranchCode?.Trim());
+            parameters.Add("@BranchName", branchDetails.BranchName?.Trim());
+            parameters.Add("@Region", branchDetails.Region?.Trim());
+            parameters.Add("@Zone", branchDetails.Zone?.Trim());
+            parameters.Add("@MegaZone", branchDetails.MegaZone?.Trim());
             await conn.ExecuteAsync("sp_SARFAESIPhysicalFiling_SubmitLegalChecklist", parameters, commandType: CommandType.StoredProcedure);
             return parameters.Get<int>("@CaseId");
         }
