@@ -12,6 +12,7 @@ namespace ProductivityApi.Models
         public ADSettings ADSettings { get; set; } = new ADSettings();
         public FilePaths FilePaths { get; set; } = new FilePaths();
         public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
+        public ZeroBalanceDayEmails ZeroBalanceDayEmails { get; set; } = new ZeroBalanceDayEmails();
         public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
     }
 
@@ -37,6 +38,18 @@ namespace ProductivityApi.Models
         public bool Unicode { get; set; } = true;
         public bool IsTestMode { get; set; } = false;
         public string TestMobile { get; set; } = string.Empty;
+    }
+
+    public class ZeroBalanceDayEmails
+    {
+        public ZeroBalanceDayEmailRecipients ShowCauseEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
+        public ZeroBalanceDayEmailRecipients WarningLetterEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
+    }
+
+    public class ZeroBalanceDayEmailRecipients
+    {
+        public List<string> To { get; set; } = new List<string>();
+        public List<string> Cc { get; set; } = new List<string>();
     }
 
     public class ADSettings

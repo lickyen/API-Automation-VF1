@@ -110,6 +110,7 @@ builder.Services.AddScoped<BulkFclService>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
 builder.Services.AddScoped<IndusArchivedService>();
 builder.Services.AddScoped<WabaWtsappHookService>();
+builder.Services.AddScoped<ZeroBalanceDayService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -148,6 +149,7 @@ builder.Services.AddScoped<BulkFclRepository>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
 builder.Services.AddScoped<IndusArchivedRepository>();
 builder.Services.AddScoped<WabaWtsappHookRepository>();
+builder.Services.AddScoped<ZeroBalanceDayRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
