@@ -304,6 +304,7 @@ namespace ProductivityApi.Models
         public string? CourierName { get; set; }
         public DateTime? FinalFieldUserAcknowledgementDate { get; set; }
         public DateTime? AdvocateAssignmentDate { get; set; }
+        public int? AdvocateId { get; set; }
         public string? AdvocateName { get; set; }
         public string? FilingType { get; set; }
         public DateTime? EFilingDate { get; set; }
@@ -313,6 +314,6 @@ namespace ProductivityApi.Models
         public string? PhysicalFilingCaseNumber { get; set; }
         public string? LegalTeamId { get; set; }
         public DateTime? LegalTeamLastUpdatedDateTime { get; set; }
-        public int? UserMappingId { get; set; }
+        public string? UserMappingId { get; set; }
     }
 }
