@@ -37,7 +37,8 @@ Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 //select config based on env
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                      .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+                      .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                      .AddEnvironmentVariables();
 
 //map config to AppSettings Model
 var appSettings = builder.Configuration.Get<AppSettings>() ?? throw new InvalidOperationException("Failed to load configuration");
@@ -104,7 +105,7 @@ builder.Services.AddScoped<AxisService>();
 builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
-builder.Services.AddScoped<DmsDocsService>();
+builder.Services.AddHttpClient<DmsDocsService>();
 builder.Services.AddScoped<BulkDocsService>();
 builder.Services.AddScoped<BulkFclService>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingService>();

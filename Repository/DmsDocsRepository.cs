@@ -18,11 +18,12 @@ namespace ProductivityApi.Repository
 
         // ── Add LANs ──────────────────────────────────────────
 
-        public async Task<int> AddLanAsync(DmsDocsAddLan item, string createdBy)
+        public async Task<int> AddLanAsync(DmsDocsAddLan item, string createdBy, string batchId)
         {
             using var conn = CreateConnection();
 
             var p = new DynamicParameters();
+            p.Add("@BatchId", batchId);
             p.Add("@LAN", item.LAN);
             p.Add("@Tag", item.Tag);
             p.Add("@SubTag", item.SubTag);
@@ -39,12 +40,18 @@ namespace ProductivityApi.Repository
         }
         // ── Get LANs ──────────────────────────────────────────
 
-        public async Task<IEnumerable<DmsDocsListItem>> GetLansAsync()
+        public async Task<IEnumerable<DmsDocsListItem>> GetLansAsync(DmsDocsGetLansRequest? request = null)
         {
             using var conn = CreateConnection();
 
+            var p = new DynamicParameters();
+            p.Add("@BatchId", NullIfWhiteSpace(request?.BatchId));
+            p.Add("@Status", NullIfWhiteSpace(request?.Status));
+            p.Add("@DocStatus", NullIfWhiteSpace(request?.DocStatus));
+
             return await conn.QueryAsync<DmsDocsListItem>(
                 "sp_DMSDocFetch_GetLans",
+                p,
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -59,6 +66,7 @@ namespace ProductivityApi.Repository
             p.Add("@ID", request.ID);
             p.Add("@DocStatus", request.DocStatus);
             p.Add("@UpdatedBy", request.UpdatedBy);
+            p.Add("@ErrorMessage", request.ErrorMessage);
             p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
             await conn.ExecuteAsync(
@@ -68,6 +76,11 @@ namespace ProductivityApi.Repository
             );
 
             return p.Get<int>("@Output");
+        }
+
+        private static string? NullIfWhiteSpace(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
     }
 }

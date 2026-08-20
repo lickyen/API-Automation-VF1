@@ -4,7 +4,7 @@ using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/dmsdocs")]
     [ApiController]
     public class DmsDocsController : ControllerBase
     {
@@ -15,9 +15,7 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
-        // ── Add LANs ──────────────────────────────────────────
-
-        [HttpPost("addLans")]
+        [HttpPost("lans")]
         public async Task<IActionResult> AddLans([FromBody] DmsDocsAddRequest request)
         {
             var result = await _service.AddLansAsync(request);
@@ -27,26 +25,32 @@ namespace ProductivityApi.Controllers
                 : Ok(new Response(true, result, $"{result.RowsAdded} LAN(s) added successfully."));
         }
 
-        // ── Get LANs ──────────────────────────────────────────
-
-        [HttpGet("getLans")]
-        public async Task<IActionResult> GetLans()
+        [HttpGet("lans")]
+        public async Task<IActionResult> GetLans([FromQuery] DmsDocsGetLansRequest request)
         {
-            var data = await _service.GetLansAsync();
+            var data = await _service.GetLansAsync(request);
 
             return Ok(new Response(true, data, "Success"));
         }
 
-        // ── Update Status ─────────────────────────────────────
-
-        [HttpPost("updateStatus")]
-        public async Task<IActionResult> UpdateStatus([FromBody] DmsDocsUpdateStatusRequest request)
+        [HttpPost("fetch")]
+        public async Task<IActionResult> FetchDocument(
+            [FromBody] DmsDocsFetchRequest request,
+            CancellationToken cancellationToken)
         {
-            var (result, error) = await _service.UpdateStatusAsync(request);
+            var result = await _service.FetchDocumentAsync(request, cancellationToken);
 
-            return result == 1
-                ? Ok(new Response(true, null, "Status updated successfully."))
-                : BadRequest(new Response(false, null, error ?? "Update failed."));
+            return Ok(new Response(result.Success, result, result.DocStatus));
+        }
+
+        [HttpPost("copy")]
+        public async Task<IActionResult> CopyDocuments(
+            [FromBody] DmsDocsCopyRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _service.CopyDocumentsAsync(request, cancellationToken);
+
+            return Ok(new Response(result.Success, result, result.Message));
         }
     }
 }

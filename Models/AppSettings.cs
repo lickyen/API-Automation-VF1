@@ -14,6 +14,7 @@ namespace ProductivityApi.Models
         public RazorPaySettings RazorPaySettings { get; set; } = new RazorPaySettings();
         public ZeroBalanceDayEmails ZeroBalanceDayEmails { get; set; } = new ZeroBalanceDayEmails();
         public AuthSettings AuthSettings { get; set; } = new AuthSettings();
+        public DmsDocsSettings DmsDocsSettings { get; set; } = new DmsDocsSettings();
         public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
     }
 
@@ -90,7 +91,20 @@ namespace ProductivityApi.Models
         public string BTFilePath { get; set; } = string.Empty;
         public string NOCFilePath { get; set; } = string.Empty;
         public string BulkFclFilePath { get; set; } = string.Empty;
+        public string DmsDocsFilePath { get; set; } = string.Empty;
     }
+
+    public class DmsDocsSettings
+    {
+        public string BaseUrl { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ApiKey { get; set; } = string.Empty;
+        public string RepoName { get; set; } = string.Empty;
+        public string ImageFormat { get; set; } = string.Empty;
+        public int TimeoutSeconds { get; set; } = 90;
+    }
+
     public class RazorPaySettings
     {
         public string UserName { get; set; } = string.Empty;
