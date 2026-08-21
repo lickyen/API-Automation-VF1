@@ -51,7 +51,7 @@ BEGIN
     CREATE TABLE dbo.ZeroBalanceDay_Submission
     (
         Id int IDENTITY(1,1) NOT NULL,
-        ZeroBalanceDayId int NOT NULL,
+        ZbdId int NOT NULL,
         ZbdDate date NOT NULL,
         Region varchar(100) NULL,
         BranchCode varchar(20) NOT NULL,
@@ -70,9 +70,6 @@ BEGIN
         SubmissionStatus varchar(50) NOT NULL CONSTRAINT DF_ZBD_Submission_Status DEFAULT ('Submitted On Time'),
         SubmissionTime datetime NULL,
         DelayMinutes int NULL,
-        ShowCauseReferenceNo varchar(50) NULL,
-        ShowCauseStatus varchar(50) NULL,
-        WarningLetterStatus varchar(50) NULL,
         CreatedBy varchar(20) NOT NULL,
         CreatedDate datetime NOT NULL CONSTRAINT DF_ZBD_Submission_CreatedDate DEFAULT (GETDATE()),
         UpdatedBy varchar(20) NULL,
@@ -118,6 +115,35 @@ END
 GO
 
 IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'ZeroBalanceDayId') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'ZbdId') IS NULL
+BEGIN
+    EXEC sp_rename 'dbo.ZeroBalanceDay_Submission.ZeroBalanceDayId', 'ZbdId', 'COLUMN';
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'ShowCauseReferenceNo') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_Submission DROP COLUMN ShowCauseReferenceNo;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'ShowCauseStatus') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_Submission DROP COLUMN ShowCauseStatus;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'WarningLetterStatus') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_Submission DROP COLUMN WarningLetterStatus;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
    AND OBJECT_ID('dbo.ZeroBalanceDay', 'U') IS NOT NULL
    AND NOT EXISTS
    (
@@ -128,7 +154,7 @@ IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
    )
 BEGIN
     ALTER TABLE dbo.ZeroBalanceDay_Submission WITH CHECK ADD CONSTRAINT FK_ZBD_Submission_ZeroBalanceDay
-        FOREIGN KEY (ZeroBalanceDayId) REFERENCES dbo.ZeroBalanceDay (Id);
+        FOREIGN KEY (ZbdId) REFERENCES dbo.ZeroBalanceDay (Id);
 END
 GO
 
@@ -248,6 +274,34 @@ END
 GO
 
 IF OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_ShowCause', 'BranchReply') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_ShowCause DROP COLUMN BranchReply;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_ShowCause', 'ResponseDate') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_ShowCause DROP COLUMN ResponseDate;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_ShowCause', 'ReviewedBy') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_ShowCause DROP COLUMN ReviewedBy;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_ShowCause', 'ReviewdBy') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_ShowCause DROP COLUMN ReviewdBy;
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
    AND OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
    AND NOT EXISTS
    (
@@ -328,6 +382,138 @@ IF OBJECT_ID('dbo.ZeroBalanceDay_WarningLetter', 'U') IS NOT NULL
 BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX UX_ZBD_WarningLetter_Submission
     ON dbo.ZeroBalanceDay_WarningLetter (SubmissionId);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ZeroBalanceDay_BranchStatus
+    (
+        Id int IDENTITY(1,1) NOT NULL,
+        ZbdId int NOT NULL,
+        ZbdDate date NOT NULL,
+        Region varchar(100) NULL,
+        BranchCode varchar(20) NOT NULL,
+        BranchName varchar(200) NOT NULL,
+        SubmissionId int NULL,
+        SubmissionStatus varchar(50) NOT NULL CONSTRAINT DF_ZBD_BranchStatus_SubmissionStatus DEFAULT ('Pending'),
+        SubmissionTime datetime NULL,
+        IsShowCauseRequired bit NOT NULL CONSTRAINT DF_ZBD_BranchStatus_IsShowCauseRequired DEFAULT (0),
+        IsShowCauseCreated bit NOT NULL CONSTRAINT DF_ZBD_BranchStatus_IsShowCauseCreated DEFAULT (0),
+        ShowCauseId int NULL,
+        IsWarningLetterRequired bit NOT NULL CONSTRAINT DF_ZBD_BranchStatus_IsWarningLetterRequired DEFAULT (0),
+        IsWarningLetterCreated bit NOT NULL CONSTRAINT DF_ZBD_BranchStatus_IsWarningLetterCreated DEFAULT (0),
+        WarningLetterId int NULL,
+        CreatedDate datetime NOT NULL CONSTRAINT DF_ZBD_BranchStatus_CreatedDate DEFAULT (GETDATE()),
+        UpdatedDate datetime NULL,
+        CONSTRAINT PK_ZeroBalanceDay_BranchStatus PRIMARY KEY CLUSTERED (Id)
+    );
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.indexes
+        WHERE object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+          AND name = 'UX_ZBD_BranchStatus_Date_Branch'
+   )
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UX_ZBD_BranchStatus_Date_Branch
+    ON dbo.ZeroBalanceDay_BranchStatus (ZbdDate, BranchCode);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.indexes
+        WHERE object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+          AND name = 'IX_ZBD_BranchStatus_Dashboard'
+   )
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_ZBD_BranchStatus_Dashboard
+    ON dbo.ZeroBalanceDay_BranchStatus
+    (
+        ZbdDate,
+        Region,
+        BranchCode,
+        SubmissionStatus,
+        IsShowCauseRequired,
+        IsShowCauseCreated
+    )
+    INCLUDE (BranchName, SubmissionTime, IsWarningLetterRequired, IsWarningLetterCreated);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND OBJECT_ID('dbo.ZeroBalanceDay', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_BranchStatus', 'ZeroBalanceDayId') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_BranchStatus', 'ZbdId') IS NULL
+BEGIN
+    EXEC sp_rename 'dbo.ZeroBalanceDay_BranchStatus.ZeroBalanceDayId', 'ZbdId', 'COLUMN';
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND OBJECT_ID('dbo.ZeroBalanceDay', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_ZBD_BranchStatus_ZeroBalanceDay'
+          AND parent_object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+   )
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_BranchStatus WITH CHECK ADD CONSTRAINT FK_ZBD_BranchStatus_ZeroBalanceDay
+        FOREIGN KEY (ZbdId) REFERENCES dbo.ZeroBalanceDay (Id);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_ZBD_BranchStatus_Submission'
+          AND parent_object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+   )
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_BranchStatus WITH CHECK ADD CONSTRAINT FK_ZBD_BranchStatus_Submission
+        FOREIGN KEY (SubmissionId) REFERENCES dbo.ZeroBalanceDay_Submission (Id);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND OBJECT_ID('dbo.ZeroBalanceDay_ShowCause', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_ZBD_BranchStatus_ShowCause'
+          AND parent_object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+   )
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_BranchStatus WITH CHECK ADD CONSTRAINT FK_ZBD_BranchStatus_ShowCause
+        FOREIGN KEY (ShowCauseId) REFERENCES dbo.ZeroBalanceDay_ShowCause (Id);
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
+   AND OBJECT_ID('dbo.ZeroBalanceDay_WarningLetter', 'U') IS NOT NULL
+   AND NOT EXISTS
+   (
+        SELECT 1
+        FROM sys.foreign_keys
+        WHERE name = 'FK_ZBD_BranchStatus_WarningLetter'
+          AND parent_object_id = OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus')
+   )
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_BranchStatus WITH CHECK ADD CONSTRAINT FK_ZBD_BranchStatus_WarningLetter
+        FOREIGN KEY (WarningLetterId) REFERENCES dbo.ZeroBalanceDay_WarningLetter (Id);
 END
 GO
 

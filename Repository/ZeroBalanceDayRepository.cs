@@ -1,6 +1,8 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
+using System.Data;
+using System.Globalization;
 
 namespace ProductivityApi.Repository
 {
@@ -8,9 +10,14 @@ namespace ProductivityApi.Repository
     {
         private readonly string _conStr;
 
+        static ZeroBalanceDayRepository()
+        {
+            SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+        }
+
         private const string SubmissionColumns = @"
             Id,
-            ZeroBalanceDayId,
+            ZbdId,
             ZbdDate,
             Region,
             BranchCode,
@@ -29,17 +36,53 @@ namespace ProductivityApi.Repository
             SubmissionStatus,
             SubmissionTime,
             DelayMinutes,
-            ShowCauseReferenceNo,
-            ShowCauseStatus,
-            WarningLetterStatus,
             CreatedBy,
             CreatedDate,
             UpdatedBy,
             UpdatedDate";
 
+        private const string BranchStatusColumns = @"
+            Id,
+            ZbdId,
+            ZbdDate,
+            COALESCE(Region, '') AS Region,
+            BranchCode,
+            BranchName,
+            SubmissionId,
+            SubmissionStatus,
+            SubmissionTime,
+            IsShowCauseRequired,
+            IsShowCauseCreated,
+            ShowCauseId,
+            IsWarningLetterRequired,
+            IsWarningLetterCreated,
+            WarningLetterId,
+            CreatedDate,
+            UpdatedDate";
+
         public ZeroBalanceDayRepository(IConfiguration configuration)
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
+        }
+
+        private sealed class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateOnly>
+        {
+            public override DateOnly Parse(object value)
+            {
+                return value switch
+                {
+                    DateOnly date => date,
+                    DateTime dateTime => DateOnly.FromDateTime(dateTime),
+                    string text => DateOnly.Parse(text, CultureInfo.InvariantCulture),
+                    _ => throw new DataException($"Cannot convert {value.GetType()} to DateOnly")
+                };
+            }
+
+            public override void SetValue(IDbDataParameter parameter, DateOnly value)
+            {
+                parameter.DbType = DbType.Date;
+                parameter.Value = value.ToDateTime(TimeOnly.MinValue);
+            }
         }
 
         public async Task<int> CreateAsync(ZeroBalanceDayCreateDto dto)
@@ -105,7 +148,17 @@ namespace ProductivityApi.Repository
                     Remarks = @Remarks
                 WHERE Id = @ExistingId;
 
-                SELECT @@ROWCOUNT;";
+                DECLARE @Rows int = @@ROWCOUNT;
+
+                IF @Rows > 0
+                BEGIN
+                    UPDATE dbo.ZeroBalanceDay_BranchStatus
+                    SET ZbdDate = CAST(@NewZbdDate AS date),
+                        UpdatedDate = GETDATE()
+                    WHERE ZbdId = @ExistingId;
+                END;
+
+                SELECT @Rows;";
 
             return await conn.ExecuteScalarAsync<int>(sql, new
             {
@@ -145,7 +198,15 @@ namespace ProductivityApi.Repository
                     UpdatedDate = GETDATE()
                 WHERE Id = @ExistingId;
 
-                SELECT @@ROWCOUNT;";
+                DECLARE @Rows int = @@ROWCOUNT;
+
+                IF @Rows > 0
+                BEGIN
+                    DELETE FROM dbo.ZeroBalanceDay_BranchStatus
+                    WHERE ZbdId = @ExistingId;
+                END;
+
+                SELECT @Rows;";
 
             return await conn.ExecuteScalarAsync<int>(sql, new
             {
@@ -156,7 +217,7 @@ namespace ProductivityApi.Repository
             });
         }
 
-        public async Task<ZeroBalanceDayModel?> GetByDateAsync(DateTime zbdDate)
+        public async Task<ZeroBalanceDayModel?> GetByDateAsync(DateOnly zbdDate)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -219,7 +280,280 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        public async Task<ZeroBalanceDaySubmissionModel?> GetSubmissionByDateBranchAsync(DateTime zbdDate, string branchCode)
+        public async Task EnsureBranchStatusesAsync(
+            int zbdId,
+            DateOnly zbdDate,
+            List<ZeroBalanceDayBranchStatusModel> branches)
+        {
+            if (branches.Count == 0)
+                return;
+
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            const string sql = @"
+                MERGE dbo.ZeroBalanceDay_BranchStatus AS target
+                USING (
+                    SELECT
+                        @ZbdId AS ZbdId,
+                        CAST(@ZbdDate AS date) AS ZbdDate,
+                        @Region AS Region,
+                        @BranchCode AS BranchCode,
+                        @BranchName AS BranchName,
+                        @SubmissionStatus AS SubmissionStatus,
+                        @IsShowCauseRequired AS IsShowCauseRequired,
+                        @IsShowCauseCreated AS IsShowCauseCreated,
+                        @IsWarningLetterRequired AS IsWarningLetterRequired,
+                        @IsWarningLetterCreated AS IsWarningLetterCreated
+                ) AS source
+                ON target.ZbdDate = source.ZbdDate
+                   AND target.BranchCode = source.BranchCode
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        Region = source.Region,
+                        BranchName = source.BranchName,
+                        UpdatedDate = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (
+                        ZbdId,
+                        ZbdDate,
+                        Region,
+                        BranchCode,
+                        BranchName,
+                        SubmissionStatus,
+                        IsShowCauseRequired,
+                        IsShowCauseCreated,
+                        IsWarningLetterRequired,
+                        IsWarningLetterCreated,
+                        CreatedDate,
+                        UpdatedDate
+                    )
+                    VALUES (
+                        source.ZbdId,
+                        source.ZbdDate,
+                        source.Region,
+                        source.BranchCode,
+                        source.BranchName,
+                        source.SubmissionStatus,
+                        source.IsShowCauseRequired,
+                        source.IsShowCauseCreated,
+                        source.IsWarningLetterRequired,
+                        source.IsWarningLetterCreated,
+                        GETDATE(),
+                        GETDATE()
+                    );";
+
+            await conn.ExecuteAsync(
+                sql,
+                branches.Select(branch => new
+                {
+                    ZbdId = zbdId,
+                    ZbdDate = zbdDate,
+                    branch.Region,
+                    branch.BranchCode,
+                    branch.BranchName,
+                    branch.SubmissionStatus,
+                    branch.IsShowCauseRequired,
+                    branch.IsShowCauseCreated,
+                    branch.IsWarningLetterRequired,
+                    branch.IsWarningLetterCreated
+                }));
+
+            await RefreshBranchStatusesAsync(conn, zbdDate);
+        }
+
+        public async Task<List<ZeroBalanceDayBranchStatusModel>> GetBranchStatusesByDateAsync(DateOnly zbdDate)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var sql = $@"
+                SELECT
+                    {BranchStatusColumns}
+                FROM dbo.ZeroBalanceDay_BranchStatus
+                WHERE ZbdDate = CAST(@ZbdDate AS date)
+                ORDER BY BranchCode;";
+
+            var result = await conn.QueryAsync<ZeroBalanceDayBranchStatusModel>(sql, new { ZbdDate = zbdDate });
+            return result.ToList();
+        }
+
+        public async Task<ZeroBalanceDayDashboardSummaryDto> GetDashboardSummaryAsync(DateOnly zbdDate, string? region, string? branchCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            const string sql = @"
+                SELECT
+                    COUNT(1) AS TotalBranches,
+                    COALESCE(SUM(CASE WHEN SubmissionStatus IN ('Submitted On Time', 'Late Submission') THEN 1 ELSE 0 END), 0) AS Completed,
+                    COALESCE(SUM(CASE WHEN SubmissionStatus = 'Submitted On Time' THEN 1 ELSE 0 END), 0) AS SubmittedOnTime,
+                    COALESCE(SUM(CASE WHEN SubmissionStatus = 'Late Submission' THEN 1 ELSE 0 END), 0) AS LateSubmitted,
+                    COALESCE(SUM(CASE WHEN SubmissionStatus IN ('Pending', 'Not Submitted') THEN 1 ELSE 0 END), 0) AS NotSubmitted,
+                    COALESCE(SUM(CASE WHEN IsShowCauseRequired = 1 AND IsShowCauseCreated = 0 THEN 1 ELSE 0 END), 0) AS ShowCauseEligible
+                FROM dbo.ZeroBalanceDay_BranchStatus
+                WHERE ZbdDate = CAST(@ZbdDate AS date)
+                  AND (@Region IS NULL OR @Region = '' OR Region = @Region)
+                  AND (@BranchCode IS NULL OR @BranchCode = '' OR BranchCode = @BranchCode);";
+
+            return await conn.QuerySingleAsync<ZeroBalanceDayDashboardSummaryDto>(sql, new
+            {
+                ZbdDate = zbdDate,
+                Region = region,
+                BranchCode = branchCode
+            });
+        }
+
+        public async Task<List<ZeroBalanceDayDashboardBranchDto>> GetDashboardBranchesAsync(DateOnly zbdDate, string? region, string? branchCode, string status)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            const string sql = @"
+                SELECT
+                    BranchCode,
+                    BranchName,
+                    CASE WHEN SubmissionStatus = 'Pending' THEN 'Not Submitted' ELSE SubmissionStatus END AS SubmissionStatus,
+                    SubmissionTime
+                FROM dbo.ZeroBalanceDay_BranchStatus
+                WHERE ZbdDate = CAST(@ZbdDate AS date)
+                  AND (@Region IS NULL OR @Region = '' OR Region = @Region)
+                  AND (@BranchCode IS NULL OR @BranchCode = '' OR BranchCode = @BranchCode)
+                  AND (
+                        @Status = 'all'
+                     OR (@Status IN ('completed', 'submitted') AND SubmissionStatus IN ('Submitted On Time', 'Late Submission'))
+                     OR (@Status IN ('submittedontime', 'ontime') AND SubmissionStatus = 'Submitted On Time')
+                     OR (@Status IN ('latesubmitted', 'latesubmission', 'late') AND SubmissionStatus = 'Late Submission')
+                     OR (@Status = 'notsubmitted' AND SubmissionStatus IN ('Pending', 'Not Submitted'))
+                     OR (@Status IN ('showcauseeligible', 'eligible', 'eligibleforshowcause', 'latesubmittednotsubmitted', 'latesubmittedandnotsubmitted')
+                         AND IsShowCauseRequired = 1
+                         AND IsShowCauseCreated = 0)
+                  )
+                ORDER BY Region, BranchCode;";
+
+            var result = await conn.QueryAsync<ZeroBalanceDayDashboardBranchDto>(sql, new
+            {
+                ZbdDate = zbdDate,
+                Region = region,
+                BranchCode = branchCode,
+                Status = status
+            });
+
+            return result.ToList();
+        }
+
+        public async Task<List<ZeroBalanceDayBranchStatusModel>> GetBranchStatusesForReportAsync(ZeroBalanceDayReportFilterDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var sql = $@"
+                SELECT
+                    {BranchStatusColumns}
+                FROM dbo.ZeroBalanceDay_BranchStatus
+                WHERE (@ZbdDate IS NULL OR ZbdDate = CAST(@ZbdDate AS date))
+                  AND (@FromDate IS NULL OR ZbdDate >= CAST(@FromDate AS date))
+                  AND (@ToDate IS NULL OR ZbdDate <= CAST(@ToDate AS date))
+                ORDER BY ZbdDate DESC, BranchCode;";
+
+            var result = await conn.QueryAsync<ZeroBalanceDayBranchStatusModel>(sql, new
+            {
+                dto.ZbdDate,
+                dto.FromDate,
+                dto.ToDate
+            });
+
+            return result.ToList();
+        }
+
+        public async Task UpdateBranchStatusFromSubmissionAsync(int submissionId)
+        {
+            using var conn = new SqlConnection(_conStr);
+            await conn.OpenAsync();
+
+            var zbdDateValue = await conn.ExecuteScalarAsync<DateTime?>(
+                @"
+                SELECT TOP (1) ZbdDate
+                FROM dbo.ZeroBalanceDay_Submission
+                WHERE Id = @SubmissionId;",
+                new { SubmissionId = submissionId });
+
+            if (zbdDateValue == null)
+                return;
+
+            var zbdDate = DateOnly.FromDateTime(zbdDateValue.Value);
+
+            const string sql = @"
+                MERGE dbo.ZeroBalanceDay_BranchStatus AS target
+                USING (
+                    SELECT
+                        s.ZbdId,
+                        s.ZbdDate,
+                        s.Region,
+                        s.BranchCode,
+                        s.BranchName,
+                        s.Id AS SubmissionId,
+                        s.SubmissionStatus,
+                        s.SubmissionTime
+                    FROM dbo.ZeroBalanceDay_Submission s
+                    WHERE s.Id = @SubmissionId
+                ) AS source
+                ON target.ZbdDate = source.ZbdDate
+                   AND target.BranchCode = source.BranchCode
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        ZbdId = source.ZbdId,
+                        Region = source.Region,
+                        BranchName = source.BranchName,
+                        SubmissionId = source.SubmissionId,
+                        SubmissionStatus = source.SubmissionStatus,
+                        SubmissionTime = source.SubmissionTime,
+                        IsShowCauseRequired = CASE
+                            WHEN target.IsShowCauseCreated = 1
+                              OR source.SubmissionStatus IN ('Late Submission', 'Not Submitted') THEN 1
+                            ELSE 0
+                        END,
+                        UpdatedDate = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (
+                        ZbdId,
+                        ZbdDate,
+                        Region,
+                        BranchCode,
+                        BranchName,
+                        SubmissionId,
+                        SubmissionStatus,
+                        SubmissionTime,
+                        IsShowCauseRequired,
+                        IsShowCauseCreated,
+                        IsWarningLetterRequired,
+                        IsWarningLetterCreated,
+                        CreatedDate,
+                        UpdatedDate
+                    )
+                    VALUES (
+                        source.ZbdId,
+                        source.ZbdDate,
+                        source.Region,
+                        source.BranchCode,
+                        source.BranchName,
+                        source.SubmissionId,
+                        source.SubmissionStatus,
+                        source.SubmissionTime,
+                        CASE WHEN source.SubmissionStatus IN ('Late Submission', 'Not Submitted') THEN 1 ELSE 0 END,
+                        0,
+                        0,
+                        0,
+                        GETDATE(),
+                        GETDATE()
+                    );
+                ";
+
+            await conn.ExecuteAsync(sql, new { SubmissionId = submissionId });
+            await RefreshBranchStatusesAsync(conn, zbdDate);
+        }
+
+        public async Task<ZeroBalanceDaySubmissionModel?> GetSubmissionByDateBranchAsync(DateOnly zbdDate, string branchCode)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -262,7 +596,7 @@ namespace ProductivityApi.Repository
                 IF EXISTS (
                     SELECT 1
                     FROM dbo.ZeroBalanceDay_Submission
-                    WHERE ZeroBalanceDayId = @ZbdId
+                    WHERE ZbdId = @ZbdId
                       AND BranchCode = @BranchCode
                       AND SubmissionStatus <> 'Not Submitted'
                 )
@@ -279,7 +613,7 @@ namespace ProductivityApi.Repository
                 IF EXISTS (
                     SELECT 1
                     FROM dbo.ZeroBalanceDay_Submission
-                    WHERE ZeroBalanceDayId = @ZbdId
+                    WHERE ZbdId = @ZbdId
                       AND BranchCode = @BranchCode
                       AND SubmissionStatus = 'Not Submitted'
                 )
@@ -302,18 +636,18 @@ namespace ProductivityApi.Repository
                         DelayMinutes = CASE WHEN @SubmissionTime > @CutOff THEN DATEDIFF(MINUTE, @CutOff, @SubmissionTime) ELSE NULL END,
                         UpdatedBy = @CreatedBy,
                         UpdatedDate = GETDATE()
-                    WHERE ZeroBalanceDayId = @ZbdId
+                    WHERE ZbdId = @ZbdId
                       AND BranchCode = @BranchCode;
 
                     SELECT TOP (1) Id
                     FROM dbo.ZeroBalanceDay_Submission
-                    WHERE ZeroBalanceDayId = @ZbdId
+                    WHERE ZbdId = @ZbdId
                       AND BranchCode = @BranchCode;
                     RETURN;
                 END;
 
                 INSERT INTO dbo.ZeroBalanceDay_Submission (
-                    ZeroBalanceDayId,
+                    ZbdId,
                     ZbdDate,
                     Region,
                     BranchCode,
@@ -401,7 +735,7 @@ namespace ProductivityApi.Repository
                     SELECT 1
                     FROM dbo.ZeroBalanceDay z
                     INNER JOIN dbo.ZeroBalanceDay_Submission s
-                        ON s.ZeroBalanceDayId = z.Id
+                        ON s.ZbdId = z.Id
                     WHERE s.Id = @Id
                       AND z.Status = 'Confirmed'
                 )
@@ -495,7 +829,7 @@ namespace ProductivityApi.Repository
             return result.ToList();
         }
 
-        public async Task<List<ZeroBalanceDaySubmissionModel>> GetSubmissionsByDateAsync(DateTime zbdDate)
+        public async Task<List<ZeroBalanceDaySubmissionModel>> GetSubmissionsByDateAsync(DateOnly zbdDate)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -581,6 +915,7 @@ namespace ProductivityApi.Repository
                 DECLARE @ZbdId int;
                 DECLARE @SubmissionId int;
                 DECLARE @ShowCauseId int;
+                DECLARE @WarningLetterId int;
                 DECLARE @RefNo varchar(50);
                 DECLARE @NoticeCountInMonth int;
                 DECLARE @MonthStart date = DATEFROMPARTS(YEAR(CAST(@ZbdDate AS date)), MONTH(CAST(@ZbdDate AS date)), 1);
@@ -603,21 +938,22 @@ namespace ProductivityApi.Repository
                         CAST(NULL AS varchar(200)) AS BranchName,
                         CAST(NULL AS varchar(50)) AS ShowCauseReferenceNo,
                         CAST(NULL AS int) AS NoticeCountInMonth,
-                        CAST(NULL AS bit) AS IsWarningLetterPending
+                        CAST(NULL AS bit) AS IsWarningLetterRequired,
+                        CAST(NULL AS bit) AS IsWarningLetterCreated
                     WHERE 1 = 0;
                     RETURN;
                 END;
 
                 SELECT TOP (1) @SubmissionId = Id
                 FROM dbo.ZeroBalanceDay_Submission
-                WHERE ZeroBalanceDayId = @ZbdId
+                WHERE ZbdId = @ZbdId
                   AND BranchCode = @BranchCode
                 ORDER BY Id DESC;
 
                 IF @SubmissionId IS NULL
                 BEGIN
                     INSERT INTO dbo.ZeroBalanceDay_Submission (
-                        ZeroBalanceDayId,
+                        ZbdId,
                         ZbdDate,
                         Region,
                         BranchCode,
@@ -663,7 +999,8 @@ namespace ProductivityApi.Repository
                         CAST(NULL AS varchar(200)) AS BranchName,
                         CAST(NULL AS varchar(50)) AS ShowCauseReferenceNo,
                         CAST(NULL AS int) AS NoticeCountInMonth,
-                        CAST(NULL AS bit) AS IsWarningLetterPending
+                        CAST(NULL AS bit) AS IsWarningLetterRequired,
+                        CAST(NULL AS bit) AS IsWarningLetterCreated
                     WHERE 1 = 0;
                     RETURN;
                 END;
@@ -708,45 +1045,122 @@ namespace ProductivityApi.Repository
 
                 SET @ShowCauseId = CAST(SCOPE_IDENTITY() AS int);
 
-                UPDATE dbo.ZeroBalanceDay_Submission
-                SET ShowCauseReferenceNo = @RefNo,
-                    ShowCauseStatus = 'Created',
-                    WarningLetterStatus = CASE
-                        WHEN @NoticeCountInMonth >= 3 THEN 'Pending'
-                        ELSE WarningLetterStatus
-                    END,
-                    UpdatedBy = @CreatedBy,
-                    UpdatedDate = GETDATE()
-                WHERE Id = @SubmissionId;
-
                 IF @NoticeCountInMonth >= 3
-                   AND NOT EXISTS (
+                BEGIN
+                    IF NOT EXISTS (
                         SELECT 1
                         FROM dbo.ZeroBalanceDay_WarningLetter
                         WHERE SubmissionId = @SubmissionId
-                   )
-                BEGIN
-                    INSERT INTO dbo.ZeroBalanceDay_WarningLetter (
-                        SubmissionId,
+                    )
+                    BEGIN
+                        INSERT INTO dbo.ZeroBalanceDay_WarningLetter (
+                            SubmissionId,
+                            ZbdDate,
+                            BranchCode,
+                            WarningLetterNumber,
+                            WarningLetterDate,
+                            IssuedBy,
+                            Remarks,
+                            CreatedDate
+                        )
+                        VALUES (
+                            @SubmissionId,
+                            CAST(@ZbdDate AS date),
+                            @BranchCode,
+                            CONCAT('WL-', CONVERT(char(8), CAST(@ZbdDate AS date), 112), '-', RIGHT('00000' + CAST(@SubmissionId AS varchar(10)), 5)),
+                            GETDATE(),
+                            @CreatedBy,
+                            'Auto-created after third show-cause in the same month',
+                            GETDATE()
+                        );
+                    END;
+
+                    SELECT TOP (1) @WarningLetterId = Id
+                    FROM dbo.ZeroBalanceDay_WarningLetter
+                    WHERE SubmissionId = @SubmissionId
+                    ORDER BY Id DESC;
+                END;
+
+                MERGE dbo.ZeroBalanceDay_BranchStatus AS target
+                USING (
+                    SELECT
+                        @ZbdId AS ZbdId,
+                        CAST(@ZbdDate AS date) AS ZbdDate,
+                        @Region AS Region,
+                        @BranchCode AS BranchCode,
+                        @BranchName AS BranchName,
+                        @SubmissionId AS SubmissionId
+                ) AS source
+                ON target.ZbdDate = source.ZbdDate
+                   AND target.BranchCode = source.BranchCode
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        ZbdId = source.ZbdId,
+                        Region = source.Region,
+                        BranchName = source.BranchName,
+                        SubmissionId = source.SubmissionId,
+                        SubmissionStatus = COALESCE((
+                            SELECT TOP (1) SubmissionStatus
+                            FROM dbo.ZeroBalanceDay_Submission
+                            WHERE Id = @SubmissionId
+                        ), target.SubmissionStatus),
+                        SubmissionTime = (
+                            SELECT TOP (1) SubmissionTime
+                            FROM dbo.ZeroBalanceDay_Submission
+                            WHERE Id = @SubmissionId
+                        ),
+                        IsShowCauseRequired = 1,
+                        IsShowCauseCreated = 1,
+                        ShowCauseId = @ShowCauseId,
+                        IsWarningLetterRequired = CASE WHEN @NoticeCountInMonth >= 3 THEN 1 ELSE target.IsWarningLetterRequired END,
+                        IsWarningLetterCreated = CASE WHEN @WarningLetterId IS NOT NULL THEN 1 ELSE target.IsWarningLetterCreated END,
+                        WarningLetterId = COALESCE(@WarningLetterId, target.WarningLetterId),
+                        UpdatedDate = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (
+                        ZbdId,
                         ZbdDate,
+                        Region,
                         BranchCode,
-                        WarningLetterNumber,
-                        WarningLetterDate,
-                        IssuedBy,
-                        Remarks,
-                        CreatedDate
+                        BranchName,
+                        SubmissionId,
+                        SubmissionStatus,
+                        SubmissionTime,
+                        IsShowCauseRequired,
+                        IsShowCauseCreated,
+                        ShowCauseId,
+                        IsWarningLetterRequired,
+                        IsWarningLetterCreated,
+                        WarningLetterId,
+                        CreatedDate,
+                        UpdatedDate
                     )
                     VALUES (
-                        @SubmissionId,
-                        CAST(@ZbdDate AS date),
-                        @BranchCode,
-                        CONCAT('WL-', CONVERT(char(8), CAST(@ZbdDate AS date), 112), '-', RIGHT('00000' + CAST(@SubmissionId AS varchar(10)), 5)),
+                        source.ZbdId,
+                        source.ZbdDate,
+                        source.Region,
+                        source.BranchCode,
+                        source.BranchName,
+                        source.SubmissionId,
+                        COALESCE((
+                            SELECT TOP (1) SubmissionStatus
+                            FROM dbo.ZeroBalanceDay_Submission
+                            WHERE Id = @SubmissionId
+                        ), 'Not Submitted'),
+                        (
+                            SELECT TOP (1) SubmissionTime
+                            FROM dbo.ZeroBalanceDay_Submission
+                            WHERE Id = @SubmissionId
+                        ),
+                        1,
+                        1,
+                        @ShowCauseId,
+                        CASE WHEN @NoticeCountInMonth >= 3 THEN 1 ELSE 0 END,
+                        CASE WHEN @WarningLetterId IS NOT NULL THEN 1 ELSE 0 END,
+                        @WarningLetterId,
                         GETDATE(),
-                        @CreatedBy,
-                        'Auto-created after third show-cause in the same month',
                         GETDATE()
                     );
-                END;
 
                 SELECT
                     @ShowCauseId AS ShowCauseId,
@@ -757,7 +1171,8 @@ namespace ProductivityApi.Repository
                     @BranchName AS BranchName,
                     @RefNo AS ShowCauseReferenceNo,
                     @NoticeCountInMonth AS NoticeCountInMonth,
-                    CAST(CASE WHEN @NoticeCountInMonth >= 3 THEN 1 ELSE 0 END AS bit) AS IsWarningLetterPending;";
+                    CAST(CASE WHEN @NoticeCountInMonth >= 3 THEN 1 ELSE 0 END AS bit) AS IsWarningLetterRequired,
+                    CAST(CASE WHEN @WarningLetterId IS NOT NULL THEN 1 ELSE 0 END AS bit) AS IsWarningLetterCreated;";
 
             var created = new List<ZeroBalanceDayShowCauseCreatedDto>();
             foreach (var branch in branches)
@@ -809,7 +1224,7 @@ namespace ProductivityApi.Repository
             });
         }
 
-        public async Task<List<ZeroBalanceDayShowCauseCreatedDto>> GetShowCauseSummaryByDateAsync(DateTime zbdDate)
+        public async Task<List<ZeroBalanceDayShowCauseCreatedDto>> GetShowCauseSummaryByDateAsync(DateOnly zbdDate)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -824,10 +1239,14 @@ namespace ProductivityApi.Repository
                     COALESCE(s.BranchName, '') AS BranchName,
                     sc.ShowCauseReferenceNo,
                     sc.NoticeCountInMonth,
-                    CAST(CASE WHEN s.WarningLetterStatus = 'Pending' THEN 1 ELSE 0 END AS bit) AS IsWarningLetterPending
+                    CAST(COALESCE(bs.IsWarningLetterRequired, 0) AS bit) AS IsWarningLetterRequired,
+                    CAST(COALESCE(bs.IsWarningLetterCreated, 0) AS bit) AS IsWarningLetterCreated
                 FROM dbo.ZeroBalanceDay_ShowCause sc
                 INNER JOIN dbo.ZeroBalanceDay_Submission s
                     ON s.Id = sc.SubmissionId
+                LEFT JOIN dbo.ZeroBalanceDay_BranchStatus bs
+                    ON bs.ZbdDate = sc.ZbdDate
+                   AND bs.BranchCode = sc.BranchCode
                 WHERE sc.ZbdDate = CAST(@ZbdDate AS date);";
 
             var result = await conn.QueryAsync<ZeroBalanceDayShowCauseCreatedDto>(sql, new { ZbdDate = zbdDate });
@@ -861,12 +1280,16 @@ namespace ProductivityApi.Repository
                     sc.ShowCauseRemarks,
                     sc.RemarksUpdatedBy,
                     sc.RemarksUpdatedDate,
-                    s.WarningLetterStatus,
+                    CAST(COALESCE(bs.IsWarningLetterRequired, 0) AS bit) AS IsWarningLetterRequired,
+                    CAST(COALESCE(bs.IsWarningLetterCreated, 0) AS bit) AS IsWarningLetterCreated,
                     sc.CreatedBy,
                     sc.CreatedDate
                 FROM dbo.ZeroBalanceDay_ShowCause sc
                 INNER JOIN dbo.ZeroBalanceDay_Submission s
                     ON s.Id = sc.SubmissionId
+                LEFT JOIN dbo.ZeroBalanceDay_BranchStatus bs
+                    ON bs.ZbdDate = sc.ZbdDate
+                   AND bs.BranchCode = sc.BranchCode
                 WHERE (@ZbdDate IS NULL OR sc.ZbdDate = CAST(@ZbdDate AS date))
                   AND (@Month IS NULL OR MONTH(sc.ZbdDate) = @Month)
                   AND (@Year IS NULL OR YEAR(sc.ZbdDate) = @Year)
@@ -896,11 +1319,8 @@ namespace ProductivityApi.Repository
 
             const string sql = @"
                 DECLARE @ShowCauseId int;
-                DECLARE @SubmissionId int;
-
                 SELECT TOP (1)
-                    @ShowCauseId = sc.Id,
-                    @SubmissionId = sc.SubmissionId
+                    @ShowCauseId = sc.Id
                 FROM dbo.ZeroBalanceDay_ShowCause sc
                 WHERE sc.ZbdDate = CAST(@ZbdDate AS date)
                   AND sc.BranchCode = @BranchCode
@@ -919,12 +1339,6 @@ namespace ProductivityApi.Repository
                     RemarksUpdatedBy = @UpdatedBy,
                     RemarksUpdatedDate = GETDATE()
                 WHERE Id = @ShowCauseId;
-
-                UPDATE dbo.ZeroBalanceDay_Submission
-                SET ShowCauseStatus = 'Remarks Updated',
-                    UpdatedBy = @UpdatedBy,
-                    UpdatedDate = GETDATE()
-                WHERE Id = @SubmissionId;
 
                 SELECT 1;";
 
@@ -963,19 +1377,24 @@ namespace ProductivityApi.Repository
                     wl.BranchCode,
                     COALESCE(s.BranchName, '') AS BranchName,
                     COALESCE(s.SubmissionStatus, '') AS SubmissionStatus,
-                    s.ShowCauseReferenceNo,
+                    sc.ShowCauseReferenceNo,
                     sc.NoticeCountInMonth,
                     wl.WarningLetterNumber,
                     wl.WarningLetterDate,
                     wl.IssuedBy,
                     wl.BranchAcknowledgement,
                     wl.Remarks,
+                    CAST(COALESCE(bs.IsWarningLetterRequired, 1) AS bit) AS IsWarningLetterRequired,
+                    CAST(COALESCE(bs.IsWarningLetterCreated, 1) AS bit) AS IsWarningLetterCreated,
                     wl.CreatedDate
                 FROM dbo.ZeroBalanceDay_WarningLetter wl
                 LEFT JOIN dbo.ZeroBalanceDay_Submission s
                     ON s.Id = wl.SubmissionId
                 LEFT JOIN dbo.ZeroBalanceDay_ShowCause sc
                     ON sc.SubmissionId = wl.SubmissionId
+                LEFT JOIN dbo.ZeroBalanceDay_BranchStatus bs
+                    ON bs.ZbdDate = wl.ZbdDate
+                   AND bs.BranchCode = wl.BranchCode
                 WHERE (@ZbdDate IS NULL OR wl.ZbdDate = CAST(@ZbdDate AS date))
                   AND (@Month IS NULL OR MONTH(wl.ZbdDate) = @Month)
                   AND (@Year IS NULL OR YEAR(wl.ZbdDate) = @Year)
@@ -1023,6 +1442,79 @@ namespace ProductivityApi.Repository
                 dto.ZbdDate,
                 dto.BranchCode
             });
+        }
+
+        private static async Task RefreshBranchStatusesAsync(SqlConnection conn, DateOnly zbdDate, SqlTransaction? transaction = null)
+        {
+            const string sql = @"
+                ;WITH LatestSubmission AS
+                (
+                    SELECT
+                        Id,
+                        ZbdDate,
+                        BranchCode,
+                        SubmissionStatus,
+                        SubmissionTime,
+                        ROW_NUMBER() OVER (PARTITION BY ZbdDate, BranchCode ORDER BY Id DESC) AS RowNo
+                    FROM dbo.ZeroBalanceDay_Submission
+                    WHERE ZbdDate = CAST(@ZbdDate AS date)
+                ),
+                LatestShowCause AS
+                (
+                    SELECT
+                        Id,
+                        ZbdDate,
+                        BranchCode,
+                        IsThirdNoticeInMonth,
+                        ROW_NUMBER() OVER (PARTITION BY ZbdDate, BranchCode ORDER BY Id DESC) AS RowNo
+                    FROM dbo.ZeroBalanceDay_ShowCause
+                    WHERE ZbdDate = CAST(@ZbdDate AS date)
+                ),
+                LatestWarningLetter AS
+                (
+                    SELECT
+                        Id,
+                        ZbdDate,
+                        BranchCode,
+                        ROW_NUMBER() OVER (PARTITION BY ZbdDate, BranchCode ORDER BY Id DESC) AS RowNo
+                    FROM dbo.ZeroBalanceDay_WarningLetter
+                    WHERE ZbdDate = CAST(@ZbdDate AS date)
+                )
+                UPDATE bs
+                SET SubmissionId = s.Id,
+                    SubmissionStatus = COALESCE(s.SubmissionStatus, bs.SubmissionStatus),
+                    SubmissionTime = CASE WHEN s.Id IS NULL THEN bs.SubmissionTime ELSE s.SubmissionTime END,
+                    ShowCauseId = sc.Id,
+                    IsShowCauseCreated = CASE WHEN sc.Id IS NULL THEN 0 ELSE 1 END,
+                    IsShowCauseRequired = CASE
+                        WHEN sc.Id IS NOT NULL
+                          OR COALESCE(s.SubmissionStatus, bs.SubmissionStatus) IN ('Late Submission', 'Not Submitted') THEN 1
+                        ELSE 0
+                    END,
+                    WarningLetterId = wl.Id,
+                    IsWarningLetterCreated = CASE WHEN wl.Id IS NULL THEN 0 ELSE 1 END,
+                    IsWarningLetterRequired = CASE
+                        WHEN wl.Id IS NOT NULL
+                          OR COALESCE(sc.IsThirdNoticeInMonth, 0) = 1 THEN 1
+                        ELSE 0
+                    END,
+                    UpdatedDate = GETDATE()
+                FROM dbo.ZeroBalanceDay_BranchStatus bs
+                LEFT JOIN LatestSubmission s
+                    ON s.ZbdDate = bs.ZbdDate
+                   AND s.BranchCode = bs.BranchCode
+                   AND s.RowNo = 1
+                LEFT JOIN LatestShowCause sc
+                    ON sc.ZbdDate = bs.ZbdDate
+                   AND sc.BranchCode = bs.BranchCode
+                   AND sc.RowNo = 1
+                LEFT JOIN LatestWarningLetter wl
+                    ON wl.ZbdDate = bs.ZbdDate
+                   AND wl.BranchCode = bs.BranchCode
+                   AND wl.RowNo = 1
+                WHERE bs.ZbdDate = CAST(@ZbdDate AS date);";
+
+            await conn.ExecuteAsync(sql, new { ZbdDate = zbdDate }, transaction);
         }
     }
 }

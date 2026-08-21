@@ -35,7 +35,7 @@ namespace ProductivityApi.Jobs
                 if (ct.IsCancellationRequested)
                     return;
 
-                var zbdDate = DateTime.Today;
+                var zbdDate = DateOnly.FromDateTime(DateTime.Today);
                 var zbd = await _service.GetByDateAsync(zbdDate);
                 if (zbd == null)
                 {
@@ -52,7 +52,7 @@ namespace ProductivityApi.Jobs
             }
         }
 
-        protected abstract Task ExecuteForZeroBalanceDayAsync(DateTime zbdDate, CancellationToken ct);
+        protected abstract Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct);
     }
 
     public class ZeroBalanceDayNotificationEmailJob : ZeroBalanceDayJobBase
@@ -66,7 +66,7 @@ namespace ProductivityApi.Jobs
         public override void Register(string cron) =>
             RecurringJob.AddOrUpdate<ZeroBalanceDayNotificationEmailJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateTime zbdDate, CancellationToken ct)
+        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
             _logger.Information("ZBD notification email schedule reached for {ZbdDate:yyyy-MM-dd}. Email logic will be added in the job implementation.", zbdDate);
             return Task.CompletedTask;
@@ -81,7 +81,7 @@ namespace ProductivityApi.Jobs
 
         protected abstract string ReminderTime { get; }
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateTime zbdDate, CancellationToken ct)
+        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
             _logger.Information("ZBD not-submitted reminder schedule reached for {ZbdDate:yyyy-MM-dd} at {ReminderTime}. Email logic will be added in the job implementation.", zbdDate, ReminderTime);
             return Task.CompletedTask;
@@ -151,7 +151,7 @@ namespace ProductivityApi.Jobs
         public override void Register(string cron) =>
             RecurringJob.AddOrUpdate<ZeroBalanceDayRchZchEscalationJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateTime zbdDate, CancellationToken ct)
+        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
             _logger.Information("ZBD late/not-submitted RCH/ZCH escalation schedule reached for {ZbdDate:yyyy-MM-dd}. Escalation logic will be added in the job implementation.", zbdDate);
             return Task.CompletedTask;

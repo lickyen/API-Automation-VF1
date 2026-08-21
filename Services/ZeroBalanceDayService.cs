@@ -39,7 +39,17 @@ namespace ProductivityApi.Services
         public async Task<int> CreateAsync(ZeroBalanceDayCreateDto dto)
         {
             ValidateFutureOrToday(dto.ZbdDate, "ZBD date");
-            return await _repository.CreateAsync(dto);
+            var id = await _repository.CreateAsync(dto);
+            if (id > 0)
+            {
+                var branches = GetAllBranches()
+                    .Select(branch => ToBranchStatusModel(id, dto.ZbdDate, branch))
+                    .ToList();
+
+                await _repository.EnsureBranchStatusesAsync(id, dto.ZbdDate, branches);
+            }
+
+            return id;
         }
 
         public async Task<int> EditAsync(ZeroBalanceDayEditDto dto)
@@ -59,35 +69,77 @@ namespace ProductivityApi.Services
             return await _repository.CancelAsync(dto);
         }
 
-        public Task<ZeroBalanceDayModel?> GetByDateAsync(DateTime zbdDate)
-            => _repository.GetByDateAsync(zbdDate.Date);
+        public Task<ZeroBalanceDayModel?> GetByDateAsync(DateOnly zbdDate)
+            => _repository.GetByDateAsync(zbdDate);
 
         public Task<List<ZeroBalanceDayModel>> GetListAsync(string? status)
             => _repository.GetListAsync(status);
 
-        public Task<List<ZeroBalanceDayBranchMappingDto>> GetBranchMappingAsync(string userId)
+        public async Task<List<ZeroBalanceDayBranchMappingDto>> GetBranchMappingAsync(string userId, DateOnly? zbdDate = null, string? status = null)
+        {
+            var branches = GetMappedBranchesForUser(userId);
+            var filter = NormalizeStatus(status);
+
+            if (string.IsNullOrWhiteSpace(filter) || filter == "all")
+                return branches;
+
+            if (filter != "pending" && filter != "completed")
+                throw new ArgumentException("Invalid branch mapping status");
+
+            if (zbdDate == null)
+                throw new ArgumentException("ZBD date is required when status is pending or completed");
+
+            var zbd = await _repository.GetByDateAsync(zbdDate.Value);
+            if (zbd == null || branches.Count == 0)
+                return new List<ZeroBalanceDayBranchMappingDto>();
+
+            var branchCodes = branches
+                .Select(x => x.BranchCode)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var submissions = await _repository.GetSubmissionsByUserAsync(
+                new ZeroBalanceDaySubmissionFilterDto
+                {
+                    UserId = userId,
+                    ZbdDate = zbdDate.Value
+                },
+                branchCodes);
+
+            var submittedBranches = submissions
+                .Select(x => x.BranchCode)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return filter == "completed"
+                ? branches.Where(x => submittedBranches.Contains(x.BranchCode)).ToList()
+                : branches.Where(x => !submittedBranches.Contains(x.BranchCode)).ToList();
+        }
+
+        private List<ZeroBalanceDayBranchMappingDto> GetMappedBranchesForUser(string userId)
         {
             var user = _userService.GetUser(userId);
             if (user == null || string.IsNullOrWhiteSpace(user.UserId))
-                return Task.FromResult(new List<ZeroBalanceDayBranchMappingDto>());
+                return new List<ZeroBalanceDayBranchMappingDto>();
 
             if (string.Equals(user.Role, "CDSM", StringComparison.OrdinalIgnoreCase))
             {
                 if (string.IsNullOrWhiteSpace(user.Region))
-                    return Task.FromResult(new List<ZeroBalanceDayBranchMappingDto>());
+                    return new List<ZeroBalanceDayBranchMappingDto>();
 
                 var branches = _branchServices.GetBranches()
                     .Where(branch => string.Equals(branch.Region, user.Region, StringComparison.OrdinalIgnoreCase))
                     .Select(branch => MapBranch(user, branch))
                     .ToList();
 
-                return Task.FromResult(branches);
+                return branches;
             }
 
             if (IsSingleBranchRole(user.Role))
             {
                 if (string.IsNullOrWhiteSpace(user.BranchId))
-                    return Task.FromResult(new List<ZeroBalanceDayBranchMappingDto>());
+                    return new List<ZeroBalanceDayBranchMappingDto>();
 
                 var branch = _branchServices.GetBranchByID(user.BranchId);
                 var branches = new List<ZeroBalanceDayBranchMappingDto>
@@ -95,15 +147,15 @@ namespace ProductivityApi.Services
                     MapBranch(user, branch)
                 };
 
-                return Task.FromResult(branches);
+                return branches;
             }
 
-            return Task.FromResult(new List<ZeroBalanceDayBranchMappingDto>());
+            return new List<ZeroBalanceDayBranchMappingDto>();
         }
 
-        public async Task<ZeroBalanceDayFormDetailsDto?> GetFormDetailsAsync(DateTime zbdDate, string branchCode, string? userId)
+        public async Task<ZeroBalanceDayFormDetailsDto?> GetFormDetailsAsync(DateOnly zbdDate, string branchCode, string? userId)
         {
-            var zbd = await _repository.GetByDateAsync(zbdDate.Date);
+            var zbd = await _repository.GetByDateAsync(zbdDate);
             if (zbd == null)
                 return null;
 
@@ -129,11 +181,11 @@ namespace ProductivityApi.Services
             if (!IsValidBranch(branch))
                 return null;
 
-            var existingSubmission = await _repository.GetSubmissionByDateBranchAsync(zbdDate.Date, branchCode);
+            var existingSubmission = await _repository.GetSubmissionByDateBranchAsync(zbdDate, branchCode);
 
             return new ZeroBalanceDayFormDetailsDto
             {
-                ZbdDate = zbdDate.Date,
+                ZbdDate = zbdDate,
                 BranchCode = branch!.BranchId ?? branchCode,
                 BranchName = branch.BranchName ?? string.Empty,
                 Region = branch.Region,
@@ -160,7 +212,13 @@ namespace ProductivityApi.Services
             {
                 var result = await _repository.SubmitBranchAsync(dto, fileName);
                 if (result <= 0)
+                {
                     DeleteSavedFile(fileName);
+                }
+                else
+                {
+                    await _repository.UpdateBranchStatusFromSubmissionAsync(result);
+                }
 
                 return result;
             }
@@ -188,7 +246,13 @@ namespace ProductivityApi.Services
             {
                 var result = await _repository.ReviseBranchSubmissionAsync(dto, fileName);
                 if (result <= 0)
+                {
                     DeleteSavedFile(fileName);
+                }
+                else
+                {
+                    await _repository.UpdateBranchStatusFromSubmissionAsync(dto.Id);
+                }
 
                 return result;
             }
@@ -219,8 +283,11 @@ namespace ProductivityApi.Services
 
         public async Task<ZeroBalanceDayDashboardDto> GetDashboardAsync(ZeroBalanceDayDashboardFilterDto dto)
         {
-            var zbdDate = (dto.ZbdDate ?? DateTime.Today).Date;
-            var zbd = await _repository.GetByDateAsync(zbdDate.Date);
+            var zbdDate = dto.ZbdDate ?? DateOnly.FromDateTime(DateTime.Today);
+            var filter = NormalizeStatus(dto.Status);
+            ValidateDashboardStatus(filter);
+
+            var zbd = await _repository.GetByDateAsync(zbdDate);
             var dashboard = new ZeroBalanceDayDashboardDto
             {
                 ZbdDate = zbdDate,
@@ -231,33 +298,10 @@ namespace ProductivityApi.Services
             if (zbd == null)
                 return dashboard;
 
-            var branches = GetAllBranches()
-                .Where(branch => string.IsNullOrWhiteSpace(dto.Region) || string.Equals(branch.Region, dto.Region, StringComparison.OrdinalIgnoreCase))
-                .Where(branch => string.IsNullOrWhiteSpace(dto.BranchCode) || string.Equals(branch.BranchId, dto.BranchCode, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            var submissions = await _repository.GetSubmissionsByDateAsync(zbdDate.Date);
-            var submissionLookup = submissions
-                .GroupBy(x => x.BranchCode, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(x => x.Key, x => x.OrderByDescending(s => s.Id).First(), StringComparer.OrdinalIgnoreCase);
-
-            var showCauseLookup = (await _repository.GetShowCauseSummaryByDateAsync(zbdDate.Date))
-                .GroupBy(x => x.BranchCode, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(x => x.Key, x => x.OrderByDescending(s => s.ShowCauseId).First(), StringComparer.OrdinalIgnoreCase);
-
-            var rows = branches
-                .Select(branch =>
-                {
-                    submissionLookup.TryGetValue(branch.BranchId ?? string.Empty, out var submission);
-                    showCauseLookup.TryGetValue(branch.BranchId ?? string.Empty, out var showCause);
-                    return ToDashboardBranch(zbd, zbdDate.Date, branch, submission, showCause);
-                })
-                .OrderBy(x => x.Region)
-                .ThenBy(x => x.BranchCode)
-                .ToList();
-
-            dashboard.Summary = BuildDashboardSummary(rows);
-            dashboard.Branches = ApplyDashboardFilter(rows, dto.Status).ToList();
+            dashboard.Summary = await _repository.GetDashboardSummaryAsync(zbdDate, dto.Region, dto.BranchCode);
+            dashboard.Branches = string.IsNullOrWhiteSpace(filter)
+                ? new List<ZeroBalanceDayDashboardBranchDto>()
+                : await _repository.GetDashboardBranchesAsync(zbdDate, dto.Region, dto.BranchCode, filter);
             return dashboard;
         }
 
@@ -271,7 +315,7 @@ namespace ProductivityApi.Services
             {
                 Count = records.Count,
                 Records = records,
-                WarningLetterList = records.Where(x => x.IsWarningLetterPending).ToList()
+                WarningLetterList = records.Where(x => x.IsWarningLetterRequired).ToList()
             };
 
             if (records.Count == 0)
@@ -296,7 +340,7 @@ namespace ProductivityApi.Services
                 return result;
             }
 
-            var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate.Date, records, to, cc);
+            var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate, records, to, cc);
             result.HrEmailStatus = emailResult.Status;
             result.HrEmailError = emailResult.Error;
 
@@ -324,13 +368,27 @@ namespace ProductivityApi.Services
             if (zbdDates.Count == 0)
                 return Enumerable.Empty<dynamic>();
 
-            var branches = GetAllBranches()
+            var allBranches = GetAllBranches();
+            foreach (var zbd in zbdDates)
+            {
+                await _repository.EnsureBranchStatusesAsync(
+                    zbd.Id,
+                    zbd.ZbdDate,
+                    allBranches.Select(branch => ToBranchStatusModel(zbd, branch)).ToList());
+            }
+
+            var branches = allBranches
                 .Where(branch => string.IsNullOrWhiteSpace(dto.Region) || string.Equals(branch.Region, dto.Region, StringComparison.OrdinalIgnoreCase))
                 .Where(branch => string.IsNullOrWhiteSpace(dto.BranchCode) || string.Equals(branch.BranchId, dto.BranchCode, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             var submissions = await _repository.GetSubmissionsForReportAsync(dto);
             var submissionLookup = submissions
+                .GroupBy(x => $"{x.ZbdDate:yyyyMMdd}|{x.BranchCode}", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.OrderByDescending(s => s.Id).First(), StringComparer.OrdinalIgnoreCase);
+
+            var branchStatuses = await _repository.GetBranchStatusesForReportAsync(dto);
+            var branchStatusLookup = branchStatuses
                 .GroupBy(x => $"{x.ZbdDate:yyyyMMdd}|{x.BranchCode}", StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x.Key, x => x.OrderByDescending(s => s.Id).First(), StringComparer.OrdinalIgnoreCase);
 
@@ -341,21 +399,26 @@ namespace ProductivityApi.Services
                 {
                     var key = $"{zbd.ZbdDate:yyyyMMdd}|{branch.BranchId}";
                     submissionLookup.TryGetValue(key, out var submission);
+                    branchStatusLookup.TryGetValue(key, out var branchStatus);
 
-                    var submissionStatus = submission?.SubmissionStatus ?? "Not Submitted";
+                    var submissionStatus = branchStatus?.SubmissionStatus ?? submission?.SubmissionStatus ?? "Pending";
                     if (!string.IsNullOrWhiteSpace(dto.SubmissionStatus)
                         && !string.Equals(submissionStatus, dto.SubmissionStatus, StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    if (!string.IsNullOrWhiteSpace(dto.ShowCauseStatus)
-                        && !string.Equals(submission?.ShowCauseStatus, dto.ShowCauseStatus, StringComparison.OrdinalIgnoreCase))
+                    if (dto.IsShowCauseRequired != null && branchStatus?.IsShowCauseRequired != dto.IsShowCauseRequired.Value)
                         continue;
 
-                    if (!string.IsNullOrWhiteSpace(dto.WarningLetterStatus)
-                        && !string.Equals(submission?.WarningLetterStatus, dto.WarningLetterStatus, StringComparison.OrdinalIgnoreCase))
+                    if (dto.IsShowCauseCreated != null && branchStatus?.IsShowCauseCreated != dto.IsShowCauseCreated.Value)
                         continue;
 
-                    rows.Add(ToReportRow(zbd.ZbdDate, branch, submission, submissionStatus));
+                    if (dto.IsWarningLetterRequired != null && branchStatus?.IsWarningLetterRequired != dto.IsWarningLetterRequired.Value)
+                        continue;
+
+                    if (dto.IsWarningLetterCreated != null && branchStatus?.IsWarningLetterCreated != dto.IsWarningLetterCreated.Value)
+                        continue;
+
+                    rows.Add(ToReportRow(zbd.ZbdDate, branch, submission, branchStatus, submissionStatus));
                 }
             }
 
@@ -374,7 +437,7 @@ namespace ProductivityApi.Services
         }
 
         private async Task<(string Status, string? Error)> SendShowCauseEmailAsync(
-            DateTime zbdDate,
+            DateOnly zbdDate,
             List<ZeroBalanceDayShowCauseCreatedDto> records,
             List<string> to,
             List<string> cc)
@@ -388,7 +451,7 @@ namespace ProductivityApi.Services
                 : ("Failed", result);
         }
 
-        private static string BuildShowCauseEmailBody(DateTime zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
+        private static string BuildShowCauseEmailBody(DateOnly zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
         {
             var body = new StringBuilder();
             body.Append("<p>Dear HR Team,</p>");
@@ -406,7 +469,7 @@ namespace ProductivityApi.Services
                 body.Append("<td>").Append(WebUtility.HtmlEncode(record.Region)).Append("</td>");
                 body.Append("<td>").Append(WebUtility.HtmlEncode(record.ShowCauseReferenceNo)).Append("</td>");
                 body.Append("<td>").Append(record.NoticeCountInMonth).Append("</td>");
-                body.Append("<td>").Append(record.IsWarningLetterPending ? "Yes" : "No").Append("</td>");
+                body.Append("<td>").Append(record.IsWarningLetterRequired ? "Yes" : "No").Append("</td>");
                 body.Append("</tr>");
             }
 
@@ -415,14 +478,14 @@ namespace ProductivityApi.Services
             return body.ToString();
         }
 
-        private static void ValidateFutureOrToday(DateTime date, string fieldName)
+        private static void ValidateFutureOrToday(DateOnly date, string fieldName)
         {
-            if (date.Date < DateTime.Today)
+            if (date < DateOnly.FromDateTime(DateTime.Today))
                 throw new ArgumentException($"{fieldName} cannot be a past date");
         }
 
         private static void ValidateBranchSubmission(
-            DateTime zbdDate,
+            DateOnly zbdDate,
             decimal openingBalance,
             decimal amountDeposited,
             string? mismatchReason,
@@ -434,7 +497,7 @@ namespace ProductivityApi.Services
             if (openingBalance != amountDeposited && (string.IsNullOrWhiteSpace(mismatchReason) || mismatchReason.Trim().Length < 20))
                 throw new ArgumentException("Reason is required with at least 20 characters when opening balance does not match bank deposit amount");
 
-            if (zbdDate.Date == DateTime.Today && DateTime.Now.TimeOfDay > TimeSpan.FromHours(12) && string.IsNullOrWhiteSpace(lateSubmissionReason))
+            if (zbdDate == DateOnly.FromDateTime(DateTime.Today) && DateTime.Now.TimeOfDay > TimeSpan.FromHours(12) && string.IsNullOrWhiteSpace(lateSubmissionReason))
                 throw new ArgumentException("Late submission reason is required after 12:00 PM");
         }
 
@@ -502,99 +565,48 @@ namespace ProductivityApi.Services
             dto.Region = branch.Region;
         }
 
-        private static ZeroBalanceDayDashboardBranchDto ToDashboardBranch(
-            ZeroBalanceDayModel zbd,
-            DateTime zbdDate,
-            BranchModel branch,
-            ZeroBalanceDaySubmissionModel? submission,
-            ZeroBalanceDayShowCauseCreatedDto? showCause)
-        {
-            var submissionStatus = submission?.SubmissionStatus ?? "Not Submitted";
-            var isShowCauseCreated = showCause != null || !string.IsNullOrWhiteSpace(submission?.ShowCauseReferenceNo);
-            var isWarningLetterPending = string.Equals(submission?.WarningLetterStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+        private static ZeroBalanceDayBranchStatusModel ToBranchStatusModel(ZeroBalanceDayModel zbd, BranchModel branch)
+            => ToBranchStatusModel(zbd.Id, zbd.ZbdDate, branch);
 
-            return new ZeroBalanceDayDashboardBranchDto
+        private static ZeroBalanceDayBranchStatusModel ToBranchStatusModel(int zbdId, DateOnly zbdDate, BranchModel branch)
+        {
+            return new ZeroBalanceDayBranchStatusModel
             {
-                SubmissionId = submission?.Id ?? 0,
-                ZeroBalanceDayId = submission?.ZeroBalanceDayId ?? zbd.Id,
+                ZbdId = zbdId,
                 ZbdDate = zbdDate,
-                Region = branch.Region ?? submission?.Region ?? string.Empty,
-                BranchCode = branch.BranchId ?? submission?.BranchCode ?? string.Empty,
-                BranchName = branch.BranchName ?? submission?.BranchName ?? string.Empty,
-                LastCobClosingBalance = submission?.LastCobClosingBalance ?? 0,
-                VeCollectReceipts = submission?.VeCollectReceipts ?? 0,
-                CashToBank = submission?.CashToBank ?? 0,
-                OpeningBalance = submission?.OpeningBalance ?? 0,
-                AmountDeposited = submission?.AmountDeposited ?? 0,
-                DifferenceAmount = submission?.DifferenceAmount ?? 0,
-                SubmissionStatus = submissionStatus,
-                SubmissionTime = submission?.SubmissionTime,
-                DelayMinutes = submission?.DelayMinutes,
-                MismatchReason = submission?.MismatchReason,
-                LateSubmissionReason = submission?.LateSubmissionReason,
-                ShowCauseReferenceNo = showCause?.ShowCauseReferenceNo ?? submission?.ShowCauseReferenceNo,
-                ShowCauseStatus = submission?.ShowCauseStatus,
-                NoticeCountInMonth = showCause?.NoticeCountInMonth ?? 0,
-                IsShowCauseCreated = isShowCauseCreated,
-                IsShowCauseEligible = IsShowCauseEligible(submissionStatus, isShowCauseCreated),
-                IsWarningLetterPending = isWarningLetterPending,
-                WarningLetterStatus = submission?.WarningLetterStatus
+                Region = branch.Region ?? string.Empty,
+                BranchCode = branch.BranchId ?? string.Empty,
+                BranchName = branch.BranchName ?? string.Empty,
+                SubmissionStatus = "Pending",
+                IsShowCauseRequired = false,
+                IsShowCauseCreated = false,
+                IsWarningLetterRequired = false,
+                IsWarningLetterCreated = false
             };
         }
 
-        private static ZeroBalanceDayDashboardSummaryDto BuildDashboardSummary(List<ZeroBalanceDayDashboardBranchDto> rows)
+        private static void ValidateDashboardStatus(string filter)
         {
-            return new ZeroBalanceDayDashboardSummaryDto
-            {
-                TotalBranches = rows.Count,
-                Completed = rows.Count(x => IsCompletedSubmission(x.SubmissionStatus)),
-                SubmittedOnTime = rows.Count(x => IsSubmittedOnTime(x.SubmissionStatus)),
-                LateSubmitted = rows.Count(x => IsLateSubmitted(x.SubmissionStatus)),
-                NotSubmitted = rows.Count(x => IsNotSubmitted(x.SubmissionStatus)),
-                ShowCauseEligible = rows.Count(x => x.IsShowCauseEligible)
-            };
-        }
+            if (string.IsNullOrWhiteSpace(filter))
+                return;
 
-        private static IEnumerable<ZeroBalanceDayDashboardBranchDto> ApplyDashboardFilter(
-            List<ZeroBalanceDayDashboardBranchDto> rows,
-            string? status)
-        {
-            var filter = NormalizeStatus(status);
-            return filter switch
-            {
-                "" or "all" => rows,
-                "completed" or "submitted" => rows.Where(x => IsCompletedSubmission(x.SubmissionStatus)),
-                "submittedontime" or "ontime" => rows.Where(x => IsSubmittedOnTime(x.SubmissionStatus)),
-                "latesubmitted" or "latesubmission" or "late" => rows.Where(x => IsLateSubmitted(x.SubmissionStatus)),
-                "notsubmitted" => rows.Where(x => IsNotSubmitted(x.SubmissionStatus)),
-                "showcauseeligible" or "eligible" or "eligibleforshowcause" or "latesubmittednotsubmitted" or "latesubmittedandnotsubmitted" => rows.Where(x => x.IsShowCauseEligible),
-                _ => throw new ArgumentException("Invalid dashboard status")
-            };
-        }
+            var valid = filter is "all"
+                or "completed"
+                or "submitted"
+                or "submittedontime"
+                or "ontime"
+                or "latesubmitted"
+                or "latesubmission"
+                or "late"
+                or "notsubmitted"
+                or "showcauseeligible"
+                or "eligible"
+                or "eligibleforshowcause"
+                or "latesubmittednotsubmitted"
+                or "latesubmittedandnotsubmitted";
 
-        private static bool IsShowCauseEligible(string submissionStatus, bool isShowCauseCreated)
-        {
-            return !isShowCauseCreated && (IsLateSubmitted(submissionStatus) || IsNotSubmitted(submissionStatus));
-        }
-
-        private static bool IsCompletedSubmission(string status)
-        {
-            return IsSubmittedOnTime(status) || IsLateSubmitted(status);
-        }
-
-        private static bool IsSubmittedOnTime(string status)
-        {
-            return string.Equals(status, "Submitted On Time", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsLateSubmitted(string status)
-        {
-            return string.Equals(status, "Late Submission", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsNotSubmitted(string status)
-        {
-            return string.Equals(status, "Not Submitted", StringComparison.OrdinalIgnoreCase);
+            if (!valid)
+                throw new ArgumentException("Invalid dashboard status");
         }
 
         private static string NormalizeStatus(string? status)
@@ -605,17 +617,18 @@ namespace ProductivityApi.Services
         }
 
         private static ExpandoObject ToReportRow(
-            DateTime zbdDate,
+            DateOnly zbdDate,
             BranchModel branch,
             ZeroBalanceDaySubmissionModel? submission,
+            ZeroBalanceDayBranchStatusModel? branchStatus,
             string submissionStatus)
         {
             dynamic row = new ExpandoObject();
             var values = (IDictionary<string, object>)row;
             values["ZbdDate"] = zbdDate;
-            values["Region"] = branch.Region ?? submission?.Region ?? string.Empty;
-            values["BranchCode"] = branch.BranchId ?? submission?.BranchCode ?? string.Empty;
-            values["BranchName"] = branch.BranchName ?? submission?.BranchName ?? string.Empty;
+            values["Region"] = branchStatus?.Region ?? branch.Region ?? submission?.Region ?? string.Empty;
+            values["BranchCode"] = branchStatus?.BranchCode ?? branch.BranchId ?? submission?.BranchCode ?? string.Empty;
+            values["BranchName"] = branchStatus?.BranchName ?? branch.BranchName ?? submission?.BranchName ?? string.Empty;
             values["LastCobClosingBalance"] = submission?.LastCobClosingBalance ?? 0;
             values["VeCollectReceipts"] = submission?.VeCollectReceipts ?? 0;
             values["CashToBank"] = submission?.CashToBank ?? 0;
@@ -623,15 +636,16 @@ namespace ProductivityApi.Services
             values["DepositAmount"] = submission?.AmountDeposited ?? 0;
             values["DifferenceAmount"] = submission?.DifferenceAmount ?? 0;
             values["SubmissionStatus"] = submissionStatus;
-            values["SubmissionTime"] = submission?.SubmissionTime;
+            values["SubmissionTime"] = branchStatus?.SubmissionTime ?? submission?.SubmissionTime;
             values["DelayReason"] = submission?.LateSubmissionReason ?? submission?.MismatchReason;
-            values["ShowCauseReferenceNo"] = submission?.ShowCauseReferenceNo;
-            values["ShowCauseStatus"] = submission?.ShowCauseStatus;
-            values["WarningLetterStatus"] = submission?.WarningLetterStatus;
+            values["IsShowCauseRequired"] = branchStatus?.IsShowCauseRequired ?? false;
+            values["IsShowCauseCreated"] = branchStatus?.IsShowCauseCreated ?? false;
+            values["IsWarningLetterRequired"] = branchStatus?.IsWarningLetterRequired ?? false;
+            values["IsWarningLetterCreated"] = branchStatus?.IsWarningLetterCreated ?? false;
             return row;
         }
 
-        private async Task<string> SaveDepositSlipAsync(FileUploadBase64? fileDto, string branchCode, DateTime zbdDate)
+        private async Task<string> SaveDepositSlipAsync(FileUploadBase64? fileDto, string branchCode, DateOnly zbdDate)
         {
             if (fileDto == null || string.IsNullOrWhiteSpace(fileDto.Base64))
                 throw new ArgumentException("Deposit slip is required");

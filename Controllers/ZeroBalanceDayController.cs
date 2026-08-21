@@ -85,12 +85,12 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getByDate")]
-        public async Task<IActionResult> GetByDate([FromQuery] DateTime? zbdDate)
+        public async Task<IActionResult> GetByDate([FromQuery] DateOnly? zbdDate)
         {
             if (zbdDate == null)
                 return BadRequest(new Response(false, null, "ZBD date is required"));
 
-            var checkedDate = zbdDate.Value.Date;
+            var checkedDate = zbdDate.Value;
             var data = await _service.GetByDateAsync(checkedDate);
             return Ok(new Response(
                 true,
@@ -113,11 +113,11 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("branchMapping")]
-        public async Task<IActionResult> GetBranchMapping([FromQuery] string userId)
+        public async Task<IActionResult> GetBranchMapping([FromQuery] string userId, [FromQuery] DateOnly? zbdDate, [FromQuery] string? status)
         {
             try
             {
-                var data = await _service.GetBranchMappingAsync(userId);
+                var data = await _service.GetBranchMappingAsync(userId, zbdDate, status);
                 return Ok(new Response(true, data, data.Any() ? "Success" : "No branches found"));
             }
             catch (ArgumentException ex)
@@ -127,7 +127,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("formDetails")]
-        public async Task<IActionResult> GetFormDetails([FromQuery] DateTime zbdDate, [FromQuery] string branchCode, [FromQuery] string? userId)
+        public async Task<IActionResult> GetFormDetails([FromQuery] DateOnly zbdDate, [FromQuery] string branchCode, [FromQuery] string? userId)
         {
             try
             {
