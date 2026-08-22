@@ -122,13 +122,26 @@
         public string CreatedBy { get; set; } = string.Empty;
     }
 
+    //public class FcRefundBulkUploadResult
+    //{
+    //    public int Added { get; set; }
+    //    public int Skipped { get; set; }
+    //    public List<string> AddedLans { get; set; } = new();
+    //    public List<string> SkippedLans { get; set; } = new();
+    //    public bool Success => Added > 0 || Skipped > 0;
+    //}
+
     public class FcRefundBulkUploadResult
     {
         public int Added { get; set; }
         public int Skipped { get; set; }
+        public int Synced { get; set; }
+
         public List<string> AddedLans { get; set; } = new();
         public List<string> SkippedLans { get; set; } = new();
-        public bool Success => Added > 0 || Skipped > 0;
+        public List<string> SyncedLans { get; set; } = new();
+
+        public bool Success => Added > 0 || Skipped > 0 || Synced > 0;
     }
     public class FcRefundLanResult
     {

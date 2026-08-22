@@ -97,16 +97,31 @@ namespace ProductivityApi.Jobs
 
             var result = await _service.AddLanAsync(dtos);
 
+            //_logger.Information(
+            //    "LAN insert complete — Added: {Added}, Skipped: {Skipped}",
+            //    result.Added, result.Skipped
+            //);
+
+            //if (result.AddedLans.Any())
+            //    _logger.Information("Added LANs: {Lans}", string.Join(", ", result.AddedLans));
+
+            //if (result.SkippedLans.Any())
+            //    _logger.Information("Skipped LANs (already exist): {Lans}", string.Join(", ", result.SkippedLans));
+
             _logger.Information(
-                "LAN insert complete — Added: {Added}, Skipped: {Skipped}",
-                result.Added, result.Skipped
-            );
+                "LAN processing complete — Added: {Added}, Synced: {Synced}, Skipped: {Skipped}",
+                    result.Added,result.Synced,result.Skipped);
 
             if (result.AddedLans.Any())
                 _logger.Information("Added LANs: {Lans}", string.Join(", ", result.AddedLans));
 
+            if (result.SyncedLans.Any())
+                _logger.Information("EB LANs with synchronized foreclosure date: {Lans}",
+                    string.Join(", ", result.SyncedLans));
+
             if (result.SkippedLans.Any())
-                _logger.Information("Skipped LANs (already exist): {Lans}", string.Join(", ", result.SkippedLans));
+                _logger.Information("Skipped LANs: {Lans}",
+                    string.Join(", ", result.SkippedLans));
         }
 
         private async Task<List<FcRefundAddLanDto>> FetchLansFromPlfAsync(CancellationToken ct)
