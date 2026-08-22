@@ -274,7 +274,7 @@ namespace ProductivityApi.Repository
                    OR (@Filter = 'completed' AND Status <> 'Cancelled' AND ZbdDate < @Today)
                    OR (@Filter = 'today' AND Status <> 'Cancelled' AND ZbdDate = @Today)
                    OR (@Filter = 'upcoming' AND Status <> 'Cancelled' AND ZbdDate > @Today)
-                ORDER BY ZbdDate DESC, Id DESC;";
+                ORDER BY ZbdDate;";
 
             var result = await conn.QueryAsync<ZeroBalanceDayModel>(sql, new { Status = status });
             return result.ToList();

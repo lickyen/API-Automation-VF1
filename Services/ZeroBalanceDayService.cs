@@ -762,12 +762,18 @@ namespace ProductivityApi.Services
 
         private static string NormalizeSubmissionStatusValue(string? submissionStatus)
         {
-            if (string.Equals(submissionStatus?.Trim(), "Late Submitted", StringComparison.OrdinalIgnoreCase))
-                return "Late Submission";
+            if (string.IsNullOrWhiteSpace(submissionStatus))
+                return string.Empty;
 
-            return string.IsNullOrWhiteSpace(submissionStatus)
-                ? string.Empty
-                : submissionStatus.Trim();
+            var value = submissionStatus.Trim();
+            var normalized = NormalizeStatus(value);
+            return normalized switch
+            {
+                "submittedontime" or "ontime" => "Submitted On Time",
+                "latesubmission" or "latesubmitted" or "late" => "Late Submission",
+                "notsubmitted" or "pending" => "Not Submitted",
+                _ => value
+            };
         }
 
         private static ExpandoObject ToReportRow(
