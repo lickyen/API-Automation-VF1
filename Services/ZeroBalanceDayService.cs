@@ -93,28 +93,24 @@ namespace ProductivityApi.Services
             if (zbd == null || branches.Count == 0)
                 return new List<ZeroBalanceDayBranchMappingDto>();
 
+            await _repository.RefreshOperationalBranchStatusesAsync(zbdDate.Value, IsShowCauseCutOffReached(zbdDate.Value));
+
             var branchCodes = branches
                 .Select(x => x.BranchCode)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var submissions = await _repository.GetSubmissionsByUserAsync(
-                new ZeroBalanceDaySubmissionFilterDto
-                {
-                    UserId = userId,
-                    ZbdDate = zbdDate.Value
-                },
-                branchCodes);
-
-            var submittedBranches = submissions
+            var branchStatuses = await _repository.GetBranchStatusesByDateAsync(zbdDate.Value);
+            var completedBranches = branchStatuses
+                .Where(x => branchCodes.Contains(x.BranchCode))
+                .Where(x => IsCompletedSubmissionStatus(x.SubmissionStatus))
                 .Select(x => x.BranchCode)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             return filter == "completed"
-                ? branches.Where(x => submittedBranches.Contains(x.BranchCode)).ToList()
-                : branches.Where(x => !submittedBranches.Contains(x.BranchCode)).ToList();
+                ? branches.Where(x => completedBranches.Contains(x.BranchCode)).ToList()
+                : branches.Where(x => !completedBranches.Contains(x.BranchCode)).ToList();
         }
 
         private List<ZeroBalanceDayBranchMappingDto> GetMappedBranchesForUser(string userId)
@@ -298,6 +294,8 @@ namespace ProductivityApi.Services
             if (zbd == null)
                 return dashboard;
 
+            await _repository.RefreshOperationalBranchStatusesAsync(zbdDate, IsShowCauseCutOffReached(zbdDate));
+
             dashboard.Summary = await _repository.GetDashboardSummaryAsync(zbdDate, dto.Region, dto.BranchCode);
             dashboard.Branches = string.IsNullOrWhiteSpace(filter)
                 ? new List<ZeroBalanceDayDashboardBranchDto>()
@@ -309,18 +307,61 @@ namespace ProductivityApi.Services
         {
             ValidateBranchCodes(dto.BranchCodes);
 
-            var branches = BuildBranchDetails(dto.BranchCodes);
+            var zbd = await _repository.GetByDateAsync(dto.ZbdDate);
+            if (zbd == null)
+            {
+                return new ZeroBalanceDayShowCauseCreateResultDto
+                {
+                    Count = 0,
+                    HrEmailStatus = "Not Sent",
+                    WarningLetterEmailStatus = "Not Sent"
+                };
+            }
+
+            await _repository.RefreshOperationalBranchStatusesAsync(dto.ZbdDate, IsShowCauseCutOffReached(dto.ZbdDate));
+
+            var branchStatuses = await _repository.GetBranchStatusesByDateAsync(dto.ZbdDate);
+            var requestedCodes = dto.BranchCodes
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var eligibleStatuses = branchStatuses
+                .Where(x => requestedCodes.Contains(x.BranchCode, StringComparer.OrdinalIgnoreCase))
+                .Where(IsShowCauseEligible)
+                .ToList();
+
+            var eligibleCodes = eligibleStatuses
+                .Select(x => x.BranchCode)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var invalidCodes = requestedCodes
+                .Where(x => !eligibleCodes.Contains(x))
+                .ToList();
+
+            if (invalidCodes.Count > 0)
+                throw new ArgumentException($"Selected branches are not eligible for show-cause: {string.Join(", ", invalidCodes)}");
+
+            var branches = eligibleStatuses
+                .Select(x => new ZeroBalanceDayBranchMappingDto
+                {
+                    BranchCode = x.BranchCode,
+                    BranchName = x.BranchName,
+                    Region = x.Region
+                })
+                .ToList();
             var records = await _repository.CreateShowCauseAsync(dto, branches);
+            var warningLetterRecords = records.Where(x => x.IsWarningLetterRequired).ToList();
             var result = new ZeroBalanceDayShowCauseCreateResultDto
             {
                 Count = records.Count,
                 Records = records,
-                WarningLetterList = records.Where(x => x.IsWarningLetterRequired).ToList()
+                WarningLetterList = warningLetterRecords
             };
 
             if (records.Count == 0)
             {
                 result.HrEmailStatus = "Not Sent";
+                result.WarningLetterEmailStatus = "Not Sent";
                 return result;
             }
 
@@ -337,14 +378,50 @@ namespace ProductivityApi.Services
             {
                 result.HrEmailStatus = "HR email not configured";
                 await _repository.UpdateShowCauseEmailStatusAsync(records.Select(x => x.ShowCauseId).ToList(), result.HrEmailStatus, null);
+            }
+            else
+            {
+                var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate, records, to, cc);
+                result.HrEmailStatus = emailResult.Status;
+                result.HrEmailError = emailResult.Error;
+
+                await _repository.UpdateShowCauseEmailStatusAsync(records.Select(x => x.ShowCauseId).ToList(), result.HrEmailStatus, result.HrEmailError);
+            }
+
+            if (warningLetterRecords.Count == 0)
+            {
+                result.WarningLetterEmailStatus = "Not Required";
                 return result;
             }
 
-            var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate, records, to, cc);
-            result.HrEmailStatus = emailResult.Status;
-            result.HrEmailError = emailResult.Error;
+            var warningTo = _emails.WarningLetterEmails.To
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var warningCc = _emails.WarningLetterEmails.Cc
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            await _repository.UpdateShowCauseEmailStatusAsync(records.Select(x => x.ShowCauseId).ToList(), result.HrEmailStatus, result.HrEmailError);
+            if (warningTo.Count == 0)
+            {
+                result.WarningLetterEmailStatus = "HR email not configured";
+                await _repository.UpdateWarningLetterEmailStatusAsync(
+                    dto.ZbdDate,
+                    warningLetterRecords.Select(x => x.BranchCode).ToList(),
+                    result.WarningLetterEmailStatus,
+                    null);
+                return result;
+            }
+
+            var warningEmailResult = await SendWarningLetterEmailAsync(dto.ZbdDate, warningLetterRecords, warningTo, warningCc);
+            result.WarningLetterEmailStatus = warningEmailResult.Status;
+            result.WarningLetterEmailError = warningEmailResult.Error;
+            await _repository.UpdateWarningLetterEmailStatusAsync(
+                dto.ZbdDate,
+                warningLetterRecords.Select(x => x.BranchCode).ToList(),
+                result.WarningLetterEmailStatus,
+                result.WarningLetterEmailError);
             return result;
         }
 
@@ -371,10 +448,7 @@ namespace ProductivityApi.Services
             var allBranches = GetAllBranches();
             foreach (var zbd in zbdDates)
             {
-                await _repository.EnsureBranchStatusesAsync(
-                    zbd.Id,
-                    zbd.ZbdDate,
-                    allBranches.Select(branch => ToBranchStatusModel(zbd, branch)).ToList());
+                await _repository.RefreshOperationalBranchStatusesAsync(zbd.ZbdDate, IsShowCauseCutOffReached(zbd.ZbdDate));
             }
 
             var branches = allBranches
@@ -401,9 +475,9 @@ namespace ProductivityApi.Services
                     submissionLookup.TryGetValue(key, out var submission);
                     branchStatusLookup.TryGetValue(key, out var branchStatus);
 
-                    var submissionStatus = branchStatus?.SubmissionStatus ?? submission?.SubmissionStatus ?? "Pending";
+                    var submissionStatus = NormalizeSubmissionStatusValue(branchStatus?.SubmissionStatus ?? submission?.SubmissionStatus ?? "Not Submitted");
                     if (!string.IsNullOrWhiteSpace(dto.SubmissionStatus)
-                        && !string.Equals(submissionStatus, dto.SubmissionStatus, StringComparison.OrdinalIgnoreCase))
+                        && !IsSubmissionStatusMatch(submissionStatus, dto.SubmissionStatus))
                         continue;
 
                     if (dto.IsShowCauseRequired != null && branchStatus?.IsShowCauseRequired != dto.IsShowCauseRequired.Value)
@@ -451,6 +525,21 @@ namespace ProductivityApi.Services
                 : ("Failed", result);
         }
 
+        private async Task<(string Status, string? Error)> SendWarningLetterEmailAsync(
+            DateOnly zbdDate,
+            List<ZeroBalanceDayShowCauseCreatedDto> records,
+            List<string> to,
+            List<string> cc)
+        {
+            var subject = $"Zero Balance Day Warning Letter Branches - {zbdDate:dd-MMM-yyyy}";
+            var body = BuildWarningLetterEmailBody(zbdDate, records);
+            var result = await _emailService.SendEmail(subject, body, to, cc, source: "ZeroBalanceDay");
+
+            return string.Equals(result, "Success", StringComparison.OrdinalIgnoreCase)
+                ? ("Success", null)
+                : ("Failed", result);
+        }
+
         private static string BuildShowCauseEmailBody(DateOnly zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
         {
             var body = new StringBuilder();
@@ -470,6 +559,32 @@ namespace ProductivityApi.Services
                 body.Append("<td>").Append(WebUtility.HtmlEncode(record.ShowCauseReferenceNo)).Append("</td>");
                 body.Append("<td>").Append(record.NoticeCountInMonth).Append("</td>");
                 body.Append("<td>").Append(record.IsWarningLetterRequired ? "Yes" : "No").Append("</td>");
+                body.Append("</tr>");
+            }
+
+            body.Append("</tbody></table>");
+            body.Append("<p>Regards,<br/>Productivity API</p>");
+            return body.ToString();
+        }
+
+        private static string BuildWarningLetterEmailBody(DateOnly zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
+        {
+            var body = new StringBuilder();
+            body.Append("<p>Dear HR Team,</p>");
+            body.Append("<p>Please find below the branches marked for warning letter on Zero Balance Day ");
+            body.Append(WebUtility.HtmlEncode(zbdDate.ToString("dd-MMM-yyyy")));
+            body.Append(".</p>");
+            body.Append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>");
+            body.Append("<thead><tr><th>Branch Code</th><th>Branch Name</th><th>Cluster</th><th>Show Cause Ref</th><th>Monthly Count</th></tr></thead><tbody>");
+
+            foreach (var record in records)
+            {
+                body.Append("<tr>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(record.BranchCode)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(record.BranchName)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(record.Region)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(record.ShowCauseReferenceNo)).Append("</td>");
+                body.Append("<td>").Append(record.NoticeCountInMonth).Append("</td>");
                 body.Append("</tr>");
             }
 
@@ -577,7 +692,7 @@ namespace ProductivityApi.Services
                 Region = branch.Region ?? string.Empty,
                 BranchCode = branch.BranchId ?? string.Empty,
                 BranchName = branch.BranchName ?? string.Empty,
-                SubmissionStatus = "Pending",
+                SubmissionStatus = "Not Submitted",
                 IsShowCauseRequired = false,
                 IsShowCauseCreated = false,
                 IsWarningLetterRequired = false,
@@ -614,6 +729,45 @@ namespace ProductivityApi.Services
             return string.IsNullOrWhiteSpace(status)
                 ? string.Empty
                 : status.Replace(" ", string.Empty).Replace("-", string.Empty).Replace("+", string.Empty).ToLowerInvariant();
+        }
+
+        private static bool IsShowCauseCutOffReached(DateOnly zbdDate)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (zbdDate < today)
+                return true;
+
+            return zbdDate == today && DateTime.Now.TimeOfDay >= TimeSpan.FromHours(12);
+        }
+
+        private static bool IsCompletedSubmissionStatus(string? submissionStatus)
+        {
+            var status = NormalizeSubmissionStatusValue(submissionStatus);
+            return string.Equals(status, "Submitted On Time", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "Late Submission", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsShowCauseEligible(ZeroBalanceDayBranchStatusModel branchStatus)
+        {
+            return branchStatus.IsShowCauseRequired && !branchStatus.IsShowCauseCreated;
+        }
+
+        private static bool IsSubmissionStatusMatch(string? actual, string? expected)
+        {
+            return string.Equals(
+                NormalizeSubmissionStatusValue(actual),
+                NormalizeSubmissionStatusValue(expected),
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeSubmissionStatusValue(string? submissionStatus)
+        {
+            if (string.Equals(submissionStatus?.Trim(), "Late Submitted", StringComparison.OrdinalIgnoreCase))
+                return "Late Submission";
+
+            return string.IsNullOrWhiteSpace(submissionStatus)
+                ? string.Empty
+                : submissionStatus.Trim();
         }
 
         private static ExpandoObject ToReportRow(

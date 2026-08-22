@@ -109,6 +109,7 @@ namespace ProductivityApi.Models
 
     public class ZeroBalanceDayDashboardBranchDto
     {
+        public int? SubmissionId { get; set; }
         public string BranchCode { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public string SubmissionStatus { get; set; } = string.Empty;
@@ -118,7 +119,7 @@ namespace ProductivityApi.Models
     public class ZeroBalanceDayShowCauseCreatedDto
     {
         public int ShowCauseId { get; set; }
-        public int SubmissionId { get; set; }
+        public int ZbdId { get; set; }
         public DateOnly ZbdDate { get; set; }
         public string Region { get; set; } = string.Empty;
         public string BranchCode { get; set; } = string.Empty;
@@ -134,6 +135,8 @@ namespace ProductivityApi.Models
         public int Count { get; set; }
         public string HrEmailStatus { get; set; } = string.Empty;
         public string? HrEmailError { get; set; }
+        public string WarningLetterEmailStatus { get; set; } = string.Empty;
+        public string? WarningLetterEmailError { get; set; }
         public List<ZeroBalanceDayShowCauseCreatedDto> Records { get; set; } = new();
         public List<ZeroBalanceDayShowCauseCreatedDto> WarningLetterList { get; set; } = new();
     }
@@ -141,7 +144,7 @@ namespace ProductivityApi.Models
     public class ZeroBalanceDayShowCauseListDto
     {
         public int ShowCauseId { get; set; }
-        public int SubmissionId { get; set; }
+        public int ZbdId { get; set; }
         public DateOnly ZbdDate { get; set; }
         public string Region { get; set; } = string.Empty;
         public string BranchCode { get; set; } = string.Empty;
@@ -149,14 +152,11 @@ namespace ProductivityApi.Models
         public string SubmissionStatus { get; set; } = string.Empty;
         public DateTime? SubmissionTime { get; set; }
         public string ShowCauseReferenceNo { get; set; } = string.Empty;
-        public DateTime NoticeDate { get; set; }
-        public string Status { get; set; } = string.Empty;
         public int NoticeCountInMonth { get; set; }
         public bool IsThirdNoticeInMonth { get; set; }
         public string? HrEmailStatus { get; set; }
         public DateTime? HrEmailSentDate { get; set; }
         public string? HrEmailError { get; set; }
-        public DateTime? LetterSentDate { get; set; }
         public string? ShowCauseRemarks { get; set; }
         public string? RemarksUpdatedBy { get; set; }
         public DateTime? RemarksUpdatedDate { get; set; }
@@ -169,7 +169,7 @@ namespace ProductivityApi.Models
     public class ZeroBalanceDayWarningLetterListDto
     {
         public int WarningLetterId { get; set; }
-        public int SubmissionId { get; set; }
+        public int ZbdId { get; set; }
         public DateOnly ZbdDate { get; set; }
         public string Region { get; set; } = string.Empty;
         public string BranchCode { get; set; } = string.Empty;
@@ -177,10 +177,9 @@ namespace ProductivityApi.Models
         public string SubmissionStatus { get; set; } = string.Empty;
         public string? ShowCauseReferenceNo { get; set; }
         public int? NoticeCountInMonth { get; set; }
-        public string WarningLetterNumber { get; set; } = string.Empty;
-        public DateTime? WarningLetterDate { get; set; }
-        public string IssuedBy { get; set; } = string.Empty;
-        public string? BranchAcknowledgement { get; set; }
+        public string? HrEmailStatus { get; set; }
+        public DateTime? HrEmailSentDate { get; set; }
+        public string? HrEmailError { get; set; }
         public string? Remarks { get; set; }
         public bool IsWarningLetterRequired { get; set; }
         public bool IsWarningLetterCreated { get; set; }
@@ -332,8 +331,6 @@ namespace ProductivityApi.Models
         [Required]
         public List<ZeroBalanceDayShowCauseRemarksItemDto> Items { get; set; } = new();
 
-        public DateTime? LetterSentDate { get; set; }
-
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
@@ -354,7 +351,6 @@ namespace ProductivityApi.Models
         public int? Year { get; set; }
         public string? Region { get; set; }
         public string? BranchCode { get; set; }
-        public string? Status { get; set; }
     }
 
     public class ZeroBalanceDayWarningLetterFilterDto
