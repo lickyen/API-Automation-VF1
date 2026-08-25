@@ -33,70 +33,50 @@ namespace ProductivityApi.Repository
             }
         }
 
-        public async Task<int> GetOrCreateRetentionIdAsync(string lan, string source, int? reqId, string createdBy)
+        public async Task<int?> GetActiveApprovedRetentionIdAsync(string lan)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
             const string sql = @"
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
+                SELECT TOP 1 Id
+                FROM dbo.Closure_Retention
+                WHERE LAN = @Lan
+                  AND ApprovedDt IS NOT NULL
+                  AND ExpiredDt >= GETDATE()
+                ORDER BY
+                    ApprovedDt DESC,
+                    Id DESC;";
 
-BEGIN TRANSACTION;
+            return await connection.ExecuteScalarAsync<int?>(
+                sql,
+                new { Lan = lan });
+        }
 
-DECLARE @RetentionId INT;
+        public async Task<int> CreateRetentionAsync(string lan, string source, int? reqId, string createdBy)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
 
-SELECT TOP 1 @RetentionId = Id
-FROM dbo.Closure_Retention WITH (UPDLOCK, HOLDLOCK)
-WHERE LAN = @Lan
-  AND
-  (
-      ApprovedDt IS NULL
-      OR ExpiredDt >= GETDATE()
-  )
-ORDER BY
-    CASE WHEN ApprovedDt IS NOT NULL THEN 0 ELSE 1 END,
-    ApprovedDt DESC,
-    Id DESC;
+            const string sql = @"
+                INSERT INTO dbo.Closure_Retention
+                (
+                    LAN,
+                    Source,
+                    ReqId,
+                    CreatedBy,
+                    CreatedDt
+                )
+                VALUES
+                (
+                    @Lan,
+                    @Source,
+                    @ReqId,
+                    @CreatedBy,
+                    GETDATE()
+                );
 
-IF @RetentionId IS NULL
-BEGIN
-    INSERT INTO dbo.Closure_Retention
-    (
-        LAN,
-        Source,
-        ReqId,
-        CreatedBy,
-        CreatedDt
-    )
-    VALUES
-    (
-        @Lan,
-        @Source,
-        @ReqId,
-        @CreatedBy,
-        GETDATE()
-    );
-
-    SET @RetentionId = CAST(SCOPE_IDENTITY() AS INT);
-END
-ELSE
-BEGIN
-    UPDATE dbo.Closure_Retention
-    SET
-        ReqId = CASE
-            WHEN @ReqId IS NULL THEN ReqId
-            ELSE ISNULL(ReqId, @ReqId)
-        END,
-        UpdatedBy = @CreatedBy,
-        UpdatedDt = GETDATE()
-    WHERE Id = @RetentionId
-      AND Source = @Source;
-END
-
-COMMIT TRANSACTION;
-
-SELECT @RetentionId;";
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             return await connection.ExecuteScalarAsync<int>(
                 sql,
@@ -107,41 +87,6 @@ SELECT @RetentionId;";
                     ReqId = reqId,
                     CreatedBy = createdBy
                 });
-        }
-
-        public async Task<bool> IsRetentionApprovedActiveAsync(int retentionId)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            const string sql = @"
-SELECT CASE
-    WHEN EXISTS
-    (
-        SELECT 1
-        FROM dbo.Closure_Retention
-        WHERE Id = @RetentionId
-          AND ApprovedDt IS NOT NULL
-          AND ExpiredDt >= GETDATE()
-    )
-    THEN 1
-    ELSE 0
-END;";
-
-            return await connection.ExecuteScalarAsync<bool>(
-                sql,
-                new { RetentionId = retentionId });
-        }
-
-        public async Task<int> ApplyExistingRetentionApprovalAsync(int id, int retentionId, string updatedBy)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            return await connection.ExecuteScalarAsync<int>(
-                "sp_newClosure_ApplyExistingRetentionApproval",
-                new { Id = id, RetentionId = retentionId, UpdatedBy = updatedBy },
-                commandType: CommandType.StoredProcedure);
         }
 
         public async Task<int> ApplyExistingRetentionApprovalAsync(int id, int retentionId, string updatedBy, SqlConnection connection, SqlTransaction transaction)

@@ -42,16 +42,22 @@ namespace ProductivityApi.Services
             var isRetention = !isCritical && !isBucket;
 
             int? retentionId = null;
-            var isExistingRetentionApproved = false;
+            var hasActiveApprovedRetention = false;
 
             if (isRetention)
             {
-                retentionId = await _repository.GetOrCreateRetentionIdAsync(dto.Lan, REQ_SOURCE, null, dto.CreatedBy);
-                isExistingRetentionApproved = await _repository.IsRetentionApprovedActiveAsync(retentionId.Value);
-
-                status = isExistingRetentionApproved
-                    ? ClosureStatus.Initiated
-                    : ClosureStatus.New;
+                var activeRetentionId = await _repository.GetActiveApprovedRetentionIdAsync(dto.Lan);
+                if (activeRetentionId.HasValue)
+                {
+                    retentionId = activeRetentionId.Value;
+                    hasActiveApprovedRetention = true;
+                    status = ClosureStatus.Initiated;
+                }
+                else
+                {
+                    retentionId = await _repository.CreateRetentionAsync(dto.Lan, REQ_SOURCE, null, dto.CreatedBy);
+                    status = ClosureStatus.New;
+                }
             }
 
             else
@@ -95,7 +101,7 @@ namespace ProductivityApi.Services
 
                 if (isRetention && retentionId.HasValue)
                 {
-                    var routeResult = isExistingRetentionApproved
+                    var routeResult = hasActiveApprovedRetention
                         ? await _repository.ApplyExistingRetentionApprovalAsync(requestId, retentionId.Value, dto.CreatedBy, connection, transaction)
                         : await _repository.StartRetentionApprovalAsync(retentionId.Value, dto.CreatedBy, connection, transaction);
 
@@ -129,7 +135,7 @@ namespace ProductivityApi.Services
             var isRetention = !isCritical && !isBucket;
 
             int? retentionId = null;
-            var isExistingRetentionApproved = false;
+            var hasActiveApprovedRetention = false;
 
             if (isRetention)
             {
@@ -137,8 +143,16 @@ namespace ProductivityApi.Services
                 if (existing == null)
                     return -1;
 
-                retentionId = await _repository.GetOrCreateRetentionIdAsync(existing.Lan, REQ_SOURCE, dto.Id, dto.UpdatedBy);
-                isExistingRetentionApproved = await _repository.IsRetentionApprovedActiveAsync(retentionId.Value);
+                var activeRetentionId = await _repository.GetActiveApprovedRetentionIdAsync(existing.Lan);
+                if (activeRetentionId.HasValue)
+                {
+                    retentionId = activeRetentionId.Value;
+                    hasActiveApprovedRetention = true;
+                }
+                else
+                {
+                    retentionId = await _repository.CreateRetentionAsync(existing.Lan, REQ_SOURCE, dto.Id, dto.UpdatedBy);
+                }
 
                 status = ClosureStatus.ReInitiated;
             }
@@ -183,7 +197,7 @@ namespace ProductivityApi.Services
 
                 if (isRetention && retentionId.HasValue)
                 {
-                    var routeResult = isExistingRetentionApproved
+                    var routeResult = hasActiveApprovedRetention
                         ? await _repository.ApplyExistingRetentionApprovalAsync(dto.Id, retentionId.Value, dto.UpdatedBy, connection, transaction)
                         : await _repository.StartRetentionApprovalAsync(retentionId.Value, dto.UpdatedBy, connection, transaction);
 
