@@ -722,7 +722,7 @@ namespace ProductivityApi.Repository
             });
         }
 
-        public async Task<int> ReviseBranchSubmissionAsync(ZeroBalanceDayBranchRevisionDto dto, string depositSlipPath)
+        public async Task<int> ReviseBranchSubmissionAsync(ZeroBalanceDayBranchRevisionDto dto, string? depositSlipPath)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -766,7 +766,7 @@ namespace ProductivityApi.Repository
                     IsOpeningBalanceEqualDeposit = @IsOpeningBalanceEqualDeposit,
                     MismatchReason = @MismatchReason,
                     LateSubmissionReason = @LateSubmissionReason,
-                    DepositSlipPath = @DepositSlipPath,
+                    DepositSlipPath = COALESCE(@DepositSlipPath, DepositSlipPath),
                     RevisionReason = @RevisionReason,
                     SubmissionStatus = CASE WHEN @SubmissionTime > @CutOff THEN 'Late Submission' ELSE 'Submitted On Time' END,
                     SubmissionTime = @SubmissionTime,

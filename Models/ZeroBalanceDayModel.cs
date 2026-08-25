@@ -290,7 +290,6 @@ namespace ProductivityApi.Models
         [Required]
         public string RevisionReason { get; set; } = string.Empty;
 
-        [Required]
         public FileUploadBase64? DepositSlip { get; set; }
 
         [Required]

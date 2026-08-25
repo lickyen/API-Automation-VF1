@@ -26,8 +26,7 @@ namespace ProductivityApi.Services
             BranchServices branchServices,
             EmailService emailService,
             TemplateService templateService,
-            AppSettings appSettings,
-            IWebHostEnvironment env)
+            AppSettings appSettings)
         {
             _repository = repository;
             _userService = userService;
@@ -35,8 +34,10 @@ namespace ProductivityApi.Services
             _emailService = emailService;
             _templateService = templateService;
             _emails = appSettings.ZeroBalanceDayEmails;
-            var webRoot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            _filePath = Path.Combine(webRoot, "zbd");
+            _filePath = appSettings.FilePaths.ZeroBalanceDayFilePath;
+
+            if (string.IsNullOrWhiteSpace(_filePath))
+                throw new InvalidOperationException("FilePaths:ZeroBalanceDayFilePath is required.");
         }
 
         public async Task<int> CreateAsync(ZeroBalanceDayCreateDto dto)
@@ -239,7 +240,11 @@ namespace ProductivityApi.Services
 
             ValidateBranchSubmission(dto.ZbdDate, dto.OpeningBalance, dto.AmountDeposited, dto.MismatchReason, dto.LateSubmissionReason);
 
-            var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+            string? fileName = null;
+            if (dto.DepositSlip != null && !string.IsNullOrWhiteSpace(dto.DepositSlip.Base64))
+            {
+                fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+            }
 
             try
             {
@@ -964,7 +969,7 @@ namespace ProductivityApi.Services
                 throw new ArgumentException("Deposit slip size must be 100 KB or less");
 
             var safeBranch = SanitizeFileToken(branchCode);
-            var fileName = $"{zbdDate:yyyyMMdd}_{safeBranch}_{DateTime.Now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{extension}";
+            var fileName = $"{zbdDate:yyyyMMdd}_{safeBranch}_{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
 
             var result = await FileHelper.SaveBytesAsync(_filePath, fileName, bytes, 1);
             if (!result.Success)
@@ -1014,7 +1019,7 @@ namespace ProductivityApi.Services
             };
         }
 
-        private void DeleteSavedFile(string fileName)
+        private void DeleteSavedFile(string? fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName)
                 return;
