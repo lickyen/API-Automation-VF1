@@ -40,7 +40,7 @@ namespace ProductivityApi.Models
 
         public string Status { get; set; }
         public string Final_Approver { get; set; }
-        public int? IsQuestionaire { get; set; }
+        //public int? IsQuestionaire { get; set; }
         public int? IsRetendionDesk { get; set; }
         public int? IsNOC { get; set; }
         public int? IsApproved { get; set; }
