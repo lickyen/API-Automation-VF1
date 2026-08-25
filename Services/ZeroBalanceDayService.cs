@@ -16,6 +16,7 @@ namespace ProductivityApi.Services
         private readonly UserService _userService;
         private readonly BranchServices _branchServices;
         private readonly EmailService _emailService;
+        private readonly TemplateService _templateService;
         private readonly ZeroBalanceDayEmails _emails;
         private readonly string _filePath;
 
@@ -24,6 +25,7 @@ namespace ProductivityApi.Services
             UserService userService,
             BranchServices branchServices,
             EmailService emailService,
+            TemplateService templateService,
             AppSettings appSettings,
             IWebHostEnvironment env)
         {
@@ -31,6 +33,7 @@ namespace ProductivityApi.Services
             _userService = userService;
             _branchServices = branchServices;
             _emailService = emailService;
+            _templateService = templateService;
             _emails = appSettings.ZeroBalanceDayEmails;
             var webRoot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             _filePath = Path.Combine(webRoot, "zbd");
@@ -365,14 +368,9 @@ namespace ProductivityApi.Services
                 return result;
             }
 
-            var to = _emails.ShowCauseEmails.To
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var cc = _emails.ShowCauseEmails.Cc
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var to = CleanEmails(_emails.ShowCauseEmails.To);
+            var cc = CleanEmails(_emails.ShowCauseEmails.Cc);
+            var bcc = CleanEmails(_emails.ShowCauseEmails.Bcc);
 
             if (to.Count == 0)
             {
@@ -381,7 +379,7 @@ namespace ProductivityApi.Services
             }
             else
             {
-                var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate, records, to, cc);
+                var emailResult = await SendShowCauseEmailAsync(dto.ZbdDate, records, to, cc, bcc);
                 result.HrEmailStatus = emailResult.Status;
                 result.HrEmailError = emailResult.Error;
 
@@ -394,14 +392,9 @@ namespace ProductivityApi.Services
                 return result;
             }
 
-            var warningTo = _emails.WarningLetterEmails.To
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var warningCc = _emails.WarningLetterEmails.Cc
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var warningTo = CleanEmails(_emails.WarningLetterEmails.To);
+            var warningCc = CleanEmails(_emails.WarningLetterEmails.Cc);
+            var warningBcc = CleanEmails(_emails.WarningLetterEmails.Bcc);
 
             if (warningTo.Count == 0)
             {
@@ -414,7 +407,7 @@ namespace ProductivityApi.Services
                 return result;
             }
 
-            var warningEmailResult = await SendWarningLetterEmailAsync(dto.ZbdDate, warningLetterRecords, warningTo, warningCc);
+            var warningEmailResult = await SendWarningLetterEmailAsync(dto.ZbdDate, warningLetterRecords, warningTo, warningCc, warningBcc);
             result.WarningLetterEmailStatus = warningEmailResult.Status;
             result.WarningLetterEmailError = warningEmailResult.Error;
             await _repository.UpdateWarningLetterEmailStatusAsync(
@@ -510,45 +503,202 @@ namespace ProductivityApi.Services
             return await FileHelper.ReadFileAsync(_filePath, fileName);
         }
 
-        private async Task<(string Status, string? Error)> SendShowCauseEmailAsync(
+        public Task<(string Status, string? Error)> SendZbdIntimationEmailAsync(DateOnly zbdDate)
+        {
+            return SendConfiguredZeroBalanceDayEmailAsync(
+                "ZeroBalanceDayIntimationEmail",
+                _emails.IntimationEmails,
+                new Dictionary<string, string>
+                {
+                    ["ZbdDate"] = zbdDate.ToString("dd-MMM-yyyy")
+                });
+        }
+
+        public async Task<(string Status, string? Error)> SendNotSubmittedReminderEmailAsync(DateOnly zbdDate, string reminderTime)
+        {
+            await _repository.RefreshOperationalBranchStatusesAsync(zbdDate, IsShowCauseCutOffReached(zbdDate));
+
+            var branchStatuses = await _repository.GetBranchStatusesByDateAsync(zbdDate);
+            var rows = branchStatuses
+                .Where(x => string.Equals(NormalizeSubmissionStatusValue(x.SubmissionStatus), "Not Submitted", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.BranchCode)
+                .ToList();
+
+            if (rows.Count == 0)
+                return ("Not Required", null);
+
+            return await SendConfiguredZeroBalanceDayEmailAsync(
+                "ZeroBalanceDayReminderEmail",
+                _emails.ReminderEmails,
+                new Dictionary<string, string>
+                {
+                    ["ZbdDate"] = zbdDate.ToString("dd-MMM-yyyy"),
+                    ["ReminderTime"] = reminderTime,
+                    ["Table"] = BuildBranchStatusEmailTable(rows, includeDelayTime: false, zbdDate)
+                });
+        }
+
+        public async Task<(string Status, string? Error)> SendLateOrNotSubmittedEscalationEmailAsync(DateOnly zbdDate)
+        {
+            await _repository.RefreshOperationalBranchStatusesAsync(zbdDate, IsShowCauseCutOffReached(zbdDate));
+
+            var branchStatuses = await _repository.GetBranchStatusesByDateAsync(zbdDate);
+            var rows = branchStatuses
+                .Where(x =>
+                {
+                    var status = NormalizeSubmissionStatusValue(x.SubmissionStatus);
+                    return string.Equals(status, "Not Submitted", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(status, "Late Submission", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderBy(x => x.BranchCode)
+                .ToList();
+
+            if (rows.Count == 0)
+                return ("Not Required", null);
+
+            return await SendConfiguredZeroBalanceDayEmailAsync(
+                "ZeroBalanceDayEscalationEmail",
+                _emails.EscalationEmails,
+                new Dictionary<string, string>
+                {
+                    ["ZbdDate"] = zbdDate.ToString("dd-MMM-yyyy"),
+                    ["Table"] = BuildBranchStatusEmailTable(rows, includeDelayTime: true, zbdDate)
+                });
+        }
+
+        private Task<(string Status, string? Error)> SendShowCauseEmailAsync(
             DateOnly zbdDate,
             List<ZeroBalanceDayShowCauseCreatedDto> records,
             List<string> to,
-            List<string> cc)
+            List<string> cc,
+            List<string> bcc)
         {
-            var subject = $"Zero Balance Day Show Cause References - {zbdDate:dd-MMM-yyyy}";
-            var body = BuildShowCauseEmailBody(zbdDate, records);
-            var result = await _emailService.SendEmail(subject, body, to, cc, source: "ZeroBalanceDay");
-
-            return string.Equals(result, "Success", StringComparison.OrdinalIgnoreCase)
-                ? ("Success", null)
-                : ("Failed", result);
+            return SendTemplateEmailAsync(
+                "ZeroBalanceDayShowCauseEmail",
+                to,
+                cc,
+                bcc,
+                new Dictionary<string, string>
+                {
+                    ["ZbdDate"] = zbdDate.ToString("dd-MMM-yyyy"),
+                    ["Table"] = BuildShowCauseEmailTable(records, includeWarningLetterColumn: true)
+                });
         }
 
-        private async Task<(string Status, string? Error)> SendWarningLetterEmailAsync(
+        private Task<(string Status, string? Error)> SendWarningLetterEmailAsync(
             DateOnly zbdDate,
             List<ZeroBalanceDayShowCauseCreatedDto> records,
             List<string> to,
-            List<string> cc)
+            List<string> cc,
+            List<string> bcc)
         {
-            var subject = $"Zero Balance Day Warning Letter Branches - {zbdDate:dd-MMM-yyyy}";
-            var body = BuildWarningLetterEmailBody(zbdDate, records);
-            var result = await _emailService.SendEmail(subject, body, to, cc, source: "ZeroBalanceDay");
-
-            return string.Equals(result, "Success", StringComparison.OrdinalIgnoreCase)
-                ? ("Success", null)
-                : ("Failed", result);
+            return SendTemplateEmailAsync(
+                "ZeroBalanceDayWarningLetterEmail",
+                to,
+                cc,
+                bcc,
+                new Dictionary<string, string>
+                {
+                    ["ZbdDate"] = zbdDate.ToString("dd-MMM-yyyy"),
+                    ["Table"] = BuildShowCauseEmailTable(records, includeWarningLetterColumn: false)
+                });
         }
 
-        private static string BuildShowCauseEmailBody(DateOnly zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
+        private Task<(string Status, string? Error)> SendConfiguredZeroBalanceDayEmailAsync(
+            string templateKey,
+            ZeroBalanceDayEmailRecipients recipients,
+            Dictionary<string, string> placeholders)
+        {
+            var to = CleanEmails(recipients.To);
+            if (to.Count == 0)
+                return Task.FromResult<(string Status, string? Error)>(("Email Not Configured", null));
+
+            return SendTemplateEmailAsync(
+                templateKey,
+                to,
+                CleanEmails(recipients.Cc),
+                CleanEmails(recipients.Bcc),
+                placeholders);
+        }
+
+        private async Task<(string Status, string? Error)> SendTemplateEmailAsync(
+            string templateKey,
+            List<string> to,
+            List<string> cc,
+            List<string> bcc,
+            Dictionary<string, string> placeholders)
+        {
+            try
+            {
+                var template = _templateService.GetEmailTemplate(templateKey);
+                var subject = _templateService.ReplacePlaceholders(template.Subject, placeholders);
+                var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+                var result = await _emailService.SendEmail(subject, body, to, cc, source: "ZeroBalanceDay", bcc: bcc);
+
+                return string.Equals(result, "Success", StringComparison.OrdinalIgnoreCase)
+                    ? ("Success", null)
+                    : ("Failed", result);
+            }
+            catch (Exception ex)
+            {
+                return ("Failed", ex.Message);
+            }
+        }
+
+        private static List<string> CleanEmails(IEnumerable<string>? emails)
+        {
+            return emails?
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? new List<string>();
+        }
+
+        private static string BuildBranchStatusEmailTable(
+            IEnumerable<ZeroBalanceDayBranchStatusModel> rows,
+            bool includeDelayTime,
+            DateOnly zbdDate)
         {
             var body = new StringBuilder();
-            body.Append("<p>Dear HR Team,</p>");
-            body.Append("<p>Please find below the branch-wise show-cause references created for Zero Balance Day ");
-            body.Append(WebUtility.HtmlEncode(zbdDate.ToString("dd-MMM-yyyy")));
-            body.Append(".</p>");
             body.Append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>");
-            body.Append("<thead><tr><th>Branch Code</th><th>Branch Name</th><th>Cluster</th><th>Show Cause Ref</th><th>Monthly Count</th><th>Warning Letter</th></tr></thead><tbody>");
+            body.Append("<thead><tr><th>Branch Code</th><th>Branch Name</th><th>Submission Status</th><th>Submission Time</th>");
+
+            if (includeDelayTime)
+                body.Append("<th>Delay Time</th>");
+
+            body.Append("</tr></thead><tbody>");
+
+            foreach (var row in rows)
+            {
+                var status = NormalizeSubmissionStatusValue(row.SubmissionStatus);
+                body.Append("<tr>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(row.BranchCode)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(row.BranchName)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(status)).Append("</td>");
+                body.Append("<td>").Append(WebUtility.HtmlEncode(row.SubmissionTime?.ToString("dd-MMM-yyyy hh:mm tt") ?? "-")).Append("</td>");
+
+                if (includeDelayTime)
+                    body.Append("<td>").Append(WebUtility.HtmlEncode(GetDelayText(status, row.SubmissionTime, zbdDate))).Append("</td>");
+
+                body.Append("</tr>");
+            }
+
+            body.Append("</tbody></table>");
+            return body.ToString();
+        }
+
+        private static string BuildShowCauseEmailTable(
+            IEnumerable<ZeroBalanceDayShowCauseCreatedDto> records,
+            bool includeWarningLetterColumn)
+        {
+            var body = new StringBuilder();
+            body.Append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>");
+            body.Append("<thead><tr><th>Branch Code</th><th>Branch Name</th><th>Cluster</th><th>Show Cause Ref</th><th>Monthly Count</th>");
+
+            if (includeWarningLetterColumn)
+                body.Append("<th>Warning Letter</th>");
+
+            body.Append("</tr></thead><tbody>");
 
             foreach (var record in records)
             {
@@ -558,39 +708,34 @@ namespace ProductivityApi.Services
                 body.Append("<td>").Append(WebUtility.HtmlEncode(record.Region)).Append("</td>");
                 body.Append("<td>").Append(WebUtility.HtmlEncode(record.ShowCauseReferenceNo)).Append("</td>");
                 body.Append("<td>").Append(record.NoticeCountInMonth).Append("</td>");
-                body.Append("<td>").Append(record.IsWarningLetterRequired ? "Yes" : "No").Append("</td>");
+
+                if (includeWarningLetterColumn)
+                    body.Append("<td>").Append(record.IsWarningLetterRequired ? "Yes" : "No").Append("</td>");
+
                 body.Append("</tr>");
             }
 
             body.Append("</tbody></table>");
-            body.Append("<p>Regards,<br/>Productivity API</p>");
             return body.ToString();
         }
 
-        private static string BuildWarningLetterEmailBody(DateOnly zbdDate, List<ZeroBalanceDayShowCauseCreatedDto> records)
+        private static string GetDelayText(string? submissionStatus, DateTime? submissionTime, DateOnly zbdDate)
         {
-            var body = new StringBuilder();
-            body.Append("<p>Dear HR Team,</p>");
-            body.Append("<p>Please find below the branches marked for warning letter on Zero Balance Day ");
-            body.Append(WebUtility.HtmlEncode(zbdDate.ToString("dd-MMM-yyyy")));
-            body.Append(".</p>");
-            body.Append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse'>");
-            body.Append("<thead><tr><th>Branch Code</th><th>Branch Name</th><th>Cluster</th><th>Show Cause Ref</th><th>Monthly Count</th></tr></thead><tbody>");
+            var status = NormalizeSubmissionStatusValue(submissionStatus);
+            if (string.Equals(status, "Not Submitted", StringComparison.OrdinalIgnoreCase))
+                return "Not submitted";
 
-            foreach (var record in records)
-            {
-                body.Append("<tr>");
-                body.Append("<td>").Append(WebUtility.HtmlEncode(record.BranchCode)).Append("</td>");
-                body.Append("<td>").Append(WebUtility.HtmlEncode(record.BranchName)).Append("</td>");
-                body.Append("<td>").Append(WebUtility.HtmlEncode(record.Region)).Append("</td>");
-                body.Append("<td>").Append(WebUtility.HtmlEncode(record.ShowCauseReferenceNo)).Append("</td>");
-                body.Append("<td>").Append(record.NoticeCountInMonth).Append("</td>");
-                body.Append("</tr>");
-            }
+            if (!string.Equals(status, "Late Submission", StringComparison.OrdinalIgnoreCase) || submissionTime == null)
+                return "-";
 
-            body.Append("</tbody></table>");
-            body.Append("<p>Regards,<br/>Productivity API</p>");
-            return body.ToString();
+            var cutoff = zbdDate.ToDateTime(new TimeOnly(12, 0));
+            var delay = submissionTime.Value - cutoff;
+            if (delay.TotalMinutes <= 0)
+                return "-";
+
+            return delay.TotalHours >= 1
+                ? $"{(int)delay.TotalHours}h {delay.Minutes}m"
+                : $"{(int)delay.TotalMinutes}m";
         }
 
         private static void ValidateFutureOrToday(DateOnly date, string fieldName)

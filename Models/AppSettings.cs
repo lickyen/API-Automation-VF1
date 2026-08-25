@@ -49,6 +49,9 @@ namespace ProductivityApi.Models
 
     public class ZeroBalanceDayEmails
     {
+        public ZeroBalanceDayEmailRecipients IntimationEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
+        public ZeroBalanceDayEmailRecipients ReminderEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
+        public ZeroBalanceDayEmailRecipients EscalationEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
         public ZeroBalanceDayEmailRecipients ShowCauseEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
         public ZeroBalanceDayEmailRecipients WarningLetterEmails { get; set; } = new ZeroBalanceDayEmailRecipients();
     }
@@ -57,6 +60,7 @@ namespace ProductivityApi.Models
     {
         public List<string> To { get; set; } = new List<string>();
         public List<string> Cc { get; set; } = new List<string>();
+        public List<string> Bcc { get; set; } = new List<string>();
     }
 
     public class ADSettings

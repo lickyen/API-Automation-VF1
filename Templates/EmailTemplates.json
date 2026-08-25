@@ -104,6 +104,26 @@
   "NewBranchMovedToQEmail": {
     "Body": "<p>Dear Team,</p><p>A new branch workflow task has been assigned to your queue.</p><p><b>Branch Name:</b> <<BranchName>></p><p><b>Checklist Item:</b> <<ChecklistName>></p><p><b>Assigned Team:</b> <<Team>></p><p>Please take the necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
+  "ZeroBalanceDayIntimationEmail": {
+    "Subject": "<<ZbdDate>> Is a Zero Balance Day: 100% of opening Balance to be deposited",
+    "Body": "<p>Dear Branches,</p><p>It is a Zero Balance Day on <b><<ZbdDate>></b>. Please ensure that 100% of opening balance is deposited in the bank.</p><p>Please confirm by uploading the bank deposit slip. Please note, even if the opening balance is zero, confirmation in the app is required.</p><p>Miss outs would be reviewed for disciplinary action.</p><p><b>Cut off Time for submitting confirmation: 12:00 PM</b></p><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayReminderEmail": {
+    "Subject": "Pending branches for Zero Balance Day confirmation",
+    "Body": "<p>Dear All,</p><p>Shared herewith are the branches which are pending for update of Zero Balance status for <b><<ZbdDate>></b>.</p><p><b>Reminder Time:</b> <<ReminderTime>></p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayEscalationEmail": {
+    "Subject": "Escalation - Late/Non-Submission of ZBD",
+    "Body": "<p>Dear All,</p><p>Shared herewith are the branches which are late submitted or not submitted for Zero Balance Day <b><<ZbdDate>></b>.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayShowCauseEmail": {
+    "Subject": "Defaulters Zero Balance Day <<ZbdDate>>",
+    "Body": "<p>Dear All,</p><p>Shared is the list of branches that updated the form post 12 PM or did not update at all. Request you to share the show cause notice to the concerned staff of the branch.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayWarningLetterEmail": {
+    "Subject": "Warning Letter Action Required",
+    "Body": "<p>Dear HR Team,</p><p>Shared is the final action suggested for Zero Balance Day <b><<ZbdDate>></b>.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
   "JobFailureAlertEmail": {
     "Body": "<p>Hi Team,</p><p>The background job encountered an error while processing.</p><ul><li><b>Job Name:</b> <<JobName>></li><li><b>Source:</b> <<Source>></li><li><b>Error Time:</b> <<ErrorTime>></li><li><b>Error Message:</b> <<ErrorMessage>></li></ul><p>Please check the application logs for more details.</p><p>Regards,<br/>Vistaar Finance</p>"
   }

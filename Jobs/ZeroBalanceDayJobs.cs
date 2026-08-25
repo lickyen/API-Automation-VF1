@@ -6,7 +6,7 @@ namespace ProductivityApi.Jobs
 {
     public abstract class ZeroBalanceDayJobBase : IJob
     {
-        private readonly ZeroBalanceDayService _service;
+        protected readonly ZeroBalanceDayService _service;
         protected readonly Serilog.ILogger _logger;
 
         protected ZeroBalanceDayJobBase(ZeroBalanceDayService service)
@@ -66,10 +66,15 @@ namespace ProductivityApi.Jobs
         public override void Register(string cron) =>
             RecurringJob.AddOrUpdate<ZeroBalanceDayNotificationEmailJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
+        protected override async Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
-            _logger.Information("ZBD notification email schedule reached for {ZbdDate:yyyy-MM-dd}. Email logic will be added in the job implementation.", zbdDate);
-            return Task.CompletedTask;
+            var result = await _service.SendZbdIntimationEmailAsync(zbdDate);
+
+            _logger.Information(
+                "ZBD intimation email completed for {ZbdDate:yyyy-MM-dd}. Status: {Status}. Error: {Error}",
+                zbdDate,
+                result.Status,
+                result.Error);
         }
     }
 
@@ -81,10 +86,16 @@ namespace ProductivityApi.Jobs
 
         protected abstract string ReminderTime { get; }
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
+        protected override async Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
-            _logger.Information("ZBD not-submitted reminder schedule reached for {ZbdDate:yyyy-MM-dd} at {ReminderTime}. Email logic will be added in the job implementation.", zbdDate, ReminderTime);
-            return Task.CompletedTask;
+            var result = await _service.SendNotSubmittedReminderEmailAsync(zbdDate, ReminderTime);
+
+            _logger.Information(
+                "ZBD not-submitted reminder completed for {ZbdDate:yyyy-MM-dd} at {ReminderTime}. Status: {Status}. Error: {Error}",
+                zbdDate,
+                ReminderTime,
+                result.Status,
+                result.Error);
         }
     }
 
@@ -151,10 +162,15 @@ namespace ProductivityApi.Jobs
         public override void Register(string cron) =>
             RecurringJob.AddOrUpdate<ZeroBalanceDayRchZchEscalationJob>(JobId, j => j.ExecuteAsync(CancellationToken.None), cron);
 
-        protected override Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
+        protected override async Task ExecuteForZeroBalanceDayAsync(DateOnly zbdDate, CancellationToken ct)
         {
-            _logger.Information("ZBD late/not-submitted RCH/ZCH escalation schedule reached for {ZbdDate:yyyy-MM-dd}. Escalation logic will be added in the job implementation.", zbdDate);
-            return Task.CompletedTask;
+            var result = await _service.SendLateOrNotSubmittedEscalationEmailAsync(zbdDate);
+
+            _logger.Information(
+                "ZBD late/not-submitted escalation completed for {ZbdDate:yyyy-MM-dd}. Status: {Status}. Error: {Error}",
+                zbdDate,
+                result.Status,
+                result.Error);
         }
     }
 }
