@@ -365,8 +365,9 @@ namespace ProductivityApi.Models
         public string UserId { get; set; }
     }
 
-    public class ClosureRetentionApprovalDto
+    public class ClosureRetentionApprovalDto : ClosureFinancialDto
     {
+        public int Id { get; set; }
         public int RetentionId { get; set; }
         public string Role { get; set; }
         public string Status { get; set; }          // Approved / Rejected / SentBack

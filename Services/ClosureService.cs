@@ -294,29 +294,6 @@ namespace ProductivityApi.Services
             var result = await _repository.ApproveAsync(dto);
             if (result > 0)
             {
-                //logs added from sp
-
-                //await _repository.AddLogAsync(new AddClosureLogDto
-                //{
-                //    ReqId = dto.Id,
-                //    Role = dto.Role,
-                //    Action = dto.Status,
-                //    Status = $"{dto.Role}-{dto.Status}",
-                //    Remarks = dto.Remarks,
-                //    TotalOutstanding = dto.TotalOutstanding,
-                //    POS = dto.POS,
-                //    Interest = dto.Interest,
-                //    Charges = dto.Charges,
-                //    AmountProposed = dto.AmountProposed,
-                //    POSProposed = dto.POSProposed,
-                //    InterestProposed = dto.InterestProposed,
-                //    ChargesProposed = dto.ChargesProposed,
-                //    POSWaiverPer = dto.POSWaiverPer,
-                //    InterestWaiverPer = dto.InterestWaiverPer,
-                //    ChargesWaiverPer = dto.ChargesWaiverPer,
-                //    CreatedBy = dto.UserId
-                //});
-
                 await NotifyBranchAsync(dto.Id, dto.Status);
 
                 await NotifyPendingUserAsync(dto.Id);
@@ -330,12 +307,8 @@ namespace ProductivityApi.Services
             var result = await _repository.RetentionApprovalAsync(dto);
             if (result > 0)
             {
-                var requestId = await _repository.GetClosureRequestIdByRetentionIdAsync(dto.RetentionId);
-                if (requestId.HasValue)
-                {
-                    await NotifyBranchAsync(requestId.Value, dto.Status);
-                    await NotifyPendingUserAsync(requestId.Value);
-                }
+                await NotifyBranchAsync(dto.Id, dto.Status);
+                await NotifyPendingUserAsync(dto.Id);
             }
 
             return result;

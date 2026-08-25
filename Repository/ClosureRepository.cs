@@ -583,30 +583,27 @@ namespace ProductivityApi.Repository
                 "sp_newClosure_RetentionApproval",
                 new
                 {
+                    dto.Id,
                     dto.RetentionId,
                     dto.Role,
                     dto.Status,
                     dto.Remarks,
-                    dto.UserId
+                    dto.UserId,
+
+                    dto.TotalOutstanding,
+                    dto.POS,
+                    dto.Interest,
+                    dto.Charges,
+                    dto.ExcessAmount,
+                    dto.AmountProposed,
+                    dto.POSProposed,
+                    dto.InterestProposed,
+                    dto.ChargesProposed,
+                    dto.POSWaiverPer,
+                    dto.InterestWaiverPer,
+                    dto.ChargesWaiverPer
                 },
                 commandType: CommandType.StoredProcedure);
-        }
-
-        public async Task<int?> GetClosureRequestIdByRetentionIdAsync(int retentionId)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            const string sql = @"
-SELECT TOP 1 Id
-FROM dbo.Closure_Transactions
-WHERE RetentionId = @RetentionId
-  AND IsActive = 1
-ORDER BY Id DESC;";
-
-            return await connection.ExecuteScalarAsync<int?>(
-                sql,
-                new { RetentionId = retentionId });
         }
 
         public async Task<int> StartRetentionApprovalAsync(int retentionId, string updatedBy)
