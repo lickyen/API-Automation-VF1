@@ -497,9 +497,6 @@ namespace ProductivityApi.Services
             return rows.Cast<dynamic>();
         }
 
-        public Task<IEnumerable<dynamic>> GetEscalationHistoryAsync(ZeroBalanceDayEscalationHistoryFilterDto dto)
-            => _repository.GetEscalationHistoryAsync(dto);
-
         public async Task<byte[]?> DownloadFileAsync(string fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName)

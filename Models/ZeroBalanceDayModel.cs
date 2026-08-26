@@ -375,9 +375,4 @@ namespace ProductivityApi.Models
         public bool? IsWarningLetterCreated { get; set; }
     }
 
-    public class ZeroBalanceDayEscalationHistoryFilterDto
-    {
-        public DateOnly? ZbdDate { get; set; }
-        public string? BranchCode { get; set; }
-    }
 }

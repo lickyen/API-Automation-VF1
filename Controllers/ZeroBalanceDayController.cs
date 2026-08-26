@@ -264,13 +264,6 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
-        [HttpGet("escalationHistory")]
-        public async Task<IActionResult> GetEscalationHistory([FromQuery] ZeroBalanceDayEscalationHistoryFilterDto dto)
-        {
-            var data = await _service.GetEscalationHistoryAsync(dto);
-            return Ok(new Response(true, data, "Success"));
-        }
-
         [HttpGet("download/{fileName}")]
         public async Task<IActionResult> DownloadFile(string fileName)
         {
