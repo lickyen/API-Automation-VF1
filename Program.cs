@@ -106,6 +106,7 @@ builder.Services.AddScoped<BTLettersService>();
 builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
 builder.Services.AddHttpClient<DmsDocsService>();
+builder.Services.AddHttpClient<GoDigitService>();
 builder.Services.AddScoped<BulkDocsService>();
 builder.Services.AddScoped<BulkFclService>();
 builder.Services.AddScoped<SARFAESIPhysicalFilingService>();

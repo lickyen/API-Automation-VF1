@@ -15,6 +15,7 @@ namespace ProductivityApi.Models
         public ZeroBalanceDayEmails ZeroBalanceDayEmails { get; set; } = new ZeroBalanceDayEmails();
         public AuthSettings AuthSettings { get; set; } = new AuthSettings();
         public DmsDocsSettings DmsDocsSettings { get; set; } = new DmsDocsSettings();
+        public GoDigitSettings GoDigitSettings { get; set; } = new GoDigitSettings();
         public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
     }
 
@@ -107,6 +108,15 @@ namespace ProductivityApi.Models
         public string ApiKey { get; set; } = string.Empty;
         public string RepoName { get; set; } = string.Empty;
         public string ImageFormat { get; set; } = string.Empty;
+        public int TimeoutSeconds { get; set; } = 90;
+    }
+
+    public class GoDigitSettings
+    {
+        public string BaseUrl { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string IntegrationId { get; set; } = string.Empty;
         public int TimeoutSeconds { get; set; } = 90;
     }
 
