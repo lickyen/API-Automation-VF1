@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ProductivityApi.Models;
+using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
@@ -14,19 +15,32 @@ namespace ProductivityApi.Services
 
         private readonly HttpClient _httpClient;
         private readonly GoDigitSettings _settings;
+        private readonly GoDigitRepository _repository;
 
-        public GoDigitService(HttpClient httpClient, AppSettings appSettings)
+        public GoDigitService(
+            HttpClient httpClient,
+            AppSettings appSettings,
+            GoDigitRepository repository)
         {
             _httpClient = httpClient;
             _settings = appSettings.GoDigitSettings;
+            _repository = repository;
             _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
         }
 
-        public async Task<GoDigitPolicyDocument> GetPolicyCopyAsync(
-            string policyNumber,
+        public async Task<GoDigitPolicyDocument?> GetPolicyCopyAsync(
+            string lan,
             CancellationToken cancellationToken)
         {
             ValidateSettings();
+
+            var policyNumber = await _repository.GetPolicyNumberByLanAsync(lan, cancellationToken);
+            if (string.IsNullOrWhiteSpace(policyNumber))
+            {
+                return null;
+            }
+
+            policyNumber = policyNumber.Trim();
 
             var token = await GetAccessTokenAsync(cancellationToken);
             var documentUrl = await GetDocumentUrlAsync(policyNumber, token, cancellationToken);
@@ -72,9 +86,7 @@ namespace ProductivityApi.Services
                 ?? throw new InvalidOperationException("Go Digit authentication response did not contain an access token.");
         }
 
-        private async Task<Uri> GetDocumentUrlAsync(
-            string policyNumber,
-            string accessToken,
+        private async Task<Uri> GetDocumentUrlAsync(string policyNumber,string accessToken,
             CancellationToken cancellationToken)
         {
             var payload = JsonSerializer.Serialize(new
@@ -87,9 +99,13 @@ namespace ProductivityApi.Services
             request.Headers.TryAddWithoutValidation("integrationid", _settings.IntegrationId);
 
             using var response = await _httpClient.SendAsync(request, cancellationToken);
-            response.EnsureSuccessStatusCode();
-
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw CreateApiException("policy document request", response, json);
+            }
+
             using var document = JsonDocument.Parse(json);
             var url = FindDocumentUrl(document.RootElement)
                 ?? throw new InvalidOperationException("Go Digit executor response did not contain a policy document URL.");
@@ -101,6 +117,52 @@ namespace ProductivityApi.Services
             }
 
             return documentUri;
+        }
+
+        private static GoDigitApiException CreateApiException(
+            string operation,
+            HttpResponseMessage response,
+            string responseBody)
+        {
+            var errorMessage = ExtractErrorMessage(responseBody)
+                ?? response.ReasonPhrase
+                ?? "Unknown error";
+
+            return new GoDigitApiException(
+                $"Go Digit {operation} failed: {errorMessage}",
+                response.StatusCode);
+        }
+
+        private static string? ExtractErrorMessage(string responseBody)
+        {
+            if (string.IsNullOrWhiteSpace(responseBody))
+            {
+                return null;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(responseBody);
+
+                if (document.RootElement.ValueKind == JsonValueKind.String)
+                {
+                    return document.RootElement.GetString();
+                }
+
+                return FindStringValue(
+                    document.RootElement,
+                    "message",
+                    "error_description",
+                    "errorDescription",
+                    "error",
+                    "detail",
+                    "description");
+            }
+            catch (JsonException)
+            {
+                var message = responseBody.Trim();
+                return message.Length <= 500 ? message : message[..500];
+            }
         }
 
         private HttpRequestMessage CreateJsonRequest(HttpMethod method, string relativePath, string payload)
