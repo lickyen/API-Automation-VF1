@@ -16,7 +16,7 @@ namespace ProductivityApi.Repository
                 BRANCH_NAME AS BranchName,
                 CLUSTER_NAME AS ClusterName,
                 STATE_NAME AS StateName,
-                CUSOMER_ID AS CustomerId,
+                CUSTOMER_ID AS CustomerId,
                 CUSTOMER_NAME AS CustomerName,
                 SZ_COLLATERAL_ID AS CollateralId,
                 LOAN_STATUS AS LoanStatus,
@@ -61,7 +61,7 @@ namespace ProductivityApi.Repository
                     BRANCH_NAME AS BranchName,
                     CLUSTER_NAME AS ClusterName,
                     STATE_NAME AS StateName,
-                    CUSOMER_ID AS CustomerId,
+                    CUSTOMER_ID AS CustomerId,
                     CUSTOMER_NAME AS CustomerName,
                     SZ_COLLATERAL_ID AS CollateralId,
                     LOAN_STATUS AS LoanStatus,
@@ -114,16 +114,36 @@ namespace ProductivityApi.Repository
         {
             using var conn = new SqlConnection(_conStr);
 
+            //var sql = $@"
+            //    {IndusArchivedDistinctColumns}
+            //    WHERE RowNum = 1
+            //    AND CustomerId IN
+            //    (
+            //        SELECT CUSTOMER_ID
+            //        FROM INDUS_ARCHIVED_MASTER
+            //        WHERE SZ_LOAN_ACCOUNT_NO = @lan
+            //    )";
+
             var sql = $@"
                 {IndusArchivedDistinctColumns}
                 WHERE RowNum = 1
-                AND CustomerId IN
-                (
-                    SELECT CUSOMER_ID
-                    FROM INDUS_ARCHIVED_MASTER
-                    WHERE SZ_LOAN_ACCOUNT_NO = @lan
-                )";
-
+                  AND
+                  (
+                      CustomerId IN
+                      (
+                          SELECT CUSTOMER_ID
+                          FROM INDUS_ARCHIVED_MASTER
+                          WHERE SZ_LOAN_ACCOUNT_NO = @lan
+                            AND CUSTOMER_ID IS NOT NULL
+                      )
+                      OR CollateralId IN
+                      (
+                          SELECT SZ_COLLATERAL_ID
+                          FROM INDUS_ARCHIVED_MASTER
+                          WHERE SZ_LOAN_ACCOUNT_NO = @lan
+                            AND SZ_COLLATERAL_ID IS NOT NULL
+                      )
+                  )";
             var result = await conn.QueryAsync<IndusArchivedMaster>(sql, new { lan });
             return result.ToList();
         }

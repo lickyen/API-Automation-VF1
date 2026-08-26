@@ -216,6 +216,13 @@ GROUP BY
                   AND loanclosure_date < CURRENT_DATE
                 {DistinctLoanOrderBy}";
 
+            //var sql = $@"
+            //    {NeolotexDisbDistinctColumns}
+            //    WHERE loan_status <> 'Active Loan'
+            //      AND loanclosure_date >= DATE '2026-07-15'
+            //      AND loanclosure_date < DATE '2026-07-16'
+            //    {DistinctLoanOrderBy}";
+
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
             var result = await connection.QueryAsync<NeolotexDisb>(sql);
@@ -262,6 +269,16 @@ GROUP BY
                 //    WHERE sz_loan_account_no = @lan
                 //);";
 
+                //var sql = $@"
+                //    {NeolotexDisbDistinctColumns}
+                //    WHERE customerid IN
+                //    (
+                //        SELECT customerid
+                //        FROM plf.neolotex_disb
+                //        WHERE sz_loan_account_no = @lan
+                //    )
+                //    {DistinctLoanOrderBy}";
+
                 var sql = $@"
                     {NeolotexDisbDistinctColumns}
                     WHERE customerid IN
@@ -269,6 +286,14 @@ GROUP BY
                         SELECT customerid
                         FROM plf.neolotex_disb
                         WHERE sz_loan_account_no = @lan
+                          AND customerid IS NOT NULL
+                    )
+                    OR sz_collateral_id IN
+                    (
+                        SELECT sz_collateral_id
+                        FROM plf.neolotex_disb
+                        WHERE sz_loan_account_no = @lan
+                          AND sz_collateral_id IS NOT NULL
                     )
                     {DistinctLoanOrderBy}";
 
