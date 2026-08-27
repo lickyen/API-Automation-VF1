@@ -58,51 +58,6 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetClosedLansAsync(isEligible);
         }
-
-        //public async Task<object> GetLinkedLoansByLanAsync(string lan)
-        //{
-        //    // Step 1: Get linked loans
-        //    var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
-
-        //    if (!loans.Any())
-        //        return Enumerable.Empty<object>();
-
-        //    // Step 2: Fetch applicants/co-applicants for all linked loans
-        //    var loanAccountNos = loans
-        //        .Select(x => x.LoanAccountNo)
-        //        .Distinct()
-        //        .ToArray();
-
-        //    var applicants = await _plfRepository.GetApplicantsByLansAsync(loanAccountNos);
-
-        //    // Step 3: Attach applicants to each loan
-        //    var applicantsLookup = applicants.ToLookup(a => a.LoanAccountNo);
-
-        //    var result = loans.Select(loan => new
-        //    {
-        //        LoanAccountNo = loan.LoanAccountNo,
-        //        BranchCode = loan.BranchCode,
-        //        LoanStatus = loan.LoanStatus,
-        //        NocStatus = loan.NocStatus,
-        //        DisbDate = loan.DisbursementDate,
-        //        ClosureDate = loan.LoanClosureDate,
-        //        CustomerId = loan.CustomerId,
-        //        CustomerName = loan.CustomerName,
-        //        CollateralId = loan.CollateralId,
-
-        //        Customers = applicantsLookup[loan.LoanAccountNo]
-        //            .Select(a => new
-        //            {
-        //                CustId = a.CustomerId,
-        //                CustName = a.CustomerName,
-        //                ApplicantType = a.ApplicantType
-        //            })
-        //            .ToList()
-        //    });
-
-        //    return result;
-        //}
-
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
             // Step 1: Get linked loans from PLF and INDUS
@@ -215,6 +170,12 @@ namespace ProductivityApi.Services
         {
             await _repository.InsertTransactionAsync(dto);
             return true;
+        }
+
+        public async Task<(IEnumerable<NocDashboardDto>? Data, string? Error)>
+        GetDashboardByUserAsync(NocDashboardRequestDto dto)
+        {
+            return await _repository.GetDashboardByUserAsync(dto);
         }
 
         public async Task<NocTransaction?> GetByIdAsync(int id)
@@ -584,10 +545,6 @@ namespace ProductivityApi.Services
             return to.Distinct().ToList();
         }
 
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
-        {
-            return await _repository.GetAllowedStatusesAsync(role);
-        }
         public async Task<List<SignUser>> GetSignUsersAsync()
         {
             return await _repository.GetSignUsersAsync();
@@ -739,77 +696,6 @@ namespace ProductivityApi.Services
 
             return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
         }
-
-        //public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
-        //{
-        //    _httpClient.DefaultRequestHeaders.Clear();
-
-        //    _httpClient.DefaultRequestHeaders.Add("authorization", "dXNlcjpBRE1JTjp0ZXN0");
-
-        //    _httpClient.DefaultRequestHeaders.Add("entityid", "Auxilo");
-
-        //    _httpClient.DefaultRequestHeaders.Add("language", "ENG");
-
-        //    _httpClient.DefaultRequestHeaders.Add("messageid", Guid.NewGuid().ToString());
-
-        //    _httpClient.DefaultRequestHeaders.Add(
-        //        "requesttime",
-        //        DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
-        //    );
-
-        //    _httpClient.DefaultRequestHeaders.Add("servicename", "getAgreements");
-
-        //    _httpClient.DefaultRequestHeaders.Add("serviceversion", "2");
-
-        //    var request = new { finReference = dto.LanNumber, agreementType = "NOC" };
-
-        //    var response = await _httpClient.PostAsJsonAsync(
-        //        "https://uatlms.vistaarfinance.net.in/pff-api/services/createFinanceRest/finance/getAgreements",
-        //        request
-        //    );
-
-        //    response.EnsureSuccessStatusCode();
-
-        //    var agreementResponse = await response.Content.ReadFromJsonAsync<AgreementResponse>();
-
-        //    if (agreementResponse == null || agreementResponse.returnStatus?.returnCode != "0000")
-        //    {
-        //        throw new Exception(
-        //            agreementResponse?.returnStatus?.returnText
-        //                ?? "Unable to fetch agreement document."
-        //        );
-        //    }
-
-        //    var agreement = agreementResponse.agreementsList?.FirstOrDefault();
-
-        //    if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
-        //    {
-        //        throw new Exception("Document content not found.");
-        //    }
-
-        //    byte[] uploadedPdf = Convert.FromBase64String(
-        //        agreement.docContent.Replace("\r", "").Replace("\n", "")
-        //    );
-
-        //    using var reader = new PdfReader(uploadedPdf);
-
-        //    if (reader.NumberOfPages < 2)
-        //    {
-        //        throw new Exception("Agreement PDF must contain at least 2 pages.");
-        //    }
-
-        //    string nocBase64 = Convert.ToBase64String(ExtractPage(reader, 1));
-
-        //    string ackBase64 = Convert.ToBase64String(ExtractPage(reader, 2));
-
-        //    return await _repository.UploadNOCAndAckPdfAsync(
-        //        dto.TransactionId,
-        //        nocBase64,
-        //        ackBase64,
-        //        dto.UpdatedBy
-        //    );
-        //}
-
         public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
         {
             _httpClient.DefaultRequestHeaders.Clear();
@@ -889,55 +775,6 @@ namespace ProductivityApi.Services
             return ms.ToArray();
         }
 
-        //public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
-        //{
-        //    var data = await _repository.GetNocPdfForSigningAsync(
-        //        dto.TransactionId,
-        //        dto.SignUserId
-        //    );
-
-        //    if (string.IsNullOrWhiteSpace(data.Pdf))
-        //        throw new Exception("NOC PDF not found.");
-
-        //    if (data.SignImage == null || data.SignImage.Length == 0)
-        //        throw new Exception("Signature image not found.");
-
-        //    byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
-        //    byte[] signBytes = data.SignImage;
-
-        //    using var output = new MemoryStream();
-
-        //    using (var reader = new PdfReader(pdfBytes))
-        //    {
-        //        using (var stamper = new PdfStamper(reader, output))
-        //        {
-        //            var image = Image.GetInstance(signBytes);
-
-        //            image.ScaleToFit(120f, 60f);
-
-        //            int pageNumber = reader.NumberOfPages;
-
-        //            var pageSize = reader.GetPageSize(pageNumber);
-
-        //            float x = pageSize.Right - 140;
-        //            float y = 40;
-
-        //            image.SetAbsolutePosition(x, y);
-
-        //            stamper.GetOverContent(pageNumber).AddImage(image);
-        //        }
-        //    }
-
-        //    string signedBase64 = Convert.ToBase64String(output.ToArray());
-
-        //    return await _repository.SaveSignedNocAsync(
-        //        dto.TransactionId,
-        //        dto.SignUserId,
-        //        signedBase64,
-        //        dto.UpdatedBy
-        //    );
-        //}
-
         public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
         {
             var data = await _repository.GetNocPdfForSigningAsync(
@@ -990,51 +827,6 @@ namespace ProductivityApi.Services
                 dto.UpdatedBy
             );
         }
-        //public async Task<bool> SignAckPdfAsync(SignAckPdfDto dto)
-        //{
-        //    var data = await _repository.GetAckPdfForSigningAsync(dto.TransactionId);
-
-        //    byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
-
-        //    using var output = new MemoryStream();
-
-        //    PdfReader reader = new PdfReader(pdfBytes);
-
-        //    PdfStamper stamper = new PdfStamper(reader, output);
-
-        //    var page = reader.NumberOfPages;
-
-        //    var content = stamper.GetOverContent(page);
-
-        //    ColumnText.ShowTextAligned(
-        //        content,
-        //        Element.ALIGN_LEFT,
-        //        new Phrase("Property Owner:", FontFactory.GetFont(FontFactory.HELVETICA, 10)),
-        //        420,
-        //        255,
-        //        0
-        //    );
-
-        //    ColumnText.ShowTextAligned(
-        //        content,
-        //        Element.ALIGN_LEFT,
-        //        new Phrase(data.PropertyOwnerName, FontFactory.GetFont(FontFactory.HELVETICA, 10)),
-        //        420,
-        //        240,
-        //        0
-        //    );
-
-        //    stamper.Close();
-
-        //    string signedBase64 = Convert.ToBase64String(output.ToArray());
-
-        //    return await _repository.SaveSignedAckAsync(
-        //        dto.TransactionId,
-        //        signedBase64,
-        //        dto.UpdatedBy
-        //    );
-        //}
-
         public async Task<bool> SignAckPdfAsync(SignAckPdfDto dto)
         {
             var data = await _repository.GetAckPdfForSigningAsync(dto.TransactionId);
@@ -1079,17 +871,6 @@ namespace ProductivityApi.Services
                 dto.UpdatedBy
             );
         }
-
-        //public async Task<byte[]> DownloadSignedNocPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetSignedNocPdfAsync(transactionId);
-
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        throw new Exception("Signed NOC PDF not found.");
-
-        //    return Convert.FromBase64String(base64);
-        //}
-
         public async Task<byte[]> DownloadSignedNocPdfAsync(int transactionId)
         {
             var fileName = await _repository.GetSignedNocPdfAsync(transactionId);
@@ -1103,16 +884,6 @@ namespace ProductivityApi.Services
 
             return bytes;
         }
-
-        //public async Task<byte[]> DownloadSignedAckPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetSignedAckPdfAsync(transactionId);
-
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        throw new Exception("Signed ACK PDF not found.");
-
-        //    return Convert.FromBase64String(base64);
-        //}
 
         public async Task<byte[]> DownloadSignedAckPdfAsync(int transactionId)
         {
@@ -1149,8 +920,9 @@ namespace ProductivityApi.Services
                 new UpdateNocStatusDto
                 {
                     Id = dto.Id,
-                    Status = "Owner Mobile Update Pending",
-                    Remarks = "Property owner mobile number updated by customer",
+                    //Status = "Owner Mobile Update Pending",
+                    Status = "Mobile Update Pending",
+                    Remarks = "Property owner mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
                 }
@@ -1185,8 +957,8 @@ namespace ProductivityApi.Services
                 new UpdateNocStatusDto
                 {
                     Id = dto.Id,
-                    Status = "Customer Mobile Update Pending",
-                    Remarks = "Customer mobile number updated by branch",
+                    Status = "Mobile Update Pending",
+                    Remarks = "Customer mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
                 }
@@ -1199,110 +971,6 @@ namespace ProductivityApi.Services
 
             return (true, "Mobile number updated successfully.");
         }
-
-        //public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
-        //{
-        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
-        //    {
-        //        return (false, "PDF file is required.");
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Convert PDF to Base64
-        //    //--------------------------------------------------
-
-        //    string pdfBase64;
-
-        //    using (var ms = new MemoryStream())
-        //    {
-        //        await dto.PdfFile.CopyToAsync(ms);
-
-        //        pdfBase64 = Convert.ToBase64String(ms.ToArray());
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Save PDF
-        //    //--------------------------------------------------
-
-        //    var saved = await _repository.UpdateKycPdfAsync(
-        //        dto.TransactionId,
-        //        pdfBase64,
-        //        dto.UpdatedBy
-        //    );
-
-        //    if (!saved)
-        //    {
-        //        return (false, "Failed to save KYC PDF.");
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Update workflow status
-        //    //--------------------------------------------------
-
-        //    var statusResult = await _repository.UpdateTransactionStatusAsync(
-        //        new UpdateNocStatusDto
-        //        {
-        //            Id = dto.TransactionId,
-        //            Status = "KYC Verification Pending",
-        //            Remarks = "KYC document uploaded",
-        //            CreatedBy = dto.UpdatedBy,
-        //            Role = dto.Role,
-        //        }
-        //    );
-
-        //    if (statusResult != 1)
-        //    {
-        //        return (false, "KYC uploaded but status update failed.");
-        //    }
-        //    try
-        //    {
-        //        var txn = await _repository.GetById(dto.TransactionId);
-
-        //        if (txn != null)
-        //        {
-        //            var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
-
-        //            var placeholders = new Dictionary<string, string>
-        //            {
-        //                { "BranchName", txn.BranchName ?? "" },
-        //                { "LAN", txn.Lan ?? "" },
-        //                { "UploadedBy", dto.UpdatedBy ?? "" },
-        //                { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
-        //            };
-
-        //            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-
-        //            // Send to central NOC email + branch recipients
-        //            var to = new List<string>();
-
-        //            var nocEmail = _configuration["NocSettings:NocEmail"];
-        //            if (!string.IsNullOrWhiteSpace(nocEmail))
-        //                to.Add(nocEmail);
-
-        //            var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
-
-        //            to.AddRange(branchRecipients);
-
-        //            to = to.Distinct().ToList();
-
-        //            if (to.Any())
-        //            {
-        //                await _emailService.SendEmail(
-        //                    template.Subject,
-        //                    body,
-        //                    to,
-        //                    new List<string>()
-        //                );
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
-        //    }
-
-        //    return (true, "KYC uploaded successfully.");
-        //}
 
         public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
         {
@@ -1380,44 +1048,6 @@ namespace ProductivityApi.Services
             return (true, "KYC uploaded successfully.");
         }
 
-        //public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
-        //{
-        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
-        //    {
-        //        return (false, "PDF file is required.");
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Convert PDF to Base64
-        //    //--------------------------------------------------
-
-        //    string pdfBase64;
-
-        //    using (var ms = new MemoryStream())
-        //    {
-        //        await dto.PdfFile.CopyToAsync(ms);
-
-        //        pdfBase64 = Convert.ToBase64String(ms.ToArray());
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Save PDF
-        //    //--------------------------------------------------
-
-        //    var saved = await _repository.UpdateAckPdfAsync(
-        //        dto.TransactionId,
-        //        pdfBase64,
-        //        dto.UpdatedBy
-        //    );
-
-        //    if (!saved)
-        //    {
-        //        return (false, "Failed to save Acknowledgement PDF.");
-        //    }
-
-        //    return (true, "Acknowledgement uploaded successfully.");
-        //}
-
         public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
         {
             if (dto.PdfFile == null || dto.PdfFile.Length == 0)
@@ -1443,23 +1073,6 @@ namespace ProductivityApi.Services
 
             return (true, "Acknowledgement uploaded successfully.");
         }
-
-        //public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetKycPdfAsync(transactionId);
-
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        return null;
-
-        //    try
-        //    {
-        //        return Convert.FromBase64String(base64);
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
 
         public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
         {
