@@ -45,6 +45,20 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, message: "Transaction inserted successfully."));
         }
 
+
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetDashboardByUser(
+            [FromQuery] NocDashboardRequestDto dto
+        )
+        {
+            var result = await _service.GetDashboardByUserAsync(dto);
+
+            if (result.Error != null)
+                return BadRequest(new Response(false, result.Error));
+
+            return Ok(new Response(true, result.Data));
+        }
+
         [HttpGet("getById/{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -132,14 +146,6 @@ namespace ProductivityApi.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"OneilReport_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
             );
-        }
-
-        [HttpGet("getAllowedStatuses")]
-        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string? role)
-        {
-            var statuses = await _service.GetAllowedStatusesAsync(role);
-
-            return Ok(new Response(true, statuses));
         }
 
         [HttpGet("signusers")]

@@ -501,4 +501,17 @@ namespace ProductivityApi.Models
 
         public string Role { get; set; } = string.Empty;
     }
+
+    public class NocDashboardDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public int LanCount { get; set; }
+    }
+
+    public class NocDashboardRequestDto
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string TabName { get; set; } = string.Empty;
+    }
 }

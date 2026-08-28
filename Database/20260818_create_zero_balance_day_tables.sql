@@ -56,6 +56,7 @@ BEGIN
         Region varchar(100) NULL,
         BranchCode varchar(20) NOT NULL,
         BranchName varchar(200) NOT NULL,
+        LastCobDate date NULL,
         LastCobClosingBalance decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_LastCobClosingBalance DEFAULT (0),
         VeCollectReceipts decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_VeCollectReceipts DEFAULT (0),
         CashToBank decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_CashToBank DEFAULT (0),
@@ -76,6 +77,14 @@ BEGIN
         UpdatedDate datetime NULL,
         CONSTRAINT PK_ZeroBalanceDay_Submission PRIMARY KEY CLUSTERED (Id)
     );
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'LastCobDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_Submission
+    ADD LastCobDate date NULL;
 END
 GO
 
@@ -809,39 +818,5 @@ IF OBJECT_ID('dbo.ZeroBalanceDay_BranchStatus', 'U') IS NOT NULL
 BEGIN
     ALTER TABLE dbo.ZeroBalanceDay_BranchStatus WITH CHECK ADD CONSTRAINT FK_ZBD_BranchStatus_WarningLetter
         FOREIGN KEY (WarningLetterId) REFERENCES dbo.ZeroBalanceDay_WarningLetter (Id);
-END
-GO
-
-IF OBJECT_ID('dbo.ZeroBalanceDay_EscalationHistory', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.ZeroBalanceDay_EscalationHistory
-    (
-        Id int IDENTITY(1,1) NOT NULL,
-        SubmissionId int NULL,
-        ZbdDate date NOT NULL,
-        BranchCode varchar(20) NOT NULL,
-        PendingAction varchar(200) NOT NULL,
-        OutstandingDays int NOT NULL,
-        CurrentStatus varchar(100) NOT NULL,
-        EscalatedTo varchar(500) NOT NULL,
-        EscalationDate datetime NOT NULL CONSTRAINT DF_ZBD_EscalationHistory_EscalationDate DEFAULT (GETDATE()),
-        CreatedDate datetime NOT NULL CONSTRAINT DF_ZBD_EscalationHistory_CreatedDate DEFAULT (GETDATE()),
-        CONSTRAINT PK_ZeroBalanceDay_EscalationHistory PRIMARY KEY CLUSTERED (Id)
-    );
-END
-GO
-
-IF OBJECT_ID('dbo.ZeroBalanceDay_EscalationHistory', 'U') IS NOT NULL
-   AND OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
-   AND NOT EXISTS
-   (
-        SELECT 1
-        FROM sys.foreign_keys
-        WHERE name = 'FK_ZBD_EscalationHistory_Submission'
-          AND parent_object_id = OBJECT_ID('dbo.ZeroBalanceDay_EscalationHistory')
-   )
-BEGIN
-    ALTER TABLE dbo.ZeroBalanceDay_EscalationHistory WITH CHECK ADD CONSTRAINT FK_ZBD_EscalationHistory_Submission
-        FOREIGN KEY (SubmissionId) REFERENCES dbo.ZeroBalanceDay_Submission (Id);
 END
 GO

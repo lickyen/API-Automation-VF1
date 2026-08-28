@@ -216,6 +216,13 @@ GROUP BY
                   AND loanclosure_date < CURRENT_DATE
                 {DistinctLoanOrderBy}";
 
+            //var sql = $@"
+            //    {NeolotexDisbDistinctColumns}
+            //    WHERE loan_status <> 'Active Loan'
+            //      AND loanclosure_date >= DATE '2026-07-15'
+            //      AND loanclosure_date < DATE '2026-07-16'
+            //    {DistinctLoanOrderBy}";
+
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
             var result = await connection.QueryAsync<NeolotexDisb>(sql);
@@ -262,6 +269,16 @@ GROUP BY
                 //    WHERE sz_loan_account_no = @lan
                 //);";
 
+                //var sql = $@"
+                //    {NeolotexDisbDistinctColumns}
+                //    WHERE customerid IN
+                //    (
+                //        SELECT customerid
+                //        FROM plf.neolotex_disb
+                //        WHERE sz_loan_account_no = @lan
+                //    )
+                //    {DistinctLoanOrderBy}";
+
                 var sql = $@"
                     {NeolotexDisbDistinctColumns}
                     WHERE customerid IN
@@ -269,6 +286,14 @@ GROUP BY
                         SELECT customerid
                         FROM plf.neolotex_disb
                         WHERE sz_loan_account_no = @lan
+                          AND customerid IS NOT NULL
+                    )
+                    OR sz_collateral_id IN
+                    (
+                        SELECT sz_collateral_id
+                        FROM plf.neolotex_disb
+                        WHERE sz_loan_account_no = @lan
+                          AND sz_collateral_id IS NOT NULL
                     )
                     {DistinctLoanOrderBy}";
 
@@ -441,6 +466,66 @@ GROUP BY
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching Cash Payemnts  by CIF: {CIF}", cif);
+                return null;
+            }
+        }
+
+        public async Task<ZeroBalanceDayCashBalanceDto?> GetZeroBalanceDayCashBalanceByBranchAsync(string branchCode)
+        {
+            try
+            {
+                const string sql = @"
+                    WITH latest_recon AS (
+                        SELECT
+                            cr.branchcode,
+                            cr.processdate,
+                            cr.cashposition,
+                            cr.lastmnton
+                        FROM plf.branch_cashier_recon cr
+                        WHERE cr.branchcode = @BranchCode
+                        ORDER BY cr.processid DESC
+                        LIMIT 1
+                    ),
+                    balance_details AS (
+                        SELECT
+                            lr.branchcode  AS BranchCode,
+                            CAST(lr.processdate AS date) AS LastCobDate,
+                            ROUND((COALESCE(lr.cashposition, 0)::numeric / 100), 2) AS LastCobClosingBalance,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(frh.receiptamount), 0)::numeric / 100, 2)
+                                FROM plf.finreceiptheader frh
+                                WHERE frh.cashierbranch = lr.branchcode
+                                  AND frh.lastmnton > lr.lastmnton
+                                  AND frh.lastmnton < CURRENT_DATE
+                                  AND frh.receiptmode = 'CASH'
+                                  AND frh.receiptmodestatus = 'R'
+                            ), 0.00) AS VeCollectReceipts,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(br.requestamount), 0)::numeric / 100, 2)
+                                FROM plf.branchcash_to_bankrequest br
+                                WHERE br.branchcode = lr.branchcode
+                                  AND br.lastmnton > lr.lastmnton
+                                  AND br.lastmnton < CURRENT_DATE
+                            ), 0.00) AS CashToBank
+                        FROM latest_recon lr
+                    )
+                    SELECT
+                        BranchCode,
+                        LastCobDate,
+                        LastCobClosingBalance,
+                        VeCollectReceipts,
+                        CashToBank,
+                        ROUND(LastCobClosingBalance + VeCollectReceipts - CashToBank, 2) AS OpeningBalance
+                    FROM balance_details;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                return await connection.QueryFirstOrDefaultAsync<ZeroBalanceDayCashBalanceDto>(sql, new { BranchCode = branchCode });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Zero Balance Day cash balance for branch: {BranchCode}", branchCode);
                 return null;
             }
         }
