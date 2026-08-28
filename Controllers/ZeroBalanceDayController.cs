@@ -55,6 +55,10 @@ namespace ProductivityApi.Controllers
             {
                 return BadRequest(new Response(false, null, ex.Message));
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
         }
 
         [HttpPut("cancel")]
@@ -137,6 +141,10 @@ namespace ProductivityApi.Controllers
                     : Ok(new Response(true, data, "Success"));
             }
             catch (ArgumentException ex)
+            {
+                return BadRequest(new Response(false, null, ex.Message));
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new Response(false, null, ex.Message));
             }

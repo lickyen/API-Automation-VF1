@@ -22,6 +22,7 @@ namespace ProductivityApi.Repository
             Region,
             BranchCode,
             BranchName,
+            LastCobDate,
             LastCobClosingBalance,
             VeCollectReceipts,
             CashToBank,
@@ -630,6 +631,7 @@ namespace ProductivityApi.Repository
                     UPDATE dbo.ZeroBalanceDay_Submission
                     SET Region = @Region,
                         BranchName = @BranchName,
+                        LastCobDate = @LastCobDate,
                         LastCobClosingBalance = @LastCobClosingBalance,
                         VeCollectReceipts = @VeCollectReceipts,
                         CashToBank = @CashToBank,
@@ -661,6 +663,7 @@ namespace ProductivityApi.Repository
                     Region,
                     BranchCode,
                     BranchName,
+                    LastCobDate,
                     LastCobClosingBalance,
                     VeCollectReceipts,
                     CashToBank,
@@ -683,6 +686,7 @@ namespace ProductivityApi.Repository
                     @Region,
                     @BranchCode,
                     @BranchName,
+                    @LastCobDate,
                     @LastCobClosingBalance,
                     @VeCollectReceipts,
                     @CashToBank,
@@ -708,6 +712,7 @@ namespace ProductivityApi.Repository
                 dto.Region,
                 dto.BranchCode,
                 dto.BranchName,
+                dto.LastCobDate,
                 dto.LastCobClosingBalance,
                 dto.VeCollectReceipts,
                 dto.CashToBank,
@@ -757,7 +762,8 @@ namespace ProductivityApi.Repository
                 DECLARE @CutOff datetime = DATEADD(HOUR, 12, CAST(CAST(@ZbdDate AS date) AS datetime));
 
                 UPDATE dbo.ZeroBalanceDay_Submission
-                SET LastCobClosingBalance = @LastCobClosingBalance,
+                SET LastCobDate = @LastCobDate,
+                    LastCobClosingBalance = @LastCobClosingBalance,
                     VeCollectReceipts = @VeCollectReceipts,
                     CashToBank = @CashToBank,
                     OpeningBalance = @OpeningBalance,
@@ -782,6 +788,7 @@ namespace ProductivityApi.Repository
                 dto.Id,
                 dto.ZbdDate,
                 dto.BranchCode,
+                dto.LastCobDate,
                 dto.LastCobClosingBalance,
                 dto.VeCollectReceipts,
                 dto.CashToBank,

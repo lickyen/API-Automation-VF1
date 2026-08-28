@@ -32,11 +32,22 @@ namespace ProductivityApi.Models
         public string BranchCode { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
         public string? Region { get; set; }
+        public DateOnly? LastCobDate { get; set; }
         public decimal LastCobClosingBalance { get; set; }
         public decimal VeCollectReceipts { get; set; }
         public decimal CashToBank { get; set; }
         public decimal OpeningBalance { get; set; }
         public ZeroBalanceDaySubmissionModel? ExistingSubmission { get; set; }
+    }
+
+    public class ZeroBalanceDayCashBalanceDto
+    {
+        public string BranchCode { get; set; } = string.Empty;
+        public DateOnly? LastCobDate { get; set; }
+        public decimal LastCobClosingBalance { get; set; }
+        public decimal VeCollectReceipts { get; set; }
+        public decimal CashToBank { get; set; }
+        public decimal OpeningBalance { get; set; }
     }
 
     public class ZeroBalanceDaySubmissionModel
@@ -47,6 +58,7 @@ namespace ProductivityApi.Models
         public string Region { get; set; } = string.Empty;
         public string BranchCode { get; set; } = string.Empty;
         public string BranchName { get; set; } = string.Empty;
+        public DateOnly? LastCobDate { get; set; }
         public decimal LastCobClosingBalance { get; set; }
         public decimal VeCollectReceipts { get; set; }
         public decimal CashToBank { get; set; }
@@ -233,6 +245,8 @@ namespace ProductivityApi.Models
         public string BranchName { get; set; } = string.Empty;
         public string? Region { get; set; }
 
+        public DateOnly? LastCobDate { get; set; }
+
         [Range(0, double.MaxValue)]
         public decimal LastCobClosingBalance { get; set; }
 
@@ -268,6 +282,8 @@ namespace ProductivityApi.Models
 
         [Required]
         public string BranchCode { get; set; } = string.Empty;
+
+        public DateOnly? LastCobDate { get; set; }
 
         [Range(0, double.MaxValue)]
         public decimal LastCobClosingBalance { get; set; }

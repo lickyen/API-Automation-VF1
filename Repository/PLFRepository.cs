@@ -470,6 +470,66 @@ GROUP BY
             }
         }
 
+        public async Task<ZeroBalanceDayCashBalanceDto?> GetZeroBalanceDayCashBalanceByBranchAsync(string branchCode)
+        {
+            try
+            {
+                const string sql = @"
+                    WITH latest_recon AS (
+                        SELECT
+                            cr.branchcode,
+                            cr.processdate,
+                            cr.cashposition,
+                            cr.lastmnton
+                        FROM plf.branch_cashier_recon cr
+                        WHERE cr.branchcode = @BranchCode
+                        ORDER BY cr.processid DESC
+                        LIMIT 1
+                    ),
+                    balance_details AS (
+                        SELECT
+                            lr.branchcode  AS BranchCode,
+                            CAST(lr.processdate AS date) AS LastCobDate,
+                            ROUND((COALESCE(lr.cashposition, 0)::numeric / 100), 2) AS LastCobClosingBalance,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(frh.receiptamount), 0)::numeric / 100, 2)
+                                FROM plf.finreceiptheader frh
+                                WHERE frh.cashierbranch = lr.branchcode
+                                  AND frh.lastmnton > lr.lastmnton
+                                  AND frh.lastmnton < CURRENT_DATE
+                                  AND frh.receiptmode = 'CASH'
+                                  AND frh.receiptmodestatus = 'R'
+                            ), 0.00) AS VeCollectReceipts,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(br.requestamount), 0)::numeric / 100, 2)
+                                FROM plf.branchcash_to_bankrequest br
+                                WHERE br.branchcode = lr.branchcode
+                                  AND br.lastmnton > lr.lastmnton
+                                  AND br.lastmnton < CURRENT_DATE
+                            ), 0.00) AS CashToBank
+                        FROM latest_recon lr
+                    )
+                    SELECT
+                        BranchCode,
+                        LastCobDate,
+                        LastCobClosingBalance,
+                        VeCollectReceipts,
+                        CashToBank,
+                        ROUND(LastCobClosingBalance + VeCollectReceipts - CashToBank, 2) AS OpeningBalance
+                    FROM balance_details;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                return await connection.QueryFirstOrDefaultAsync<ZeroBalanceDayCashBalanceDto>(sql, new { BranchCode = branchCode });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Zero Balance Day cash balance for branch: {BranchCode}", branchCode);
+                return null;
+            }
+        }
+
         public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
         {
             try

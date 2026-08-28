@@ -56,6 +56,7 @@ BEGIN
         Region varchar(100) NULL,
         BranchCode varchar(20) NOT NULL,
         BranchName varchar(200) NOT NULL,
+        LastCobDate date NULL,
         LastCobClosingBalance decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_LastCobClosingBalance DEFAULT (0),
         VeCollectReceipts decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_VeCollectReceipts DEFAULT (0),
         CashToBank decimal(18,2) NOT NULL CONSTRAINT DF_ZBD_Submission_CashToBank DEFAULT (0),
@@ -76,6 +77,14 @@ BEGIN
         UpdatedDate datetime NULL,
         CONSTRAINT PK_ZeroBalanceDay_Submission PRIMARY KEY CLUSTERED (Id)
     );
+END
+GO
+
+IF OBJECT_ID('dbo.ZeroBalanceDay_Submission', 'U') IS NOT NULL
+   AND COL_LENGTH('dbo.ZeroBalanceDay_Submission', 'LastCobDate') IS NULL
+BEGIN
+    ALTER TABLE dbo.ZeroBalanceDay_Submission
+    ADD LastCobDate date NULL;
 END
 GO
 

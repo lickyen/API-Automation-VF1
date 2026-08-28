@@ -13,6 +13,7 @@ namespace ProductivityApi.Services
         private static readonly string[] DepositSlipExtensions = { ".pdf", ".jpg", ".jpeg", ".png" };
 
         private readonly ZeroBalanceDayRepository _repository;
+        private readonly PLFRepository _plfRepository;
         private readonly UserService _userService;
         private readonly BranchServices _branchServices;
         private readonly EmailService _emailService;
@@ -22,6 +23,7 @@ namespace ProductivityApi.Services
 
         public ZeroBalanceDayService(
             ZeroBalanceDayRepository repository,
+            PLFRepository plfRepository,
             UserService userService,
             BranchServices branchServices,
             EmailService emailService,
@@ -29,6 +31,7 @@ namespace ProductivityApi.Services
             AppSettings appSettings)
         {
             _repository = repository;
+            _plfRepository = plfRepository;
             _userService = userService;
             _branchServices = branchServices;
             _emailService = emailService;
@@ -181,18 +184,23 @@ namespace ProductivityApi.Services
             if (!IsValidBranch(branch))
                 return null;
 
-            var existingSubmission = await _repository.GetSubmissionByDateBranchAsync(zbdDate, branchCode);
+            var resolvedBranchCode = branch!.BranchId ?? branchCode;
+            var existingSubmission = await _repository.GetSubmissionByDateBranchAsync(zbdDate, resolvedBranchCode);
+            var cashBalance = existingSubmission == null
+                ? await GetRequiredCashBalanceDetailsAsync(resolvedBranchCode)
+                : null;
 
             return new ZeroBalanceDayFormDetailsDto
             {
                 ZbdDate = zbdDate,
-                BranchCode = branch!.BranchId ?? branchCode,
+                BranchCode = resolvedBranchCode,
                 BranchName = branch.BranchName ?? string.Empty,
                 Region = branch.Region,
-                LastCobClosingBalance = existingSubmission?.LastCobClosingBalance ?? 0,
-                VeCollectReceipts = existingSubmission?.VeCollectReceipts ?? 0,
-                CashToBank = existingSubmission?.CashToBank ?? 0,
-                OpeningBalance = existingSubmission?.OpeningBalance ?? 0,
+                LastCobDate = existingSubmission?.LastCobDate ?? cashBalance?.LastCobDate,
+                LastCobClosingBalance = existingSubmission?.LastCobClosingBalance ?? cashBalance?.LastCobClosingBalance ?? 0,
+                VeCollectReceipts = existingSubmission?.VeCollectReceipts ?? cashBalance?.VeCollectReceipts ?? 0,
+                CashToBank = existingSubmission?.CashToBank ?? cashBalance?.CashToBank ?? 0,
+                OpeningBalance = existingSubmission?.OpeningBalance ?? cashBalance?.OpeningBalance ?? 0,
                 ExistingSubmission = existingSubmission
             };
         }
@@ -204,6 +212,7 @@ namespace ProductivityApi.Services
                 return -3;
 
             ApplyBranchDetails(dto, mappedBranch);
+            await ApplyCashBalanceDetailsAsync(dto);
             ValidateBranchSubmission(dto.ZbdDate, dto.OpeningBalance, dto.AmountDeposited, dto.MismatchReason, dto.LateSubmissionReason);
 
             var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
@@ -238,6 +247,8 @@ namespace ProductivityApi.Services
             if (mappedBranch == null)
                 return -3;
 
+            dto.BranchCode = mappedBranch.BranchCode;
+            await ApplyCashBalanceDetailsAsync(dto);
             ValidateBranchSubmission(dto.ZbdDate, dto.OpeningBalance, dto.AmountDeposited, dto.MismatchReason, dto.LateSubmissionReason);
 
             string? fileName = null;
@@ -827,6 +838,35 @@ namespace ProductivityApi.Services
             dto.Region = branch.Region;
         }
 
+        private async Task ApplyCashBalanceDetailsAsync(ZeroBalanceDayBranchSubmissionDto dto)
+        {
+            var balance = await GetRequiredCashBalanceDetailsAsync(dto.BranchCode);
+            dto.LastCobDate = balance.LastCobDate;
+            dto.LastCobClosingBalance = balance.LastCobClosingBalance;
+            dto.VeCollectReceipts = balance.VeCollectReceipts;
+            dto.CashToBank = balance.CashToBank;
+            dto.OpeningBalance = balance.OpeningBalance;
+        }
+
+        private async Task ApplyCashBalanceDetailsAsync(ZeroBalanceDayBranchRevisionDto dto)
+        {
+            var balance = await GetRequiredCashBalanceDetailsAsync(dto.BranchCode);
+            dto.LastCobDate = balance.LastCobDate;
+            dto.LastCobClosingBalance = balance.LastCobClosingBalance;
+            dto.VeCollectReceipts = balance.VeCollectReceipts;
+            dto.CashToBank = balance.CashToBank;
+            dto.OpeningBalance = balance.OpeningBalance;
+        }
+
+        private async Task<ZeroBalanceDayCashBalanceDto> GetRequiredCashBalanceDetailsAsync(string branchCode)
+        {
+            var balance = await _plfRepository.GetZeroBalanceDayCashBalanceByBranchAsync(branchCode);
+            if (balance == null)
+                throw new InvalidOperationException($"Cash balance details not found for branch {branchCode}");
+
+            return balance;
+        }
+
         private static ZeroBalanceDayBranchStatusModel ToBranchStatusModel(ZeroBalanceDayModel zbd, BranchModel branch)
             => ToBranchStatusModel(zbd.Id, zbd.ZbdDate, branch);
 
@@ -936,6 +976,7 @@ namespace ProductivityApi.Services
             values["Region"] = branchStatus?.Region ?? branch.Region ?? submission?.Region ?? string.Empty;
             values["BranchCode"] = branchStatus?.BranchCode ?? branch.BranchId ?? submission?.BranchCode ?? string.Empty;
             values["BranchName"] = branchStatus?.BranchName ?? branch.BranchName ?? submission?.BranchName ?? string.Empty;
+            values["LastCobDate"] = submission?.LastCobDate;
             values["LastCobClosingBalance"] = submission?.LastCobClosingBalance ?? 0;
             values["VeCollectReceipts"] = submission?.VeCollectReceipts ?? 0;
             values["CashToBank"] = submission?.CashToBank ?? 0;
