@@ -920,8 +920,8 @@ namespace ProductivityApi.Services
                 new UpdateNocStatusDto
                 {
                     Id = dto.Id,
-                    //Status = "Owner Mobile Update Pending",
-                    Status = "Mobile Update Pending",
+                    Status = "Owner Mobile Update Pending",
+                    //Status = "Mobile Update Pending",
                     Remarks = "Property owner mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
@@ -957,7 +957,8 @@ namespace ProductivityApi.Services
                 new UpdateNocStatusDto
                 {
                     Id = dto.Id,
-                    Status = "Mobile Update Pending",
+                    Status = "Customer Mobile Update Pending",
+                    //Status = "Mobile Update Pending",
                     Remarks = "Customer mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
