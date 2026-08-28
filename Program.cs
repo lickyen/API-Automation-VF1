@@ -152,6 +152,7 @@ builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
 builder.Services.AddScoped<IndusArchivedRepository>();
 builder.Services.AddScoped<WabaWtsappHookRepository>();
 builder.Services.AddScoped<ZeroBalanceDayRepository>();
+builder.Services.AddScoped<GoDigitRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
