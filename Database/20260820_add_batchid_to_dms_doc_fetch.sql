@@ -44,6 +44,20 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.DMSDocFetchMaster')
+      AND name = 'IX_DMSDocFetchMaster_CreatedBy_BatchId'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_DMSDocFetchMaster_CreatedBy_BatchId
+    ON dbo.DMSDocFetchMaster (CreatedBy, BatchId)
+    INCLUDE (Status, DocStatus, CreatedDt, UpdatedDt);
+END
+GO
+
 ALTER TABLE dbo.DMSDocFetchMaster
 ALTER COLUMN DocStatus varchar(200) NULL;
 GO
@@ -158,6 +172,42 @@ BEGIN
           )
       AND (@DocStatus IS NULL OR DocStatus = @DocStatus)
     ORDER BY CreatedDt DESC;
+END
+GO
+
+IF OBJECT_ID('dbo.sp_DMSDocFetch_GetBatches', 'P') IS NULL
+BEGIN
+    EXEC('CREATE PROCEDURE dbo.sp_DMSDocFetch_GetBatches AS BEGIN SET NOCOUNT ON; END')
+END
+GO
+
+ALTER PROCEDURE dbo.sp_DMSDocFetch_GetBatches
+    @CreatedBy varchar(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @CreatedBy = NULLIF(LTRIM(RTRIM(@CreatedBy)), '');
+
+    SELECT
+        BatchId,
+        CreatedBy,
+        MIN(CreatedDt) AS CreatedDt,
+        CASE
+            WHEN SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) > 0 THEN 'Active'
+            ELSE 'Processed'
+        END AS [Status],
+        COUNT(1) AS TotalLans,
+        SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) AS ActiveCount,
+        SUM(CASE WHEN Status = 'Processed' THEN 1 ELSE 0 END) AS ProcessedCount,
+        SUM(CASE WHEN DocStatus = 'Success' THEN 1 ELSE 0 END) AS SuccessCount,
+        SUM(CASE WHEN DocStatus = 'Error' THEN 1 ELSE 0 END) AS ErrorCount,
+        MAX(UpdatedDt) AS LastUpdatedDt
+    FROM dbo.DMSDocFetchMaster
+    WHERE @CreatedBy IS NOT NULL
+      AND CreatedBy = @CreatedBy
+    GROUP BY BatchId, CreatedBy
+    ORDER BY MIN(CreatedDt) DESC;
 END
 GO
 

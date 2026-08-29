@@ -15,6 +15,14 @@ namespace ProductivityApi.Controllers
             _service = service;
         }
 
+        [HttpGet("tags")]
+        public async Task<IActionResult> GetTags()
+        {
+            var data = await _service.GetTagsAsync();
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("lans")]
         public async Task<IActionResult> AddLans([FromBody] DmsDocsAddRequest request)
         {
@@ -25,9 +33,20 @@ namespace ProductivityApi.Controllers
                 : Ok(new Response(true, result, $"{result.RowsAdded} LAN(s) added successfully."));
         }
 
+        [HttpGet("batches")]
+        public async Task<IActionResult> GetBatches([FromQuery] DmsDocsGetBatchesRequest request)
+        {
+            var data = await _service.GetBatchesAsync(request);
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpGet("lans")]
         public async Task<IActionResult> GetLans([FromQuery] DmsDocsGetLansRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.BatchId))
+                return BadRequest(new Response(false, null, "BatchId is required."));
+
             var data = await _service.GetLansAsync(request);
 
             return Ok(new Response(true, data, "Success"));
@@ -41,6 +60,29 @@ namespace ProductivityApi.Controllers
             var result = await _service.FetchDocumentAsync(request, cancellationToken);
 
             return Ok(new Response(result.Success, result, result.DocStatus));
+        }
+
+        [HttpGet("download")]
+        public async Task<IActionResult> DownloadZip(
+            [FromQuery] DmsDocsDownloadRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.BatchId))
+                return BadRequest(new Response(false, null, "BatchId is required."));
+
+            var result = await _service.DownloadZipAsync(request, cancellationToken);
+            if (!result.Success)
+            {
+                return BadRequest(new Response(false, new
+                {
+                    result.BatchId,
+                    result.TotalDocuments,
+                    result.FileCount,
+                    result.MissingFiles
+                }, result.Message));
+            }
+
+            return File(result.FileContent, result.ContentType, result.FileName);
         }
 
         [HttpPost("copy")]

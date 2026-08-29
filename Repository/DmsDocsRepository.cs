@@ -16,6 +16,16 @@ namespace ProductivityApi.Repository
 
         private IDbConnection CreateConnection() => new SqlConnection(_conStr);
 
+        public async Task<IEnumerable<DmsDocsTagItem>> GetTagsAsync()
+        {
+            using var conn = CreateConnection();
+
+            return await conn.QueryAsync<DmsDocsTagItem>(
+                "sp_DMSDocFetch_GetTagSubTagMaster",
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
         // ── Add LANs ──────────────────────────────────────────
 
         public async Task<int> AddLanAsync(DmsDocsAddLan item, string createdBy, string batchId)
@@ -39,6 +49,20 @@ namespace ProductivityApi.Repository
             return p.Get<int>("@Output");
         }
         // ── Get LANs ──────────────────────────────────────────
+
+        public async Task<IEnumerable<DmsDocsBatchListItem>> GetBatchesAsync(DmsDocsGetBatchesRequest request)
+        {
+            using var conn = CreateConnection();
+
+            var p = new DynamicParameters();
+            p.Add("@CreatedBy", NullIfWhiteSpace(request?.CreatedBy));
+
+            return await conn.QueryAsync<DmsDocsBatchListItem>(
+                "sp_DMSDocFetch_GetBatches",
+                p,
+                commandType: CommandType.StoredProcedure
+            );
+        }
 
         public async Task<IEnumerable<DmsDocsListItem>> GetLansAsync(DmsDocsGetLansRequest? request = null)
         {
