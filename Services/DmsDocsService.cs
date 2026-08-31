@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Newtonsoft.Json.Linq;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
@@ -41,6 +42,12 @@ namespace ProductivityApi.Services
                 _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
         }
 
+        public async Task<List<DmsDocsTagItem>> GetTagsAsync()
+        {
+            var items = await _repository.GetTagsAsync();
+            return items.ToList();
+        }
+
         public async Task<DmsDocsAddResult> AddLansAsync(DmsDocsAddRequest request)
         {
             var batchId = GenerateBatchId();
@@ -80,6 +87,19 @@ namespace ProductivityApi.Services
             }
 
             return result;
+        }
+
+        public async Task<List<DmsDocsBatchListItem>> GetBatchesAsync(DmsDocsGetBatchesRequest request)
+        {
+            var items = await _repository.GetBatchesAsync(request);
+            var batches = items.ToList();
+
+            foreach (var batch in batches)
+            {
+                batch.Status = batch.ActiveCount > 0 ? "Active" : "Processed";
+            }
+
+            return batches;
         }
 
         public async Task<List<DmsDocsListItem>> GetLansAsync(DmsDocsGetLansRequest? request = null)
@@ -137,6 +157,87 @@ namespace ProductivityApi.Services
 
                 _logger.LogError(ex, "DMS document fetch failed for LAN {Lan}", result.LAN);
             }
+
+            return result;
+        }
+
+        public async Task<DmsDocsDownloadResult> DownloadZipAsync(
+            DmsDocsDownloadRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var result = new DmsDocsDownloadResult
+            {
+                BatchId = request?.BatchId?.Trim() ?? string.Empty
+            };
+
+            if (!IsSafeBatchId(result.BatchId))
+                return FailDownload(result, "Valid BatchId is required.");
+
+            if (string.IsNullOrWhiteSpace(_filePath))
+                return FailDownload(result, "FilePaths:DmsDocsFilePath is required.");
+
+            if (!Directory.Exists(_filePath))
+                return FailDownload(result, $"Source path was not found: {_filePath}");
+
+            var batchDocs = await GetLansByBatchId(result.BatchId);
+            var fetchedDocs = batchDocs
+                .Where(x => string.Equals(x.DocStatus, SuccessDocStatus, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            result.TotalDocuments = fetchedDocs.Count;
+
+            if (!fetchedDocs.Any())
+                return FailDownload(result, $"No successfully fetched documents found for BatchId {result.BatchId}.");
+
+            var files = new List<(string SourceFile, string EntryName)>();
+            var entryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var doc in fetchedDocs)
+            {
+                var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
+                var sourceFile = Path.Combine(_filePath, fileName);
+
+                if (!File.Exists(sourceFile))
+                {
+                    result.MissingFiles.Add(fileName);
+                    continue;
+                }
+
+                files.Add((sourceFile, GetUniqueZipEntryName(fileName, entryNames)));
+            }
+
+            if (result.MissingFiles.Any())
+                return FailDownload(result, $"Some files are missing for BatchId {result.BatchId}.");
+
+            await using var zipStream = new MemoryStream();
+
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var file in files)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var entry = archive.CreateEntry(file.EntryName, CompressionLevel.Fastest);
+
+                    await using var sourceStream = new FileStream(
+                        file.SourceFile,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        bufferSize: 81920,
+                        useAsync: true);
+
+                    await using var entryStream = entry.Open();
+                    await sourceStream.CopyToAsync(entryStream, cancellationToken);
+
+                    result.FileCount++;
+                }
+            }
+
+            result.Success = true;
+            result.FileName = $"{BuildSafeFileName(result.BatchId)}.zip";
+            result.FileContent = zipStream.ToArray();
+            result.Message = $"{result.FileCount} file(s) added to zip.";
 
             return result;
         }
@@ -462,6 +563,13 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        private static DmsDocsDownloadResult FailDownload(DmsDocsDownloadResult result, string message)
+        {
+            result.Success = false;
+            result.Message = message;
+            return result;
+        }
+
         private static string NormalizePath(string path)
         {
             return path.Trim().TrimEnd('\\', '/');
@@ -488,6 +596,25 @@ namespace ProductivityApi.Services
         private static string GenerateBatchId()
         {
             return $"{BatchPrefix}_{DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
+        private static string GetUniqueZipEntryName(string fileName, HashSet<string> entryNames)
+        {
+            if (entryNames.Add(fileName))
+                return fileName;
+
+            var name = Path.GetFileNameWithoutExtension(fileName);
+            var extension = Path.GetExtension(fileName);
+            var counter = 2;
+
+            while (true)
+            {
+                var entryName = $"{name}_{counter}{extension}";
+                if (entryNames.Add(entryName))
+                    return entryName;
+
+                counter++;
+            }
         }
 
         private static bool IsSafeBatchId(string batchId)

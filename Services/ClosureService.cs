@@ -99,12 +99,9 @@ namespace ProductivityApi.Services
                     CreatedBy = dto.CreatedBy
                 }, connection, transaction);
 
-                if (isRetention && retentionId.HasValue)
+                if (isRetention && retentionId.HasValue && hasActiveApprovedRetention)
                 {
-                    var routeResult = hasActiveApprovedRetention
-                        ? await _repository.ApplyExistingRetentionApprovalAsync(requestId, retentionId.Value, dto.CreatedBy, connection, transaction)
-                        : await _repository.StartRetentionApprovalAsync(retentionId.Value, dto.CreatedBy, connection, transaction);
-
+                    var routeResult = await _repository.ApplyExistingRetentionApprovalAsync(requestId, retentionId.Value, dto.CreatedBy, connection, transaction);
                     shouldNotifyPendingUser = routeResult > 0;
                 }
 
@@ -197,11 +194,15 @@ namespace ProductivityApi.Services
 
                 if (isRetention && retentionId.HasValue)
                 {
-                    var routeResult = hasActiveApprovedRetention
-                        ? await _repository.ApplyExistingRetentionApprovalAsync(dto.Id, retentionId.Value, dto.UpdatedBy, connection, transaction)
-                        : await _repository.StartRetentionApprovalAsync(retentionId.Value, dto.UpdatedBy, connection, transaction);
-
-                    shouldNotifyPendingUser = routeResult > 0;
+                    if (hasActiveApprovedRetention)
+                    {
+                        var routeResult = await _repository.ApplyExistingRetentionApprovalAsync(dto.Id, retentionId.Value, dto.UpdatedBy, connection, transaction);
+                        shouldNotifyPendingUser = routeResult > 0;
+                    }
+                    else
+                    {
+                        shouldNotifyPendingUser = true;
+                    }
                 }
 
                 return updateResult;
@@ -344,7 +345,7 @@ namespace ProductivityApi.Services
 
             var result = await _repository.SubmitQuestionnaireAsync(dto, status);
 
-            if (result > 0 && dto.RetentionId is null && dto.Source == REQ_SOURCE && dto.Id.HasValue)
+            if (result > 0 && dto.Source == REQ_SOURCE && dto.Id.HasValue)
             {
                 await _repository.AddLogAsync(new AddClosureLogDto
                 {
