@@ -100,21 +100,17 @@ namespace ProductivityApi.Services
         isWaiver = dto.charges.Any(x => x.IsWaiver == 1);
 
 
-            if (IsCritical(dto.Category) || IsBucket(dto.Bucket))
-            {
-                
-                    dto.status = "New";
-                
-
-            }
-            else if (dto.SOA == 1 && dto.LOD == 0 && dto.FCL == 0) // ONLY SOA Selected
+           
+             if (dto.SOA == 1 && dto.LOD == 0 && dto.FCL == 0) // ONLY SOA Selected
             {
                 dto.status = "Auto-Approved";
             }
-
-            else if (dto.FCL == 1 || dto.LOD == 1)  //FCL or LOD Selected
+            else if (IsCritical(dto.Category) || IsBucket(dto.Bucket))
             {
-                dto.status = "New";
+
+                dto.status = "Auto-Approved";
+
+
             }
 
             else //default
