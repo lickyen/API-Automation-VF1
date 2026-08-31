@@ -96,14 +96,9 @@ namespace ProductivityApi.Services
 
             if (IsCritical(dto.Category) || IsBucket(dto.Bucket))
             {
-                if (!isWaiver) //No Waiver
-                {
-                    dto.status = "Auto-Approved";
-                }
-                else // Waiver
-                {
-                    dto.status = "Initiated";
-                }
+                
+                    dto.status = "New";
+                
 
             }
             else if (dto.SOA == 1 && dto.LOD == 0 && dto.FCL == 0) // ONLY SOA Selected
@@ -118,7 +113,7 @@ namespace ProductivityApi.Services
 
             else //default
             {
-                dto.status = "Initiated";
+                dto.status = "New";
             }
             //retentionId Logic added on 31-08-2026
             var isCritical = IsCritical(dto.Category);
