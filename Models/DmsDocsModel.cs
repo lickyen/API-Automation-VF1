@@ -116,14 +116,8 @@ namespace ProductivityApi.Models
     public class DmsDocsFetchRequest
     {
         [Required]
-        public string LAN { get; set; } = string.Empty;
-        public string UpdatedBy { get; set; } = "System";
-    }
-
-    public class DmsDocsFetchBatchRequest
-    {
-        [Required]
         public string BatchId { get; set; } = string.Empty;
+        public string LAN { get; set; } = string.Empty;
         public string UpdatedBy { get; set; } = "System";
     }
 

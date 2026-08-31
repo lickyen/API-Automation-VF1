@@ -103,33 +103,8 @@ namespace ProductivityApi.Services
             return items.ToList();
         }
 
-        public async Task<DmsDocsFetchResult> FetchDocumentAsync(
+        public async Task<DmsDocsFetchBatchResult> FetchAsync(
             DmsDocsFetchRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            var result = new DmsDocsFetchResult
-            {
-                LAN = request?.LAN?.Trim() ?? string.Empty
-            };
-
-            if (string.IsNullOrWhiteSpace(result.LAN))
-                return Fail(result, "LAN is required.");
-
-            var doc = await GetLanAsync(result.LAN);
-            if (doc == null)
-                return Fail(result, $"LAN {result.LAN} was not found.");
-
-            result.BatchId = doc.BatchId ?? string.Empty;
-
-            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy)
-                ? "System"
-                : request.UpdatedBy.Trim();
-
-            return await FetchDocumentAsync(doc, updatedBy, null, cancellationToken);
-        }
-
-        public async Task<DmsDocsFetchBatchResult> FetchBatchAsync(
-            DmsDocsFetchBatchRequest request,
             CancellationToken cancellationToken = default)
         {
             var result = new DmsDocsFetchBatchResult
@@ -140,20 +115,36 @@ namespace ProductivityApi.Services
             if (!IsSafeBatchId(result.BatchId))
                 return FailBatch(result, "Valid BatchId is required.");
 
-            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy)
+            var lan = request?.LAN?.Trim() ?? string.Empty;
+            var updatedBy = string.IsNullOrWhiteSpace(request?.UpdatedBy)
                 ? "System"
                 : request.UpdatedBy.Trim();
 
-            var docs = (await _repository.GetLansAsync(new DmsDocsGetLansRequest
-            {
-                BatchId = result.BatchId,
-                Status = "Active"
-            })).ToList();
+            var docs = string.IsNullOrWhiteSpace(lan)
+                ? (await _repository.GetLansAsync(new DmsDocsGetLansRequest
+                {
+                    BatchId = result.BatchId,
+                    Status = "Active"
+                })).ToList()
+                : (await _repository.GetLansAsync(new DmsDocsGetLansRequest
+                {
+                    BatchId = result.BatchId
+                }))
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.LAN)
+                    && string.Equals(x.LAN.Trim(), lan, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             result.TotalLans = docs.Count;
 
             if (!docs.Any())
-                return FailBatch(result, $"No active LANs found for BatchId {result.BatchId}.");
+            {
+                var message = string.IsNullOrWhiteSpace(lan)
+                    ? $"No active LANs found for BatchId {result.BatchId}."
+                    : $"LAN {lan} was not found for BatchId {result.BatchId}.";
+
+                return FailBatch(result, message);
+            }
 
             string? token;
 
@@ -166,21 +157,21 @@ namespace ProductivityApi.Services
             {
                 var errorMessage = BuildErrorMessage(ex.Message) ?? string.Empty;
 
-                foreach (var doc in docs)
+                foreach (var item in docs)
                 {
-                    await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
-                    result.Results.Add(BuildFailedFetchResult(doc, errorMessage));
+                    await TryUpdateDocStatusAsync(item.ID, ErrorDocStatus, errorMessage, updatedBy);
+                    result.Results.Add(BuildFailedFetchResult(item, errorMessage));
                 }
 
                 SetFetchBatchCounts(result);
-                _logger.LogError(ex, "DMS document batch fetch setup failed for BatchId {BatchId}", result.BatchId);
+                _logger.LogError(ex, "DMS document fetch setup failed for BatchId {BatchId}", result.BatchId);
                 return result;
             }
 
-            foreach (var doc in docs)
+            foreach (var item in docs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                result.Results.Add(await FetchDocumentAsync(doc, updatedBy, token, cancellationToken));
+                result.Results.Add(await FetchDocumentAsync(item, updatedBy, token, cancellationToken));
             }
 
             SetFetchBatchCounts(result);
@@ -284,15 +275,6 @@ namespace ProductivityApi.Services
             result.Message = $"{result.FileCount} file(s) added to zip.";
 
             return result;
-        }
-
-        private async Task<DmsDocsListItem?> GetLanAsync(string lan)
-        {
-            var docs = await _repository.GetLansAsync();
-
-            return docs.FirstOrDefault(x =>
-                !string.IsNullOrWhiteSpace(x.LAN)
-                && string.Equals(x.LAN.Trim(), lan, StringComparison.OrdinalIgnoreCase));
         }
 
         private async Task<List<DmsDocsListItem>> GetLansByBatchId(string batchId)

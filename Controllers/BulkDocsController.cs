@@ -16,12 +16,11 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("lans")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> Upload([FromForm] BulkDocUploadRequest request)
+        public async Task<IActionResult> AddLans([FromBody] BulkDocsAddRequest request)
         {
             try
             {
-                var result = await _service.UploadAsync(request.File, request.CreatedBy);
+                var result = await _service.AddLansAsync(request);
 
                 return result.RowsAdded == 0
                     ? BadRequest(new Response(false, result, "No LANs were added."))
@@ -59,20 +58,10 @@ namespace ProductivityApi.Controllers
             [FromBody] BulkDocsFetchRequest request,
             CancellationToken cancellationToken)
         {
-            var result = await _service.FetchDocumentAsync(request, cancellationToken);
-
-            return Ok(new Response(result.Success, result, result.DocStatus));
-        }
-
-        [HttpPost("fetch/batch")]
-        public async Task<IActionResult> FetchBatch(
-            [FromBody] BulkDocsFetchBatchRequest request,
-            CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(request.BatchId))
+            if (string.IsNullOrWhiteSpace(request?.BatchId))
                 return BadRequest(new Response(false, null, "BatchId is required."));
 
-            var result = await _service.FetchBatchAsync(request, cancellationToken);
+            var result = await _service.FetchAsync(request, cancellationToken);
 
             return Ok(new Response(result.Success, result, result.Message));
         }

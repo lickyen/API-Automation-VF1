@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
 
 namespace ProductivityApi.Models
 {
@@ -29,6 +28,14 @@ namespace ProductivityApi.Models
         public DateTime? ToDate { get; set; }
     }
 
+    public class BulkDocsAddRequest
+    {
+        [Required]
+        public List<BulkDocItem> Lans { get; set; } = new();
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+    }
+
     public class BulkDocsGetBatchesRequest
     {
         [Required]
@@ -45,16 +52,9 @@ namespace ProductivityApi.Models
 
     public class BulkDocsFetchRequest
     {
-        public string BatchId { get; set; } = string.Empty;
         [Required]
+        public string BatchId { get; set; } = string.Empty;
         public string Lan { get; set; } = string.Empty;
-        public string UpdatedBy { get; set; } = "System";
-    }
-
-    public class BulkDocsFetchBatchRequest
-    {
-        [Required]
-        public string BatchId { get; set; } = string.Empty;
         public string UpdatedBy { get; set; } = "System";
     }
 
@@ -62,14 +62,6 @@ namespace ProductivityApi.Models
     {
         [Required]
         public string BatchId { get; set; } = string.Empty;
-    }
-
-    public class BulkDocUploadRequest
-    {
-        [Required]
-        public IFormFile File { get; set; }
-        [Required]
-        public string CreatedBy { get; set; } = string.Empty;
     }
 
     public class BulkDocsAddResult
