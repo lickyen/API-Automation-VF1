@@ -9,7 +9,7 @@ namespace ProductivityApi.Services
 {
     public class ZeroBalanceDayService
     {
-        private const int DepositSlipMaxSizeBytes = 100 * 1024;
+        private const int DepositSlipMaxSizeBytes = 10 * 1024 * 1024;
         private static readonly string[] DepositSlipExtensions = { ".pdf", ".jpg", ".jpeg", ".png" };
 
         private readonly ZeroBalanceDayRepository _repository;
