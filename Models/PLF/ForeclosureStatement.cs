@@ -23,5 +23,6 @@
         public decimal Charges { get; set; }
         public decimal TotalOutstanding { get; set; }
         public decimal TotalOutstandingExclFc { get; set; }
+        public decimal TotalOutstandingExclFcBpi { get; set; }
     }
 }
