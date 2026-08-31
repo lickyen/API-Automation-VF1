@@ -53,6 +53,8 @@ namespace ProductivityApi.Repository
                 soa.Payments = (await multi.ReadFirstOrDefaultAsync<SOALODFCLPayment>());
                 soa.Logs = (await multi.ReadAsync<SOALog>()).ToList();
                 soa.Charges = (await multi.ReadAsync<SOALODCharges>()).ToList();
+                soa.AdditionalData =
+     (await multi.ReadFirstOrDefaultAsync<LanAdditionalData>());
             }
 
             return soa;
@@ -154,6 +156,28 @@ namespace ProductivityApi.Repository
             parameters.Add("@RetentionId", RetentionId);
             parameters.Add("@IsRetention", IsRetention);
             parameters.Add("@Request_Type", REQ_SOURCE);
+
+            parameters.Add("@BusinessProfile", dto.AdditionalData.BusinessProfile);
+            parameters.Add("@CurrentPOS", dto.AdditionalData.CurrentPOS);
+            parameters.Add("@CurrentMOB", dto.AdditionalData.CurrentMOB);
+            parameters.Add("@ProductDesc", dto.AdditionalData.ProductDesc);
+            parameters.Add("@PromotionDesc", dto.AdditionalData.PromotionDesc);
+            parameters.Add("@DisbursedAmt", dto.AdditionalData.DisbursedAmt);
+            parameters.Add("@TranchePendingAmount", dto.AdditionalData.TranchePendingAmount);
+            parameters.Add("@CurrentLTVPer", dto.AdditionalData.CurrentLTVPer);
+            parameters.Add("@CurrentLTVAmt", dto.AdditionalData.CurrentLTVAmt);
+            parameters.Add("@CurrentDSR", dto.AdditionalData.CurrentDSR);
+            parameters.Add("@Income", dto.AdditionalData.Income);
+            parameters.Add("@CIBILScore", dto.AdditionalData.CIBILScore);
+            parameters.Add("@Obligation", dto.AdditionalData.Obligation);
+            parameters.Add("@Valuation", dto.AdditionalData.Valuation);
+            parameters.Add("@EndUseDesc", dto.AdditionalData.EndUseDesc);
+            parameters.Add("@TypeOfProperty", dto.AdditionalData.TypeOfProperty);
+            parameters.Add("@CurrentROI", dto.AdditionalData.CurrentROI);
+            parameters.Add("@LastEMIPaid", dto.AdditionalData.LastEMIPaid);
+            parameters.Add("@EMIPending", dto.AdditionalData.EMIPending);
+
+
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
