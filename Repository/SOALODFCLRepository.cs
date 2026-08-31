@@ -53,6 +53,8 @@ namespace ProductivityApi.Repository
                 soa.Payments = (await multi.ReadFirstOrDefaultAsync<SOALODFCLPayment>());
                 soa.Logs = (await multi.ReadAsync<SOALog>()).ToList();
                 soa.Charges = (await multi.ReadAsync<SOALODCharges>()).ToList();
+                soa.AdditionalData =
+     (await multi.ReadFirstOrDefaultAsync<LanAdditionalData>());
             }
 
             return soa;

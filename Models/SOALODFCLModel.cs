@@ -102,6 +102,9 @@ namespace ProductivityApi.Models
         public string? NOCLOD_FileName { get; set; }
         public string? Receipt_Path { get; set; }
         public int RetentionId { get; set; }
+        public LanAdditionalData AdditionalData { get; set; }
+
+        public List<ClosureQuestionnaireResponse> Questionnaire { get; set; }
 
     }
     public class SOALog
@@ -235,6 +238,7 @@ namespace ProductivityApi.Models
         public List<AddChargesDto> charges { get; set; }
         public LanAdditionalData AdditionalData { get; set; }
     }
+    
     public class AddChargesDto
     {
         public int? TID { get; set; }

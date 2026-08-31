@@ -57,6 +57,7 @@ namespace ProductivityApi.Services
         public async Task<SOADashboard?> GetSettlementByIdAsync(int id)
         {
             var result = await _repository.GetSettlementByIdAsync(id);
+            result.Questionnaire = await _crepository.GetQuestionnaireAsync(id, "SOA/LOD/FCL", result.RetentionId);
             return result;
         }
         //public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
