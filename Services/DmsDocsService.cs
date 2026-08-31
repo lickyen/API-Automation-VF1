@@ -10,15 +10,10 @@ namespace ProductivityApi.Services
         private const string SuccessDocStatus = "Success";
         private const string ErrorDocStatus = "Error";
         private const int MaxErrorMessageLength = 4000;
-        private const string BatchPrefix = "DMSDOCS";
-        private const string CompletedStatus = "COMPLETED";
-        private const string PartialStatus = "PARTIAL";
-        private const string FailedStatus = "FAILED";
-        private static readonly string[] AllowedNetworkRoots =
-        {
-            @"\\172.16.1.28\IT-FIN-Share",
-            @"\\172.16.1.28\ITTeam"
-        };
+        private const long MaxDownloadZipBytes = 250L * 1024 * 1024;
+        private const int MaxBatchIdLength = 50;
+        private const int BatchTimestampLength = 15;
+        private const string BatchIdFallbackPrefix = "USER";
 
         private readonly DmsDocsRepository _repository;
         private readonly HttpClient _httpClient;
@@ -50,7 +45,7 @@ namespace ProductivityApi.Services
 
         public async Task<DmsDocsAddResult> AddLansAsync(DmsDocsAddRequest request)
         {
-            var batchId = GenerateBatchId();
+            var batchId = GenerateBatchId(request.CreatedBy);
             var result = new DmsDocsAddResult
             {
                 BatchId = batchId
@@ -130,34 +125,65 @@ namespace ProductivityApi.Services
                 ? "System"
                 : request.UpdatedBy.Trim();
 
+            return await FetchDocumentAsync(doc, updatedBy, null, cancellationToken);
+        }
+
+        public async Task<DmsDocsFetchBatchResult> FetchBatchAsync(
+            DmsDocsFetchBatchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var result = new DmsDocsFetchBatchResult
+            {
+                BatchId = request?.BatchId?.Trim() ?? string.Empty
+            };
+
+            if (!IsSafeBatchId(result.BatchId))
+                return FailBatch(result, "Valid BatchId is required.");
+
+            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy)
+                ? "System"
+                : request.UpdatedBy.Trim();
+
+            var docs = (await _repository.GetLansAsync(new DmsDocsGetLansRequest
+            {
+                BatchId = result.BatchId,
+                Status = "Active"
+            })).ToList();
+
+            result.TotalLans = docs.Count;
+
+            if (!docs.Any())
+                return FailBatch(result, $"No active LANs found for BatchId {result.BatchId}.");
+
+            string? token;
+
             try
             {
                 ValidateFetchConfiguration();
-
-                var token = await GetAuthenticationTokenAsync(cancellationToken);
-                var documentBytes = await GetDocumentBytesAsync(doc, token, cancellationToken);
-                var fileName = await SaveDocumentAsync(doc.LAN, documentBytes, cancellationToken);
-
-                await UpdateDocStatusAsync(doc.ID, SuccessDocStatus, null, updatedBy);
-
-                result.Success = true;
-                result.DocStatus = SuccessDocStatus;
-                result.FileName = fileName;
-                result.Message = "Document fetched successfully.";
+                token = await GetAuthenticationTokenAsync(cancellationToken);
             }
             catch (Exception ex)
             {
-                var errorMessage = BuildErrorMessage(ex.Message);
-                await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
+                var errorMessage = BuildErrorMessage(ex.Message) ?? string.Empty;
 
-                result.Success = false;
-                result.DocStatus = ErrorDocStatus;
-                result.ErrorMessage = errorMessage;
-                result.Message = errorMessage;
+                foreach (var doc in docs)
+                {
+                    await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
+                    result.Results.Add(BuildFailedFetchResult(doc, errorMessage));
+                }
 
-                _logger.LogError(ex, "DMS document fetch failed for LAN {Lan}", result.LAN);
+                SetFetchBatchCounts(result);
+                _logger.LogError(ex, "DMS document batch fetch setup failed for BatchId {BatchId}", result.BatchId);
+                return result;
             }
 
+            foreach (var doc in docs)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                result.Results.Add(await FetchDocumentAsync(doc, updatedBy, token, cancellationToken));
+            }
+
+            SetFetchBatchCounts(result);
             return result;
         }
 
@@ -167,7 +193,8 @@ namespace ProductivityApi.Services
         {
             var result = new DmsDocsDownloadResult
             {
-                BatchId = request?.BatchId?.Trim() ?? string.Empty
+                BatchId = request?.BatchId?.Trim() ?? string.Empty,
+                MaxAllowedBytes = MaxDownloadZipBytes
             };
 
             if (!IsSafeBatchId(result.BatchId))
@@ -180,6 +207,15 @@ namespace ProductivityApi.Services
                 return FailDownload(result, $"Source path was not found: {_filePath}");
 
             var batchDocs = await GetLansByBatchId(result.BatchId);
+            if (!batchDocs.Any())
+                return FailDownload(result, $"No LANs found for BatchId {result.BatchId}.");
+
+            var batchFolderPath = GetBatchFolderPath(result.BatchId, batchDocs.First().CreatedBy);
+            result.SourcePath = batchFolderPath;
+
+            if (!Directory.Exists(batchFolderPath))
+                return FailDownload(result, $"Batch folder was not found: {batchFolderPath}");
+
             var fetchedDocs = batchDocs
                 .Where(x => string.Equals(x.DocStatus, SuccessDocStatus, StringComparison.OrdinalIgnoreCase))
                 .ToList();
@@ -195,7 +231,7 @@ namespace ProductivityApi.Services
             foreach (var doc in fetchedDocs)
             {
                 var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
-                var sourceFile = Path.Combine(_filePath, fileName);
+                var sourceFile = Path.Combine(batchFolderPath, fileName);
 
                 if (!File.Exists(sourceFile))
                 {
@@ -203,11 +239,19 @@ namespace ProductivityApi.Services
                     continue;
                 }
 
+                result.TotalBytes += new FileInfo(sourceFile).Length;
                 files.Add((sourceFile, GetUniqueZipEntryName(fileName, entryNames)));
             }
 
             if (result.MissingFiles.Any())
                 return FailDownload(result, $"Some files are missing for BatchId {result.BatchId}.");
+
+            if (result.TotalBytes > MaxDownloadZipBytes)
+            {
+                return FailDownload(
+                    result,
+                    $"Batch size is {FormatBytes(result.TotalBytes)}. Maximum allowed download size is {FormatBytes(MaxDownloadZipBytes)}.");
+            }
 
             await using var zipStream = new MemoryStream();
 
@@ -242,128 +286,6 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        public async Task<DmsDocsCopyResult> CopyDocumentsAsync(
-            DmsDocsCopyRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            var result = new DmsDocsCopyResult
-            {
-                SourcePath = _filePath
-            };
-
-            if (request == null)
-                return FailCopy(result, "Request is required.");
-
-            var batchId = request.BatchId?.Trim() ?? string.Empty;
-            result.BatchId = batchId;
-
-            if (!IsSafeBatchId(batchId))
-                return FailCopy(result, "Valid BatchId is required.");
-
-            var batchDocs = await GetLansByBatchId(batchId);
-            if (!batchDocs.Any())
-                return FailCopy(result, $"No LANs found for BatchId {batchId}.");
-
-            if (string.IsNullOrWhiteSpace(request.DestinationPath))
-                return FailCopy(result, "Destination path is required.");
-
-            var destinationBasePath = NormalizePath(request.DestinationPath);
-            result.DestinationBasePath = destinationBasePath;
-
-            if (!destinationBasePath.StartsWith(@"\\"))
-                return FailCopy(result, "Destination path must be a UNC path.");
-
-            if (!IsAllowedNetworkPath(destinationBasePath))
-                return FailCopy(result, $"Destination path must be under one of: {string.Join(", ", AllowedNetworkRoots)}.");
-
-            if (ContainsParentTraversal(destinationBasePath))
-                return FailCopy(result, "Destination path cannot contain parent directory traversal.");
-
-            if (string.IsNullOrWhiteSpace(_filePath))
-                return FailCopy(result, "FilePaths:DmsDocsFilePath is required.");
-
-            if (!Directory.Exists(_filePath))
-                return FailCopy(result, $"Source path was not found: {_filePath}");
-
-            var destinationFolderName = batchId;
-            var destinationPath = Path.Combine(destinationBasePath, destinationFolderName);
-
-            result.DestinationFolderName = destinationFolderName;
-            result.DestinationPath = destinationPath;
-            result.TotalFiles = batchDocs.Count;
-
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                Directory.CreateDirectory(destinationPath);
-
-                foreach (var doc in batchDocs)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var sourceFile = Path.Combine(_filePath, $"{BuildSafeFileName(doc.LAN)}.pdf");
-                    var fileName = Path.GetFileName(sourceFile);
-                    var destinationFile = Path.Combine(destinationPath, fileName);
-                    var item = new DmsDocsCopyItemResult
-                    {
-                        BatchId = batchId,
-                        LAN = doc.LAN,
-                        FileName = fileName,
-                        SourceFilePath = sourceFile,
-                        DestinationFilePath = destinationFile
-                    };
-
-                    result.Items.Add(item);
-
-                    try
-                    {
-                        if (!File.Exists(sourceFile))
-                            throw new FileNotFoundException($"Source file was not found: {fileName}", sourceFile);
-
-                        File.Copy(sourceFile, destinationFile, overwrite: true);
-                        result.CopiedFiles++;
-
-                        File.Delete(sourceFile);
-                        result.DeletedFiles++;
-
-                        item.Success = true;
-                        item.SourceDeleted = true;
-                        item.Message = $"Copied to {destinationFile}.";
-                    }
-                    catch (Exception ex)
-                    {
-                        result.FailedFiles++;
-
-                        item.Success = false;
-                        item.Message = ex.Message;
-
-                        _logger.LogError(ex, "Failed to copy/delete DMS document {FileName}", fileName);
-                    }
-                }
-
-                result.Success = result.FailedFiles == 0;
-                result.Status = GetBatchStatus(result.TotalFiles, result.CopiedFiles, result.FailedFiles);
-                result.Message = result.Success
-                    ? $"{result.CopiedFiles} file(s) copied to {destinationPath}."
-                    : $"{result.CopiedFiles} file(s) copied, {result.FailedFiles} failed. Destination: {destinationPath}";
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                result.Success = false;
-                result.Status = FailedStatus;
-                result.Message = ex.Message;
-
-                _logger.LogError(ex, "DMS document copy failed");
-            }
-
-            return result;
-        }
-
         private async Task<DmsDocsListItem?> GetLanAsync(string lan)
         {
             var docs = await _repository.GetLansAsync();
@@ -381,6 +303,52 @@ namespace ProductivityApi.Services
             });
 
             return docs.ToList();
+        }
+
+        private async Task<DmsDocsFetchResult> FetchDocumentAsync(
+            DmsDocsListItem doc,
+            string updatedBy,
+            string? token,
+            CancellationToken cancellationToken)
+        {
+            var result = new DmsDocsFetchResult
+            {
+                BatchId = doc.BatchId ?? string.Empty,
+                LAN = doc.LAN?.Trim() ?? string.Empty
+            };
+
+            try
+            {
+                ValidateFetchConfiguration();
+
+                var authToken = string.IsNullOrWhiteSpace(token)
+                    ? await GetAuthenticationTokenAsync(cancellationToken)
+                    : token;
+
+                var documentBytes = await GetDocumentBytesAsync(doc, authToken, cancellationToken);
+                var fileName = await SaveDocumentAsync(doc, documentBytes, cancellationToken);
+
+                await UpdateDocStatusAsync(doc.ID, SuccessDocStatus, null, updatedBy);
+
+                result.Success = true;
+                result.DocStatus = SuccessDocStatus;
+                result.FileName = fileName;
+                result.Message = "Document fetched successfully.";
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = BuildErrorMessage(ex.Message) ?? string.Empty;
+                await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
+
+                result.Success = false;
+                result.DocStatus = ErrorDocStatus;
+                result.ErrorMessage = errorMessage;
+                result.Message = errorMessage;
+
+                _logger.LogError(ex, "DMS document fetch failed for BatchId {BatchId}, LAN {Lan}", result.BatchId, result.LAN);
+            }
+
+            return result;
         }
 
         private async Task<string> GetAuthenticationTokenAsync(CancellationToken cancellationToken)
@@ -449,14 +417,15 @@ namespace ProductivityApi.Services
         }
 
         private async Task<string> SaveDocumentAsync(
-            string lan,
+            DmsDocsListItem doc,
             byte[] documentBytes,
             CancellationToken cancellationToken)
         {
-            Directory.CreateDirectory(_filePath);
+            var batchFolderPath = GetBatchFolderPath(doc.BatchId, doc.CreatedBy);
+            Directory.CreateDirectory(batchFolderPath);
 
-            var fileName = $"{BuildSafeFileName(lan)}.pdf";
-            var fullPath = Path.Combine(_filePath, fileName);
+            var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
+            var fullPath = Path.Combine(batchFolderPath, fileName);
 
             await File.WriteAllBytesAsync(fullPath, documentBytes, cancellationToken);
 
@@ -555,12 +524,32 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        private static DmsDocsCopyResult FailCopy(DmsDocsCopyResult result, string message)
+        private static DmsDocsFetchBatchResult FailBatch(DmsDocsFetchBatchResult result, string message)
         {
             result.Success = false;
-            result.Status = FailedStatus;
             result.Message = message;
             return result;
+        }
+
+        private static DmsDocsFetchResult BuildFailedFetchResult(DmsDocsListItem doc, string errorMessage)
+        {
+            return new DmsDocsFetchResult
+            {
+                BatchId = doc.BatchId ?? string.Empty,
+                LAN = doc.LAN?.Trim() ?? string.Empty,
+                Success = false,
+                DocStatus = ErrorDocStatus,
+                ErrorMessage = errorMessage,
+                Message = errorMessage
+            };
+        }
+
+        private static void SetFetchBatchCounts(DmsDocsFetchBatchResult result)
+        {
+            result.SuccessCount = result.Results.Count(x => x.Success);
+            result.ErrorCount = result.Results.Count(x => !x.Success);
+            result.Success = result.TotalLans > 0 && result.ErrorCount == 0;
+            result.Message = $"{result.SuccessCount} succeeded, {result.ErrorCount} failed.";
         }
 
         private static DmsDocsDownloadResult FailDownload(DmsDocsDownloadResult result, string message)
@@ -570,32 +559,49 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        private static string NormalizePath(string path)
+        private string GetBatchFolderPath(string batchId, string? createdBy)
         {
-            return path.Trim().TrimEnd('\\', '/');
+            return Path.Combine(
+                _filePath,
+                BuildSafePathSegment(createdBy, "UNKNOWN"),
+                BuildSafeFileName(batchId));
         }
 
-        private static bool IsAllowedNetworkPath(string networkPath)
+        private static string GenerateBatchId(string createdBy)
         {
-            return AllowedNetworkRoots.Any(root =>
+            var safePrefix = BuildSafeBatchIdPrefix(createdBy);
+            return $"{safePrefix}_{DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
+        private static string BuildSafeBatchIdPrefix(string? value)
+        {
+            var input = (value ?? string.Empty).Trim();
+            var chars = new char[input.Length];
+
+            for (var i = 0; i < input.Length; i++)
             {
-                var allowedRoot = NormalizePath(root);
+                var ch = input[i];
+                chars[i] = char.IsLetterOrDigit(ch) || ch == '_' || ch == '-'
+                    ? ch
+                    : '_';
+            }
 
-                return string.Equals(networkPath, allowedRoot, StringComparison.OrdinalIgnoreCase)
-                    || networkPath.StartsWith($"{allowedRoot}\\", StringComparison.OrdinalIgnoreCase);
-            });
+            var prefix = new string(chars).Trim('_', '-');
+            if (string.IsNullOrWhiteSpace(prefix))
+                return BatchIdFallbackPrefix;
+
+            var maxPrefixLength = MaxBatchIdLength - BatchTimestampLength - 1;
+            if (prefix.Length > maxPrefixLength)
+                prefix = prefix.Substring(0, maxPrefixLength).Trim('_', '-');
+
+            return string.IsNullOrWhiteSpace(prefix)
+                ? BatchIdFallbackPrefix
+                : prefix;
         }
 
-        private static bool ContainsParentTraversal(string path)
-        {
-            return path
-                .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
-                .Any(part => part == "..");
-        }
-
-        private static string GenerateBatchId()
-        {
-            return $"{BatchPrefix}_{DateTime.Now:yyyyMMdd_HHmmss}";
+        private static string FormatBytes(long bytes)
+        {   
+            return $"{bytes / 1024d / 1024d:0.##} MB";
         }
 
         private static string GetUniqueZipEntryName(string fileName, HashSet<string> entryNames)
@@ -623,15 +629,17 @@ namespace ProductivityApi.Services
                 && batchId.All(ch => char.IsLetterOrDigit(ch) || ch == '_' || ch == '-');
         }
 
-        private static string GetBatchStatus(int totalFiles, int copiedFiles, int failedFiles)
+        private static string BuildSafePathSegment(string? value, string fallback)
         {
-            if (totalFiles > 0 && copiedFiles == totalFiles && failedFiles == 0)
-                return CompletedStatus;
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var safeName = new string((value ?? string.Empty)
+                .Select(ch => invalidChars.Contains(ch) ? '_' : ch)
+                .ToArray())
+                .Trim();
 
-            if (copiedFiles > 0)
-                return PartialStatus;
-
-            return FailedStatus;
+            return string.IsNullOrWhiteSpace(safeName)
+                ? fallback
+                : safeName;
         }
     }
 }

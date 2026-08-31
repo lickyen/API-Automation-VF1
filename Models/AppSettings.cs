@@ -96,6 +96,7 @@ namespace ProductivityApi.Models
         public string BTFilePath { get; set; } = string.Empty;
         public string NOCFilePath { get; set; } = string.Empty;
         public string BulkFclFilePath { get; set; } = string.Empty;
+        public string BulkDocsFilePath { get; set; } = string.Empty;
         public string DmsDocsFilePath { get; set; } = string.Empty;
         public string ZeroBalanceDayFilePath { get; set; } = string.Empty;
     }
