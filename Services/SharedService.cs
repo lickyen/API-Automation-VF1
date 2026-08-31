@@ -183,7 +183,8 @@ namespace ProductivityApi.Services
                 Interest = Interest,
                 Charges = Charges,
                 TotalOutstanding = Pos + Interest + Charges,
-                TotalOutstandingExclFc = Pos + InterestExclBpi + ChargesExclFc  
+                TotalOutstandingExclFc = Pos + Interest + ChargesExclFc, 
+                TotalOutstandingExclFcBpi = Pos + InterestExclBpi + ChargesExclFc  
             };
 
             return (statement, response.ReturnStatus.returnText);
