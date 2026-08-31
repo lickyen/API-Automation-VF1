@@ -233,6 +233,7 @@ namespace ProductivityApi.Models
         public string CreatedBy { get; set; }
         public DateTime DisbDate { get; set; }
         public List<AddChargesDto> charges { get; set; }
+        public LanAdditionalData AdditionalData { get; set; }
     }
     public class AddChargesDto
     {
@@ -464,6 +465,30 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
 
+    }
+
+    public class LanAdditionalData
+    {
+        public string? BusinessProfile { get; set; }
+        public decimal? CurrentPOS { get; set; }
+        public int? CurrentMOB { get; set; }
+        public string? ProductDesc { get; set; }
+        public string? PromotionDesc { get; set; }
+        public decimal? DisbursedAmt { get; set; }
+        public decimal? TranchePendingAmount { get; set; }
+        public decimal? CurrentLTVPer { get; set; }
+        public decimal? CurrentLTVAmt { get; set; }
+        public decimal? CurrentDSR { get; set; }
+        public decimal? Income { get; set; }
+        public int? CIBILScore { get; set; }
+        public decimal? Obligation { get; set; }
+        public int? Tenure { get; set; }
+        public decimal? Valuation { get; set; }
+        public string? EndUseDesc { get; set; }
+        public string? TypeOfProperty { get; set; }
+        public decimal? CurrentROI { get; set; }
+        public DateTime? LastEMIPaid { get; set; }
+        public int? EMIPending { get; set; }
     }
 }
 

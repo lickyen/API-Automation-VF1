@@ -132,7 +132,7 @@ namespace ProductivityApi.Services
                 }
                 else
                 {
-                    retentionId = await _crepository.CreateRetentionAsync(dto.LAN, REQ_SOURCE, null, dto.CreatedBy);
+                    retentionId = await _crepository.CreateRetentionAsync(dto.LAN, "SOA/LOD/FCL", null, dto.CreatedBy);
                    
                 }
             }
