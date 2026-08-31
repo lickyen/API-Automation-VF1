@@ -125,7 +125,7 @@ namespace ProductivityApi.Repository
 
             return parameters.Get<int>("@Output");
         }
-        public async Task<int> CreateSOALODFCLAsync(CreateSOALODDto dto)
+        public async Task<int> CreateSOALODFCLAsync(CreateSOALODDto dto, int? RetentionId,int IsRetention, string REQ_SOURCE)
         {
             using var conn = new SqlConnection(_conStr);
 
@@ -151,6 +151,9 @@ namespace ProductivityApi.Repository
             parameters.Add("@status", dto.status);
             parameters.Add("@remarks", dto.remarks);
             parameters.Add("@CreatedBy", dto.CreatedBy);
+            parameters.Add("@RetentionId", RetentionId);
+            parameters.Add("@IsRetention", IsRetention);
+            parameters.Add("@Request_Type", REQ_SOURCE);
 
             parameters.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
