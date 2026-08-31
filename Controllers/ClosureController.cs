@@ -174,18 +174,6 @@ namespace ProductivityApi.Controllers
         [HttpGet("getByUser")]
         public async Task<IActionResult> GetListByUser([FromQuery] GetClosureListDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.UserId))
-                return BadRequest(new Response(false, null, "User ID is required"));
-
-            if (string.IsNullOrWhiteSpace(request.Role))
-                return BadRequest(new Response(false, null, "Role is required"));
-
-            if (request.PageNumber < 1)
-                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
-
-            if (request.PageSize < 1 || request.PageSize > 100)
-                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
-
             var data = await _service.GetListByUserAsync(request);
             return Ok(new Response(
                 true,
@@ -368,12 +356,6 @@ namespace ProductivityApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
         {
-            if (request.PageNumber < 1)
-                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
-
-            if (request.PageSize < 1 || request.PageSize > 100)
-                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
-
             var result = await _service.GetAllAsync(request);
 
             return Ok(new Response(

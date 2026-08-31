@@ -450,8 +450,12 @@ namespace ProductivityApi.Models
     // ── Get List ────────────────────────────────────────────────────────
     public class GetClosureListDto : PaginationRequestDto
     {
-        public string UserId { get; set; }
-        public string Role { get; set; }
+        [Required(ErrorMessage = "User ID is required")]
+        public string UserId { get; set; } = String.Empty;
+
+        [Required(ErrorMessage = "Role is required")]
+        public string Role { get; set; } = String.Empty;
+
         public string? Status { get; set; }
     }
 

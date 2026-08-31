@@ -7,7 +7,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_newClosure_GetByUser]
     ,@Role       VARCHAR(50)
     ,@Status     VARCHAR(20) = 'All'
     ,@PageNumber INT = 1
-    ,@PageSize   INT = 20
+    ,@PageSize   INT = 10
     ,@Search     NVARCHAR(100) = NULL
 )
 AS
@@ -19,7 +19,7 @@ BEGIN
     SET @PageNumber = CASE WHEN ISNULL(@PageNumber, 1) < 1 THEN 1 ELSE @PageNumber END;
     SET @PageSize =
         CASE
-            WHEN ISNULL(@PageSize, 20) < 1 THEN 20
+            WHEN ISNULL(@PageSize, 10) < 1 THEN 10
             WHEN @PageSize > 100 THEN 100
             ELSE @PageSize
         END;
