@@ -101,6 +101,7 @@ namespace ProductivityApi.Models
         public string? FCL_FileName { get; set; }
         public string? NOCLOD_FileName { get; set; }
         public string? Receipt_Path { get; set; }
+        public int RetentionId { get; set; }
 
     }
     public class SOALog
