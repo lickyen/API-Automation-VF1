@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using ClosedXML.Excel;
 using Newtonsoft.Json;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
@@ -36,27 +35,18 @@ namespace ProductivityApi.Services
             _logger = logger;
         }
 
-        public async Task<BulkDocsAddResult> UploadAsync(IFormFile file, string createdBy)
+        public async Task<BulkDocsAddResult> AddLansAsync(BulkDocsAddRequest request)
         {
-            if (file == null || file.Length == 0)
-                throw new ArgumentException("File is required.");
+            if (request == null)
+                throw new ArgumentException("Request is required.");
 
+            return await AddItemsAsync(request.Lans, request.CreatedBy);
+        }
+
+        private async Task<BulkDocsAddResult> AddItemsAsync(IEnumerable<BulkDocItem>? items, string createdBy)
+        {
             if (string.IsNullOrWhiteSpace(createdBy))
                 throw new ArgumentException("CreatedBy is required.");
-
-            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (ext != ".xlsx" && ext != ".xls")
-                throw new ArgumentException("Invalid file type. Please upload an Excel file.");
-
-            List<BulkDocItem> items;
-
-            using (var stream = file.OpenReadStream())
-            {
-                items = ReadItemsFromExcel(stream);
-            }
-
-            if (items.Count == 0)
-                throw new ArgumentException("No records found in the uploaded file.");
 
             var batchId = GenerateBatchId(createdBy);
             var result = new BulkDocsAddResult
@@ -64,21 +54,50 @@ namespace ProductivityApi.Services
                 BatchId = batchId
             };
 
+            if (items == null || !items.Any())
+            {
+                result.Errors.Add("No LANs provided.");
+                return result;
+            }
+
+            var trimmedCreatedBy = createdBy.Trim();
+
             foreach (var item in items)
             {
+                if (item == null || string.IsNullOrWhiteSpace(item.Lan))
+                {
+                    result.Errors.Add("Empty LAN skipped.");
+                    continue;
+                }
+
+                var normalizedItem = new BulkDocItem
+                {
+                    Lan = item.Lan.Trim(),
+                    DocType = string.IsNullOrWhiteSpace(item.DocType) ? SoaDocCode : item.DocType.Trim(),
+                    FromDate = item.FromDate,
+                    ToDate = item.ToDate
+                };
+
+                if (IsSoaDocument(normalizedItem.DocType)
+                    && (!normalizedItem.FromDate.HasValue || !normalizedItem.ToDate.HasValue))
+                {
+                    result.Errors.Add($"LAN {normalizedItem.Lan}: FromDate and ToDate are required when DocType is SOA.");
+                    continue;
+                }
+
                 try
                 {
-                    var output = await _repository.AddLanAsync(item, createdBy.Trim(), batchId);
+                    var output = await _repository.AddLanAsync(normalizedItem, trimmedCreatedBy, batchId);
                     if (output == 1)
                         result.RowsAdded++;
                     else if (output == -1)
-                        result.Errors.Add($"LAN {item.Lan}: Already exists in this batch.");
+                        result.Errors.Add($"LAN {normalizedItem.Lan}: Already exists in this batch.");
                     else
-                        result.Errors.Add($"LAN {item.Lan}: Could not be added.");
+                        result.Errors.Add($"LAN {normalizedItem.Lan}: Could not be added.");
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"LAN {item.Lan}: {ex.Message}");
+                    result.Errors.Add($"LAN {normalizedItem.Lan}: {ex.Message}");
                 }
             }
 
@@ -103,44 +122,8 @@ namespace ProductivityApi.Services
             return items.ToList();
         }
 
-        public async Task<BulkDocsFetchResult> FetchDocumentAsync(
+        public async Task<BulkDocsFetchBatchResult> FetchAsync(
             BulkDocsFetchRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            var result = new BulkDocsFetchResult
-            {
-                BatchId = request?.BatchId?.Trim() ?? string.Empty,
-                Lan = request?.Lan?.Trim() ?? string.Empty
-            };
-
-            if (!string.IsNullOrWhiteSpace(result.BatchId) && !IsSafeBatchId(result.BatchId))
-                return Fail(result, "Valid BatchId is required.");
-
-            if (string.IsNullOrWhiteSpace(result.Lan))
-                return Fail(result, "LAN is required.");
-
-            var doc = string.IsNullOrWhiteSpace(result.BatchId)
-                ? await GetLanAsync(result.Lan)
-                : await GetLanAsync(result.BatchId, result.Lan);
-
-            if (doc == null)
-            {
-                var message = string.IsNullOrWhiteSpace(result.BatchId)
-                    ? $"LAN {result.Lan} was not found."
-                    : $"LAN {result.Lan} was not found for BatchId {result.BatchId}.";
-
-                return Fail(result, message);
-            }
-
-            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy)
-                ? "System"
-                : request.UpdatedBy.Trim();
-
-            return await FetchDocumentAsync(doc, updatedBy, cancellationToken);
-        }
-
-        public async Task<BulkDocsFetchBatchResult> FetchBatchAsync(
-            BulkDocsFetchBatchRequest request,
             CancellationToken cancellationToken = default)
         {
             var result = new BulkDocsFetchBatchResult
@@ -151,25 +134,41 @@ namespace ProductivityApi.Services
             if (!IsSafeBatchId(result.BatchId))
                 return FailBatch(result, "Valid BatchId is required.");
 
-            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy)
+            var lan = request?.Lan?.Trim() ?? string.Empty;
+            var updatedBy = string.IsNullOrWhiteSpace(request?.UpdatedBy)
                 ? "System"
                 : request.UpdatedBy.Trim();
 
-            var docs = (await _repository.GetLansAsync(new BulkDocsGetLansRequest
-            {
-                BatchId = result.BatchId,
-                Status = "Active"
-            })).ToList();
+            var docs = string.IsNullOrWhiteSpace(lan)
+                ? (await _repository.GetLansAsync(new BulkDocsGetLansRequest
+                {
+                    BatchId = result.BatchId,
+                    Status = "Active"
+                })).ToList()
+                : (await _repository.GetLansAsync(new BulkDocsGetLansRequest
+                {
+                    BatchId = result.BatchId
+                }))
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.Lan)
+                    && string.Equals(x.Lan.Trim(), lan, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             result.TotalLans = docs.Count;
 
             if (!docs.Any())
-                return FailBatch(result, $"No active LANs found for BatchId {result.BatchId}.");
+            {
+                var message = string.IsNullOrWhiteSpace(lan)
+                    ? $"No active LANs found for BatchId {result.BatchId}."
+                    : $"LAN {lan} was not found for BatchId {result.BatchId}.";
 
-            foreach (var doc in docs)
+                return FailBatch(result, message);
+            }
+
+            foreach (var item in docs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                result.Results.Add(await FetchDocumentAsync(doc, updatedBy, cancellationToken));
+                result.Results.Add(await FetchDocumentAsync(item, updatedBy, cancellationToken));
             }
 
             SetFetchBatchCounts(result);
@@ -319,57 +318,6 @@ namespace ProductivityApi.Services
             result.Message = $"{result.FileCount} file(s) added to zip.";
 
             return result;
-        }
-
-        private List<BulkDocItem> ReadItemsFromExcel(Stream stream)
-        {
-            using var workbook = new XLWorkbook(stream);
-
-            var worksheet = workbook.Worksheet(1);
-            var items = new List<BulkDocItem>();
-
-            foreach (var row in worksheet.RowsUsed().Skip(1))
-            {
-                var lan = row.Cell(1).GetString().Trim();
-
-                if (string.IsNullOrWhiteSpace(lan))
-                    continue;
-
-                var docType = row.Cell(2).GetString().Trim();
-                if (string.IsNullOrWhiteSpace(docType))
-                    docType = SoaDocCode;
-
-                items.Add(new BulkDocItem
-                {
-                    Lan = lan,
-                    DocType = docType,
-                    FromDate = ReadOptionalDate(row.Cell(3), row.RowNumber(), "SOA_FromDt"),
-                    ToDate = ReadOptionalDate(row.Cell(4), row.RowNumber(), "SOA_ToDt")
-                });
-            }
-
-            return items;
-        }
-
-        private async Task<BulkDocsModel?> GetLanAsync(string lan)
-        {
-            var docs = await _repository.GetLansAsync();
-
-            return docs.FirstOrDefault(x =>
-                !string.IsNullOrWhiteSpace(x.Lan)
-                && string.Equals(x.Lan.Trim(), lan, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private async Task<BulkDocsModel?> GetLanAsync(string batchId, string lan)
-        {
-            var docs = await _repository.GetLansAsync(new BulkDocsGetLansRequest
-            {
-                BatchId = batchId
-            });
-
-            return docs.FirstOrDefault(x =>
-                !string.IsNullOrWhiteSpace(x.Lan)
-                && string.Equals(x.Lan.Trim(), lan, StringComparison.OrdinalIgnoreCase));
         }
 
         private async Task<List<BulkDocsModel>> GetLansByBatchId(string batchId)
@@ -579,24 +527,6 @@ namespace ProductivityApi.Services
                     ReturnText = transferResult.ReturnStatus?.returnText
                 }
             });
-        }
-
-        private static DateTime? ReadOptionalDate(IXLCell cell, int rowNumber, string columnName)
-        {
-            if (cell.IsEmpty())
-                return null;
-
-            if (cell.TryGetValue<DateTime>(out var date))
-                return date;
-
-            var text = cell.GetString().Trim();
-            if (string.IsNullOrWhiteSpace(text))
-                return null;
-
-            if (DateTime.TryParse(text, out var parsed))
-                return parsed;
-
-            throw new ArgumentException($"Invalid {columnName} at row {rowNumber}.");
         }
 
         private static string GenerateBatchId(string createdBy)

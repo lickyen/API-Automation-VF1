@@ -57,20 +57,10 @@ namespace ProductivityApi.Controllers
             [FromBody] DmsDocsFetchRequest request,
             CancellationToken cancellationToken)
         {
-            var result = await _service.FetchDocumentAsync(request, cancellationToken);
-
-            return Ok(new Response(result.Success, result, result.DocStatus));
-        }
-
-        [HttpPost("fetch/batch")]
-        public async Task<IActionResult> FetchBatch(
-            [FromBody] DmsDocsFetchBatchRequest request,
-            CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(request.BatchId))
+            if (string.IsNullOrWhiteSpace(request?.BatchId))
                 return BadRequest(new Response(false, null, "BatchId is required."));
 
-            var result = await _service.FetchBatchAsync(request, cancellationToken);
+            var result = await _service.FetchAsync(request, cancellationToken);
 
             return Ok(new Response(result.Success, result, result.Message));
         }
