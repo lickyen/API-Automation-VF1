@@ -670,22 +670,34 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-        public async Task<List<ClosureTransaction>> GetByUserAsync(string userId, string role, string? status)
+        public async Task<PagedResult<ClosureTransaction>> GetByUserAsync(GetClosureListDto request)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var rows = await connection.QueryAsync<ClosureTransaction>(
+            using var multi = await connection.QueryMultipleAsync(
                 "sp_newClosure_GetByUser",
                 new
                 {
-                    UserId = userId,
-                    Role = role,
-                    Status = status
+                    request.UserId,
+                    request.Role,
+                    request.Status,
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
                 },
                 commandType: CommandType.StoredProcedure);
 
-            return rows.ToList();
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<ClosureTransaction>()).ToList();
+
+            return new PagedResult<ClosureTransaction>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
         public async Task<List<ClosurePayment>> GetPaymentsAsync(int reqId)
         {

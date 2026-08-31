@@ -448,10 +448,11 @@ namespace ProductivityApi.Models
     }
 
     // ── Get List ────────────────────────────────────────────────────────
-    public class GetClosureListDto
+    public class GetClosureListDto : PaginationRequestDto
     {
         public string UserId { get; set; }
         public string Role { get; set; }
+        public string? Status { get; set; }
     }
 
     public class GetWaiverApproverDto
