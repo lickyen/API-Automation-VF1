@@ -120,6 +120,13 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; } = "System";
     }
 
+    public class DmsDocsFetchBatchRequest
+    {
+        [Required]
+        public string BatchId { get; set; } = string.Empty;
+        public string UpdatedBy { get; set; } = "System";
+    }
+
     public class DmsDocsFetchResult
     {
         public string BatchId { get; set; } = string.Empty;
@@ -131,6 +138,17 @@ namespace ProductivityApi.Models
         public string Message { get; set; } = string.Empty;
     }
 
+    public class DmsDocsFetchBatchResult
+    {
+        public string BatchId { get; set; } = string.Empty;
+        public bool Success { get; set; }
+        public int TotalLans { get; set; }
+        public int SuccessCount { get; set; }
+        public int ErrorCount { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public List<DmsDocsFetchResult> Results { get; set; } = new();
+    }
+
     public class DmsDocsDownloadResult
     {
         public bool Success { get; set; }
@@ -138,46 +156,12 @@ namespace ProductivityApi.Models
         public string FileName { get; set; } = string.Empty;
         public string ContentType { get; set; } = "application/zip";
         public byte[] FileContent { get; set; } = Array.Empty<byte>();
+        public string SourcePath { get; set; } = string.Empty;
         public int TotalDocuments { get; set; }
         public int FileCount { get; set; }
+        public long TotalBytes { get; set; }
+        public long MaxAllowedBytes { get; set; }
         public string Message { get; set; } = string.Empty;
         public List<string> MissingFiles { get; set; } = new();
-    }
-
-    public class DmsDocsCopyRequest
-    {
-        [Required]
-        public string BatchId { get; set; } = string.Empty;
-        [Required]
-        public string DestinationPath { get; set; } = string.Empty;
-    }
-
-    public class DmsDocsCopyResult
-    {
-        public string BatchId { get; set; } = string.Empty;
-        public bool Success { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string SourcePath { get; set; } = string.Empty;
-        public string DestinationBasePath { get; set; } = string.Empty;
-        public string DestinationFolderName { get; set; } = string.Empty;
-        public string DestinationPath { get; set; } = string.Empty;
-        public int TotalFiles { get; set; }
-        public int CopiedFiles { get; set; }
-        public int DeletedFiles { get; set; }
-        public int FailedFiles { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public List<DmsDocsCopyItemResult> Items { get; set; } = new();
-    }
-
-    public class DmsDocsCopyItemResult
-    {
-        public string BatchId { get; set; } = string.Empty;
-        public string LAN { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        public string SourceFilePath { get; set; } = string.Empty;
-        public string DestinationFilePath { get; set; } = string.Empty;
-        public bool SourceDeleted { get; set; }
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
     }
 }

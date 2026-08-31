@@ -62,6 +62,19 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(result.Success, result, result.DocStatus));
         }
 
+        [HttpPost("fetch/batch")]
+        public async Task<IActionResult> FetchBatch(
+            [FromBody] DmsDocsFetchBatchRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.BatchId))
+                return BadRequest(new Response(false, null, "BatchId is required."));
+
+            var result = await _service.FetchBatchAsync(request, cancellationToken);
+
+            return Ok(new Response(result.Success, result, result.Message));
+        }
+
         [HttpGet("download")]
         public async Task<IActionResult> DownloadZip(
             [FromQuery] DmsDocsDownloadRequest request,
@@ -76,8 +89,11 @@ namespace ProductivityApi.Controllers
                 return BadRequest(new Response(false, new
                 {
                     result.BatchId,
+                    result.SourcePath,
                     result.TotalDocuments,
                     result.FileCount,
+                    result.TotalBytes,
+                    result.MaxAllowedBytes,
                     result.MissingFiles
                 }, result.Message));
             }
@@ -85,14 +101,5 @@ namespace ProductivityApi.Controllers
             return File(result.FileContent, result.ContentType, result.FileName);
         }
 
-        [HttpPost("copy")]
-        public async Task<IActionResult> CopyDocuments(
-            [FromBody] DmsDocsCopyRequest request,
-            CancellationToken cancellationToken)
-        {
-            var result = await _service.CopyDocumentsAsync(request, cancellationToken);
-
-            return Ok(new Response(result.Success, result, result.Message));
-        }
     }
 }
