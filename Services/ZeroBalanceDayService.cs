@@ -215,7 +215,13 @@ namespace ProductivityApi.Services
             await ApplyCashBalanceDetailsAsync(dto);
             ValidateBranchSubmission(dto.ZbdDate, dto.OpeningBalance, dto.AmountDeposited, dto.MismatchReason, dto.LateSubmissionReason);
 
-            var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+           // var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+
+            string? fileName = null;
+            if (dto.DepositSlip != null && !string.IsNullOrWhiteSpace(dto.DepositSlip.Base64))
+            {
+                fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+            }
 
             try
             {

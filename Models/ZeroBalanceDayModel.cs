@@ -264,8 +264,6 @@ namespace ProductivityApi.Models
 
         public string? MismatchReason { get; set; }
         public string? LateSubmissionReason { get; set; }
-
-        [Required]
         public FileUploadBase64? DepositSlip { get; set; }
 
         [Required]
