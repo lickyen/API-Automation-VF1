@@ -109,8 +109,6 @@ namespace ProductivityApi.Services
             {
 
                 dto.status = "Auto-Approved";
-
-
             }
 
             else //default
