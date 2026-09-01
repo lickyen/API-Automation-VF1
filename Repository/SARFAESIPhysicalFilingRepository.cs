@@ -20,17 +20,17 @@ namespace ProductivityApi.Repository
 
             return (await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>("sp_SARFAESIPhysicalFiling_GetDocumentMaster", new { IsActive = isActive }, commandType: CommandType.StoredProcedure)).ToList();
         }
-        public async Task<int> AddDocumentMasterAsync(string documentName, string createdBy)
+        public async Task<int> AddDocumentMasterAsync(string documentName, bool isMandatory, string createdBy)
         {
             using var conn = new SqlConnection(_conStr);
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, IsMandatory = isMandatory, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<int> EditDocumentMasterAsync(int id, string documentName, string updatedBy)
+        public async Task<int> EditDocumentMasterAsync(int id, string documentName, bool isMandatory, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, IsMandatory = isMandatory, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<bool> UpdateDocumentMasterStatusAsync(int id, bool isActive, string updatedBy)
@@ -69,15 +69,26 @@ namespace ProductivityApi.Repository
             var table = new DataTable();
             table.Columns.Add("DocumentId", typeof(int));
             table.Columns.Add("IsAvailable", typeof(bool));
+            table.Columns.Add("IdentificationNumber", typeof(string));
             table.Columns.Add("Comments", typeof(string));
 
             foreach (var item in dto.Checklist)
-                table.Rows.Add(item.DocumentId, item.IsAvailable!.Value, (object?)item.Comments ?? DBNull.Value);
+                table.Rows.Add(
+                    item.DocumentId,
+                    item.IsAvailable!.Value,
+                    string.IsNullOrWhiteSpace(item.IdentificationNumber)
+                        ? DBNull.Value
+                        : item.IdentificationNumber.Trim(),
+                    string.IsNullOrWhiteSpace(item.Comments)
+                        ? DBNull.Value
+                        : item.Comments.Trim()
+                );
             var parameters = new DynamicParameters();
             parameters.Add("@Lan", dto.Lan.Trim());
             parameters.Add("@DispatchDate", dto.DispatchDate);
             parameters.Add("@PodNumber", dto.PodNumber.Trim());
             parameters.Add("@CourierName", dto.CourierName.Trim());
+            parameters.Add("@DocumentTransmissionType", dto.DocumentTransmissionType.Trim());
             parameters.Add("@Checklist", table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalChecklist"));
             parameters.Add("@SubmittedBy", dto.SubmittedBy.Trim());
             parameters.Add("@CaseId", dbType: DbType.Int32, direction: ParameterDirection.Output);

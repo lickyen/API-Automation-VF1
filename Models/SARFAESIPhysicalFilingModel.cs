@@ -28,6 +28,18 @@ namespace ProductivityApi.Models
         public static readonly string[] All = [EFiling, PhysicalFiling];
     }
 
+    public static class SARFAESIPhysicalFilingDocumentTransmissionType
+    {
+        public const string ScannedCopy = "Scanned Copy";
+        public const string PhysicalDocuments = "Physical Documents";
+
+        public static readonly string[] All =
+        {
+            ScannedCopy,
+            PhysicalDocuments
+        };
+    }
+
     public class SARFAESIPhysicalFilingCase
     {
         public int Id { get; set; }
@@ -73,7 +85,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
         public string DocumentName { get; set; } = string.Empty;
-        //public int DisplayOrder { get; set; }
+        public bool IsMandatory { get; set; }
         public bool IsActive { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
@@ -89,6 +101,7 @@ namespace ProductivityApi.Models
         public bool? FieldReceived { get; set; }
         public string? LegalComments { get; set; }
         public string? FieldComments { get; set; }
+        public string? IdentificationNumber { get; set; }
         public bool HasDiscrepancy { get; set; }
     }
 
@@ -97,7 +110,8 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        //public int DisplayOrder { get; set; }
+        [Required]
+        public bool IsMandatory { get; set; }
 
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
@@ -111,7 +125,8 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        //public int DisplayOrder { get; set; }
+        [Required]
+        public bool IsMandatory { get; set; }
 
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
@@ -136,33 +151,29 @@ namespace ProductivityApi.Models
         [Required]
         public bool? IsAvailable { get; set; }
 
+        public string? IdentificationNumber { get; set; }
+
         public string? Comments { get; set; }
     }
 
     public class SARFAESIPhysicalFilingLegalChecklistSubmitDto
     {
-        [Required]
         public string Lan { get; set; } = string.Empty;
 
-        [Required]
         public DateTime DispatchDate { get; set; }
 
-        [Required]
         public string PodNumber { get; set; } = string.Empty;
 
-        [Required]
         public string CourierName { get; set; } = string.Empty;
 
-        [Required]
-        [MinLength(1)]
+        public string DocumentTransmissionType { get; set; } = string.Empty;
+
         public List<SARFAESIPhysicalFilingLegalChecklistItemDto> Checklist { get; set; } = [];
 
-        [Required]
         public string SubmittedBy { get; set; } = string.Empty;
 
         public string? Remarks { get; set; }
     }
-
     public class SARFAESIPhysicalFilingFieldChecklistItemDto
     {
         [Required]

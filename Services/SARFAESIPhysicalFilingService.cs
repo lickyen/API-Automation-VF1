@@ -28,14 +28,14 @@ namespace ProductivityApi.Services
 
         public async Task<(bool Success, int? Id, string Message)> AddDocumentMasterAsync(SARFAESIPhysicalFilingDocumentMasterAddDto dto)
         {
-            var id = await _repository.AddDocumentMasterAsync(dto.DocumentName.Trim(), dto.CreatedBy.Trim());
+            var id = await _repository.AddDocumentMasterAsync(dto.DocumentName.Trim(), dto.IsMandatory, dto.CreatedBy.Trim());
 
             return id > 0 ? (true, id, "Document added successfully.") : (false, null, "Document already exists.");
         }
 
         public async Task<(bool Success, string Message)> EditDocumentMasterAsync(SARFAESIPhysicalFilingDocumentMasterEditDto dto)
         {
-            var result = await _repository.EditDocumentMasterAsync(dto.Id, dto.DocumentName.Trim(), dto.UpdatedBy.Trim());
+            var result = await _repository.EditDocumentMasterAsync(dto.Id, dto.DocumentName.Trim(), dto.IsMandatory, dto.UpdatedBy.Trim());
 
             return result switch
             {
@@ -70,22 +70,42 @@ namespace ProductivityApi.Services
             return data.Count > 0 ? (true, data, "Success") : (true, [], "No records found.");
         }
 
-        public async Task<(bool Success, int? CaseId, string Message)> SubmitLegalChecklistAsync(SARFAESIPhysicalFilingLegalChecklistSubmitDto dto)
+        public async Task<(bool Success, int? CaseId, string Message)> SubmitLegalChecklistAsync(
+            SARFAESIPhysicalFilingLegalChecklistSubmitDto dto)
         {
             if (dto.DispatchDate.Date > DateTime.Today)
                 return (false, null, "Dispatch Date cannot be a future date.");
 
-            if (!SARFAESIPhysicalFilingCourierName.All.Contains(dto.CourierName, StringComparer.OrdinalIgnoreCase))
+            if (!SARFAESIPhysicalFilingCourierName.All.Contains(
+                dto.CourierName,
+                StringComparer.OrdinalIgnoreCase))
+            {
                 return (false, null, "Invalid Courier Name.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.DocumentTransmissionType))
+                return (false, null, "Document Transmission Type is required.");
+
+            if (!SARFAESIPhysicalFilingDocumentTransmissionType.All.Contains(
+                dto.DocumentTransmissionType.Trim(),
+                StringComparer.OrdinalIgnoreCase))
+            {
+                return (false, null, "Invalid Document Transmission Type.");
+            }
 
             var branchResult = await GetBranchDetailsAsync(dto.Lan);
+
             if (!branchResult.Success)
                 return (false, null, branchResult.Message);
 
-            var caseId = await _repository.SubmitLegalChecklistAsync(dto, branchResult.Data!);
-            return caseId > 0 ? (true, caseId, "Checklist submitted and assigned to the Field User.") : (false, null, "Unable to submit checklist.");
-        }
+            var caseId = await _repository.SubmitLegalChecklistAsync(
+                dto,
+                branchResult.Data!);
 
+            return caseId > 0
+                ? (true, caseId, "Checklist submitted and assigned to the Field User.")
+                : (false, null, "Unable to submit checklist.");
+        }
         public async Task<(bool Success, string Message)> SubmitFieldChecklistAsync(SARFAESIPhysicalFilingFieldChecklistSubmitDto dto)
         {
             var discrepancyCount = await _repository.SubmitFieldChecklistAsync(dto);
