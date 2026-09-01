@@ -30,6 +30,7 @@ namespace ProductivityApi.Repository
         }
 
         public async Task<int> AddCourtAsync(
+            string state,
             string courtName,
             string createdBy)
         {
@@ -39,6 +40,7 @@ namespace ProductivityApi.Repository
                 "dbo.sp_LegalCourts_Add",
                 new
                 {
+                    State = state,
                     CourtName = courtName,
                     CreatedBy = createdBy
                 },
@@ -47,6 +49,7 @@ namespace ProductivityApi.Repository
 
         public async Task<int> EditCourtAsync(
             int id,
+            string state,
             string courtName,
             string updatedBy)
         {
@@ -57,6 +60,7 @@ namespace ProductivityApi.Repository
                 new
                 {
                     Id = id,
+                    State = state,
                     CourtName = courtName,
                     UpdatedBy = updatedBy
                 },

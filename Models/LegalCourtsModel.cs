@@ -6,6 +6,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
 
+        public string State { get; set; } = string.Empty;
         public string CourtName { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }
@@ -21,22 +22,21 @@ namespace ProductivityApi.Models
 
     public class LegalCourtAddDto
     {
-        [Required]
+        public string State { get; set; } = string.Empty;
+
         public string CourtName { get; set; } = string.Empty;
 
-        [Required]
         public string CreatedBy { get; set; } = string.Empty;
     }
 
     public class LegalCourtEditDto
     {
-        [Required]
         public int Id { get; set; }
 
-        [Required]
+        public string State { get; set; } = string.Empty;
+
         public string CourtName { get; set; } = string.Empty;
 
-        [Required]
         public string UpdatedBy { get; set; } = string.Empty;
     }
 

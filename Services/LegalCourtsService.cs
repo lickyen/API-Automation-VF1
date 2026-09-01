@@ -22,6 +22,7 @@ namespace ProductivityApi.Services
             LegalCourtAddDto dto)
         {
             var id = await _repository.AddCourtAsync(
+                dto.State.Trim(),
                 dto.CourtName.Trim(),
                 dto.CreatedBy.Trim());
 
@@ -35,6 +36,7 @@ namespace ProductivityApi.Services
         {
             var result = await _repository.EditCourtAsync(
                 dto.Id,
+                dto.State.Trim(),
                 dto.CourtName.Trim(),
                 dto.UpdatedBy.Trim());
 
