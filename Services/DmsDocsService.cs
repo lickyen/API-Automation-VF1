@@ -45,17 +45,29 @@ namespace ProductivityApi.Services
 
         public async Task<DmsDocsAddResult> AddLansAsync(DmsDocsAddRequest request)
         {
-            var batchId = GenerateBatchId(request.CreatedBy);
-            var result = new DmsDocsAddResult
-            {
-                BatchId = batchId
-            };
+            var result = new DmsDocsAddResult();
 
-            if (request.Lans == null || !request.Lans.Any())
+            // Check if user already has an active batch
+            var batches = await _repository.GetBatchesAsync(
+                new DmsDocsGetBatchesRequest
+                {
+                    CreatedBy = request.CreatedBy
+                });
+
+            var hasActiveBatch = batches.Any(x => x.ActiveCount > 0);
+
+            if (hasActiveBatch)
             {
-                result.Errors.Add("No LANs provided.");
+                result.Errors.Add(
+                    "An active batch already exists. Please wait until it is processed.");
+
                 return result;
             }
+
+            // Generate new batch only when no active batch exists
+            var batchId = GenerateBatchId(request.CreatedBy);
+
+            result.BatchId = batchId;
 
             foreach (var lan in request.Lans)
             {
@@ -67,22 +79,71 @@ namespace ProductivityApi.Services
 
                 try
                 {
-                    var output = await _repository.AddLanAsync(lan, request.CreatedBy, batchId);
+                    var output = await _repository.AddLanAsync(
+                        lan,
+                        request.CreatedBy,
+                        batchId);
+
                     if (output == 1)
+                    {
                         result.RowsAdded++;
-                    else if (output == -1)
-                        result.Errors.Add($"LAN {lan.LAN}: Already exists.");
+                    }
                     else
-                        result.Errors.Add($"LAN {lan.LAN}: Could not be added.");
+                    {
+                        result.Errors.Add(
+                            $"LAN {lan.LAN}: Could not be added.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"LAN {lan.LAN}: {ex.Message}");
+                    result.Errors.Add(
+                        $"LAN {lan.LAN}: {ex.Message}");
                 }
             }
 
             return result;
         }
+
+        //public async Task<DmsDocsAddResult> AddLansAsync(DmsDocsAddRequest request)
+        //{
+        //    var batchId = GenerateBatchId(request.CreatedBy);
+        //    var result = new DmsDocsAddResult
+        //    {
+        //        BatchId = batchId
+        //    };
+
+        //    if (request.Lans == null || !request.Lans.Any())
+        //    {
+        //        result.Errors.Add("No LANs provided.");
+        //        return result;
+        //    }
+
+        //    foreach (var lan in request.Lans)
+        //    {
+        //        if (string.IsNullOrWhiteSpace(lan.LAN))
+        //        {
+        //            result.Errors.Add("Empty LAN skipped.");
+        //            continue;
+        //        }
+
+        //        try
+        //        {
+        //            var output = await _repository.AddLanAsync(lan, request.CreatedBy, batchId);
+        //            if (output == 1)
+        //                result.RowsAdded++;
+        //            else if (output == -1)
+        //                result.Errors.Add($"LAN {lan.LAN}: Already exists.");
+        //            else
+        //                result.Errors.Add($"LAN {lan.LAN}: Could not be added.");
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            result.Errors.Add($"LAN {lan.LAN}: {ex.Message}");
+        //        }
+        //    }
+
+        //    return result;
+        //}
 
         public async Task<List<DmsDocsBatchListItem>> GetBatchesAsync(DmsDocsGetBatchesRequest request)
         {
