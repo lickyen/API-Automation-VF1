@@ -40,6 +40,7 @@
         public string Req_type { get; set; }
         public string Req_date { get; set; }
         public string Txn_amnt { get; set; }
+        public string? PAN { get; set; }
         public string? Pmode { get; set; }
 
     }
