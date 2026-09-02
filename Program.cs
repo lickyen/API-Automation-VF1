@@ -177,6 +177,10 @@ builder.Services.AddScoped<FixedAssetService>();
 builder.Services.AddScoped<ModulesRepository>();
 builder.Services.AddScoped<ModulesService>();
 
+builder.Services.AddScoped<LegalCourtsService>();
+builder.Services.AddScoped<LegalCourtsRepository>();
+
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

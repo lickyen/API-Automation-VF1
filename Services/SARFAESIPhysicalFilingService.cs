@@ -165,5 +165,140 @@ namespace ProductivityApi.Services
                 MegaZone = branch?.MegaZone?.Trim()
             }, "Success");
         }
+
+        public async Task<(bool Success, string Message)> RequestWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.WithdrawalReason))
+                return (false, "Withdrawal reason is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.WithdrawalRemarks))
+                return (false, "Withdrawal remarks are mandatory.");
+
+            var validReasons = new[]
+            {
+                "Out of NPA",
+                "Closed/Settled",
+                "Dismissed",
+                "Re-initiation"
+            };
+
+            if (!validReasons.Contains(
+                    dto.WithdrawalReason.Trim(),
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                return (false, "Invalid withdrawal reason.");
+            }
+
+            return await _repository.RequestWithdrawalAsync(dto);
+        }
+
+        public async Task<(bool Success, string Message)> ReviewWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalReviewDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.Decision))
+                return (false, "Withdrawal decision is required.");
+
+            if (!dto.Decision.Equals("APPROVE", StringComparison.OrdinalIgnoreCase) &&
+                !dto.Decision.Equals("REJECT", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Invalid withdrawal decision.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.ReviewRemarks))
+                return (false, "Review remarks are mandatory.");
+
+            return await _repository.ReviewWithdrawalAsync(dto);
+        }
+
+        public async Task<SARFAESIPhysicalFilingDocumentReturn?> GetDocumentReturnAsync(
+    int caseId)
+        {
+            if (caseId <= 0)
+                return null;
+
+            return await _repository.GetDocumentReturnAsync(caseId);
+        }
+
+        public async Task<(bool Success, string Message)> SubmitDocumentReturnAsync(
+            SARFAESIPhysicalFilingDocumentReturnSubmitDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.PODNumber))
+                return (false, "POD Number is required.");
+
+            if (dto.DispatchDate.Date > DateTime.Today)
+                return (false, "Dispatch Date cannot be a future date.");
+
+            if (!SARFAESIPhysicalFilingCourierName.All.Contains(
+                    dto.CourierName.Trim(),
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                return (false, "Invalid Courier Name.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.SubmittedBy))
+                return (false, "Submitted By is required.");
+
+            return await _repository.SubmitDocumentReturnAsync(dto);
+        }
+
+        public async Task<(bool Success, string Message)> CompleteDocumentReturnAsync(
+            SARFAESIPhysicalFilingDocumentReturnCompleteDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.CompletedBy))
+                return (false, "Completed By is required.");
+
+            return await _repository.CompleteDocumentReturnAsync(dto);
+        }
+
+        public async Task<(bool Success, string Message)> DirectWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.WithdrawalReason))
+                return (false, "Withdrawal reason is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.WithdrawalRemarks))
+                return (false, "Withdrawal remarks are mandatory.");
+
+            if (!SARFAESIPhysicalFilingWithdrawalReason.All.Contains(
+                    dto.WithdrawalReason.Trim(),
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                return (false, "Invalid withdrawal reason.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.RequestedBy))
+                return (false, "Withdrawn By is required.");
+
+            return await _repository.DirectWithdrawalAsync(dto);
+        }
+
+        public async Task<(bool Success, string Message)> UpdatePhysicalDocumentRequirementAsync(SARFAESIPhysicalFilingPhysicalDocumentRequirementDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+                return (false, "Updated By is required.");
+
+            return await _repository.UpdatePhysicalDocumentRequirementAsync(dto);
+        }
+
+
     }
 }
