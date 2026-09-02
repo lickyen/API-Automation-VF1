@@ -474,6 +474,22 @@ namespace ProductivityApi.Services
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
+                if (decimal.TryParse(dto.Txn_amnt, out decimal txnAmount1))
+                {
+                    if (string.Equals(dto.Pmode, "CASH", StringComparison.OrdinalIgnoreCase)
+                        && txnAmount1 >= 50000
+                        && string.IsNullOrWhiteSpace(dto.PAN))
+                    {
+                        response = new AxisofflinefetchResponseModel(
+                         "F",
+                         "0013",
+                         "PAN is mandatory for cash transactions of Rs. 50,000 or above.");
+
+                        return await LogAndReturn(
+                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    }
+                }
+
 
                 if (string.IsNullOrWhiteSpace(dto.Req_date))
                 {

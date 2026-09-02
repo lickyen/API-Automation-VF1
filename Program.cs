@@ -113,6 +113,9 @@ builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
 builder.Services.AddScoped<IndusArchivedService>();
 builder.Services.AddScoped<WabaWtsappHookService>();
 builder.Services.AddScoped<ZeroBalanceDayService>();
+builder.Services.AddScoped<VendorService>();
+builder.Services.AddScoped<PurchaseOrderService>();
+builder.Services.AddScoped<AirtelabankService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -153,6 +156,9 @@ builder.Services.AddScoped<IndusArchivedRepository>();
 builder.Services.AddScoped<WabaWtsappHookRepository>();
 builder.Services.AddScoped<ZeroBalanceDayRepository>();
 builder.Services.AddScoped<GoDigitRepository>();
+builder.Services.AddScoped<VendorRepository>();
+builder.Services.AddScoped<PurchaseOrderRepository>();
+builder.Services.AddScoped<AirtelBankRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();

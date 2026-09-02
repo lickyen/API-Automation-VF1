@@ -106,7 +106,8 @@ namespace ProductivityApi.Repository
                   Req_Type = dto.Req_type,
                   Req_Date = dto.Req_date,
                   Txn_Amnt = dto.Txn_amnt,
-                  Pmode = dto.Pmode
+                  Pmode = dto.Pmode,
+                  PAN =dto.PAN
               },
                 commandType: CommandType.StoredProcedure
             );
