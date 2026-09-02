@@ -172,10 +172,13 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpGet("getByUser")]
-        public async Task<IActionResult> GetListByUser([FromQuery] string userId, [FromQuery] string role, [FromQuery] string? status)
+        public async Task<IActionResult> GetListByUser([FromQuery] GetClosureListDto request)
         {
-            var data = await _service.GetListByUserAsync(userId, role, status);
-            return Ok(new Response(true, data, "Success"));
+            var data = await _service.GetListByUserAsync(request);
+            return Ok(new Response(
+                true,
+                data,
+                data.TotalRecords == 0 ? "No records found" : "Success"));
         }
 
         // Payments
@@ -353,12 +356,6 @@ namespace ProductivityApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] PaginationRequestDto request)
         {
-            if (request.PageNumber < 1)
-                return BadRequest(new Response(false, null, "Page number must be greater than 0"));
-
-            if (request.PageSize < 1 || request.PageSize > 100)
-                return BadRequest(new Response(false, null, "Page size must be between 1 and 100"));
-
             var result = await _service.GetAllAsync(request);
 
             return Ok(new Response(

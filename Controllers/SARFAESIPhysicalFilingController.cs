@@ -119,5 +119,80 @@ namespace ProductivityApi.Controllers
 
             return Ok(new Response(true, data, "Success"));
         }
+
+        [HttpPost("requestWithdrawal")]
+        public async Task<IActionResult> RequestWithdrawal(
+    [FromBody] SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            var result = await _service.RequestWithdrawalAsync(dto);
+
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+        [HttpPost("reviewWithdrawal")]
+        public async Task<IActionResult> ReviewWithdrawal(
+    [FromBody] SARFAESIPhysicalFilingWithdrawalReviewDto dto)
+        {
+            var result = await _service.ReviewWithdrawalAsync(dto);
+
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+        [HttpGet("documentReturn/{caseId}")]
+        public async Task<IActionResult> GetDocumentReturn(int caseId)
+        {
+            var data = await _service.GetDocumentReturnAsync(caseId);
+
+            if (data == null)
+                return NotFound(new Response(false, null, "Document return record not found."));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPost("documentReturn/submit")]
+        public async Task<IActionResult> SubmitDocumentReturn(
+            [FromBody] SARFAESIPhysicalFilingDocumentReturnSubmitDto dto)
+        {
+            var result = await _service.SubmitDocumentReturnAsync(dto);
+
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+        [HttpPost("documentReturn/complete")]
+        public async Task<IActionResult> CompleteDocumentReturn(
+            [FromBody] SARFAESIPhysicalFilingDocumentReturnCompleteDto dto)
+        {
+            var result = await _service.CompleteDocumentReturnAsync(dto);
+
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+        [HttpPost("directWithdrawal")]
+        public async Task<IActionResult> DirectWithdrawal(
+    [FromBody] SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            var result = await _service.DirectWithdrawalAsync(dto);
+
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+        [HttpPost("physicalDocumentRequirement")]
+        public async Task<IActionResult> UpdatePhysicalDocumentRequirement([FromBody] SARFAESIPhysicalFilingPhysicalDocumentRequirementDto dto)
+        {
+            var result = await _service.UpdatePhysicalDocumentRequirementAsync(dto);
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
     }
 }

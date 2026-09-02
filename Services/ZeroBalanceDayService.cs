@@ -9,7 +9,7 @@ namespace ProductivityApi.Services
 {
     public class ZeroBalanceDayService
     {
-        private const int DepositSlipMaxSizeBytes = 100 * 1024;
+        private const int DepositSlipMaxSizeInMB = 10;
         private static readonly string[] DepositSlipExtensions = { ".pdf", ".jpg", ".jpeg", ".png" };
 
         private readonly ZeroBalanceDayRepository _repository;
@@ -215,7 +215,13 @@ namespace ProductivityApi.Services
             await ApplyCashBalanceDetailsAsync(dto);
             ValidateBranchSubmission(dto.ZbdDate, dto.OpeningBalance, dto.AmountDeposited, dto.MismatchReason, dto.LateSubmissionReason);
 
-            var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+           // var fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+
+            string? fileName = null;
+            if (dto.DepositSlip != null && !string.IsNullOrWhiteSpace(dto.DepositSlip.Base64))
+            {
+                fileName = await SaveDepositSlipAsync(dto.DepositSlip, dto.BranchCode, dto.ZbdDate);
+            }
 
             try
             {
@@ -1003,13 +1009,11 @@ namespace ProductivityApi.Services
                 throw new ArgumentException("Invalid deposit slip format");
 
             var bytes = DecodeBase64(fileDto.Base64);
-            if (bytes.Length > DepositSlipMaxSizeBytes)
-                throw new ArgumentException("Deposit slip size must be 100 KB or less");
 
             var safeBranch = SanitizeFileToken(branchCode);
             var fileName = $"{zbdDate:yyyyMMdd}_{safeBranch}_{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
 
-            var result = await FileHelper.SaveBytesAsync(_filePath, fileName, bytes, 1);
+            var result = await FileHelper.SaveBytesAsync(_filePath, fileName, bytes, DepositSlipMaxSizeInMB);
             if (!result.Success)
                 throw new InvalidOperationException(result.Error);
 

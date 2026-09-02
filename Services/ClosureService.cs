@@ -484,9 +484,9 @@ namespace ProductivityApi.Services
             return txn;
         }
 
-        public Task<List<ClosureTransaction>> GetListByUserAsync(string userId, string role, string? status)
+        public Task<PagedResult<ClosureTransaction>> GetListByUserAsync(GetClosureListDto request)
         {
-            return _repository.GetByUserAsync(userId, role, status);
+            return _repository.GetByUserAsync(request);
         }
 
         public async Task<List<ClosureTransaction>> GetByLanAsync(string lan)

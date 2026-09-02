@@ -28,6 +28,47 @@ namespace ProductivityApi.Models
         public static readonly string[] All = [EFiling, PhysicalFiling];
     }
 
+    public static class SARFAESIPhysicalFilingDocumentTransmissionType
+    {
+        public const string ScannedCopy = "Scanned Copy";
+        public const string PhysicalDocuments = "Physical Documents";
+
+        public static readonly string[] All =
+        {
+            ScannedCopy,
+            PhysicalDocuments
+        };
+    }
+
+    public static class SARFAESIPhysicalFilingWithdrawalReason
+    {
+        public const string OutOfNPA = "Out of NPA";
+        public const string ClosedSettled = "Closed/Settled";
+        public const string Dismissed = "Dismissed";
+        public const string ReInitiation = "Re-initiation";
+
+        public static readonly string[] All =
+        [
+            OutOfNPA,
+        ClosedSettled,
+        Dismissed,
+        ReInitiation
+        ];
+    }
+
+    public static class SARFAESIPhysicalFilingDocumentReturnStatus
+    {
+        public const string Pending = "Pending";
+        public const string Dispatched = "Dispatched";
+        public const string Completed = "Completed";
+
+        public static readonly string[] All =
+        [
+            Pending,
+        Dispatched,
+        Completed
+        ];
+    }
     public class SARFAESIPhysicalFilingCase
     {
         public int Id { get; set; }
@@ -51,6 +92,29 @@ namespace ProductivityApi.Models
         public string? EFilingCaseNumber { get; set; }
         public DateTime? PhysicalFilingDate { get; set; }
         public string? PhysicalFilingCaseNumber { get; set; }
+        public string DocumentTransmissionType { get; set; } = string.Empty;
+
+        public string? WithdrawalReason { get; set; }
+        public string? WithdrawalRemarks { get; set; }
+        public string? WithdrawalStatus { get; set; }
+        public string? WithdrawalRequestedBy { get; set; }
+        public DateTime? WithdrawalRequestedDt { get; set; }
+        public string? WithdrawalReviewedBy { get; set; }
+        public DateTime? WithdrawalReviewedDt { get; set; }
+        public string? WithdrawalReviewRemarks { get; set; }
+        public bool IsDirectWithdrawal { get; set; }
+
+        public string? DocumentReturnStatus { get; set; }
+        public string? DocumentReturnPODNumber { get; set; }
+        public DateTime? DocumentReturnDispatchDate { get; set; }
+        public string? DocumentReturnCourierName { get; set; }
+        public string? DocumentReturnRemarks { get; set; }
+        public string? DocumentReturnRequestedBy { get; set; }
+        public DateTime? DocumentReturnRequestedDt { get; set; }
+        public string? DocumentReturnCompletedBy { get; set; }
+        public DateTime? DocumentReturnCompletedDt { get; set; }
+
+        public bool? RequiresPhysicalDocuments { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -73,7 +137,7 @@ namespace ProductivityApi.Models
     {
         public int Id { get; set; }
         public string DocumentName { get; set; } = string.Empty;
-        //public int DisplayOrder { get; set; }
+        public bool IsMandatory { get; set; }
         public bool IsActive { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
@@ -89,6 +153,7 @@ namespace ProductivityApi.Models
         public bool? FieldReceived { get; set; }
         public string? LegalComments { get; set; }
         public string? FieldComments { get; set; }
+        public string? IdentificationNumber { get; set; }
         public bool HasDiscrepancy { get; set; }
     }
 
@@ -97,7 +162,8 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        //public int DisplayOrder { get; set; }
+        [Required]
+        public bool IsMandatory { get; set; }
 
         [Required]
         public string CreatedBy { get; set; } = string.Empty;
@@ -111,7 +177,8 @@ namespace ProductivityApi.Models
         [Required]
         public string DocumentName { get; set; } = string.Empty;
 
-        //public int DisplayOrder { get; set; }
+        [Required]
+        public bool IsMandatory { get; set; }
 
         [Required]
         public string UpdatedBy { get; set; } = string.Empty;
@@ -136,33 +203,29 @@ namespace ProductivityApi.Models
         [Required]
         public bool? IsAvailable { get; set; }
 
+        public string? IdentificationNumber { get; set; }
+
         public string? Comments { get; set; }
     }
 
     public class SARFAESIPhysicalFilingLegalChecklistSubmitDto
     {
-        [Required]
         public string Lan { get; set; } = string.Empty;
 
-        [Required]
         public DateTime DispatchDate { get; set; }
 
-        [Required]
         public string PodNumber { get; set; } = string.Empty;
 
-        [Required]
         public string CourierName { get; set; } = string.Empty;
 
-        [Required]
-        [MinLength(1)]
+        public string DocumentTransmissionType { get; set; } = string.Empty;
+
         public List<SARFAESIPhysicalFilingLegalChecklistItemDto> Checklist { get; set; } = [];
 
-        [Required]
         public string SubmittedBy { get; set; } = string.Empty;
 
         public string? Remarks { get; set; }
     }
-
     public class SARFAESIPhysicalFilingFieldChecklistItemDto
     {
         [Required]
@@ -266,6 +329,17 @@ namespace ProductivityApi.Models
         public DateTime? AdvocateAssignmentDate { get; set; }
         public string? FilingType { get; set; }
         public string? CourtName { get; set; }
+        public string DocumentTransmissionType { get; set; } = string.Empty;
+
+        public string? WithdrawalReason { get; set; }
+        public string? WithdrawalStatus { get; set; }
+        public bool IsDirectWithdrawal { get; set; }
+
+        public string? DocumentReturnStatus { get; set; }
+        public DateTime? DocumentReturnDispatchDate { get; set; }
+        public string? DocumentReturnPODNumber { get; set; }
+
+        public bool? RequiresPhysicalDocuments { get; set; }
         public DateTime CreatedDt { get; set; }
         public DateTime? UpdatedDt { get; set; }
     }
@@ -316,4 +390,111 @@ namespace ProductivityApi.Models
         public DateTime? LegalTeamLastUpdatedDateTime { get; set; }
         public string? UserMappingId { get; set; }
     }
+
+    public class SARFAESIPhysicalFilingWithdrawalRequestDto
+    {
+        public int CaseId { get; set; }
+        public string WithdrawalReason { get; set; } = string.Empty;
+        public string WithdrawalRemarks { get; set; } = string.Empty;
+        public string RequestedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingWithdrawalReviewDto
+    {
+        public int CaseId { get; set; }
+        public string Decision { get; set; } = string.Empty;
+        public string ReviewRemarks { get; set; } = string.Empty;
+        public string ReviewedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingDirectWithdrawalDto
+    {
+        [Required]
+        public int CaseId { get; set; }
+
+        [Required]
+        public string WithdrawalReason { get; set; } = string.Empty;
+
+        [Required]
+        public string WithdrawalRemarks { get; set; } = string.Empty;
+
+        [Required]
+        public string WithdrawnBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingDocumentReturn
+    {
+        public int CaseId { get; set; }
+        public string Lan { get; set; } = string.Empty;
+
+        public string? DocumentReturnStatus { get; set; }
+        public string? DocumentReturnPODNumber { get; set; }
+        public DateTime? DocumentReturnDispatchDate { get; set; }
+        public string? DocumentReturnCourierName { get; set; }
+        public string? DocumentReturnRemarks { get; set; }
+
+        public string? DocumentReturnRequestedBy { get; set; }
+        public DateTime? DocumentReturnRequestedDt { get; set; }
+
+        public string? DocumentReturnCompletedBy { get; set; }
+        public DateTime? DocumentReturnCompletedDt { get; set; }
+
+        public List<SARFAESIPhysicalFilingDocumentReturnItem> Documents { get; set; } = [];
+    }
+
+    public class SARFAESIPhysicalFilingDocumentReturnItem
+    {
+        public int ChecklistItemId { get; set; }
+        public int DocumentId { get; set; }
+        public string DocumentName { get; set; } = string.Empty;
+
+        public string? IdentificationNumber { get; set; }
+
+        public bool? LegalAvailable { get; set; }
+        public string? LegalComments { get; set; }
+
+        public bool? FieldReceived { get; set; }
+        public string? FieldComments { get; set; }
+
+        public bool HasDiscrepancy { get; set; }
+    }
+
+    public class SARFAESIPhysicalFilingDocumentReturnSubmitDto
+    {
+        [Required]
+        public int CaseId { get; set; }
+
+        [Required]
+        public string PODNumber { get; set; } = string.Empty;
+
+        [Required]
+        public DateTime DispatchDate { get; set; }
+
+        [Required]
+        public string CourierName { get; set; } = string.Empty;
+
+        public string? Remarks { get; set; }
+
+        [Required]
+        public string SubmittedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingDocumentReturnCompleteDto
+    {
+        [Required]
+        public int CaseId { get; set; }
+
+        public string? Remarks { get; set; }
+
+        [Required]
+        public string CompletedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingPhysicalDocumentRequirementDto
+    {
+        public int CaseId { get; set; }
+        public bool RequiresPhysicalDocuments { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
 }

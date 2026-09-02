@@ -20,17 +20,17 @@ namespace ProductivityApi.Repository
 
             return (await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>("sp_SARFAESIPhysicalFiling_GetDocumentMaster", new { IsActive = isActive }, commandType: CommandType.StoredProcedure)).ToList();
         }
-        public async Task<int> AddDocumentMasterAsync(string documentName, string createdBy)
+        public async Task<int> AddDocumentMasterAsync(string documentName, bool isMandatory, string createdBy)
         {
             using var conn = new SqlConnection(_conStr);
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_AddDocumentMaster", new { DocumentName = documentName, IsMandatory = isMandatory, CreatedBy = createdBy }, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<int> EditDocumentMasterAsync(int id, string documentName, string updatedBy)
+        public async Task<int> EditDocumentMasterAsync(int id, string documentName, bool isMandatory, string updatedBy)
         {
             using var conn = new SqlConnection(_conStr);
 
-            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
+            return await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_EditDocumentMaster", new { Id = id, DocumentName = documentName, IsMandatory = isMandatory, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
         }
 
         public async Task<bool> UpdateDocumentMasterStatusAsync(int id, bool isActive, string updatedBy)
@@ -69,15 +69,26 @@ namespace ProductivityApi.Repository
             var table = new DataTable();
             table.Columns.Add("DocumentId", typeof(int));
             table.Columns.Add("IsAvailable", typeof(bool));
+            table.Columns.Add("IdentificationNumber", typeof(string));
             table.Columns.Add("Comments", typeof(string));
 
             foreach (var item in dto.Checklist)
-                table.Rows.Add(item.DocumentId, item.IsAvailable!.Value, (object?)item.Comments ?? DBNull.Value);
+                table.Rows.Add(
+                    item.DocumentId,
+                    item.IsAvailable!.Value,
+                    string.IsNullOrWhiteSpace(item.IdentificationNumber)
+                        ? DBNull.Value
+                        : item.IdentificationNumber.Trim(),
+                    string.IsNullOrWhiteSpace(item.Comments)
+                        ? DBNull.Value
+                        : item.Comments.Trim()
+                );
             var parameters = new DynamicParameters();
             parameters.Add("@Lan", dto.Lan.Trim());
             parameters.Add("@DispatchDate", dto.DispatchDate);
             parameters.Add("@PodNumber", dto.PodNumber.Trim());
             parameters.Add("@CourierName", dto.CourierName.Trim());
+            parameters.Add("@DocumentTransmissionType", dto.DocumentTransmissionType.Trim());
             parameters.Add("@Checklist", table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalChecklist"));
             parameters.Add("@SubmittedBy", dto.SubmittedBy.Trim());
             parameters.Add("@CaseId", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -169,6 +180,151 @@ namespace ProductivityApi.Repository
             };
 
             return (await conn.QueryAsync<SARFAESIPhysicalFilingReportItem>("dbo.sp_SARFAESIPhysicalFiling_Report", parameters, commandType: CommandType.StoredProcedure)).ToList();
+        }
+
+        public async Task<(bool Success, string Message)> RequestWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_RequestWithdrawal",
+                new
+                {
+                    dto.CaseId,
+                    WithdrawalReason = dto.WithdrawalReason.Trim(),
+                    WithdrawalRemarks = dto.WithdrawalRemarks.Trim(),
+                    RequestedBy = dto.RequestedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return ((int)result.Result == 1, (string)result.Message);
+        }
+
+        public async Task<(bool Success, string Message)> ReviewWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalReviewDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_ReviewWithdrawal",
+                new
+                {
+                    dto.CaseId,
+                    Decision = dto.Decision.Trim(),
+                    ReviewRemarks = dto.ReviewRemarks.Trim(),
+                    ReviewedBy = dto.ReviewedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return (
+                (int)result.Result == 1,
+                (string)result.Message
+            );
+        }
+
+        public async Task<SARFAESIPhysicalFilingDocumentReturn?> GetDocumentReturnAsync(
+    int caseId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            using var multi = await conn.QueryMultipleAsync(
+                "sp_SARFAESIPhysicalFiling_GetDocumentReturn",
+                new { CaseId = caseId },
+                commandType: CommandType.StoredProcedure);
+
+            var result = await multi.ReadFirstOrDefaultAsync<SARFAESIPhysicalFilingDocumentReturn>();
+
+            if (result == null)
+                return null;
+
+            result.Documents = (await multi.ReadAsync<SARFAESIPhysicalFilingDocumentReturnItem>())
+                .ToList();
+
+            return result;
+        }
+
+        public async Task<(bool Success, string Message)> SubmitDocumentReturnAsync(
+    SARFAESIPhysicalFilingDocumentReturnSubmitDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_SubmitDocumentReturn",
+                new
+                {
+                    dto.CaseId,
+                    PODNumber = dto.PODNumber.Trim(),
+                    dto.DispatchDate,
+                    CourierName = dto.CourierName.Trim(),
+                    Remarks = dto.Remarks?.Trim(),
+                    SubmittedBy = dto.SubmittedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return (
+                (int)result.Result == 1,
+                (string)result.Message
+            );
+        }
+
+        public async Task<(bool Success, string Message)> CompleteDocumentReturnAsync(
+    SARFAESIPhysicalFilingDocumentReturnCompleteDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_CompleteDocumentReturn",
+                new
+                {
+                    dto.CaseId,
+                    Remarks = dto.Remarks?.Trim(),
+                    CompletedBy = dto.CompletedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return (
+                (int)result.Result == 1,
+                (string)result.Message
+            );
+        }
+
+        public async Task<(bool Success, string Message)> DirectWithdrawalAsync(
+    SARFAESIPhysicalFilingWithdrawalRequestDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_DirectWithdrawal",
+                new
+                {
+                    dto.CaseId,
+                    WithdrawalReason = dto.WithdrawalReason.Trim(),
+                    WithdrawalRemarks = dto.WithdrawalRemarks.Trim(),
+                    WithdrawnBy = dto.RequestedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return (
+                (int)result.Result == 1,
+                (string)result.Message
+            );
+        }
+
+        public async Task<(bool Success, string Message)> UpdatePhysicalDocumentRequirementAsync(SARFAESIPhysicalFilingPhysicalDocumentRequirementDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_UpdatePhysicalDocumentRequirement",
+                new
+                {
+                    dto.CaseId,
+                    dto.RequiresPhysicalDocuments,
+                    UpdatedBy = dto.UpdatedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return ((int)result.Result == 1, (string)result.Message);
         }
     }
 }
