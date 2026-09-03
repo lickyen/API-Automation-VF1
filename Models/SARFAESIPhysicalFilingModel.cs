@@ -2,16 +2,6 @@
 
 namespace ProductivityApi.Models
 {
-    public static class SARFAESIPhysicalFilingStage
-    {
-        public const string DocumentChecklist = "Section 14 - Document Checklist";
-        public const string TaskAssignmentToFieldUser = "Section 14 - Task Assignment to Field User";
-        public const string AssignedToAdvocate = "Section 14 - Assigned to Advocate";
-        public const string FilingDetails = "Section 14 - Filing Details";
-        public const string FiledEFiling = "Section 14 Filed - E-Filing";
-        public const string FiledPhysicalFiling = "Section 14 Filed - Physical Filing";
-    }
-
     public static class SARFAESIPhysicalFilingCourierName
     {
         public const string DTDC = "DTDC";
@@ -50,9 +40,9 @@ namespace ProductivityApi.Models
         public static readonly string[] All =
         [
             OutOfNPA,
-        ClosedSettled,
-        Dismissed,
-        ReInitiation
+            ClosedSettled,
+            Dismissed,
+            ReInitiation
         ];
     }
 
@@ -65,8 +55,8 @@ namespace ProductivityApi.Models
         public static readonly string[] All =
         [
             Pending,
-        Dispatched,
-        Completed
+            Dispatched,
+            Completed
         ];
     }
     public class SARFAESIPhysicalFilingCase
@@ -155,6 +145,7 @@ namespace ProductivityApi.Models
         public string? FieldComments { get; set; }
         public string? IdentificationNumber { get; set; }
         public bool HasDiscrepancy { get; set; }
+        public bool IsMandatory { get; set; }
     }
 
     public class SARFAESIPhysicalFilingDocumentMasterAddDto

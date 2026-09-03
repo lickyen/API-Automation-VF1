@@ -56,7 +56,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, null, result.Message));
         }
 
-        [HttpGet("{caseId}")]
+        [HttpGet("{caseId}")]   
         public async Task<IActionResult> GetCase(int caseId)
         {
             var data = await _service.GetCaseAsync(caseId);
