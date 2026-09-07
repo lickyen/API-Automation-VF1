@@ -29,6 +29,7 @@ namespace ProductivityApi.Repository
                 parameters.Add("@Zone", model.Zone);
                 parameters.Add("@Region", model.Region);
                 parameters.Add("@Megazone", model.Megazone);
+                parameters.Add("@BranchType", model.BranchType);
                 parameters.Add("@CreatedBy", model.CreatedBy);
 
                 int branchId = connection.ExecuteScalar<int>(

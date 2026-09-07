@@ -8,7 +8,7 @@ namespace ProductivityApi.Models
     public class NewBranchMasterModel
     {
         public int Id { get; set; }
-
+        public string BranchType { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
 
         public string? State { get; set; }
@@ -50,6 +50,12 @@ namespace ProductivityApi.Models
 
         public DateTime? COPSDate { get; set; }
 
+        public string? ProductStatus { get; set; }
+        public DateTime? ProductDate { get; set; }
+
+        public string? LDStatus { get; set; }
+        public DateTime? LDDate { get; set; }
+
         public string CreatedBy { get; set; } = string.Empty;
 
         public DateTime CreatedDate { get; set; }
@@ -72,6 +78,12 @@ namespace ProductivityApi.Models
         public bool MarketingHasPendingActions { get; set; }
 
         public bool COPSHasPendingActions { get; set; }
+
+        public bool ProductHasPendingActions { get; set; }
+
+        public bool LDHasPendingActions { get; set; }
+
+
     }
 
     public class NewBranchTransactionModel
@@ -110,6 +122,9 @@ namespace ProductivityApi.Models
     public class AddNewBranchRequestDto
     {
         [Required]
+        public string BranchType { get; set; } = string.Empty;
+
+        [Required]
         public string Name { get; set; } = string.Empty;
 
         [Required]
@@ -125,11 +140,6 @@ namespace ProductivityApi.Models
         public string Megazone { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(
-            50,
-            MinimumLength = 1,
-            ErrorMessage = "CreatedBy must be between 1 and 50 characters."
-        )]
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -158,6 +168,8 @@ namespace ProductivityApi.Models
     public class NewBranchListItemDto
     {
         public int Id { get; set; }
+
+        public string BranchType { get; set; } = string.Empty;
 
         public string Name { get; set; } = string.Empty;
 
