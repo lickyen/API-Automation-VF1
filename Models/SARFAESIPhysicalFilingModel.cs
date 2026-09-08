@@ -364,6 +364,8 @@ namespace ProductivityApi.Models
         public string? Zone { get; set; }
         public string? MegaZone { get; set; }
         public string CurrentWorkflowStage { get; set; } = string.Empty;
+        public string? DocumentTransmissionType { get; set; }
+        public bool? RequiresPhysicalDocuments { get; set; }
         public DateTime? DocumentDispatchDate { get; set; }
         public string? PodNumber { get; set; }
         public string? CourierName { get; set; }
@@ -380,6 +382,16 @@ namespace ProductivityApi.Models
         public string? LegalTeamId { get; set; }
         public DateTime? LegalTeamLastUpdatedDateTime { get; set; }
         public string? UserMappingId { get; set; }
+
+        public string? WithdrawalReason { get; set; }
+        public string? WithdrawalStatus { get; set; }
+        public DateTime? WithdrawalRequestedDt { get; set; }
+        public DateTime? WithdrawalReviewedDt { get; set; }
+
+        public string? DocumentReturnStatus { get; set; }
+        public string? DocumentReturnPODNumber { get; set; }
+        public DateTime? DocumentReturnDispatchDate { get; set; }
+        public DateTime? DocumentReturnCompletedDt { get; set; }
     }
 
     public class SARFAESIPhysicalFilingWithdrawalRequestDto
