@@ -482,7 +482,7 @@ namespace ProductivityApi.Services
 
         private static string BuildDocumentFileName(BulkDocsModel doc)
         {
-            return $"{BuildSafeFileName(doc.Lan)}_{SoaDocCode}.pdf";
+            return $"{BuildSafeFileName(doc.Lan)}.pdf";
         }
 
         private static byte[] DecodeBase64Document(string value)

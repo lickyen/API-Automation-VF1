@@ -28,9 +28,19 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.AddLansAsync(request);
 
-            return result.RowsAdded == 0
-                ? BadRequest(new Response(false, result, "No LANs were added."))
-                : Ok(new Response(true, result, $"{result.RowsAdded} LAN(s) added successfully."));
+            if (result.RowsAdded == 0)
+            {
+                var message = result.Errors != null && result.Errors.Any()
+                    ? string.Join(" ", result.Errors)
+                    : "No LANs were added.";
+
+                return BadRequest(new Response(false, result, message));
+            }
+
+            return Ok(new Response(
+                true,
+                result,
+                $"{result.RowsAdded} LAN(s) added successfully."));
         }
 
         [HttpGet("batches")]
