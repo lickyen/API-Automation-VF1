@@ -159,7 +159,6 @@ namespace ProductivityApi.Models
         [Required]
         public DateTime DisbDate { get; set; }
 
-        [Required]
         public DateTime ClosureDate { get; set; }
 
         [Required]
