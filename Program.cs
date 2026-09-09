@@ -113,7 +113,7 @@ builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
 builder.Services.AddScoped<IndusArchivedService>();
 builder.Services.AddScoped<WabaWtsappHookService>();
 builder.Services.AddScoped<ZeroBalanceDayService>();
-builder.Services.AddScoped<VendorService>();
+
 builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<AirtelabankService>();
 
@@ -156,7 +156,7 @@ builder.Services.AddScoped<IndusArchivedRepository>();
 builder.Services.AddScoped<WabaWtsappHookRepository>();
 builder.Services.AddScoped<ZeroBalanceDayRepository>();
 builder.Services.AddScoped<GoDigitRepository>();
-builder.Services.AddScoped<VendorRepository>();
+
 builder.Services.AddScoped<PurchaseOrderRepository>();
 builder.Services.AddScoped<AirtelBankRepository>();
 
