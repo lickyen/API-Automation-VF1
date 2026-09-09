@@ -8,16 +8,18 @@ namespace ProductivityApi.Services
     public class AirtelabankService
     {
         private readonly AirtelBankRepository _repository;
+        private readonly AxisRepository _axisrepository;
         private readonly PLFService _plfService;
         private readonly PLFRepository _pLFRepository;
         private readonly SharedService _sharedservice;
 
-        public AirtelabankService(AirtelBankRepository axisRepository, PLFService plfService, SharedService sharedservice, PLFRepository pLFRepository)
+        public AirtelabankService(AirtelBankRepository axisRepository, PLFService plfService, SharedService sharedservice, PLFRepository pLFRepository, AxisRepository axisRepository1)
         {
             _repository = axisRepository;
             _plfService = plfService;
             _sharedservice = sharedservice;
             _pLFRepository = pLFRepository;
+            _axisrepository = axisRepository1; 
         }
 
         public async Task<AxisofflinefetchResponseModel> OfflinePaymentsValidation(AxisOfflineReqModel dto)
@@ -32,30 +34,24 @@ namespace ProductivityApi.Services
                 {
                     response = new AxisofflinefetchResponseModel("F", "0002", "Pmode is mandatory.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
                 var allowedModes = new[] { "CASH" };
                 if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
-                    response = new AxisofflinefetchResponseModel("F", "0003", "Invalid payment mode. Allowed values are CASH.");
+                    response = new AxisofflinefetchResponseModel("F", "0003", "Invalid payment mode. Allowed values: CASH.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
-                if (string.IsNullOrWhiteSpace(dto.UTR))
-                {
-                    response = new AxisofflinefetchResponseModel("F", "0004", "UTR is mandatory.");
-                    return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
-
-                }
+              
                 if (string.IsNullOrWhiteSpace(dto.Loan_acc_no))
                 {
                     response = new AxisofflinefetchResponseModel("F", "0005", "Loan Account Number is mandatory.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
@@ -63,7 +59,7 @@ namespace ProductivityApi.Services
                 {
                     response = new AxisofflinefetchResponseModel("F", "0006", "Req_type is mandatory.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
@@ -72,7 +68,7 @@ namespace ProductivityApi.Services
                 {
                     response = new AxisofflinefetchResponseModel("F", "0007", "Req_type should be 'Validation'");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
@@ -86,7 +82,7 @@ namespace ProductivityApi.Services
                         "Txn_amnt is mandatory and must be greater than zero.");
 
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
                 if (decimal.TryParse(dto.Txn_amnt, out decimal txnAmount1))
                 {
@@ -98,7 +94,7 @@ namespace ProductivityApi.Services
                          "PAN is mandatory for transactions of Rs. 50,000 or above.");
 
                         return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                        apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                     }
                 }
 
@@ -107,7 +103,7 @@ namespace ProductivityApi.Services
                 {
                     response = new AxisofflinefetchResponseModel("F", "0009", "Req_date is mandatory.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
@@ -116,7 +112,7 @@ namespace ProductivityApi.Services
                 {
                     response = new AxisofflinefetchResponseModel("F", "0010", "Req_date should be in yyyy-MM-dd format.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
 
 
@@ -133,7 +129,7 @@ namespace ProductivityApi.Services
                     {
                         response = new AxisofflinefetchResponseModel("F", "0011", $"Loan details not found for LAN {dto.Loan_acc_no}.");
                         return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                        apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 
                     }
 
@@ -149,7 +145,7 @@ namespace ProductivityApi.Services
 
                     response = new AxisofflinefetchResponseModel("F", "0012", $"Loan Account number is closed -{dto.Loan_acc_no}.");
                     return await LogAndReturn(
-                    apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                    apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 
 
                 }
@@ -160,7 +156,7 @@ namespace ProductivityApi.Services
                     var cashValidation = await ValidateCashLimit(dto);
                     if (cashValidation.Stts_flg == "F")
                     {
-                        // response = new AxisofflinefetchResponseModel("F", cashValidation.Err_cd, cashValidation.message,cashValidation.AmountTobeAccepted,dto.UTR);
+                        
 
                         response = new AxisofflinefetchResponseModel
                         {
@@ -168,10 +164,10 @@ namespace ProductivityApi.Services
                             Err_cd = cashValidation.Err_cd,
                             message = cashValidation.message,
                             AmountTobeAccepted = cashValidation.AmountTobeAccepted,
-                            UTR = dto.UTR
+                            RefNo = ""
                         };
                         return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                        apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 
                     }
 
@@ -187,7 +183,7 @@ namespace ProductivityApi.Services
             {
                 var response1 = new AxisofflinefetchResponseModel("F", "9999", "An unexpected error occurred while updating payment details.");
                 return await LogAndReturn(
-                apiName, dto, response1, dto.UTR, dto.Loan_acc_no, response1.Stts_flg, response1.Err_cd);
+                apiName, dto, response1, "", dto.Loan_acc_no, response1.Stts_flg, response1.Err_cd);
 
 
 
@@ -218,7 +214,7 @@ namespace ProductivityApi.Services
                     Err_cd = "0014",
                     message = "Cash limit will be exceeded.",
                     AmountTobeAccepted = acceptableCash.ToString("0.00"),
-                    UTR = ""
+                    RefNo = ""
                 };
             }
 
@@ -228,44 +224,45 @@ namespace ProductivityApi.Services
             return new AxisofflinefetchResponseModel
             {
                 Stts_flg = "S",
-                Err_cd = "000",
+                Err_cd = "0000",
                 message = "Success",
                 AmountTobeAccepted = acceptableCash.ToString("0.00"),
-                UTR = dto.UTR
+                RefNo = ""
             };
         }
 
         private async Task<AxisofflinefetchResponseModel> InsertOfflinePayment(AxisOfflineReqModel dto, string? amountToBeAccepted, string CustName)
         {
             string apiName = "Offline Validation API";
-            var id = await _repository.AddOfflinePaymentDetailsAsync(dto, CustName);
+            var BankRef = _axisrepository.GenerateBankReferenceNoAsync("Airtel");
+            var id = await _repository.AddOfflinePaymentDetailsAsync(dto, CustName, BankRef.Result);
             AxisofflinefetchResponseModel response = new AxisofflinefetchResponseModel();
             if (id == 0)
             {
 
 
-                response = new AxisofflinefetchResponseModel("F", "0004", $"Same UTR and Loan number already Exists {dto.Loan_acc_no} , {dto.UTR}.");
+                response = new AxisofflinefetchResponseModel("F", "0004", $"Same UTR and Loan number already Exists {dto.Loan_acc_no} ");
                 return await LogAndReturn(
-                apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+                apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 
             }
 
             response = new AxisofflinefetchResponseModel
             {
                 Stts_flg = "S",
-                Err_cd = "000",
+                Err_cd = "0000",
                 message = "Success",
                 AmountTobeAccepted = amountToBeAccepted,
-                UTR = dto.UTR,
+                RefNo = BankRef.Result,
                 Name = CustName
             };
             return await LogAndReturn(
-            apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
+            apiName, dto, response, "", dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
         }
 
 
 
-        public async Task<AxisResponseModel> OfflineUpdatePaymentDetailsAsync(AxisOfflineNotifReqModel dto)
+        public async Task<AxisResponseModel> OfflineUpdatePaymentDetailsAsync(AirtelOfflineNotifReqModel dto)
         {
             string apiName = "Offline Notification API";
             try
@@ -281,10 +278,10 @@ namespace ProductivityApi.Services
                 }
 
 
-                var allowedModes = new[] { "CASH", "DD", "CHEQUE" };
+                var allowedModes = new[] { "CASH" };
                 if (!allowedModes.Contains(dto.Pmode.Trim()))
                 {
-                    response = new AxisResponseModel("F", "0003", "Invalid payment mode. Allowed values are CASH, DD, or CHEQUE.");
+                    response = new AxisResponseModel("F", "0003", "Invalid payment mode. Allowed values: CASH");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
                 }
@@ -373,46 +370,15 @@ namespace ProductivityApi.Services
                 }
 
 
-                // For DD and CHEQUE, Cheque/DD No and IFSC are mandatory
-                if (!dto.Pmode.Equals("CASH", StringComparison.OrdinalIgnoreCase))
-                {
-
-
-
-                    if (string.IsNullOrWhiteSpace(dto.PayedBy_Ac_No))
-                    {
-                        response = new AxisResponseModel("F", "0013", "PayedBy_Ac_No is mandatory.");
-                        return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
-                    }
-
-                    if (string.IsNullOrWhiteSpace(dto.Cheque_DD_no))
-                    {
-                        response = new AxisResponseModel("F", "0014", "Cheque_DD_no is mandatory for DD/CHEQUE payments.");
-                        return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
-                    }
-
-
-
-                    if (string.IsNullOrWhiteSpace(dto.ifsc))
-                    {
-                        response = new AxisResponseModel("F", "0015", "IFSC is mandatory for DD/CHEQUE payments.");
-                        return await LogAndReturn(
-                        apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
-                    }
-
-
-                }
-
+            
                 var updatedRows =
                      await _repository.UpdateOfflinePaymentDetailsAsync(dto);
 
                 if (updatedRows == 0)
                 {
-                    response = new AxisResponseModel("F", "0016", $"No payment record found for UTR and LAN / Payment status already Updated.");
-                    response = new AxisResponseModel("F", "0017",
-                    $"No eligible record found. The record was either not found or the payment status has already been updated for Bene_acc_no - {dto.Loan_acc_no} and UTR - {dto.UTR}.");
+                   
+                    response = new AxisResponseModel("F", "0013",
+                    $"The record was either not found or the payment status has already been updated for Bene_acc_no - {dto.Loan_acc_no} and Ref No - {dto.RefNo} and Amount - {dto.Txn_amnt}.");
                     return await LogAndReturn(
                     apiName, dto, response, dto.UTR, dto.Loan_acc_no, response.Stts_flg, response.Err_cd);
 

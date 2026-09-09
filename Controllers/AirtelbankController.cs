@@ -45,7 +45,7 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("OfflineNotification")]
-        public async Task<IActionResult> UpdatePaymentNotification([FromBody] AxisOfflineNotifReqModel request)
+        public async Task<IActionResult> UpdatePaymentNotification([FromBody] AirtelOfflineNotifReqModel request)
         {
             if (request == null)
             {

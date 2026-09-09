@@ -4,7 +4,7 @@ using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public sealed class PurchaseOrderController : ControllerBase
     {
@@ -15,206 +15,96 @@ namespace ProductivityApi.Controllers
             _purchaseOrderService = purchaseOrderService;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreatePO(
-            [FromQuery] string employeeId,
-            [FromBody] CreatePORequest request)
+        [HttpGet]
+        public async Task<IActionResult> CheckUserAccess([FromQuery] string employeeCode)
         {
-            POServiceResult<CreatePOResponse> result =
-                await _purchaseOrderService.CreatePOAsync(request, employeeId);
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
 
-            if (!result.Success)
-                return ToActionResult(result);
-
-            return CreatedAtAction(
-                nameof(GetById),
-                new { poId = result.Data!.POId },
-                new PurchaseOrderApiResponse(true, result.Message, result.Data));
-        }
-
-        [HttpPut("{poId:long}/draft")]
-        public async Task<IActionResult> UpdateDraft(
-            long poId,
-            [FromQuery] string employeeId,
-            [FromBody] CreatePORequest request)
-        {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.UpdateDraftAsync(poId, request, employeeId);
-
-            return ToActionResult(result);
-        }
-
-        [HttpPost("validate")]
-        public async Task<IActionResult> Validate(
-            [FromQuery] bool isBudgetExceeded,
-            [FromBody] CreatePORequest request)
-        {
-            POServiceResult<PurchaseOrderValidationResponse> result =
-                await _purchaseOrderService.ValidateAsync(request, isBudgetExceeded);
-
-            return ToActionResult(result);
-        }
-
-        [HttpGet("{poId:long}")]
-        public async Task<IActionResult> GetById(long poId)
-        {
-            POServiceResult<PurchaseOrderDetailsResponse> result =
-                await _purchaseOrderService.GetByIdAsync(poId);
-
-            return ToActionResult(result);
+            var result = await _purchaseOrderService.CheckAccessAsync(employeeCode);
+            return result.HasAccess ? Ok(result) : StatusCode(StatusCodes.Status403Forbidden, result);
         }
 
         [HttpGet]
-        public async Task<IActionResult> Search(
-            [FromQuery] PurchaseOrderFilterRequest filter)
+        public async Task<IActionResult> GetVendors([FromQuery] string? status)
         {
-            POServiceResult<PagedPurchaseOrderResponse> result =
-                await _purchaseOrderService.SearchAsync(filter);
-
-            return ToActionResult(result);
+            var result = await _purchaseOrderService.GetAllVendorsAsync(status);
+            return Ok(result);
         }
 
-        [HttpGet("actionable")]
-        public async Task<IActionResult> GetActionable(
-            [FromQuery] string employeeId,
-            [FromQuery] string userRole,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 20)
+        /// <summary>GET /api/Purchaseorder/GetVendorById?vendorId=5</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetVendorById([FromQuery] int vendorId)
         {
-            POServiceResult<PagedPurchaseOrderResponse> result =
-                await _purchaseOrderService.GetActionableAsync(
-                    employeeId,
-                    userRole,
-                    pageNumber,
-                    pageSize);
-
-            return ToActionResult(result);
+            try
+            {
+                var result = await _purchaseOrderService.GetVendorByIdAsync(vendorId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+        /// <summary>GET /api/Purchaseorder/GetDepartments</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDepartments()
+        {
+            var result = await _purchaseOrderService.GetDepartmentsAsync();
+            return Ok(result);
         }
 
-        [HttpGet("{poId:long}/approval-history")]
-        public async Task<IActionResult> GetApprovalHistory(long poId)
+        /// <summary>GET /api/Purchaseorder/GetBudget?budgetYear=FY2026-27 — Admin view of all departments' budgets.</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetBudget([FromQuery] string? budgetYear)
         {
-            POServiceResult<IReadOnlyList<PurchaseOrderApprovalHistoryResponse>> result =
-                await _purchaseOrderService.GetApprovalHistoryAsync(poId);
-
-            return ToActionResult(result);
+            var result = await _purchaseOrderService.GetBudgetAsync(budgetYear);
+            return Ok(result);
         }
 
-        [HttpGet("{poId:long}/approval-route")]
-        public async Task<IActionResult> GetApprovalRoute(long poId)
+        /// <summary>GET /api/Purchaseorder/GetDepartmentWiseBudget?department=IT&budgetYear=FY2026-27&classification=Capex</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentWiseBudget(
+            [FromQuery] string? department,
+            [FromQuery] string? budgetYear,
+            [FromQuery] string? classification)
         {
-            POServiceResult<IReadOnlyList<PurchaseOrderApprovalStepResponse>> result =
-                await _purchaseOrderService.GetApprovalRouteAsync(poId);
-
-            return ToActionResult(result);
+            var result = await _purchaseOrderService.GetDepartmentWiseBudgetAsync(department, budgetYear, classification);
+            return Ok(result);
         }
 
-        [HttpPost("{poId:long}/submit")]
-        public async Task<IActionResult> Submit(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
-        {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "SUBMIT", request);
 
-            return ToActionResult(result);
+
+        /// <summary>POST /api/Purchaseorder/CreatePurchaseOrder</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreatePurchaseOrder([FromBody] CreatePurchaseOrderRequest request)
+        {
+            try
+            {
+                var result = await _purchaseOrderService.CreatePurchaseOrderAsync(request);
+                return Ok(result);
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
-        [HttpPost("{poId:long}/review")]
-        public async Task<IActionResult> Review(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
+        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderById?poId=5</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseOrderById([FromQuery] int poId)
         {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "REVIEW", request);
-
-            return ToActionResult(result);
+            try
+            {
+                return Ok(await _purchaseOrderService.GetPurchaseOrderByIdAsync(poId));
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
         }
 
-        [HttpPost("{poId:long}/approve")]
-        public async Task<IActionResult> Approve(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
+        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderList?departmentCode=IT&status=PendingApproval</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseOrderList([FromQuery] string? departmentCode, [FromQuery] string? status)
         {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "APPROVE", request);
-
-            return ToActionResult(result);
+            return Ok(await _purchaseOrderService.GetPurchaseOrderListAsync(departmentCode, status));
         }
 
-        [HttpPost("{poId:long}/reject")]
-        public async Task<IActionResult> Reject(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
-        {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "REJECT", request);
-
-            return ToActionResult(result);
-        }
-
-        [HttpPost("{poId:long}/resubmit")]
-        public async Task<IActionResult> Resubmit(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
-        {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "RESUBMIT", request);
-
-            return ToActionResult(result);
-        }
-
-        [HttpPost("{poId:long}/cancel")]
-        public async Task<IActionResult> Cancel(
-            long poId,
-            [FromBody] PurchaseOrderWorkflowRequest request)
-        {
-            POServiceResult<PurchaseOrderWorkflowResponse> result =
-                await _purchaseOrderService.TransitionAsync(poId, "CANCEL", request);
-
-            return ToActionResult(result);
-        }
-
-        [HttpPost("{poId:long}/addendums")]
-        public async Task<IActionResult> CreateAddendum(
-            long poId,
-            [FromBody] CreatePOAddendumRequest request)
-        {
-            POServiceResult<POAddendumResponse> result =
-                await _purchaseOrderService.CreateAddendumAsync(poId, request);
-
-            return ToActionResult(result);
-        }
-
-        [HttpGet("{poId:long}/addendums")]
-        public async Task<IActionResult> GetAddendums(long poId)
-        {
-            POServiceResult<IReadOnlyList<POAddendumResponse>> result =
-                await _purchaseOrderService.GetAddendumsAsync(poId);
-
-            return ToActionResult(result);
-        }
-
-        [HttpGet("{poId:long}/pdf")]
-        public async Task<IActionResult> DownloadPdf(
-            long poId,
-            [FromQuery] bool draft = false)
-        {
-            POServiceResult<PurchaseOrderDocumentResponse> result =
-                await _purchaseOrderService.GetPdfAsync(poId, draft);
-
-            if (!result.Success)
-                return ToActionResult(result);
-
-            PurchaseOrderDocumentResponse document = result.Data!;
-            return File(document.Content, document.ContentType, document.FileName);
-        }
-
-        private ObjectResult ToActionResult<T>(POServiceResult<T> result)
-        {
-            return StatusCode(
-                result.StatusCode,
-                new PurchaseOrderApiResponse(result.Success, result.Message, result.Data));
-        }
     }
 }

@@ -35,7 +35,7 @@
     }
     public class AxisOfflineReqModel
     {
-        public string UTR { get; set; }
+       // public string UTR { get; set; }
         public string Loan_acc_no { get; set; }
         public string Req_type { get; set; }
         public string Req_date { get; set; }
@@ -61,7 +61,7 @@
         public string? message { get; set; }
         public string? Name { get; set; }
         public string? AmountTobeAccepted { get; set; }
-        public string? UTR { get; set; }
+        public string? RefNo { get; set; }
         public AxisofflinefetchResponseModel()
         {
         }
@@ -81,6 +81,7 @@
     {
         public string UTR { get; set; }
         public string Loan_acc_no { get; set; }
+        public string? RefNo { get; set; }
         public string Req_type { get; set; }
         public string Req_date { get; set; }
         public string Txn_amnt { get; set; }
@@ -93,4 +94,27 @@
 
 
     }
+
+    public class BankReferenceResponse
+    {
+        public int Result { get; set; }
+        public string? Reference_No { get; set; }
+    }
+
+    public class AirtelOfflineNotifReqModel
+    {
+        public string UTR { get; set; }
+        public string Loan_acc_no { get; set; }
+        public string? RefNo { get; set; }
+        public string Req_type { get; set; }
+        public string Req_date { get; set; }
+        public string Txn_amnt { get; set; }
+        public string? Pmode { get; set; }
+        public string? PayedBy { get; set; }
+       
+        public string? Tran_id { get; set; }
+
+
+    }
+
 }

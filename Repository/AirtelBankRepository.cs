@@ -28,7 +28,7 @@ namespace ProductivityApi.Repository
 
             return soa;
         }
-        public async Task<int> AddOfflinePaymentDetailsAsync(AxisOfflineReqModel dto, string CustName)
+        public async Task<int> AddOfflinePaymentDetailsAsync(AxisOfflineReqModel dto, string CustName, string Bankref)
         {
 
             using var connection = new SqlConnection(_conStr);
@@ -38,7 +38,8 @@ namespace ProductivityApi.Repository
                 "sp_InsertAirtelBankOfflineCollection",
               new
               {
-                  UTR = dto.UTR,
+                  // UTR = dto.UTR,
+                  Reference_No = Bankref,
                   Bene_Acc_No = dto.Loan_acc_no,
                   Cust_Name = CustName,
                   Req_Type = dto.Req_type,
@@ -50,7 +51,7 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-        public async Task<int> UpdateOfflinePaymentDetailsAsync(AxisOfflineNotifReqModel request)
+        public async Task<int> UpdateOfflinePaymentDetailsAsync(AirtelOfflineNotifReqModel request)
         {
             await using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -61,14 +62,15 @@ namespace ProductivityApi.Repository
                 {
                     request.UTR,
                     Bene_Acc_No = request.Loan_acc_no,
+                    Reference_No = request.RefNo,
                     Req_Type = request.Req_type,
                     Req_Date = request.Req_date,
                     Txn_Amnt = request.Txn_amnt,
                     request.Pmode,
                     PayedBy = request.PayedBy,
-                    PayedBy_Ac_No = request.PayedBy_Ac_No,
-                    Cheque_DD_no = request.Cheque_DD_no,
-                    IFSC = request.ifsc,
+                    //PayedBy_Ac_No = request.PayedBy_Ac_No,
+                    //Cheque_DD_no = request.Cheque_DD_no,
+                    //IFSC = request.ifsc,
                     Tran_Id = request.Tran_id
                 },
                 commandType: CommandType.StoredProcedure

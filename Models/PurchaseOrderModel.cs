@@ -3,290 +3,235 @@
     public class PurchaseOrderModel
     {
     }
-    public sealed class CreatePORequest
-    {
-        public string Department { get; set; } = string.Empty;
-        public DateTime PODate { get; set; }
-        public string BudgetYear { get; set; } = string.Empty;
 
+    public class PoUser
+    {
+        public int Id { get; set; }
+        public string EmployeeCode { get; set; } = default!;
+        public string Name { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public bool IsDepartmentHead { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class PoRole
+    {
+        public int Id { get; set; }
+        public string RoleName { get; set; } = default!;
+        public string Status { get; set; } = default!;   // 'Active' / 'Inactive'
+    }
+    public class POUserAccessResponse
+    {
+        public bool HasAccess { get; set; }
+        public string EmployeeCode { get; set; } = default!;
+        public string? Name { get; set; }
+        public string? DepartmentCode { get; set; }
+        public bool IsDepartmentHead { get; set; }
+        public List<string> Roles { get; set; } = new();
+        public string? Message { get; set; }
+    }
+    public class POVendorMaster
+    {
+        public int VendorId { get; set; }
+        public string VendorCode { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public string? BankHolderName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankName { get; set; }
+        public string? IFSCCode { get; set; }
+        public bool MSMEVendor { get; set; }
+        public string? UDYAMRegnNo { get; set; }
+        public string? VendorPAN { get; set; }
+        public string Status { get; set; } = default!;
+        public string? CreatedBy { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public string? ModifiedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+    }
+    public class POVendorAddressMaster
+    {
+        public int VendorAddressId { get; set; }
+        public int VendorId { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string StateCode { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string GSTIN { get; set; } = default!;
+        public bool IsPrimaryAddress { get; set; }
+        public string Status { get; set; } = default!;
+    }
+    public class POVendorListItemResponse
+    {
+        public int VendorId { get; set; }
+        public string VendorCode { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public bool MSMEVendor { get; set; }
+        public string Status { get; set; } = default!;
+    }
+    public class POVendorAddressResponse
+    {
+        public int VendorAddressId { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string StateCode { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string GSTIN { get; set; } = default!;
+        public bool IsPrimaryAddress { get; set; }
+        public string Status { get; set; } = default!;
+    }
+    public class POVendorDetailResponse
+    {
+        public int VendorId { get; set; }
+        public string VendorCode { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public string? BankHolderName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankName { get; set; }
+        public string? IFSCCode { get; set; }
+        public bool MSMEVendor { get; set; }
+        public string? UDYAMRegnNo { get; set; }
+        public string? VendorPAN { get; set; }
+        public string Status { get; set; } = default!;
+        public List<POVendorAddressResponse> Addresses { get; set; } = new();
+    }
+    public class PoDepartment
+    {
+        public int Id { get; set; }
+        public string Department { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public bool ActiveStatus { get; set; }
+    }
+    public class PoDeptWiseBudget
+    {
+        public int Id { get; set; }
+        public string Department { get; set; } = default!;
+        public string Classification { get; set; } = default!;      // Capex / Opex
+        public string? SubClassification { get; set; }
+        public string? ItemCategory { get; set; }
+        public string BudgetYear { get; set; } = default!;          // e.g. "FY2026-27"
+        public decimal Budget { get; set; }
+        public bool IsActive { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime CreatedDt { get; set; }
+        public string? ModifiedBy { get; set; }
+        public DateTime? ModifiedDt { get; set; }
+    }
+    public class PODepartmentResponse
+    {
+        public int Id { get; set; }
+        public string Department { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+    }
+    public class PODepartmentBudgetResponse
+    {
+        public int Id { get; set; }
+        public string Department { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string? SubClassification { get; set; }
+        public string? ItemCategory { get; set; }
+        public string BudgetYear { get; set; } = default!;          // e.g. "FY2026-27"
+        public decimal Budget { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+
+    public class PoPurchaseOrder
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
         public long VendorId { get; set; }
         public long VendorAddressId { get; set; }
-
-        public string? VendorContactName { get; set; }
-        public string? VendorContactNumber { get; set; }
-        public string? VendorEmailId { get; set; }
-
-        public List<CreatePOItemRequest> Items { get; set; } = [];
-        public List<CreatePOQuotationRequest> Quotations { get; set; } = [];
-        public List<CreatePOTermRequest> Terms { get; set; } = [];
-    }
-
-    public sealed class CreatePOItemRequest
-    {
-        public int ItemSequence { get; set; }
-
-        public string Classification { get; set; } = string.Empty;
-        public string SubClassification { get; set; } = string.Empty;
-        public string ItemCategory { get; set; } = string.Empty;
-
-      //  public string? ItemCode { get; set; }
-        public string ItemDescription { get; set; } = string.Empty;
-      //  public string UOM { get; set; } = string.Empty;
-
-        public decimal Quantity { get; set; }
-        public decimal BaseValue { get; set; }
-        public decimal GSTPercentage { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public string TermsType { get; set; } = default!;
+        public string? CustomAdvanceText { get; set; }
+        public decimal SubTotal { get; set; }
         public decimal GSTAmount { get; set; }
-        public decimal ValueInclGST { get; set; }
-
-        // Resolved by the backend, not supplied by the frontend.
-        //[System.Text.Json.Serialization.JsonIgnore]
-        //public long? BudgetId { get; set; }
-    }
-
-    public sealed class CreatePOQuotationRequest
-    {
-        public int QuotationSequence { get; set; }
-        public string? QuotationVendorName { get; set; }
-        public string? QuotationReference { get; set; }
-        public DateTime? QuotationDate { get; set; }
-        public decimal? QuotedAmount { get; set; }
-        public string FileName { get; set; } = string.Empty;
-        public bool IsSelectedQuotation { get; set; }
-    }
-
-    public sealed class CreatePOTermRequest
-    {
-        public int TermSequence { get; set; }
-        public string TermType { get; set; } = string.Empty;
-        public string TermCategory { get; set; } = string.Empty;
-        public string TermsAndConditionDetails { get; set; } = string.Empty;
-        public bool IsCustomTerm { get; set; }
-    }
-
-    public sealed class CreatePOResponse
-    {
-        public long POId { get; set; }
-        public string PONumber { get; set; } = string.Empty;
-        public string POStatus { get; set; } = string.Empty;
-    }
-
-    public sealed class PurchaseOrderFilterRequest
-    {
-        public string? EmployeeId { get; set; }
-        public string? Department { get; set; }
-        public string? Status { get; set; }
-        public string? ExpenseType { get; set; }
-        public long? VendorId { get; set; }
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
-        public string? Search { get; set; }
-        public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-    }
-
-    public sealed class PurchaseOrderSummaryResponse
-    {
-        public long POId { get; set; }
-        public string PONumber { get; set; } = string.Empty;
-        public DateTime PODate { get; set; }
-        public string Department { get; set; } = string.Empty;
-        public string? ExpenseType { get; set; }
-        public long VendorId { get; set; }
-        public string VendorName { get; set; } = string.Empty;
-        public decimal TotalBaseValue { get; set; }
-        public decimal TotalGSTAmount { get; set; }
-        public decimal TotalValueInclGST { get; set; }
+        public decimal TotalAmount { get; set; }
         public bool IsBudgetExceeded { get; set; }
-        public bool IsQuotationRequired { get; set; }
-        public string POStatus { get; set; } = string.Empty;
-        public string? CurrentApprovalRole { get; set; }
-        public string CreatedBy { get; set; } = string.Empty;
+        public bool QuotationRequired { get; set; }
+        public string Status { get; set; } = default!;
+        public int CurrentApprovalStep { get; set; }
+        public string CreatedBy { get; set; } = default!;
         public DateTime CreatedDt { get; set; }
     }
-
-    public sealed class PagedPurchaseOrderResponse
+    public class PoPurchaseOrderItem
     {
-        public IReadOnlyList<PurchaseOrderSummaryResponse> Items { get; set; } = [];
-        public int TotalCount { get; set; }
-        public int PageNumber { get; set; }
-        public int PageSize { get; set; }
+        public int POItemId { get; set; }
+        public int POId { get; set; }
+        public string ItemDescription { get; set; } = default!;
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal Amount { get; set; }
+        public decimal GSTRate { get; set; }
+        public string GSTType { get; set; } = default!;
+        public decimal CGSTAmount { get; set; }
+        public decimal SGSTAmount { get; set; }
+        public decimal IGSTAmount { get; set; }
     }
-
-    public sealed class PurchaseOrderDetailsResponse
+    public class PoPurchaseOrderApprovalHistory
     {
-        public long POId { get; set; }
-        public string PONumber { get; set; } = string.Empty;
-        public string POStatus { get; set; } = string.Empty;
-        public string Department { get; set; } = string.Empty;
-        public string? ExpenseType { get; set; }
-        public DateTime PODate { get; set; }
-        public string BudgetYear { get; set; } = string.Empty;
+        public int ApprovalId { get; set; }
+        public int POId { get; set; }
+        public int StepNumber { get; set; }
+        public string ApproverRole { get; set; } = default!;
+    }
+    public class CreatePurchaseOrderRequest
+    {
         public long VendorId { get; set; }
-        public string VendorName { get; set; } = string.Empty;
         public long VendorAddressId { get; set; }
-        public string? VendorGSTIN { get; set; }
-        public string? VendorContactName { get; set; }
-        public string? VendorContactNumber { get; set; }
-        public string? VendorEmailId { get; set; }
-        public decimal TotalBaseValue { get; set; }
-        public decimal TotalGSTAmount { get; set; }
-        public decimal TotalValueInclGST { get; set; }
-        public bool IsBudgetExceeded { get; set; }
-        public bool IsQuotationRequired { get; set; }
-        public int RequiredQuotationCount { get; set; }
-        public decimal QuotationThresholdAmount { get; set; }
-        public string? CurrentApprovalRole { get; set; }
-        public int ApprovalCycle { get; set; }
-        public string CreatedBy { get; set; } = string.Empty;
-        public DateTime CreatedDt { get; set; }
-        public List<PurchaseOrderItemResponse> Items { get; set; } = [];
-        public List<PurchaseOrderQuotationResponse> Quotations { get; set; } = [];
-        public List<PurchaseOrderTermResponse> Terms { get; set; } = [];
-        public List<PurchaseOrderApprovalHistoryResponse> ApprovalHistory { get; set; } = [];
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;   // Capex / Opex
+        public string BudgetYear { get; set; } = default!;       // FY2026-27
+        public string TermsType { get; set; } = default!;
+        public string? CustomAdvanceText { get; set; }
+        public string CreatedBy { get; set; } = default!;        // EmployeeCode of the Maker
+        public string BuyerStateCode { get; set; } = default!;   // pending Company/Branch master
+        public bool SaveAsDraft { get; set; }
+        public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
+        public List<string> QuotationFilePaths { get; set; } = new();
     }
-
-    public sealed class PurchaseOrderItemResponse
+    public class CreatePurchaseOrderItemRequest
     {
-        public long POItemId { get; set; }
-        public int ItemSequence { get; set; }
-        public string Classification { get; set; } = string.Empty;
-        public string SubClassification { get; set; } = string.Empty;
-        public string ItemCategory { get; set; } = string.Empty;
-        public string ItemDescription { get; set; } = string.Empty;
+        public string ItemDescription { get; set; } = default!;
         public decimal Quantity { get; set; }
-        public decimal BaseValue { get; set; }
-        public decimal GSTPercentage { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal GSTRate { get; set; }
+    }
+    public class PurchaseOrderResponse
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public decimal SubTotal { get; set; }
         public decimal GSTAmount { get; set; }
-        public decimal ValueInclGST { get; set; }
-        public long? BudgetId { get; set; }
-    }
-
-    public sealed class PurchaseOrderQuotationResponse
-    {
-        public long POQuotationId { get; set; }
-        public int QuotationSequence { get; set; }
-        public string? QuotationVendorName { get; set; }
-        public string? QuotationReference { get; set; }
-        public DateTime? QuotationDate { get; set; }
-        public decimal? QuotedAmount { get; set; }
-        public string FileName { get; set; } = string.Empty;
-        public bool IsSelectedQuotation { get; set; }
-    }
-
-    public sealed class PurchaseOrderTermResponse
-    {
-        public long POTermId { get; set; }
-        public int TermSequence { get; set; }
-        public string TermType { get; set; } = string.Empty;
-        public string TermCategory { get; set; } = string.Empty;
-        public string TermsAndConditionDetails { get; set; } = string.Empty;
-        public bool IsCustomTerm { get; set; }
-    }
-
-    public sealed class PurchaseOrderApprovalHistoryResponse
-    {
-        public long ApprovalHistoryId { get; set; }
-        public int ApprovalCycle { get; set; }
-        public int ApprovalSequence { get; set; }
-        public string ApprovalRole { get; set; } = string.Empty;
-        public string Action { get; set; } = string.Empty;
-        public string ActionBy { get; set; } = string.Empty;
-        public string? Remarks { get; set; }
-        public DateTime ActionDt { get; set; }
-    }
-
-    public sealed class PurchaseOrderWorkflowRequest
-    {
-        public string EmployeeId { get; set; } = string.Empty;
-        public string UserRole { get; set; } = string.Empty;
-        public string? Remarks { get; set; }
-    }
-
-    public sealed class PurchaseOrderWorkflowResponse
-    {
-        public long POId { get; set; }
-        public string POStatus { get; set; } = string.Empty;
-        public string? CurrentApprovalRole { get; set; }
-        public int ApprovalCycle { get; set; }
-    }
-
-    public sealed class CreatePOAddendumRequest
-    {
-        public decimal AdditionalAmount { get; set; }
-        public string Reason { get; set; } = string.Empty;
-        public string? SupportingDocumentName { get; set; }
-        public string EmployeeId { get; set; } = string.Empty;
-    }
-
-    public sealed class POAddendumResponse
-    {
-        public long POAddendumId { get; set; }
-        public long POId { get; set; }
-        public int AddendumNumber { get; set; }
-        public decimal ExistingPOValue { get; set; }
-        public decimal AdditionalAmount { get; set; }
-        public decimal RevisedPOValue { get; set; }
-        public string Reason { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public string CreatedBy { get; set; } = string.Empty;
-        public DateTime CreatedDt { get; set; }
-    }
-
-    public sealed class PurchaseOrderApprovalStepResponse
-    {
-        public int Sequence { get; set; }
-        public string Role { get; set; } = string.Empty;
-        public string Reason { get; set; } = string.Empty;
-    }
-
-    public sealed class PurchaseOrderValidationResponse
-    {
-        public decimal TotalBaseValue { get; set; }
-        public decimal TotalGSTAmount { get; set; }
-        public decimal TotalValueInclGST { get; set; }
-        public bool IsQuotationRequired { get; set; }
-        public int RequiredQuotationCount { get; set; }
-        public decimal QuotationThresholdAmount { get; set; }
+        public decimal TotalAmount { get; set; }
         public bool IsBudgetExceeded { get; set; }
-        public List<PurchaseOrderApprovalStepResponse> ApprovalRoute { get; set; } = [];
+        public bool QuotationRequired { get; set; }
+        public string Status { get; set; } = default!;
+        public List<PurchaseOrderItemResponse> Items { get; set; } = new();
     }
-
-    public sealed class PurchaseOrderDocumentResponse
+    public class PurchaseOrderItemResponse
     {
-        public byte[] Content { get; set; } = [];
-        public string ContentType { get; set; } = "application/pdf";
-        public string FileName { get; set; } = string.Empty;
+        public string ItemDescription { get; set; } = default!;
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal Amount { get; set; }
+        public decimal GSTRate { get; set; }
+        public string GSTType { get; set; } = default!;
+        public decimal CGSTAmount { get; set; }
+        public decimal SGSTAmount { get; set; }
+        public decimal IGSTAmount { get; set; }
     }
 
-    public sealed class POServiceResult<T>
-    {
-        public bool Success { get; init; }
-        public int StatusCode { get; init; }
-        public string Message { get; init; } = string.Empty;
-        public T? Data { get; init; }
 
-        public static POServiceResult<T> Ok(T data, string message = "Success") =>
-            new() { Success = true, StatusCode = 200, Message = message, Data = data };
 
-        public static POServiceResult<T> Created(T data, string message) =>
-            new() { Success = true, StatusCode = 201, Message = message, Data = data };
 
-        public static POServiceResult<T> Fail(int statusCode, string message) =>
-            new() { Success = false, StatusCode = statusCode, Message = message };
-    }
 
-    public sealed class PurchaseOrderApiResponse
-    {
-        public bool Success { get; init; }
-        public string ResponseString { get; init; } = string.Empty;
-        public object? Data { get; init; }
 
-        public PurchaseOrderApiResponse(bool success, string responseString, object? data = null)
-        {
-            Success = success;
-            ResponseString = responseString;
-            Data = data;
-        }
-    }
 }
