@@ -159,7 +159,7 @@ namespace ProductivityApi.Models
         [Required]
         public DateTime DisbDate { get; set; }
 
-        public DateTime ClosureDate { get; set; }
+        public DateTime? ClosureDate { get; set; }
 
         [Required]
         public string NocStatus { get; set; } = string.Empty;
