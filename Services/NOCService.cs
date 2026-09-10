@@ -177,15 +177,15 @@ namespace ProductivityApi.Services
         //    return true;
         //}
 
-        public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
+        public async Task<(bool Success, string Message)> InsertTransactionAsync(NocTransactionInsertDto dto)
         {
             var customer = await _plfService.GetCustomerDetails(dto.CustId);
 
             if (customer?.ReturnStatus == null)
-                throw new Exception("Failed to retrieve customer details");
+                return (false, "Failed to retrieve customer details");
 
             if (customer.ReturnStatus.returnCode != "0000")
-                throw new Exception(customer.ReturnStatus.returnText);
+                return (false, customer.ReturnStatus.returnText);
 
             var mobile = customer.Phones?
                 .OrderByDescending(p => p.priority)
@@ -195,7 +195,7 @@ namespace ProductivityApi.Services
             var branch = _branchService.GetBranchByID(dto.BranchCode);
 
             if (branch == null)
-                throw new Exception("Branch not found");
+                return (false, "Branch not found");
 
             var transaction = new NocTransactionInsertModel
             {
@@ -221,9 +221,8 @@ namespace ProductivityApi.Services
 
             await _repository.InsertTransactionAsync(transaction);
 
-            return true;
+            return (true, "Transaction inserted successfully.");
         }
-
         public async Task<(IEnumerable<NocDashboardDto>? Data, string? Error)>
         GetDashboardByUserAsync(NocDashboardRequestDto dto)
         {
@@ -1344,6 +1343,22 @@ namespace ProductivityApi.Services
         internal async Task<byte[]> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<(bool Success, object Data, string Message)> GetTransactionReportAsync(
+    NocReportRequest request)
+        {
+            if (request.FromDate.HasValue && request.ToDate.HasValue &&
+                request.FromDate > request.ToDate)
+            {
+                return (false, new object(), "From date cannot be greater than To date.");
+            }
+
+            var data = await _repository.GetTransactionReportAsync(
+                request.FromDate,
+                request.ToDate);
+
+            return (true, data, "Report retrieved successfully.");
         }
     }
 }
