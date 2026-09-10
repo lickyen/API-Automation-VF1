@@ -796,5 +796,24 @@ namespace ProductivityApi.Repository
 
             await conn.ExecuteAsync(sql, new { TransactionId = transactionId, Status = status });
         }
+
+        public async Task<IEnumerable<NocReportModel>> GetTransactionReportAsync(
+    DateTime? fromDate,
+    DateTime? toDate)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync<NocReportModel>(
+                "sp_NOC_Report",
+                new
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
     }
 }

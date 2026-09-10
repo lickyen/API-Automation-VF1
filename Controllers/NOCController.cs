@@ -37,12 +37,10 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.InsertTransactionAsync(dto);
 
-            if (!result)
-            {
-                return BadRequest(new Response(false, message: "Failed to insert transaction."));
-            }
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
 
-            return Ok(new Response(true, message: "Transaction inserted successfully."));
+            return Ok(new Response(true, message: result.Message));
         }
 
 
@@ -471,6 +469,18 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, result.Message));
+        }
+
+        [HttpGet("report")]
+        public async Task<IActionResult> GetTransactionReport(
+        [FromQuery] NocReportRequest request)
+        {
+            var result = await _service.GetTransactionReportAsync(request);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, result.Data, result.Message));
+
+            return Ok(new Response(true, result.Data, result.Message));
         }
     }
 }

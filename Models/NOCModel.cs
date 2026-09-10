@@ -568,4 +568,33 @@ namespace ProductivityApi.Models
         public string Role { get; set; } = string.Empty;
         public string TabName { get; set; } = string.Empty;
     }
+
+    public class NocReportRequest
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+    }
+
+    public class NocReportModel
+    {
+        public int Id { get; set; }
+        public string? Lan { get; set; }
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? Region { get; set; }
+        public string? Zone { get; set; }
+        public string? MegaZone { get; set; }
+        public string? CustId { get; set; }
+        public string? CustName { get; set; }
+        public string? CustMobile { get; set; }
+        public string? CollId { get; set; }
+        public string? LoanStatus { get; set; }
+        public DateTime? DisbDate { get; set; }
+        public DateTime? ClosureDate { get; set; }
+        public string? NocStatus { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? CreatedDt { get; set; }
+        public string? Status { get; set; }
+        public int? Tat { get; set; }
+    }
 }
