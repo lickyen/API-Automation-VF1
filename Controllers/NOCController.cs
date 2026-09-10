@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -473,14 +474,17 @@ namespace ProductivityApi.Controllers
 
         [HttpGet("report")]
         public async Task<IActionResult> GetTransactionReport(
-        [FromQuery] NocReportRequest request)
+            [FromQuery] NocReportRequest request)
         {
             var result = await _service.GetTransactionReportAsync(request);
 
             if (!result.Success)
-                return BadRequest(new Response(false, result.Data, result.Message));
+                return BadRequest(new Response(false, message: result.Message));
 
-            return Ok(new Response(true, result.Data, result.Message));
+            return File(
+                result.Data!,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"NOC_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
         }
     }
 }

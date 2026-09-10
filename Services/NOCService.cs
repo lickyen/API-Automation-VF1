@@ -1,11 +1,12 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using ClosedXML.Excel;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
+using System.Text;
+using System.Text.Json;
 
 namespace ProductivityApi.Services
 {
@@ -1345,20 +1346,57 @@ namespace ProductivityApi.Services
             throw new NotImplementedException();
         }
 
-        public async Task<(bool Success, object Data, string Message)> GetTransactionReportAsync(
-    NocReportRequest request)
+        public async Task<(bool Success, byte[]? Data, string Message)> GetTransactionReportAsync(
+            NocReportRequest request)
         {
-            if (request.FromDate.HasValue && request.ToDate.HasValue &&
+            if (request.FromDate.HasValue &&
+                request.ToDate.HasValue &&
                 request.FromDate > request.ToDate)
             {
-                return (false, new object(), "From date cannot be greater than To date.");
+                return (false, null, "From date cannot be greater than To date.");
             }
 
             var data = await _repository.GetTransactionReportAsync(
                 request.FromDate,
                 request.ToDate);
 
-            return (true, data, "Report retrieved successfully.");
+            var excel = ExcelHelper.GenerateExcel(data, "NOC Report");
+
+            if (excel == null)
+                return (false, null, "No records found.");
+
+            using var stream = new MemoryStream(excel);
+            using var workbook = new XLWorkbook(stream);
+
+            var ws = workbook.Worksheet("NOC Report");
+
+            var tatColumn = ws.Row(1)
+                .CellsUsed()
+                .FirstOrDefault(x => x.Value.ToString()
+                    .Equals("TAT", StringComparison.OrdinalIgnoreCase));
+
+            if (tatColumn != null)
+            {
+                for (int row = 2; row <= ws.LastRowUsed().RowNumber(); row++)
+                {
+                    var cell = ws.Cell(row, tatColumn.Address.ColumnNumber);
+
+                    if (!cell.IsEmpty() && int.TryParse(cell.Value.ToString(), out int tat))
+                    {
+                        if (tat <= 7)
+                            cell.Style.Fill.BackgroundColor = XLColor.PaleGreen;
+                        else if (tat <= 15)
+                            cell.Style.Fill.BackgroundColor = XLColor.LightGoldenrodYellow;
+                        else
+                            cell.Style.Fill.BackgroundColor = XLColor.LightPink;
+                    }
+                }
+            }
+
+            using var output = new MemoryStream();
+            workbook.SaveAs(output);
+
+            return (true, output.ToArray(), "Report generated successfully.");
         }
     }
 }
