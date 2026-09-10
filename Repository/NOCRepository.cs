@@ -63,7 +63,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task InsertTransactionAsync(NocTransactionInsertDto dto)
+        public async Task InsertTransactionAsync(NocTransactionInsertModel dto)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();

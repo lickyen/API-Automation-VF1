@@ -15,6 +15,7 @@ namespace ProductivityApi.Services
         private readonly PLFRepository _plfRepository;
         private readonly IndusArchivedRepository _indusArchivedRepository;
         private readonly BranchServices _branchService;
+        private readonly PLFService _plfService;
 
         private readonly EmailService _emailService;
         private readonly SmsService _smsService;
@@ -34,6 +35,8 @@ namespace ProductivityApi.Services
             TemplateService templateService,
             HttpClient httpClient,
             OtpService otpService,
+            PLFService plfService,
+            BranchServices branchService,
             AppSettings appSettings
         )
         {
@@ -45,6 +48,8 @@ namespace ProductivityApi.Services
             _configuration = configuration;
             _templateService = templateService;
             _httpClient = httpClient;
+            _plfService = plfService;
+            _branchService = branchService;
             _otpService = otpService;
             _filePaths = appSettings.FilePaths;
         }
@@ -166,9 +171,56 @@ namespace ProductivityApi.Services
                 .Concat(indusResult.Cast<object>())
                 .ToList();
         }
+        //public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
+        //{
+        //    await _repository.InsertTransactionAsync(dto);
+        //    return true;
+        //}
+
         public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
         {
-            await _repository.InsertTransactionAsync(dto);
+            var customer = await _plfService.GetCustomerDetails(dto.CustId);
+
+            if (customer?.ReturnStatus == null)
+                throw new Exception("Failed to retrieve customer details");
+
+            if (customer.ReturnStatus.returnCode != "0000")
+                throw new Exception(customer.ReturnStatus.returnText);
+
+            var mobile = customer.Phones?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.phoneNumber)
+                .FirstOrDefault();
+
+            var branch = _branchService.GetBranchByID(dto.BranchCode);
+
+            if (branch == null)
+                throw new Exception("Branch not found");
+
+            var transaction = new NocTransactionInsertModel
+            {
+                Lan = dto.Lan,
+                CustId = dto.CustId,
+                CustName = dto.CustName,
+                CollId = dto.CollId,
+                CustMobile = mobile,
+
+                BranchCode = dto.BranchCode,
+                BranchName = branch.BranchName,
+                Region = branch.Region,
+                Zone = branch.Zone,
+                MegaZone = branch.MegaZone,
+
+                DisbDate = dto.DisbDate,
+                LoanStatus = dto.LoanStatus,
+                ClosureDate = dto.ClosureDate,
+                NocStatus = dto.NocStatus,
+                CreatedBy = dto.CreatedBy,
+                GenerateNOC = dto.GenerateNOC
+            };
+
+            await _repository.InsertTransactionAsync(transaction);
+
             return true;
         }
 
