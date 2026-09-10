@@ -63,17 +63,31 @@ namespace ProductivityApi.Controllers
         }
 
         /// <summary>GET /api/Purchaseorder/GetDepartmentWiseBudget?department=IT&budgetYear=FY2026-27&classification=Capex</summary>
+        //[HttpGet]
+        //public async Task<IActionResult> GetDepartmentWiseBudget(
+        //    [FromQuery] string? department,
+        //    [FromQuery] string? budgetYear,
+        //    [FromQuery] string? classification)
+        //{
+        //    var result = await _purchaseOrderService.GetDepartmentWiseBudgetAsync(department, budgetYear, classification);
+        //    return Ok(result);
+        //}
+
+        ///// <summary>GET /api/Purchaseorder/GetBudgetLines?departmentCode=Admin&classification=Capex&budgetYear=FY2026-27</summary>
+        //[HttpGet]
+        //public async Task<IActionResult> GetBudgetLines(
+        //    [FromQuery] string departmentCode, [FromQuery] string classification, [FromQuery] string budgetYear)
+        //{
+        //    return Ok(await _purchaseOrderService.GetBudgetLinesAsync(departmentCode, classification, budgetYear));
+        //}
+        /// <summary>GET /api/Purchaseorder/GetTermsMaster?termCategory=Payment</summary>
         [HttpGet]
-        public async Task<IActionResult> GetDepartmentWiseBudget(
-            [FromQuery] string? department,
-            [FromQuery] string? budgetYear,
-            [FromQuery] string? classification)
-        {
-            var result = await _purchaseOrderService.GetDepartmentWiseBudgetAsync(department, budgetYear, classification);
-            return Ok(result);
-        }
-
-
+        public async Task<IActionResult> GetTermsMaster([FromQuery] string? termCategory)
+            => Ok(await _purchaseOrderService.GetTermsMasterAsync(termCategory));
+        /// <summary>GET /api/Purchaseorder/GetBudgetCategories?departmentCode=Admin&classification=Capex</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetBudgetCategories([FromQuery] string departmentCode, [FromQuery] string? classification)
+            => Ok(await _purchaseOrderService.GetBudgetCategoriesAsync(departmentCode, classification));
 
         /// <summary>POST /api/Purchaseorder/CreatePurchaseOrder</summary>
         [HttpPost]

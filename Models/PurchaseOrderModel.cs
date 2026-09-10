@@ -106,7 +106,7 @@
     public class PoDeptWiseBudget
     {
         public int Id { get; set; }
-        public string Department { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;      // Capex / Opex
         public string? SubClassification { get; set; }
         public string? ItemCategory { get; set; }
@@ -127,7 +127,7 @@
     public class PODepartmentBudgetResponse
     {
         public int Id { get; set; }
-        public string Department { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;
         public string? SubClassification { get; set; }
         public string? ItemCategory { get; set; }
@@ -146,6 +146,7 @@
         public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
+        public int BudgetCategoryId { get; set; }   // <-- confirm this is here too
         public string TermsType { get; set; } = default!;
         public string? CustomAdvanceText { get; set; }
         public decimal SubTotal { get; set; }
@@ -157,6 +158,27 @@
         public int CurrentApprovalStep { get; set; }
         public string CreatedBy { get; set; } = default!;
         public DateTime CreatedDt { get; set; }
+    }
+    public class PoTermsConditionsMaster
+    {
+        public long TermMasterId { get; set; }          // was int
+        public string TermType { get; set; } = default!;
+        public string TermCategory { get; set; } = default!;
+        public string TermsAndConditionDetails { get; set; } = default!;
+        public bool IsActive { get; set; }
+    }
+    public class PoPurchaseOrderTerm
+    {
+        public int POTermId { get; set; }
+        public int POId { get; set; }
+        public long TermMasterId { get; set; }            // was int
+    }
+    public class PurchaseOrderTermResponse
+    {
+        public long TermMasterId { get; set; }               // was int
+        public string TermType { get; set; } = default!;
+        public string TermCategory { get; set; } = default!;
+        public string TermsAndConditionDetails { get; set; } = default!;
     }
     public class PoPurchaseOrderItem
     {
@@ -184,15 +206,17 @@
         public long VendorId { get; set; }
         public long VendorAddressId { get; set; }
         public string DepartmentCode { get; set; } = default!;
-        public string Classification { get; set; } = default!;   // Capex / Opex
-        public string BudgetYear { get; set; } = default!;       // FY2026-27
+        public string Classification { get; set; } = default!;   // kept for quick display/filtering
+        public string BudgetYear { get; set; } = default!;
+        public int BudgetCategoryId { get; set; }                 // <-- ADD THIS: picked from GetBudgetCategories dropdown
         public string TermsType { get; set; } = default!;
         public string? CustomAdvanceText { get; set; }
-        public string CreatedBy { get; set; } = default!;        // EmployeeCode of the Maker
-        public string BuyerStateCode { get; set; } = default!;   // pending Company/Branch master
+        public string CreatedBy { get; set; } = default!;
+        public string BuyerStateCode { get; set; } = default!;
         public bool SaveAsDraft { get; set; }
         public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
         public List<string> QuotationFilePaths { get; set; } = new();
+        public List<long> TermMasterIds { get; set; } = new();   // was List<int>
     }
     public class CreatePurchaseOrderItemRequest
     {
@@ -215,6 +239,7 @@
         public bool QuotationRequired { get; set; }
         public string Status { get; set; } = default!;
         public List<PurchaseOrderItemResponse> Items { get; set; } = new();
+        public List<PurchaseOrderTermResponse> Terms { get; set; } = new();
     }
     public class PurchaseOrderItemResponse
     {
@@ -229,8 +254,23 @@
         public decimal IGSTAmount { get; set; }
     }
 
-
-
+    public class PoBudgetCategory
+    {
+        public int BudgetCategoryId { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public bool IsActive { get; set; }
+    }
+    public class BudgetCategoryResponse
+    {
+        public int BudgetCategoryId { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+    }
 
 
 

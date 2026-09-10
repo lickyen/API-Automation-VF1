@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
@@ -111,7 +112,17 @@ namespace ProductivityApi.Services
         public async Task<IEnumerable<PODepartmentBudgetResponse>> GetBudgetAsync(string? budgetYear = null)
         {
             var budgets = await _repository.GetBudgetAsync(budgetYear);
-            return budgets.Select(MapToBudgetResponse);
+            return budgets.Select(r => new PODepartmentBudgetResponse
+            {
+                Id = (int)r.Id,
+                DepartmentCode = (string)r.DepartmentCode,
+                Classification = (string)r.Classification,
+                SubClassification = (string)r.SubClassification,
+                ItemCategory = (string)r.ItemCategory,
+                BudgetYear = (string)r.BudgetYear,
+                Budget = (decimal)r.Budget,
+                IsActive = (bool)r.IsActive
+            });
         }
 
         public async Task<IEnumerable<PODepartmentBudgetResponse>> GetDepartmentWiseBudgetAsync(
@@ -120,11 +131,22 @@ namespace ProductivityApi.Services
             var budgets = await _repository.GetDepartmentWiseBudgetAsync(department, budgetYear, classification);
             return budgets.Select(MapToBudgetResponse);
         }
+        public async Task<IEnumerable<PurchaseOrderTermResponse>> GetTermsMasterAsync(string? termCategory)
+        {
+            var terms = await _repository.GetTermsMasterAsync(termCategory);
+            return terms.Select(t => new PurchaseOrderTermResponse
+            {
+                TermMasterId = t.TermMasterId,
+                TermType = t.TermType,
+                TermCategory = t.TermCategory,
+                TermsAndConditionDetails = t.TermsAndConditionDetails
+            });
+        }
 
         private static PODepartmentBudgetResponse MapToBudgetResponse(Models.PoDeptWiseBudget b) => new()
         {
             Id = b.Id,
-            Department = b.Department,
+            DepartmentCode = b.DepartmentCode,
             Classification = b.Classification,
             SubClassification = b.SubClassification,
             ItemCategory = b.ItemCategory,
@@ -135,10 +157,56 @@ namespace ProductivityApi.Services
 
         private const decimal DefaultQuotationThreshold = 25000m; // TODO: move to a settings table once one exists
 
+        public async Task<IEnumerable<PODepartmentBudgetResponse>> GetBudgetLinesAsync(string departmentCode, string classification, string budgetYear)
+        {
+            var lines = await _repository.GetBudgetLinesAsync(departmentCode, classification, budgetYear);
+            return lines.Select(b => new PODepartmentBudgetResponse
+            {
+                Id = b.Id,
+                DepartmentCode = b.DepartmentCode,
+                Classification = b.Classification,
+                SubClassification = b.SubClassification,
+                ItemCategory = b.ItemCategory,
+                BudgetYear = b.BudgetYear,
+                Budget = b.Budget,
+                IsActive = b.IsActive
+            });
+        }
+
         public async Task<PurchaseOrderResponse> CreatePurchaseOrderAsync(CreatePurchaseOrderRequest request)
         {
             if (request.Items is null || request.Items.Count == 0)
                 throw new ArgumentException("A Purchase Order must have at least one line item.");
+
+            // ---------------- Explicit pre-validation ----------------
+
+            if (!await _repository.VendorExistsAsync(request.VendorId))
+                throw new ArgumentException($"VendorId {request.VendorId} does not exist or is not Approved.");
+
+            if (!await _repository.VendorAddressExistsAsync(request.VendorAddressId, request.VendorId))
+                throw new ArgumentException($"VendorAddressId {request.VendorAddressId} does not exist for VendorId {request.VendorId}.");
+
+            if (!await _repository.DepartmentExistsAsync(request.DepartmentCode))
+                throw new ArgumentException($"DepartmentCode '{request.DepartmentCode}' does not exist or is inactive.");
+
+            if (!await _repository.BudgetCategoryExistsAsync(request.BudgetCategoryId, request.DepartmentCode))
+                throw new ArgumentException($"BudgetCategoryId {request.BudgetCategoryId} does not exist for department '{request.DepartmentCode}'.");
+
+            // Validate terms up-front AND keep the matched objects — reused later to populate the response, no second DB call needed.
+            var selectedTerms = new List<Models.PoTermsConditionsMaster>();
+            if (request.TermMasterIds is { Count: > 0 })
+            {
+                var allTerms = (await _repository.GetTermsMasterAsync()).ToList();
+                var validIds = allTerms.Select(t => t.TermMasterId).ToHashSet();
+                var invalidIds = request.TermMasterIds.Where(id => !validIds.Contains(id)).ToList();
+
+                if (invalidIds.Count > 0)
+                    throw new ArgumentException($"The following TermMasterId(s) do not exist or are inactive: {string.Join(", ", invalidIds)}.");
+
+                selectedTerms = allTerms.Where(t => request.TermMasterIds.Contains(t.TermMasterId)).ToList();
+            }
+
+            // ---------------- GST split ----------------
 
             var vendorStateCode = await _repository.GetVendorAddressStateCodeAsync(request.VendorAddressId)
                 ?? throw new ArgumentException("Invalid vendor address selected.");
@@ -180,20 +248,27 @@ namespace ProductivityApi.Services
 
             decimal totalAmount = subTotal + gstTotal;
 
+            // ---------------- Quotation check ----------------
+
             bool quotationRequired = totalAmount > DefaultQuotationThreshold;
             if (quotationRequired && (request.QuotationFilePaths is null || request.QuotationFilePaths.Count == 0))
                 throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {DefaultQuotationThreshold:N0}.");
 
-            var allocatedBudget = await _repository.GetBudgetAmountAsync(request.DepartmentCode, request.Classification, request.BudgetYear);
-            var consumedBudget = await _repository.GetConsumedBudgetAsync(request.DepartmentCode, request.Classification, request.BudgetYear);
+            // ---------------- Budget check ----------------
+
+            var allocatedBudget = await _repository.GetBudgetAmountAsync(request.BudgetCategoryId, request.BudgetYear);
+            var consumedBudget = await _repository.GetConsumedBudgetAsync(request.BudgetCategoryId, request.BudgetYear);
             bool budgetExceeded = allocatedBudget is null || (consumedBudget + totalAmount) > allocatedBudget;
+
+            // ---------------- PO number ----------------
 
             var lastPoNumber = await _repository.GetLastPoNumberAsync(request.BudgetYear);
             int nextSeq = 1;
             if (!string.IsNullOrEmpty(lastPoNumber))
             {
-                var parts = lastPoNumber.Split('-');
-                if (parts.Length == 3 && int.TryParse(parts[2], out var seq)) nextSeq = seq + 1;
+                string prefix = $"PO-{request.BudgetYear}-";
+                if (lastPoNumber.StartsWith(prefix) && int.TryParse(lastPoNumber.Substring(prefix.Length), out var seq))
+                    nextSeq = seq + 1;
             }
             string poNumber = $"PO-{request.BudgetYear}-{nextSeq:D5}";
 
@@ -205,6 +280,7 @@ namespace ProductivityApi.Services
                 DepartmentCode = request.DepartmentCode,
                 Classification = request.Classification,
                 BudgetYear = request.BudgetYear,
+                BudgetCategoryId = request.BudgetCategoryId,
                 TermsType = request.TermsType,
                 CustomAdvanceText = request.CustomAdvanceText,
                 SubTotal = subTotal,
@@ -217,9 +293,18 @@ namespace ProductivityApi.Services
                 CreatedBy = request.CreatedBy
             };
 
+            // ---------------- Inserts ----------------
+
             int poId = await _repository.CreatePurchaseOrderAsync(po);
-            await _repository.AddPurchaseOrderItemsAsync(poId, items);
-            await _repository.AddQuotationsAsync(poId, request.QuotationFilePaths ?? new List<string>());
+
+            var itemsList = items.ToList();
+            await _repository.AddPurchaseOrderItemsAsync(poId, itemsList);
+            await _repository.AddQuotationsAsync(poId, (request.QuotationFilePaths ?? new List<string>()).ToList());
+
+            if (selectedTerms.Count > 0)
+            {
+                await _repository.AddPurchaseOrderTermsAsync(poId, request.TermMasterIds, request.CreatedBy);
+            }
 
             if (!request.SaveAsDraft)
             {
@@ -230,10 +315,12 @@ namespace ProductivityApi.Services
                 {
                     StepNumber = i + 1,
                     ApproverRole = role
-                });
+                }).ToList();
 
                 await _repository.AddApprovalStepsAsync(poId, steps);
             }
+
+            // ---------------- Response ----------------
 
             return new PurchaseOrderResponse
             {
@@ -248,7 +335,7 @@ namespace ProductivityApi.Services
                 IsBudgetExceeded = budgetExceeded,
                 QuotationRequired = quotationRequired,
                 Status = po.Status,
-                Items = items.Select(i => new PurchaseOrderItemResponse
+                Items = itemsList.Select(i => new PurchaseOrderItemResponse
                 {
                     ItemDescription = i.ItemDescription,
                     Quantity = i.Quantity,
@@ -259,16 +346,36 @@ namespace ProductivityApi.Services
                     CGSTAmount = i.CGSTAmount,
                     SGSTAmount = i.SGSTAmount,
                     IGSTAmount = i.IGSTAmount
+                }).ToList(),
+                Terms = selectedTerms.Select(t => new PurchaseOrderTermResponse   // <-- now populated from the same data used for validation
+                {
+                    TermMasterId = t.TermMasterId,
+                    TermType = t.TermType,
+                    TermCategory = t.TermCategory,
+                    TermsAndConditionDetails = t.TermsAndConditionDetails
                 }).ToList()
             };
         }
+        public async Task<IEnumerable<BudgetCategoryResponse>> GetBudgetCategoriesAsync(string departmentCode, string? classification)
+        {
+            var categories = await _repository.GetBudgetCategoriesAsync(departmentCode, classification);
 
+            return categories.Select(c => new BudgetCategoryResponse
+            {
+                BudgetCategoryId = c.BudgetCategoryId,
+                DepartmentCode = c.DepartmentCode,
+                Classification = c.Classification,
+                SubClassification = c.SubClassification,
+                ItemCategory = c.ItemCategory
+            });
+        }
         public async Task<PurchaseOrderResponse> GetPurchaseOrderByIdAsync(int poId)
         {
             var po = await _repository.GetPurchaseOrderByIdAsync(poId)
                 ?? throw new KeyNotFoundException($"Purchase Order {poId} not found.");
 
             var items = await _repository.GetPurchaseOrderItemsAsync(poId);
+            var terms = await _repository.GetPurchaseOrderTermsAsync(poId);
 
             return new PurchaseOrderResponse
             {
@@ -294,10 +401,16 @@ namespace ProductivityApi.Services
                     CGSTAmount = i.CGSTAmount,
                     SGSTAmount = i.SGSTAmount,
                     IGSTAmount = i.IGSTAmount
+                }).ToList(),
+                Terms = terms.Select(t => new PurchaseOrderTermResponse
+                {
+                    TermMasterId = t.TermMasterId,
+                    TermType = t.TermType,
+                    TermCategory = t.TermCategory,
+                    TermsAndConditionDetails = t.TermsAndConditionDetails
                 }).ToList()
             };
         }
-
         public async Task<IEnumerable<PurchaseOrderResponse>> GetPurchaseOrderListAsync(string? departmentCode, string? status)
         {
             var pos = await _repository.GetPurchaseOrderListAsync(departmentCode, status);
