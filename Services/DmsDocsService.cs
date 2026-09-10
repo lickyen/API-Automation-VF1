@@ -262,7 +262,7 @@ namespace ProductivityApi.Services
             if (!batchDocs.Any())
                 return FailDownload(result, $"No LANs found for BatchId {result.BatchId}.");
 
-            var batchFolderPath = GetBatchFolderPath(result.BatchId, batchDocs.First().CreatedBy);
+            var batchFolderPath = await GetBatchFolderPathAsync(result.BatchId, batchDocs.First().CreatedBy);
             result.SourcePath = batchFolderPath;
 
             if (!Directory.Exists(batchFolderPath))
@@ -464,7 +464,7 @@ namespace ProductivityApi.Services
             byte[] documentBytes,
             CancellationToken cancellationToken)
         {
-            var batchFolderPath = GetBatchFolderPath(doc.BatchId, doc.CreatedBy);
+            var batchFolderPath = await GetBatchFolderPathAsync(doc.BatchId, doc.CreatedBy);
             Directory.CreateDirectory(batchFolderPath);
 
             var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
@@ -602,10 +602,25 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        private string GetBatchFolderPath(string batchId, string? createdBy)
+        private async Task<string> GetBatchFolderPathAsync(string batchId, string? createdBy)
         {
+            // Try to get a user-specific base path from repository. If not available, use the default _filePath.
+            string? userBasePath = null;
+
+            try
+            {
+                userBasePath = await _repository.GetUserPathAsync(createdBy);
+            }
+            catch (Exception ex)
+            {
+                // Log and fallback to default path
+                _logger.LogWarning(ex, "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.", createdBy);
+            }
+
+            var basePath = string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath!;
+
             return Path.Combine(
-                _filePath,
+                basePath,
                 BuildSafePathSegment(createdBy, "UNKNOWN"),
                 BuildSafeFileName(batchId));
         }

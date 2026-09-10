@@ -80,6 +80,25 @@ namespace ProductivityApi.Repository
             );
         }
 
+        // ── Get user-specific path (optional) ─────────────────────────────────
+
+        public async Task<string?> GetUserPathAsync(string? createdBy)
+        {
+            using var conn = CreateConnection();
+
+            var p = new DynamicParameters();
+            p.Add("@UserId", NullIfWhiteSpace(createdBy));
+
+            // Expect the stored procedure to return a single column with the path or null
+            var result = await conn.QueryFirstOrDefaultAsync<string?>(
+                "sp_DMSDocFetch_GetUserPath",
+                p,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return string.IsNullOrWhiteSpace(result) ? null : result?.Trim();
+        }
+
         // ── Update Status ─────────────────────────────────────
 
         public async Task<int> UpdateStatusAsync(DmsDocsUpdateStatusRequest request)
