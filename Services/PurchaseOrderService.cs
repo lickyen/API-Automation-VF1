@@ -12,14 +12,20 @@ namespace ProductivityApi.Services
         
 
         private readonly PurchaseOrderRepository _repository;
-       
+        private readonly string _filePath;
+        private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".pdf", ".jpg", ".jpeg", ".png", ".docx" };
+
+        private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
+
         private readonly ILogger<PurchaseOrderService> _logger;
 
         public PurchaseOrderService( PurchaseOrderRepository repository,
-            ILogger<PurchaseOrderService> logger)
+            ILogger<PurchaseOrderService> logger, AppSettings appSettings)
         {
             _repository = repository;
             _logger = logger;
+            _filePath = appSettings.FilePaths.POBasePath;
         }
         public async Task<POUserAccessResponse> CheckAccessAsync(string employeeCode)
         {
@@ -177,6 +183,21 @@ namespace ProductivityApi.Services
         {
             if (request.Items is null || request.Items.Count == 0)
                 throw new ArgumentException("A Purchase Order must have at least one line item.");
+            if (!string.Equals(request.TermsType, "Normal", StringComparison.OrdinalIgnoreCase) &&
+    !string.Equals(request.TermsType, "Advance", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("TermsType must be either 'Normal' or 'Advance'.");
+            }
+
+            if (string.Equals(request.TermsType, "Advance", StringComparison.OrdinalIgnoreCase))
+            {
+                if (request.AdvancePercentage is null || request.AdvancePercentage <= 0 || request.AdvancePercentage > 100)
+                    throw new ArgumentException("AdvancePercentage is required and must be between 0 and 100 when TermsType is 'Advance'.");
+            }
+            else if (request.AdvancePercentage is not null)
+            {
+                throw new ArgumentException("AdvancePercentage should not be provided when TermsType is 'Normal'.");
+            }
 
             // ---------------- Explicit pre-validation ----------------
 
@@ -249,9 +270,8 @@ namespace ProductivityApi.Services
             decimal totalAmount = subTotal + gstTotal;
 
             // ---------------- Quotation check ----------------
-
             bool quotationRequired = totalAmount > DefaultQuotationThreshold;
-            if (quotationRequired && (request.QuotationFilePaths is null || request.QuotationFilePaths.Count == 0))
+            if (quotationRequired && (request.Quotations is null || request.Quotations.Count == 0))
                 throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {DefaultQuotationThreshold:N0}.");
 
             // ---------------- Budget check ----------------
@@ -282,7 +302,7 @@ namespace ProductivityApi.Services
                 BudgetYear = request.BudgetYear,
                 BudgetCategoryId = request.BudgetCategoryId,
                 TermsType = request.TermsType,
-                CustomAdvanceText = request.CustomAdvanceText,
+                AdvancePercentage = request.AdvancePercentage,
                 SubTotal = subTotal,
                 GSTAmount = gstTotal,
                 TotalAmount = totalAmount,
@@ -299,11 +319,22 @@ namespace ProductivityApi.Services
 
             var itemsList = items.ToList();
             await _repository.AddPurchaseOrderItemsAsync(poId, itemsList);
-            await _repository.AddQuotationsAsync(poId, (request.QuotationFilePaths ?? new List<string>()).ToList());
+            var savedQuotationPaths = SaveQuotationFiles(request.Quotations, request.BudgetYear, poId);
+
+            await _repository.AddQuotationsAsync(poId, savedQuotationPaths);
 
             if (selectedTerms.Count > 0)
             {
                 await _repository.AddPurchaseOrderTermsAsync(poId, request.TermMasterIds, request.CreatedBy);
+            }
+            var cleanedAdditionalTerms = (request.AdditionalTerms ?? new List<string>())
+    .Where(t => !string.IsNullOrWhiteSpace(t))
+    .Select(t => t.Trim())
+    .ToList();
+
+            if (cleanedAdditionalTerms.Count > 0)
+            {
+                await _repository.AddAdditionalTermsAsync(poId, cleanedAdditionalTerms, request.CreatedBy);
             }
 
             if (!request.SaveAsDraft)
@@ -353,6 +384,11 @@ namespace ProductivityApi.Services
                     TermType = t.TermType,
                     TermCategory = t.TermCategory,
                     TermsAndConditionDetails = t.TermsAndConditionDetails
+                }).ToList(),
+                AdditionalTerms = cleanedAdditionalTerms.Select((text, i) => new PurchaseOrderAdditionalTermResponse
+                {
+                    POAdditionalTermId = 0,   // not known until re-fetched; fine for immediate create-response echo
+                    TermText = text
                 }).ToList()
             };
         }
@@ -376,6 +412,9 @@ namespace ProductivityApi.Services
 
             var items = await _repository.GetPurchaseOrderItemsAsync(poId);
             var terms = await _repository.GetPurchaseOrderTermsAsync(poId);
+            var additionalTerms = await _repository.GetAdditionalTermsAsync(poId);
+            var quotationPaths = await _repository.GetQuotationFilePathsAsync(poId);
+
 
             return new PurchaseOrderResponse
             {
@@ -408,7 +447,13 @@ namespace ProductivityApi.Services
                     TermType = t.TermType,
                     TermCategory = t.TermCategory,
                     TermsAndConditionDetails = t.TermsAndConditionDetails
-                }).ToList()
+                }).ToList(),
+                AdditionalTerms = additionalTerms.Select(a => new PurchaseOrderAdditionalTermResponse
+                {
+                    POAdditionalTermId = a.POAdditionalTermId,
+                    TermText = a.TermText
+                }).ToList(),
+                Quotations = LoadQuotationFiles(quotationPaths)
             };
         }
         public async Task<IEnumerable<PurchaseOrderResponse>> GetPurchaseOrderListAsync(string? departmentCode, string? status)
@@ -431,5 +476,75 @@ namespace ProductivityApi.Services
             });
         }
 
+        private List<string> SaveQuotationFiles(List<QuotationFileUpload> quotations, string budgetYear, int poId)
+        {
+            var savedPaths = new List<string>();
+            if (quotations is null || quotations.Count == 0) return savedPaths;
+
+            string yearFolder = Path.Combine(_filePath, "Quotations", budgetYear.Replace("/", "-"));
+            Directory.CreateDirectory(yearFolder);
+
+            int sequence = 1;
+            foreach (var quotation in quotations)
+            {
+                if (string.IsNullOrWhiteSpace(quotation.FileName) || string.IsNullOrWhiteSpace(quotation.Base64Content))
+                    throw new ArgumentException("Each quotation must include a FileName and Base64Content.");
+
+                string extension = Path.GetExtension(quotation.FileName);
+                if (!AllowedExtensions.Contains(extension))
+                    throw new ArgumentException($"File type '{extension}' is not allowed. Allowed types: {string.Join(", ", AllowedExtensions)}.");
+
+                byte[] fileBytes;
+                try
+                {
+                    string cleanBase64 = quotation.Base64Content.Contains(",")
+                        ? quotation.Base64Content.Substring(quotation.Base64Content.IndexOf(",") + 1)
+                        : quotation.Base64Content;
+
+                    fileBytes = Convert.FromBase64String(cleanBase64);
+                }
+                catch (FormatException)
+                {
+                    throw new ArgumentException($"File '{quotation.FileName}' contains invalid base64 content.");
+                }
+
+                if (fileBytes.LongLength > MaxFileSizeBytes)
+                    throw new ArgumentException($"File '{quotation.FileName}' exceeds the 10 MB size limit.");
+
+                // e.g. 6_Quotation1.pdf, 6_Quotation2.pdf
+                string safeFileName = $"{poId}_Quotation{sequence}{extension}";
+                string fullPath = Path.Combine(yearFolder, safeFileName);
+
+                File.WriteAllBytes(fullPath, fileBytes);
+
+                savedPaths.Add(fullPath);
+                sequence++;
+            }
+
+            return savedPaths;
+        }
+        private List<QuotationFileResponse> LoadQuotationFiles(IEnumerable<string> filePaths)
+        {
+            var results = new List<QuotationFileResponse>();
+
+            foreach (var path in filePaths)
+            {
+                if (!File.Exists(path))
+                {
+                    // File missing on disk (moved/deleted outside the app) — skip rather than fail the whole GET
+                    continue;
+                }
+
+                byte[] fileBytes = File.ReadAllBytes(path);
+
+                results.Add(new QuotationFileResponse
+                {
+                    FileName = Path.GetFileName(path),          // e.g. "6_Quotation1.pdf"
+                    Base64Content = Convert.ToBase64String(fileBytes)
+                });
+            }
+
+            return results;
+        }
     }
-    }
+}

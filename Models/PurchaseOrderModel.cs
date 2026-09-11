@@ -136,7 +136,6 @@
         public bool IsActive { get; set; }
     }
 
-
     public class PoPurchaseOrder
     {
         public int POId { get; set; }
@@ -146,9 +145,9 @@
         public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
-        public int BudgetCategoryId { get; set; }   // <-- confirm this is here too
-        public string TermsType { get; set; } = default!;
-        public string? CustomAdvanceText { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public string TermsType { get; set; } = default!;       // "Normal" / "Advance"
+        public decimal? AdvancePercentage { get; set; }           // required only when TermsType = "Advance"
         public decimal SubTotal { get; set; }
         public decimal GSTAmount { get; set; }
         public decimal TotalAmount { get; set; }
@@ -206,17 +205,19 @@
         public long VendorId { get; set; }
         public long VendorAddressId { get; set; }
         public string DepartmentCode { get; set; } = default!;
-        public string Classification { get; set; } = default!;   // kept for quick display/filtering
+        public string Classification { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
-        public int BudgetCategoryId { get; set; }                 // <-- ADD THIS: picked from GetBudgetCategories dropdown
-        public string TermsType { get; set; } = default!;
-        public string? CustomAdvanceText { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public string TermsType { get; set; } = default!;         // "Normal" / "Advance"
+        public decimal? AdvancePercentage { get; set; }             // required if TermsType = "Advance"
+        public List<long> TermMasterIds { get; set; } = new();       // selected from master
+        public List<string> AdditionalTerms { get; set; } = new();     // free-text, PO-specific
         public string CreatedBy { get; set; } = default!;
         public string BuyerStateCode { get; set; } = default!;
         public bool SaveAsDraft { get; set; }
         public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
-        public List<string> QuotationFilePaths { get; set; } = new();
-        public List<long> TermMasterIds { get; set; } = new();   // was List<int>
+        //  public List<string> QuotationFilePaths { get; set; } = new();
+        public List<QuotationFileUpload> Quotations { get; set; } = new();   // was: List<string> QuotationFilePaths
     }
     public class CreatePurchaseOrderItemRequest
     {
@@ -232,6 +233,8 @@
         public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
+        public string TermsType { get; set; } = default!;
+        public decimal? AdvancePercentage { get; set; }
         public decimal SubTotal { get; set; }
         public decimal GSTAmount { get; set; }
         public decimal TotalAmount { get; set; }
@@ -240,6 +243,8 @@
         public string Status { get; set; } = default!;
         public List<PurchaseOrderItemResponse> Items { get; set; } = new();
         public List<PurchaseOrderTermResponse> Terms { get; set; } = new();
+        public List<PurchaseOrderAdditionalTermResponse> AdditionalTerms { get; set; } = new();
+        public List<QuotationFileResponse> Quotations { get; set; } = new();
     }
     public class PurchaseOrderItemResponse
     {
@@ -272,6 +277,25 @@
         public string ItemCategory { get; set; } = default!;
     }
 
-
-
+    public class PoPurchaseOrderAdditionalTerm
+    {
+        public int POAdditionalTermId { get; set; }
+        public int POId { get; set; }
+        public string TermText { get; set; } = default!;
+    }
+    public class PurchaseOrderAdditionalTermResponse
+    {
+        public int POAdditionalTermId { get; set; }
+        public string TermText { get; set; } = default!;
+    }
+    public class QuotationFileUpload
+    {
+        public string FileName { get; set; } = default!;      // e.g. "quote-vendor1.pdf"
+        public string Base64Content { get; set; } = default!;   // raw base64 string, no "data:...;base64," prefix
+    }
+    public class QuotationFileResponse
+    {
+        public string FileName { get; set; } = default!;
+        public string Base64Content { get; set; } = default!;
+    }
 }

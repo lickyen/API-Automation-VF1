@@ -99,6 +99,7 @@ namespace ProductivityApi.Models
         public string BulkDocsFilePath { get; set; } = string.Empty;
         public string DmsDocsFilePath { get; set; } = string.Empty;
         public string ZeroBalanceDayFilePath { get; set; } = string.Empty;
+        public string POBasePath { get; set; } = string.Empty;
     }
 
     public class DmsDocsSettings
