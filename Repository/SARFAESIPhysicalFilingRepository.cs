@@ -86,8 +86,8 @@ namespace ProductivityApi.Repository
             var parameters = new DynamicParameters();
             parameters.Add("@Lan", dto.Lan.Trim());
             parameters.Add("@DispatchDate", dto.DispatchDate);
-            parameters.Add("@PodNumber", dto.PodNumber.Trim());
-            parameters.Add("@CourierName", dto.CourierName.Trim());
+            parameters.Add("@PodNumber", dto.PodNumber?.Trim());
+            parameters.Add("@CourierName", dto.CourierName?.Trim());
             parameters.Add("@DocumentTransmissionType", dto.DocumentTransmissionType.Trim());
             parameters.Add("@Checklist", table.AsTableValuedParameter("dbo.TVP_SARFAESIPhysicalFiling_LegalChecklist"));
             parameters.Add("@SubmittedBy", dto.SubmittedBy.Trim());

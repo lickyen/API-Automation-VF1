@@ -203,11 +203,11 @@ namespace ProductivityApi.Models
     {
         public string Lan { get; set; } = string.Empty;
 
-        public DateTime DispatchDate { get; set; }
+        public DateTime? DispatchDate { get; set; }
 
-        public string PodNumber { get; set; } = string.Empty;
+        public string? PodNumber { get; set; } = string.Empty;
 
-        public string CourierName { get; set; } = string.Empty;
+        public string? CourierName { get; set; } = string.Empty;
 
         public string DocumentTransmissionType { get; set; } = string.Empty;
 
