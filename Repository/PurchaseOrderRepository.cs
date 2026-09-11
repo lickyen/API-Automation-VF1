@@ -206,15 +206,16 @@ namespace ProductivityApi.Repository
             const string sql = @"
         INSERT INTO [dbo].[PO_PurchaseOrder]
             ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [BudgetYear],
-             [BudgetCategoryId],
-             [TermsType], [CustomAdvanceText], [SubTotal], [GSTAmount], [TotalAmount],
+             [BudgetCategoryId], [TermsType], [AdvancePercentage],
+             [SubTotal], [GSTAmount], [TotalAmount],
              [IsBudgetExceeded], [QuotationRequired], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
         OUTPUT INSERTED.[POId]
         VALUES
             (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @BudgetYear,
-             @BudgetCategoryId,
-             @TermsType, @CustomAdvanceText, @SubTotal, @GSTAmount, @TotalAmount,
+             @BudgetCategoryId, @TermsType, @AdvancePercentage,
+             @SubTotal, @GSTAmount, @TotalAmount,
              @IsBudgetExceeded, @QuotationRequired, @Status, @CurrentApprovalStep, @CreatedBy, GETDATE());";
+
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<int>(sql, po);
@@ -369,6 +370,31 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<int>(sql, new { BudgetCategoryId = budgetCategoryId, DepartmentCode = departmentCode }) > 0;
         }
+        public async Task AddAdditionalTermsAsync(int poId, IEnumerable<string> termTexts, string createdBy)
+        {
+            var texts = termTexts.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+            if (texts.Count == 0) return;
 
+            const string sql = @"
+        INSERT INTO [dbo].[PO_PurchaseOrderAdditionalTerms] ([POId], [TermText], [CreatedBy], [CreatedDt])
+        VALUES (@POId, @TermText, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = texts.Select(t => new { POId = poId, TermText = t, CreatedBy = createdBy }).ToList();
+            await connection.ExecuteAsync(sql, rows);
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrderAdditionalTerm>> GetAdditionalTermsAsync(int poId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrderAdditionalTerms] WHERE [POId] = @POId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrderAdditionalTerm>(sql, new { POId = poId });
+        }
+        public async Task<IEnumerable<string>> GetQuotationFilePathsAsync(int poId)
+        {
+            const string sql = "SELECT [FilePath] FROM [dbo].[PO_PurchaseOrderQuotations] WHERE [POId] = @POId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<string>(sql, new { POId = poId });
+        }
     }
     }
