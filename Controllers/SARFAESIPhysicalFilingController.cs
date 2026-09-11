@@ -194,5 +194,14 @@ namespace ProductivityApi.Controllers
                 ? Ok(new Response(true, null, result.Message))
                 : BadRequest(new Response(false, null, result.Message));
         }
+
+        //From LAN mapping
+        [HttpGet("getNewLans")]
+        public async Task<IActionResult> GetNewLans()
+        {
+            var data = await _service.GetNewLansAsync();
+
+            return Ok(new Response(true, data, "Success"));
+        }
     }
 }

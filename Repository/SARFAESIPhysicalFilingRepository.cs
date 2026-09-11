@@ -326,5 +326,15 @@ namespace ProductivityApi.Repository
 
             return ((int)result.Result == 1, (string)result.Message);
         }
+
+        public async Task<List<SARFAESILanMapping>> GetNewLansAsync()
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return (await conn.QueryAsync<SARFAESILanMapping>(
+                "sp_SARFAESIPhysicalFiling_GetNewLans",
+                commandType: CommandType.StoredProcedure
+            )).ToList();
+        }
     }
 }

@@ -299,6 +299,11 @@ namespace ProductivityApi.Services
             return await _repository.UpdatePhysicalDocumentRequirementAsync(dto);
         }
 
+        public Task<List<SARFAESILanMapping>> GetNewLansAsync()
+        {
+            return _repository.GetNewLansAsync();
+        }
+
 
     }
 }
