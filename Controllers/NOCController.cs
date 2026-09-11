@@ -188,7 +188,7 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.UploadNOCandAckAsync(dto);
 
-            return Ok(new Response(result));
+            return Ok(new Response(result.Success, null, result.Message));
         }
 
         [HttpPost("signNocPdf")]

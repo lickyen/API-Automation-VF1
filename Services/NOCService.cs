@@ -748,65 +748,131 @@ namespace ProductivityApi.Services
 
             return doc.RootElement.GetProperty("data").GetProperty("file").GetString()!;
         }
-        public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
+
+        //public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
+        //{
+        //    var request = new AgreementRequest
+        //    {
+        //        finReference = dto.LanNumber,
+        //        agreementType = "NOC"
+        //    };
+
+        //    var response = _plfService.GetAgreements(request);
+
+        //    if (response == null || response.Result?.returnStatus?.returnCode != "0000")
+        //        throw new Exception(response?.Result?.returnStatus?.returnText ?? "Unable to fetch agreement document.");
+
+        //    var agreement = response.Result?.agreementsList?.FirstOrDefault();
+
+        //    if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
+        //        throw new Exception("Document content not found.");
+
+        //    byte[] uploadedPdf = Convert.FromBase64String(
+        //        agreement.docContent.Replace("\r", "").Replace("\n", "")
+        //    );
+
+        //    using var reader = new PdfReader(uploadedPdf);
+
+        //    if (reader.NumberOfPages < 2)
+        //        throw new Exception("Agreement PDF must contain at least 2 pages.");
+
+        //    byte[] nocBytes = ExtractPage(reader, 1);
+        //    byte[] ackBytes = ExtractPage(reader, 2);
+
+        //    string nocFileName = $"{dto.TransactionId}_noc.pdf";
+        //    string ackFileName = $"{dto.TransactionId}_ack.pdf";
+
+        //    var nocSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, nocFileName, nocBytes);
+        //    if (!nocSaved.Success)
+        //        throw new Exception($"Failed to save NOC PDF: {nocSaved.Error}");
+
+        //    var ackSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, ackFileName, ackBytes);
+        //    if (!ackSaved.Success)
+        //        throw new Exception($"Failed to save ACK PDF: {ackSaved.Error}");
+
+        //    return await _repository.UploadNOCAndAckPdfAsync(
+        //        dto.TransactionId,
+        //        nocFileName,
+        //        ackFileName,
+        //        dto.UpdatedBy
+        //    );
+        //}
+
+        public async Task<(bool Success, string Message)> UploadNOCandAckAsync(FetchNocAckDto dto)
         {
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("authorization", "dXNlcjpBRE1JTjp0ZXN0");
-            _httpClient.DefaultRequestHeaders.Add("entityid", "Auxilo");
-            _httpClient.DefaultRequestHeaders.Add("language", "ENG");
-            _httpClient.DefaultRequestHeaders.Add("messageid", Guid.NewGuid().ToString());
-            _httpClient.DefaultRequestHeaders.Add("requesttime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"));
-            _httpClient.DefaultRequestHeaders.Add("servicename", "getAgreements");
-            _httpClient.DefaultRequestHeaders.Add("serviceversion", "2");
+            try
+            {
+                var request = new AgreementRequest
+                {
+                    finReference = dto.LanNumber,
+                    agreementType = "NOC"
+                };
 
-            var request = new { finReference = dto.LanNumber, agreementType = "NOC" };
+                var response = await _plfService.GetAgreements(request);
 
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://uatlms.vistaarfinance.net.in/pff-api/services/createFinanceRest/finance/getAgreements",
-                request
-            );
+                if (response?.returnStatus?.returnCode != "0000")
+                    return (
+                        false,
+                        response?.returnStatus?.returnText ?? "Unable to fetch NOC."
+                    );
 
-            response.EnsureSuccessStatusCode();
+                var agreement = response.agreementsList?.FirstOrDefault();
 
-            var agreementResponse = await response.Content.ReadFromJsonAsync<AgreementResponse>();
+                if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
+                    return (false, "Document content not found.");
 
-            if (agreementResponse == null || agreementResponse.returnStatus?.returnCode != "0000")
-                throw new Exception(agreementResponse?.returnStatus?.returnText ?? "Unable to fetch agreement document.");
+                byte[] uploadedPdf = Convert.FromBase64String(
+                    agreement.docContent.Replace("\r", "").Replace("\n", "")
+                );
 
-            var agreement = agreementResponse.agreementsList?.FirstOrDefault();
+                using var reader = new PdfReader(uploadedPdf);
 
-            if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
-                throw new Exception("Document content not found.");
+                if (reader.NumberOfPages < 2)
+                    return (false, "PDF must contain at least 2 pages.");
 
-            byte[] uploadedPdf = Convert.FromBase64String(
-                agreement.docContent.Replace("\r", "").Replace("\n", "")
-            );
+                byte[] nocBytes = ExtractPage(reader, 1);
+                byte[] ackBytes = ExtractPage(reader, 2);
 
-            using var reader = new PdfReader(uploadedPdf);
+                string nocFileName = $"{dto.TransactionId}_noc.pdf";
+                string ackFileName = $"{dto.TransactionId}_ack.pdf";
 
-            if (reader.NumberOfPages < 2)
-                throw new Exception("Agreement PDF must contain at least 2 pages.");
+                var nocSaved = await FileHelper.SaveBytesAsync(
+                    _filePaths.NOCFilePath,
+                    nocFileName,
+                    nocBytes
+                );
 
-            byte[] nocBytes = ExtractPage(reader, 1);
-            byte[] ackBytes = ExtractPage(reader, 2);
+                if (!nocSaved.Success)
+                    return (false, $"Failed to save NOC PDF: {nocSaved.Error}");
 
-            string nocFileName = $"{dto.TransactionId}_noc.pdf";
-            string ackFileName = $"{dto.TransactionId}_ack.pdf";
+                var ackSaved = await FileHelper.SaveBytesAsync(
+                    _filePaths.NOCFilePath,
+                    ackFileName,
+                    ackBytes
+                );
 
-            var nocSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, nocFileName, nocBytes);
-            if (!nocSaved.Success)
-                throw new Exception($"Failed to save NOC PDF: {nocSaved.Error}");
+                if (!ackSaved.Success)
+                    return (false, $"Failed to save ACK PDF: {ackSaved.Error}");
 
-            var ackSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, ackFileName, ackBytes);
-            if (!ackSaved.Success)
-                throw new Exception($"Failed to save ACK PDF: {ackSaved.Error}");
+                var result = await _repository.UploadNOCAndAckPdfAsync(
+                    dto.TransactionId,
+                    nocFileName,
+                    ackFileName,
+                    dto.UpdatedBy
+                );
 
-            return await _repository.UploadNOCAndAckPdfAsync(
-                dto.TransactionId,
-                nocFileName,
-                ackFileName,
-                dto.UpdatedBy
-            );
+                return result
+                    ? (true, "NOC uploaded successfully.")
+                    : (false, "Failed to save NOC details.");
+            }
+            catch (FormatException)
+            {
+                return (false, "Invalid document content.");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
         }
         private byte[] ExtractPage(PdfReader reader, int pageNumber)
         {
@@ -1383,9 +1449,9 @@ namespace ProductivityApi.Services
 
                     if (!cell.IsEmpty() && int.TryParse(cell.Value.ToString(), out int tat))
                     {
-                        if (tat <= 7)
-                            cell.Style.Fill.BackgroundColor = XLColor.PaleGreen;
-                        else if (tat <= 15)
+                        if (tat <= 10)
+                            cell.Style.Fill.BackgroundColor = XLColor.LightGreen;
+                        else if (tat <= 16)
                             cell.Style.Fill.BackgroundColor = XLColor.LightGoldenrodYellow;
                         else
                             cell.Style.Fill.BackgroundColor = XLColor.LightPink;
