@@ -32,10 +32,11 @@ namespace ProductivityApi.Repository
         public async Task<IEnumerable<string>> GetActiveRoleNamesForUserAsync(int userId)
         {
             const string sql = @"
-                SELECT r.[RoleName]
-                FROM [dbo].[PO_UserRoles] ur
-                INNER JOIN [dbo].[PO_Roles] r ON r.[Id] = ur.[RoleId]
-                WHERE ur.[UserId] = @UserId AND r.[Status] = 1;";
+        SELECT r.[RoleName]
+        FROM [dbo].[PO_UserRoles] ur
+        INNER JOIN [dbo].[PO_Roles] r ON r.[Id] = ur.[RoleId]
+        WHERE ur.[UserId] = @UserId AND r.[Status] = 1;";
+            //--was: r.[Status] = 'Active'
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<string>(sql, new { UserId = userId });
@@ -396,5 +397,135 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<string>(sql, new { POId = poId });
         }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetAllPurchaseOrdersAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] ORDER BY [CreatedDt] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql);
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetPurchaseOrdersPendingApprovalForRoleAsync(string approverRole)
+        {
+            const string sql = @"
+        SELECT po.*
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_PurchaseOrderApprovalHistory] ah
+            ON ah.[POId] = po.[POId] AND ah.[StepNumber] = po.[CurrentApprovalStep]
+        WHERE po.[Status] = 'PendingApproval'
+          AND ah.[ApproverRole] = @ApproverRole
+        ORDER BY po.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { ApproverRole = approverRole });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetPurchaseOrdersByDepartmentAsync(string departmentCode)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrder]
+        WHERE [DepartmentCode] = @DepartmentCode
+        ORDER BY [CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { DepartmentCode = departmentCode });
+        }
+        public async Task<IEnumerable<PoPurchaseOrderApprovalHistory>> GetApprovalHistoryForPOsAsync(IEnumerable<int> poIds)
+        {
+            var ids = poIds.ToList();
+            if (ids.Count == 0) return Enumerable.Empty<PoPurchaseOrderApprovalHistory>();
+
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrderApprovalHistory]
+        WHERE [POId] IN @POIds
+        ORDER BY [POId], [StepNumber];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrderApprovalHistory>(sql, new { POIds = ids });
+        }
+        public async Task<IEnumerable<PoPurchaseOrderApprovalHistory>> GetApprovalHistoryAsync(int poId)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrderApprovalHistory]
+        WHERE [POId] = @POId
+        ORDER BY [StepNumber];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrderApprovalHistory>(sql, new { POId = poId });
+        }
+        public async Task<IEnumerable<PoUser>> GetUsersByRoleAsync(string roleName, string? departmentCode = null)
+        {
+            const string sql = @"
+        SELECT u.[Id], u.[EmployeeCode], u.[Name], u.[DepartmentCode], u.[IsDepartmentHead], u.[IsActive]
+        FROM [dbo].[PO_Users] u
+        INNER JOIN [dbo].[PO_UserRoles] ur ON ur.[UserId] = u.[Id]
+        INNER JOIN [dbo].[PO_Roles] r ON r.[Id] = ur.[RoleId]
+        WHERE r.[RoleName] = @RoleName
+          AND r.[Status] = 1                          -- was: r.[Status] = 'Active'
+          AND u.[IsActive] = 1
+          AND (@DepartmentCode IS NULL OR u.[DepartmentCode] = @DepartmentCode);";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoUser>(sql, new { RoleName = roleName, DepartmentCode = departmentCode });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetPendingWithRolesAsync(IEnumerable<string> roles, string userDepartmentCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT po.*
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_PurchaseOrderApprovalHistory] ah
+            ON ah.[POId] = po.[POId] AND ah.[StepNumber] = po.[CurrentApprovalStep]
+        WHERE po.[Status] = 'PendingApproval'
+          AND ah.[ApproverRole] IN @Roles
+          AND (ah.[ApproverRole] <> 'DepartmentHead' OR po.[DepartmentCode] = @UserDepartmentCode)
+        ORDER BY po.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { Roles = roles.ToList(), UserDepartmentCode = userDepartmentCode });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetAllPendingAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [Status] = 'PendingApproval' ORDER BY [CreatedDt] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql);
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetInProgressByDepartmentAsync(string departmentCode)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrder]
+        WHERE [DepartmentCode] = @DepartmentCode AND [Status] = 'PendingApproval'
+        ORDER BY [CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { DepartmentCode = departmentCode });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetCompletedByDepartmentAsync(string departmentCode)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrder]
+        WHERE [DepartmentCode] = @DepartmentCode AND [Status] IN ('Approved','Rejected','Cancelled')
+        ORDER BY [ModifiedDt] DESC, [CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { DepartmentCode = departmentCode });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetAllCompletedAsync()
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrder]
+        WHERE [Status] IN ('Approved','Rejected','Cancelled')
+        ORDER BY [ModifiedDt] DESC, [CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql);
+        }
+
+
+
     }
-    }
+}

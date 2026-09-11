@@ -199,6 +199,10 @@
         public int POId { get; set; }
         public int StepNumber { get; set; }
         public string ApproverRole { get; set; } = default!;
+        public string? ApproverEmployeeCode { get; set; }
+        public string? Action { get; set; }          // Approved / Rejected — null until actioned
+        public string? Remarks { get; set; }
+        public DateTime? ActionedDt { get; set; }
     }
     public class CreatePurchaseOrderRequest
     {
@@ -241,10 +245,13 @@
         public bool IsBudgetExceeded { get; set; }
         public bool QuotationRequired { get; set; }
         public string Status { get; set; } = default!;
+        public string? PendingWithRole { get; set; }
+        public List<PendingApproverResponse> PendingWithUsers { get; set; } = new();   // NEW                     // NEW
         public List<PurchaseOrderItemResponse> Items { get; set; } = new();
         public List<PurchaseOrderTermResponse> Terms { get; set; } = new();
         public List<PurchaseOrderAdditionalTermResponse> AdditionalTerms { get; set; } = new();
         public List<QuotationFileResponse> Quotations { get; set; } = new();
+        public List<ApprovalStepSummary> ApprovalTrail { get; set; } = new();  // NEW
     }
     public class PurchaseOrderItemResponse
     {
@@ -297,5 +304,42 @@
     {
         public string FileName { get; set; } = default!;
         public string Base64Content { get; set; } = default!;
+    }
+    public class PurchaseOrderListItemResponse
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = default!;
+        public bool IsBudgetExceeded { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDt { get; set; }
+
+        public string? PendingWithRole { get; set; }              // e.g. "FinancialController" — who needs to act next
+        public List<ApprovalStepSummary> ApprovalTrail { get; set; } = new();
+    }
+
+    public class ApprovalStepSummary
+    {
+        public int StepNumber { get; set; }
+        public string ApproverRole { get; set; } = default!;
+        public string? Action { get; set; }        // null = not yet actioned, "Approved" / "Rejected" once done
+        public string? Remarks { get; set; }
+        public DateTime? ActionedDt { get; set; }
+    }
+    public class PendingApproverResponse
+    {
+        public string EmployeeCode { get; set; } = default!;
+        public string Name { get; set; } = default!;
+    }
+
+    public class PurchaseOrderDashboardResponse
+    {
+        public List<PurchaseOrderListItemResponse> PendingWithMe { get; set; } = new();
+        public List<PurchaseOrderListItemResponse> InProgress { get; set; } = new();
+        public List<PurchaseOrderListItemResponse> Completed { get; set; } = new();
     }
 }
