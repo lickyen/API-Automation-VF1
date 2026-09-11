@@ -63,7 +63,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task InsertTransactionAsync(NocTransactionInsertDto dto)
+        public async Task InsertTransactionAsync(NocTransactionInsertModel dto)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -795,6 +795,24 @@ namespace ProductivityApi.Repository
             };
 
             await conn.ExecuteAsync(sql, new { TransactionId = transactionId, Status = status });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetTransactionReportAsync(
+            DateTime? fromDate,
+            DateTime? toDate)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "sp_NOC_Report",
+                new
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate
+                },
+                commandType: CommandType.StoredProcedure);
         }
     }
 }

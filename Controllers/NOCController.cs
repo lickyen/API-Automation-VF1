@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -37,12 +38,10 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.InsertTransactionAsync(dto);
 
-            if (!result)
-            {
-                return BadRequest(new Response(false, message: "Failed to insert transaction."));
-            }
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
 
-            return Ok(new Response(true, message: "Transaction inserted successfully."));
+            return Ok(new Response(true, message: result.Message));
         }
 
 
@@ -471,6 +470,21 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, result.Message));
+        }
+
+        [HttpGet("report")]
+        public async Task<IActionResult> GetTransactionReport(
+            [FromQuery] NocReportRequest request)
+        {
+            var result = await _service.GetTransactionReportAsync(request);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return File(
+                result.Data!,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"NOC_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
         }
     }
 }
