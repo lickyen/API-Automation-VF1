@@ -405,6 +405,10 @@ namespace ProductivityApi.Services
                 ItemCategory = c.ItemCategory
             });
         }
+        
+        private static readonly HashSet<string> DepartmentScopedRoles = new(StringComparer.OrdinalIgnoreCase){ "DepartmentHead" };
+       
+
         public async Task<PurchaseOrderResponse> GetPurchaseOrderByIdAsync(int poId)
         {
             var po = await _repository.GetPurchaseOrderByIdAsync(poId)
@@ -414,7 +418,23 @@ namespace ProductivityApi.Services
             var terms = await _repository.GetPurchaseOrderTermsAsync(poId);
             var additionalTerms = await _repository.GetAdditionalTermsAsync(poId);
             var quotationPaths = await _repository.GetQuotationFilePathsAsync(poId);
+            var approvalHistory = (await _repository.GetApprovalHistoryAsync(poId)).ToList();
 
+            var pendingStep = approvalHistory.FirstOrDefault(h => h.StepNumber == po.CurrentApprovalStep);
+            string? pendingRole = po.Status == "PendingApproval" ? pendingStep?.ApproverRole : null;
+
+            var pendingUsers = new List<PendingApproverResponse>();
+            if (pendingRole is not null)
+            {
+                string? scopeDept = DepartmentScopedRoles.Contains(pendingRole) ? po.DepartmentCode : null;
+                var users = await _repository.GetUsersByRoleAsync(pendingRole, scopeDept);
+
+                pendingUsers = users.Select(u => new PendingApproverResponse
+                {
+                    EmployeeCode = u.EmployeeCode,
+                    Name = u.Name
+                }).ToList();
+            }
 
             return new PurchaseOrderResponse
             {
@@ -423,12 +443,16 @@ namespace ProductivityApi.Services
                 DepartmentCode = po.DepartmentCode,
                 Classification = po.Classification,
                 BudgetYear = po.BudgetYear,
+                TermsType = po.TermsType,
+                AdvancePercentage = po.AdvancePercentage,
                 SubTotal = po.SubTotal,
                 GSTAmount = po.GSTAmount,
                 TotalAmount = po.TotalAmount,
                 IsBudgetExceeded = po.IsBudgetExceeded,
                 QuotationRequired = po.QuotationRequired,
                 Status = po.Status,
+                PendingWithRole = pendingRole,
+                PendingWithUsers = pendingUsers,          // NEW
                 Items = items.Select(i => new PurchaseOrderItemResponse
                 {
                     ItemDescription = i.ItemDescription,
@@ -453,7 +477,15 @@ namespace ProductivityApi.Services
                     POAdditionalTermId = a.POAdditionalTermId,
                     TermText = a.TermText
                 }).ToList(),
-                Quotations = LoadQuotationFiles(quotationPaths)
+                Quotations = LoadQuotationFiles(quotationPaths),
+                ApprovalTrail = approvalHistory.Select(h => new ApprovalStepSummary
+                {
+                    StepNumber = h.StepNumber,
+                    ApproverRole = h.ApproverRole,
+                    Action = h.Action,
+                    Remarks = h.Remarks,
+                    ActionedDt = h.ActionedDt
+                }).ToList()
             };
         }
         public async Task<IEnumerable<PurchaseOrderResponse>> GetPurchaseOrderListAsync(string? departmentCode, string? status)
@@ -545,6 +577,165 @@ namespace ProductivityApi.Services
             }
 
             return results;
+        }
+
+    //    private static readonly HashSet<string> ApproverRoles = new(StringComparer.OrdinalIgnoreCase)
+    //{ "DepartmentHead", "FinancialController", "FinanceHead", "CFO", "ManagingDirector" };
+
+        public async Task<IEnumerable<PurchaseOrderListItemResponse>> GetPurchaseOrderListForUserAsync(string employeeCode)
+        {
+            var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
+                ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
+
+            var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (roles.Count == 0)
+                throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine PO access.");
+
+            IEnumerable<PoPurchaseOrder> purchaseOrders;
+
+            if (roles.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+            {
+                purchaseOrders = await _repository.GetAllPurchaseOrdersAsync();
+            }
+            else
+            {
+                var combined = new Dictionary<int, PoPurchaseOrder>();
+
+                var matchedApproverRoles = roles.Where(r => ApproverRoles.Contains(r)).ToList();
+                foreach (var role in matchedApproverRoles)
+                {
+                    var pending = await _repository.GetPurchaseOrdersPendingApprovalForRoleAsync(role);
+                    foreach (var po in pending) combined[po.POId] = po;
+                }
+
+                bool hasNonApproverRole = roles.Any(r => !ApproverRoles.Contains(r, StringComparer.OrdinalIgnoreCase)
+                                                          && !string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase));
+                if (hasNonApproverRole)
+                {
+                    var deptPOs = await _repository.GetPurchaseOrdersByDepartmentAsync(user.DepartmentCode);
+                    foreach (var po in deptPOs) combined[po.POId] = po;
+                }
+
+                purchaseOrders = combined.Values.OrderByDescending(po => po.CreatedDt);
+            }
+
+            var poList = purchaseOrders.ToList();
+
+            // Single batched query for approval history across every PO in the list — avoids N+1 queries
+            var allHistory = (await _repository.GetApprovalHistoryForPOsAsync(poList.Select(p => p.POId)))
+                .GroupBy(h => h.POId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(h => h.StepNumber).ToList());
+
+            return poList.Select(po =>
+            {
+                allHistory.TryGetValue(po.POId, out var history);
+                history ??= new List<PoPurchaseOrderApprovalHistory>();
+
+                var pendingStep = history.FirstOrDefault(h => h.StepNumber == po.CurrentApprovalStep);
+
+                return new PurchaseOrderListItemResponse
+                {
+                    POId = po.POId,
+                    PONumber = po.PONumber,
+                    DepartmentCode = po.DepartmentCode,
+                    Classification = po.Classification,
+                    BudgetYear = po.BudgetYear,
+                    TotalAmount = po.TotalAmount,
+                    Status = po.Status,
+                    IsBudgetExceeded = po.IsBudgetExceeded,
+                    CreatedBy = po.CreatedBy,
+                    CreatedDt = po.CreatedDt,
+                    PendingWithRole = po.Status == "PendingApproval" ? pendingStep?.ApproverRole : null,
+                    ApprovalTrail = history.Select(h => new ApprovalStepSummary
+                    {
+                        StepNumber = h.StepNumber,
+                        ApproverRole = h.ApproverRole,
+                        Action = h.Action,
+                        Remarks = h.Remarks,
+                        ActionedDt = h.ActionedDt
+                    }).ToList()
+                };
+            });
+        }
+        private static readonly HashSet<string> ApproverRoles = new(StringComparer.OrdinalIgnoreCase)
+    { "DepartmentHead", "FinancialController", "FinanceHead", "CFO", "ManagingDirector" };
+
+        public async Task<PurchaseOrderDashboardResponse> GetPurchaseOrderDashboardAsync(string employeeCode)
+        {
+            var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
+                ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
+
+            var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (roles.Count == 0)
+                throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine PO access.");
+
+            bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            var myApproverRoles = roles.Where(r => ApproverRoles.Contains(r)).ToList();
+
+            // ---------------- Pending With Me ----------------
+            List<PoPurchaseOrder> pendingWithMe = new();
+            if (isAdmin)
+            {
+                // Admins generally aren't in the approval chain themselves; leave empty unless "Admin" ever appears as an ApproverRole.
+            }
+            else if (myApproverRoles.Count > 0)
+            {
+                pendingWithMe = (await _repository.GetPendingWithRolesAsync(myApproverRoles, user.DepartmentCode)).ToList();
+            }
+
+            var pendingWithMeIds = pendingWithMe.Select(p => p.POId).ToHashSet();
+
+            // ---------------- In Progress ----------------
+            var inProgressRaw = isAdmin
+                ? await _repository.GetAllPendingAsync()
+                : await _repository.GetInProgressByDepartmentAsync(user.DepartmentCode);
+
+            var inProgress = inProgressRaw.Where(p => !pendingWithMeIds.Contains(p.POId)).ToList();
+
+            // ---------------- Completed ----------------
+            var completed = isAdmin
+                ? (await _repository.GetAllCompletedAsync()).ToList()
+                : (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
+            // ---------------- Batched "who's it pending with" lookup — ONE call for everything pending across all three buckets ----------------
+            var allPendingPOs = pendingWithMe.Concat(inProgress).ToList();   // Completed POs are never "pending", so excluded
+            var pendingRoleMap = await GetPendingRolesForPOsAsync(allPendingPOs);
+
+            return new PurchaseOrderDashboardResponse
+            {
+                PendingWithMe = MapToListResponse(pendingWithMe, pendingRoleMap).ToList(),
+                InProgress = MapToListResponse(inProgress, pendingRoleMap).ToList(),
+                Completed = MapToListResponse(completed, pendingRoleMap).ToList()
+            };
+        }
+
+        private static IEnumerable<PurchaseOrderListItemResponse> MapToListResponse(
+      IEnumerable<PoPurchaseOrder> purchaseOrders, Dictionary<int, string?> pendingRoleMap)
+      => purchaseOrders.Select(po => new PurchaseOrderListItemResponse
+      {
+          POId = po.POId,
+          PONumber = po.PONumber,
+          DepartmentCode = po.DepartmentCode,
+          Classification = po.Classification,
+          BudgetYear = po.BudgetYear,
+          TotalAmount = po.TotalAmount,
+          Status = po.Status,
+          IsBudgetExceeded = po.IsBudgetExceeded,
+          CreatedBy = po.CreatedBy,
+          CreatedDt = po.CreatedDt,
+          PendingWithRole = pendingRoleMap.TryGetValue(po.POId, out var role) ? role : null
+      });
+        private async Task<Dictionary<int, string?>> GetPendingRolesForPOsAsync(IEnumerable<PoPurchaseOrder> pos)
+        {
+            var poIds = pos.Where(p => p.Status == "PendingApproval").Select(p => p.POId).ToList();
+            if (poIds.Count == 0) return new Dictionary<int, string?>();
+
+            var history = await _repository.GetApprovalHistoryForPOsAsync(poIds);
+            return pos.Where(p => p.Status == "PendingApproval").ToDictionary(
+                p => p.POId,
+                p => history.FirstOrDefault(h => h.POId == p.POId && h.StepNumber == p.CurrentApprovalStep)?.ApproverRole
+            );
         }
     }
 }

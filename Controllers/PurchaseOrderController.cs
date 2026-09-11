@@ -113,12 +113,23 @@ namespace ProductivityApi.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
         }
 
-        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderList?departmentCode=IT&status=PendingApproval</summary>
-        [HttpGet]
-        public async Task<IActionResult> GetPurchaseOrderList([FromQuery] string? departmentCode, [FromQuery] string? status)
-        {
-            return Ok(await _purchaseOrderService.GetPurchaseOrderListAsync(departmentCode, status));
-        }
+      
 
+        
+
+        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderDashboard?employeeCode=EMP1023</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseOrderDashboard([FromQuery] string employeeCode)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            try
+            {
+                return Ok(await _purchaseOrderService.GetPurchaseOrderDashboardAsync(employeeCode));
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
     }
 }
