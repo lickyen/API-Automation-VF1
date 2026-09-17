@@ -727,5 +727,32 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<int>(sql, new { DepartmentCode = departmentCode, Classification = classification, SubClassification = subClassification }) > 0;
         }
+        public async Task<IEnumerable<dynamic>> GetDepartmentBudgetUtilizationAsync(string departmentCode, string budgetYear)
+        {
+            const string sql = @"
+        SELECT
+            bc.[BudgetCategoryId],
+            bc.[Classification],
+            bc.[SubClassification],
+            bc.[ItemCategory],
+            b.[Budget]              AS AllocatedAmount,
+            ISNULL(consumed.UsedAmount, 0) AS UsedAmount
+        FROM [dbo].[PO_BudgetCategoryMaster] bc
+        INNER JOIN [dbo].[PO_DeptWise_Budget] b
+            ON b.[BudgetCategoryId] = bc.[BudgetCategoryId] AND b.[BudgetYear] = @BudgetYear AND b.[IsActive] = 1
+        LEFT JOIN (
+            SELECT poi.[BudgetCategoryId], SUM(poi.[Amount] + poi.[GSTAmount]) AS UsedAmount
+            FROM [dbo].[PO_PurchaseOrderItems] poi
+            INNER JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = poi.[POId]
+            WHERE po.[BudgetYear] = @BudgetYear AND po.[Status] = 'Approved'
+            GROUP BY poi.[BudgetCategoryId]
+        ) consumed ON consumed.[BudgetCategoryId] = bc.[BudgetCategoryId]
+        WHERE bc.[DepartmentCode] = @DepartmentCode
+          AND bc.[IsActive] = 1
+        ORDER BY bc.[Classification], bc.[SubClassification], bc.[ItemCategory];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { DepartmentCode = departmentCode, BudgetYear = budgetYear });
+        }
     }
 }

@@ -171,5 +171,16 @@ namespace ProductivityApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSubClassifications([FromQuery] string departmentCode, [FromQuery] string classification)
             => Ok(await _purchaseOrderService.GetSubClassificationsAsync(departmentCode, classification));
+
+        /// <summary>GET /api/Purchaseorder/GetDepartmentBudgetUtilization?departmentCode=IT&budgetYear=FY2026-27</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentBudgetUtilization([FromQuery] string departmentCode, [FromQuery] string budgetYear)
+        {
+            try
+            {
+                return Ok(await _purchaseOrderService.GetDepartmentBudgetUtilizationAsync(departmentCode, budgetYear));
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
     }
 }

@@ -416,4 +416,35 @@
         public string SettingValue { get; set; } = default!;
         public string ModifiedBy { get; set; } = default!;
     }
+
+    public class BudgetUtilizationResponse
+    {
+        public int BudgetCategoryId { get; set; }
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public decimal AllocatedAmount { get; set; }
+        public decimal UsedAmount { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public decimal UsedPercentage { get; set; }
+    }
+
+    public class DepartmentBudgetUtilizationResponse
+    {
+        public string DepartmentCode { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public decimal TotalAllocated { get; set; }
+        public decimal TotalUsed { get; set; }
+        public decimal TotalRemaining { get; set; }
+        public decimal OverallUsedPercentage { get; set; }
+        public List<ClassificationBudgetUtilizationResponse> Classifications { get; set; } = new();   // <-- NEW grouping level
+    }
+    public class ClassificationBudgetUtilizationResponse
+    {
+        public string Classification { get; set; } = default!;   // "Capex" / "Opex"
+        public decimal TotalAllocated { get; set; }
+        public decimal TotalUsed { get; set; }
+        public decimal TotalRemaining { get; set; }
+        public decimal UsedPercentage { get; set; }
+        public List<BudgetUtilizationResponse> Categories { get; set; } = new();
+    }
 }
