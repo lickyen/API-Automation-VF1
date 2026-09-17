@@ -206,14 +206,16 @@ namespace ProductivityApi.Repository
         {
             const string sql = @"
         INSERT INTO [dbo].[PO_PurchaseOrder]
-            ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [BudgetYear],
-             [BudgetCategoryId], [TermsType], [AdvancePercentage],
+            ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [SubClassification], [BudgetYear],
+             [POType], [TermsType], [AdvancePercentage],
+             [VendorContactName], [VendorContactMobile], [VendorContactEmail],
              [SubTotal], [GSTAmount], [TotalAmount],
              [IsBudgetExceeded], [QuotationRequired], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
         OUTPUT INSERTED.[POId]
         VALUES
-            (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @BudgetYear,
-             @BudgetCategoryId, @TermsType, @AdvancePercentage,
+            (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @SubClassification, @BudgetYear,
+             @POType, @TermsType, @AdvancePercentage,
+             @VendorContactName, @VendorContactMobile, @VendorContactEmail,
              @SubTotal, @GSTAmount, @TotalAmount,
              @IsBudgetExceeded, @QuotationRequired, @Status, @CurrentApprovalStep, @CreatedBy, GETDATE());";
 
@@ -226,9 +228,10 @@ namespace ProductivityApi.Repository
         {
             const string sql = @"
         INSERT INTO [dbo].[PO_PurchaseOrderItems]
-            ([POId], [ItemDescription], [Quantity], [UnitPrice], [Amount], [GSTRate], [GSTType], [CGSTAmount], [SGSTAmount], [IGSTAmount])
+            ([POId], [ItemDescription], [Quantity], [UnitPrice], [Amount], [GSTRate], [GSTAmount], [BudgetCategoryId], [IsBudgetExceeded])
         VALUES
-            (@POId, @ItemDescription, @Quantity, @UnitPrice, @Amount, @GSTRate, @GSTType, @CGSTAmount, @SGSTAmount, @IGSTAmount);";
+            (@POId, @ItemDescription, @Quantity, @UnitPrice, @Amount, @GSTRate, @GSTAmount, @BudgetCategoryId, @IsBudgetExceeded);";
+
 
             using IDbConnection connection = new SqlConnection(_conStr);
             foreach (var item in items) item.POId = poId;
@@ -525,7 +528,204 @@ namespace ProductivityApi.Repository
             return await connection.QueryAsync<PoPurchaseOrder>(sql);
         }
 
+        public async Task<dynamic?> GetVendorDetailsForPOAsync(int poId)
+        {
+            const string sql = @"
+        SELECT v.[VendorName], v.[VendorCode], va.[GSTIN], va.[AddressLine1], va.[City], va.[StateName]
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = po.[VendorId]
+        INNER JOIN [dbo].[PO_VendorAddressMaster] va ON va.[VendorAddressId] = po.[VendorAddressId]
+        WHERE po.[POId] = @POId;";
 
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync(sql, new { POId = poId });
+        }
 
+    
+
+        public async Task<bool> AllLocationsExistAsync(IEnumerable<int> locationIds)
+        {
+            var ids = locationIds.Distinct().ToList();
+            if (ids.Count == 0) return false;
+
+            const string sql = "SELECT COUNT(1) FROM [dbo].[PO_Location] WHERE [LocationId] IN @Ids AND [IsActive] = 1;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            int matched = await connection.ExecuteScalarAsync<int>(sql, new { Ids = ids });
+            return matched == ids.Count;
+        }
+
+        public async Task AddPurchaseOrderDeliveryLocationsAsync(int poId, IEnumerable<int> locationIds, string createdBy)
+        {
+            var ids = locationIds.Distinct().ToList();
+            if (ids.Count == 0) return;
+
+            const string sql = @"
+        INSERT INTO [dbo].[PO_PurchaseOrderDeliveryLocations] ([POId], [LocationId], [CreatedBy], [CreatedDt])
+        VALUES (@POId, @LocationId, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = ids.Select(id => new { POId = poId, LocationId = id, CreatedBy = createdBy }).ToList();
+            await connection.ExecuteAsync(sql, rows);
+        }
+
+        public async Task<IEnumerable<PoLocation>> GetLocationsAsync(string? region = null, string? zone = null)
+        {
+            const string sql = @"
+        SELECT [LocationId], [BranchCode], [BranchName], [Address], [Region], [Zone], [MegaZone], [IsActive]
+        FROM [dbo].[PO_Location]
+        WHERE [IsActive] = 1
+          AND (@Region IS NULL OR [Region] = @Region)
+          AND (@Zone IS NULL OR [Zone] = @Zone)
+        ORDER BY [MegaZone], [Zone], [Region], [BranchName];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoLocation>(sql, new { Region = region, Zone = zone });
+        }
+
+        public async Task<IEnumerable<PoLocation>> GetPurchaseOrderDeliveryLocationsAsync(int poId)
+        {
+            const string sql = @"
+        SELECT l.[LocationId], l.[BranchCode], l.[BranchName], l.[Address], l.[Region], l.[Zone], l.[MegaZone], l.[IsActive]
+        FROM [dbo].[PO_PurchaseOrderDeliveryLocations] pdl
+        INNER JOIN [dbo].[PO_Location] l ON l.[LocationId] = pdl.[LocationId]
+        WHERE pdl.[POId] = @POId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoLocation>(sql, new { POId = poId });
+        }
+        public async Task<PoPurchaseOrderApprovalHistory?> GetPendingApprovalStepAsync(int poId, int stepNumber)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrderApprovalHistory]
+        WHERE [POId] = @POId AND [StepNumber] = @StepNumber;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync<PoPurchaseOrderApprovalHistory>(sql, new { POId = poId, StepNumber = stepNumber });
+        }
+
+        public async Task MarkApprovalStepActionedAsync(int approvalId, string approverEmployeeCode, string action, string? remarks)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_PurchaseOrderApprovalHistory]
+        SET [ApproverEmployeeCode] = @ApproverEmployeeCode, [Action] = @Action, [Remarks] = @Remarks, [ActionedDt] = GETDATE()
+        WHERE [ApprovalId] = @ApprovalId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { ApprovalId = approvalId, ApproverEmployeeCode = approverEmployeeCode, Action = action, Remarks = remarks });
+        }
+
+        public async Task UpdatePOStatusAsync(int poId, string status, int currentApprovalStep)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_PurchaseOrder]
+        SET [Status] = @Status, [CurrentApprovalStep] = @CurrentApprovalStep, [ModifiedDt] = GETDATE()
+        WHERE [POId] = @POId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { POId = poId, Status = status, CurrentApprovalStep = currentApprovalStep });
+        }
+
+        public async Task<Dictionary<int, decimal>> GetBudgetAmountsAsync(IEnumerable<int> budgetCategoryIds, string budgetYear)
+        {
+            var ids = budgetCategoryIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, decimal>();
+
+            const string sql = @"
+        SELECT [BudgetCategoryId], [Budget]
+        FROM [dbo].[PO_DeptWise_Budget]
+        WHERE [BudgetCategoryId] IN @Ids AND [BudgetYear] = @BudgetYear AND [IsActive] = 1;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = await connection.QueryAsync<(int BudgetCategoryId, decimal Budget)>(sql, new { Ids = ids, BudgetYear = budgetYear });
+            return rows.ToDictionary(r => r.BudgetCategoryId, r => r.Budget);
+        }
+        public async Task<Dictionary<int, decimal>> GetConsumedBudgetsAsync(IEnumerable<int> budgetCategoryIds, string budgetYear)
+        {
+            var ids = budgetCategoryIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, decimal>();
+
+            const string sql = @"
+        SELECT poi.[BudgetCategoryId], ISNULL(SUM(poi.[Amount] + poi.[GSTAmount]), 0) AS Consumed
+        FROM [dbo].[PO_PurchaseOrderItems] poi
+        INNER JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = poi.[POId]
+        WHERE poi.[BudgetCategoryId] IN @Ids
+          AND po.[BudgetYear] = @BudgetYear
+          AND po.[Status] = 'Approved'
+        GROUP BY poi.[BudgetCategoryId];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = await connection.QueryAsync<(int BudgetCategoryId, decimal Consumed)>(sql, new { Ids = ids, BudgetYear = budgetYear });
+            return rows.ToDictionary(r => r.BudgetCategoryId, r => r.Consumed);
+        }
+        public async Task<IEnumerable<dynamic>> GetPurchaseOrderItemsWithCategoryAsync(int poId)
+        {
+            const string sql = @"
+        SELECT poi.*, bc.[SubClassification], bc.[ItemCategory]
+        FROM [dbo].[PO_PurchaseOrderItems] poi
+        LEFT JOIN [dbo].[PO_BudgetCategoryMaster] bc ON bc.[BudgetCategoryId] = poi.[BudgetCategoryId]
+        WHERE poi.[POId] = @POId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { POId = poId });
+        }
+
+        public async Task<string?> GetSettingAsync(string key)
+        {
+            const string sql = "SELECT [SettingValue] FROM [dbo].[PO_AppSettings] WHERE [SettingKey] = @Key;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<string?>(sql, new { Key = key });
+        }
+
+        public async Task<Dictionary<string, string>> GetSettingsAsync(IEnumerable<string> keys)
+        {
+            const string sql = "SELECT [SettingKey], [SettingValue] FROM [dbo].[PO_AppSettings] WHERE [SettingKey] IN @Keys;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = await connection.QueryAsync<(string SettingKey, string SettingValue)>(sql, new { Keys = keys.ToList() });
+            return rows.ToDictionary(r => r.SettingKey, r => r.SettingValue);
+        }
+
+        public async Task UpdateSettingAsync(string key, string value, string modifiedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_AppSettings]
+        SET [SettingValue] = @Value, [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
+        WHERE [SettingKey] = @Key;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            int rows = await connection.ExecuteAsync(sql, new { Key = key, Value = value, ModifiedBy = modifiedBy });
+            if (rows == 0)
+                throw new KeyNotFoundException($"Setting '{key}' does not exist.");
+        }
+        public async Task<IEnumerable<(string SettingKey, string SettingValue, string? Description)>> GetAllSettingsAsync()
+        {
+            const string sql = "SELECT [SettingKey], [SettingValue], [Description] FROM [dbo].[PO_AppSettings];";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<(string, string, string?)>(sql);
+        }
+        public async Task<IEnumerable<string>> GetSubClassificationsAsync(string departmentCode, string classification)
+        {
+            const string sql = @"
+        SELECT DISTINCT [SubClassification]
+        FROM [dbo].[PO_BudgetCategoryMaster]
+        WHERE [DepartmentCode] = @DepartmentCode
+          AND [Classification] = @Classification
+          AND [IsActive] = 1
+        ORDER BY [SubClassification];";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<string>(sql, new { DepartmentCode = departmentCode, Classification = classification });
+        }
+        public async Task<bool> SubClassificationExistsAsync(string departmentCode, string classification, string subClassification)
+        {
+            const string sql = @"
+        SELECT COUNT(1) FROM [dbo].[PO_BudgetCategoryMaster]
+        WHERE [DepartmentCode] = @DepartmentCode
+          AND [Classification] = @Classification
+          AND [SubClassification] = @SubClassification
+          AND [IsActive] = 1;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new { DepartmentCode = departmentCode, Classification = classification, SubClassification = subClassification }) > 0;
+        }
     }
 }

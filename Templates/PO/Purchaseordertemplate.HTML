@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vistaar Finance — Purchase Order</title>
+  <style>
+    :root{--navy:#1f3763;--grey:#6d6e71;--mist:#a7b6bf;--red:#a12531;--ink:#263247;--line:#d9e0e5}
+    @page{size:A4;margin:0}
+    *{box-sizing:border-box}
+    body{margin:0;background:#e8edf1;color:var(--ink);font:9px Arial,Helvetica,sans-serif}
+    .page{position:relative;display:grid;grid-template-columns:48mm 1fr;width:210mm;min-height:297mm;margin:0 auto;background:white}
+    .side{position:relative;min-height:297mm;padding:14mm 7mm 12mm;background:var(--navy);color:white}
+    .side img{width:100%;margin-bottom:16mm}
+    .side h1{margin:0;font-size:20px;line-height:1.02;letter-spacing:.08em}
+    .side .po-number{margin:16mm 0 7mm;font-size:13px;font-weight:900}
+    .side dl{margin:0}
+    .side dt{margin-top:6mm;color:var(--mist);font-size:7px;letter-spacing:.08em;text-transform:uppercase}
+    .side dd{margin:1.5mm 0 0;font-weight:700;line-height:1.35}
+    .side-note{position:absolute;left:7mm;right:7mm;bottom:12mm;padding-top:5mm;border-top:1px solid #5f7697;color:#cbd6df;font-size:7px;line-height:1.55}
+    .content{position:relative;min-height:297mm;padding:14mm 11mm 13mm}
+    .watermark{position:absolute;top:44%;left:16%;transform:rotate(-30deg);color:rgba(161,37,49,.12);font-size:60px;font-weight:900;letter-spacing:6px;pointer-events:none;z-index:0}
+    .topline{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:10mm}
+    .eyebrow,.label{display:block;margin-bottom:2mm;color:var(--grey);font-size:7px;letter-spacing:.09em;text-transform:uppercase}
+    .topline h2{margin:2mm 0 0;color:var(--navy);font-size:24px;line-height:1}
+    .status{padding:2.5mm 4mm;border-radius:20px;color:var(--navy);background:#eaf1f6;font-size:7px;font-weight:900;text-transform:uppercase}
+    .party-grid{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:9mm}
+    .party{min-height:29mm;padding:4mm;border-radius:4px;background:#f4f7f9;line-height:1.5}
+    .party strong,.purpose strong{color:var(--navy);font-size:10px}
+    .purpose{position:relative;z-index:1;margin-top:5mm;padding:4mm;border-left:4px solid var(--red);background:#fff6f6;line-height:1.45}
+    table{position:relative;z-index:1;width:100%;margin-top:6mm;border-collapse:collapse}
+    th{padding:3mm 2mm;color:white;background:var(--grey);font-size:6px;letter-spacing:.05em;text-transform:uppercase;text-align:left}
+    td{padding:3mm 2mm;border-bottom:1px solid var(--line);vertical-align:top}
+    td strong{color:var(--navy)}
+    td small{display:block;margin-top:1mm;color:var(--grey);font-size:7px}
+    .center{text-align:center}
+    .right{text-align:right;white-space:nowrap}
+    .total-hero{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-top:6mm;padding:5mm;border-radius:5px;background:var(--navy);color:white}
+    .total-hero small{color:#cdd7e1}
+    .total-hero strong{font-size:18px}
+    .words{position:relative;z-index:1;margin-top:3mm;color:var(--grey);line-height:1.5}
+    .words strong{color:var(--navy)}
+    .terms{position:relative;z-index:1;margin-top:8mm;padding-top:5mm;border-top:1px solid var(--line);line-height:1.5}
+    .terms h3{margin:0 0 2mm;color:var(--navy);font-size:9px}
+    .terms ol{margin:0;padding-left:5mm}
+    .system-note{position:relative;z-index:1;margin-top:7mm;padding:3.5mm;border:1px solid var(--mist);border-radius:4px;background:#f4f7f9;color:var(--navy);font-weight:800;text-align:center}
+    footer{position:absolute;left:11mm;right:11mm;bottom:7mm;display:flex;justify-content:space-between;padding-top:2mm;border-top:1px solid var(--line);color:var(--grey);font-size:6px}
+  </style>
+</head>
+<body>
+  <main class="page">
+
+    <aside class="side">
+      <img src="{{LogoBase64}}" alt="Vistaar Finance">
+      <h1>PURCHASE<br>ORDER</h1>
+      <div class="po-number">{{PONumber}}</div>
+      <dl>
+        <dt>Issue date</dt>
+        <dd>{{IssueDate}}</dd>
+
+        <dt>Financial year</dt>
+        <dd>{{BudgetYear}}</dd>
+
+        <dt>Department</dt>
+        <dd>{{DepartmentCode}} · {{Classification}}</dd>
+
+        <dt>PO type</dt>
+        <dd>Standard</dd>
+
+        <dt>Delivery</dt>
+        <dd>{{DeliveryLocations}}</dd>
+
+        <dt>Advance</dt>
+        <dd>{{Advance}}</dd>
+      </dl>
+      <div class="side-note">
+        Vistaar Financial Services Private Limited<br><br>
+        System-generated controlled procurement document
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="watermark">{{StatusWatermark}}</div>
+
+      <div class="topline">
+        <div>
+          <span class="eyebrow">Supplier document</span>
+          <h2>Purchase Order</h2>
+        </div>
+        <span class="status">{{Status}}</span>
+      </div>
+
+      <div class="party-grid">
+        <div class="party">
+          <span class="label">Supplier</span>
+          <strong>{{VendorName}}</strong><br>
+          Vendor code: {{VendorCode}}<br>
+          GSTIN: {{VendorGSTIN}}<br>
+          {{VendorState}}
+        </div>
+        <div class="party">
+          <span class="label">Bill to</span>
+          <strong>Vistaar Financial Services Private Limited</strong><br>
+          {{CompanyAddress}}<br>
+          GSTIN: {{CompanyGSTIN}}
+        </div>
+        <div class="party">
+          <span class="label">Deliver to</span>
+          <strong>{{DeliveryLocations}}</strong><br>
+          {{DeliveryAddress}}
+        </div>
+        <div class="party">
+          <span class="label">Commercial terms</span>
+          <strong>Currency: INR</strong><br>
+          Advance: {{Advance}}<br>
+          Balance: {{TermsType}}
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Description / classification</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Taxable</th>
+            <th>Tax</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ItemRows}}
+        </tbody>
+      </table>
+
+      <div class="total-hero">
+        <span>Total amount<br><small>Taxable ₹{{SubTotal}} · Tax ₹{{GSTAmount}}</small></span>
+        <strong>₹{{TotalAmount}}</strong>
+      </div>
+      <div class="words">
+        <span class="label">Amount in words</span>
+        <strong>{{AmountInWords}}</strong>
+      </div>
+
+      <section class="terms">
+        <h3>Commercial and control terms</h3>
+        <ol>
+          <li>Quote this PO number on invoices, delivery documents and correspondence.</li>
+          <li>Supply must conform to the description, quantity, rate, tax and delivery location stated above.</li>
+          <li>Any change requires an approved PO amendment before supply or invoicing.</li>
+          <li>Payment is subject to receipt, verification, statutory deductions and approved invoice processing.</li>
+          <li>Protect confidential information and personal data according to contract and applicable law.</li>
+          {{TermsList}}
+        </ol>
+      </section>
+
+      <div class="system-note">This is a system-generated Purchase Order. Hence, no signature is required.</div>
+
+      <footer>
+        <span>Vistaar Finance · Purchase Order Management System</span>
+        <span>Controlled form · Generated {{IssueDate}}</span>
+      </footer>
+    </section>
+
+  </main>
+</body>
+</html>

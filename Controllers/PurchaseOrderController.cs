@@ -131,5 +131,45 @@ namespace ProductivityApi.Controllers
             catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
+        /// <summary>GET /api/Purchaseorder/GetLocations?region=South&zone=Chennai</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetLocations([FromQuery] string? region, [FromQuery] string? zone)
+            => Ok(await _purchaseOrderService.GetLocationsAsync(region, zone));
+
+        /// <summary>POST /api/Purchaseorder/ActOnApproval</summary>
+        [HttpPost]
+        public async Task<IActionResult> ActOnApproval([FromBody] ApprovalActionRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.ActOnApprovalAsync(request);
+                return Ok(new { message = request.IsApproved ? "Approved successfully." : "Rejected." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetSettings</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetSettings()
+            => Ok(await _purchaseOrderService.GetAllSettingsAsync());
+
+        /// <summary>POST /api/Purchaseorder/UpdateSetting — Admin only</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateSetting([FromBody] UpdateAppSettingRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateSettingAsync(request);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+        /// <summary>GET /api/Purchaseorder/GetSubClassifications?departmentCode=IT&classification=Opex</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetSubClassifications([FromQuery] string departmentCode, [FromQuery] string classification)
+            => Ok(await _purchaseOrderService.GetSubClassificationsAsync(departmentCode, classification));
     }
 }
