@@ -73,6 +73,8 @@ namespace ProductivityApi.Models
         public DateTime? DispatchDate { get; set; }
         public string? PodNumber { get; set; }
         public string? CourierName { get; set; }
+        public DateTime? EmailDate { get; set; }
+        public string? EmailSubject { get; set; } = string.Empty;
         public int? AdvocateId { get; set; }
         public string? AdvocateName { get; set; }
         public DateTime? AdvocateAssignmentDate { get; set; }
@@ -105,6 +107,8 @@ namespace ProductivityApi.Models
         public DateTime? DocumentReturnCompletedDt { get; set; }
 
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
+
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -203,11 +207,15 @@ namespace ProductivityApi.Models
     {
         public string Lan { get; set; } = string.Empty;
 
-        public DateTime DispatchDate { get; set; }
+        public DateTime? DispatchDate { get; set; }
 
-        public string PodNumber { get; set; } = string.Empty;
+        public string? PodNumber { get; set; } = string.Empty;
 
-        public string CourierName { get; set; } = string.Empty;
+        public DateTime? EmailDate { get; set; }
+
+        public string? EmailSubject { get; set; } = string.Empty;
+
+        public string? CourierName { get; set; } = string.Empty;
 
         public string DocumentTransmissionType { get; set; } = string.Empty;
 
@@ -314,6 +322,8 @@ namespace ProductivityApi.Models
         public DateTime? DispatchDate { get; set; }
         public string? PodNumber { get; set; }
         public string? CourierName { get; set; }
+        public DateTime? EmailDate { get; set; }
+        public string? EmailSubject { get; set; } = string.Empty;
         public string? FieldUserId { get; set; }
         public int? AdvocateId { get; set; }
         public string? AdvocateName { get; set; }
@@ -331,6 +341,7 @@ namespace ProductivityApi.Models
         public string? DocumentReturnPODNumber { get; set; }
 
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
         public DateTime CreatedDt { get; set; }
         public DateTime? UpdatedDt { get; set; }
     }
@@ -366,9 +377,13 @@ namespace ProductivityApi.Models
         public string CurrentWorkflowStage { get; set; } = string.Empty;
         public string? DocumentTransmissionType { get; set; }
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
+
         public DateTime? DocumentDispatchDate { get; set; }
         public string? PodNumber { get; set; }
         public string? CourierName { get; set; }
+        public DateTime? EmailDate { get; set; }
+        public string? EmailSubject { get; set; } = string.Empty;
         public DateTime? FinalFieldUserAcknowledgementDate { get; set; }
         public DateTime? AdvocateAssignmentDate { get; set; }
         public int? AdvocateId { get; set; }
@@ -497,6 +512,13 @@ namespace ProductivityApi.Models
     {
         public int CaseId { get; set; }
         public bool RequiresPhysicalDocuments { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingAdditionalDocumentRequirementDto
+    {
+        public int CaseId { get; set; }
+        public bool RequiresAdditionalDocuments { get; set; }
         public string UpdatedBy { get; set; } = string.Empty;
     }
 

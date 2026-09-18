@@ -195,6 +195,16 @@ namespace ProductivityApi.Controllers
                 : BadRequest(new Response(false, null, result.Message));
         }
 
+        [HttpPost("additionalDocumentRequirement")]
+        public async Task<IActionResult> UpdateAdditionalDocumentRequirement([FromBody] SARFAESIPhysicalFilingAdditionalDocumentRequirementDto dto)
+        {
+            var result = await _service.UpdateAdditionalDocumentRequirementAsync(dto);
+            return result.Success
+                ? Ok(new Response(true, null, result.Message))
+                : BadRequest(new Response(false, null, result.Message));
+        }
+
+
         //From LAN mapping
         [HttpGet("getNewLans")]
         public async Task<IActionResult> GetNewLans()
