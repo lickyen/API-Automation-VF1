@@ -141,9 +141,14 @@
         public int POId { get; set; }
         public string PONumber { get; set; } = default!;
         public long VendorId { get; set; }
+        public string? VendorContactName { get; set; }
+        public string? VendorContactMobile { get; set; }
+        public string? VendorContactEmail { get; set; }
+        public string POType { get; set; } = default!;   // "Standard" / "Blanket"
         public long VendorAddressId { get; set; }
         public string DepartmentCode { get; set; } = default!;
         public string Classification { get; set; } = default!;
+        public string? SubClassification { get; set; }
         public string BudgetYear { get; set; } = default!;
         public int BudgetCategoryId { get; set; }
         public string TermsType { get; set; } = default!;       // "Normal" / "Advance"
@@ -188,10 +193,9 @@
         public decimal UnitPrice { get; set; }
         public decimal Amount { get; set; }
         public decimal GSTRate { get; set; }
-        public string GSTType { get; set; } = default!;
-        public decimal CGSTAmount { get; set; }
-        public decimal SGSTAmount { get; set; }
-        public decimal IGSTAmount { get; set; }
+        public decimal GSTAmount { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public bool IsBudgetExceeded { get; set; }
     }
     public class PoPurchaseOrderApprovalHistory
     {
@@ -208,20 +212,27 @@
     {
         public long VendorId { get; set; }
         public long VendorAddressId { get; set; }
+
+        public string? VendorContactName { get; set; }
+        public string? VendorContactMobile { get; set; }
+        public string? VendorContactEmail { get; set; }
         public string DepartmentCode { get; set; } = default!;
+        public string POType { get; set; } = default!;   // "Standard" / "Blanket"
         public string Classification { get; set; } = default!;
+        public string? SubClassification { get; set; }
         public string BudgetYear { get; set; } = default!;
-        public int BudgetCategoryId { get; set; }
+       // public int BudgetCategoryId { get; set; }
         public string TermsType { get; set; } = default!;         // "Normal" / "Advance"
         public decimal? AdvancePercentage { get; set; }             // required if TermsType = "Advance"
         public List<long> TermMasterIds { get; set; } = new();       // selected from master
         public List<string> AdditionalTerms { get; set; } = new();     // free-text, PO-specific
         public string CreatedBy { get; set; } = default!;
-        public string BuyerStateCode { get; set; } = default!;
+      
         public bool SaveAsDraft { get; set; }
         public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
         //  public List<string> QuotationFilePaths { get; set; } = new();
         public List<QuotationFileUpload> Quotations { get; set; } = new();   // was: List<string> QuotationFilePaths
+        public List<int> DeliveryLocationIds { get; set; } = new();   // one or more — REQUIRED, at least one
     }
     public class CreatePurchaseOrderItemRequest
     {
@@ -229,13 +240,25 @@
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal GSTRate { get; set; }
+        public int BudgetCategoryId { get; set; }
     }
     public class PurchaseOrderResponse
     {
         public int POId { get; set; }
         public string PONumber { get; set; } = default!;
         public string DepartmentCode { get; set; } = default!;
+        // NEW — needed for the PDF's party-grid
+        public string POType { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public string VendorCode { get; set; } = default!;
+        public string VendorGSTIN { get; set; } = default!;
+        public string VendorAddress { get; set; } = default!;
+        public string VendorState { get; set; } = default!;
+        public string? VendorContactName { get; set; }
+        public string? VendorContactMobile { get; set; }
+        public string? VendorContactEmail { get; set; }
         public string Classification { get; set; } = default!;
+        public string? SubClassification { get; set; }
         public string BudgetYear { get; set; } = default!;
         public string TermsType { get; set; } = default!;
         public decimal? AdvancePercentage { get; set; }
@@ -252,6 +275,7 @@
         public List<PurchaseOrderAdditionalTermResponse> AdditionalTerms { get; set; } = new();
         public List<QuotationFileResponse> Quotations { get; set; } = new();
         public List<ApprovalStepSummary> ApprovalTrail { get; set; } = new();  // NEW
+        public List<DeliveryLocationResponse> DeliveryLocations { get; set; } = new();
     }
     public class PurchaseOrderItemResponse
     {
@@ -260,10 +284,11 @@
         public decimal UnitPrice { get; set; }
         public decimal Amount { get; set; }
         public decimal GSTRate { get; set; }
-        public string GSTType { get; set; } = default!;
-        public decimal CGSTAmount { get; set; }
-        public decimal SGSTAmount { get; set; }
-        public decimal IGSTAmount { get; set; }
+        public decimal GSTAmount { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public bool IsBudgetExceeded { get; set; }
     }
 
     public class PoBudgetCategory
@@ -290,6 +315,8 @@
         public int POId { get; set; }
         public string TermText { get; set; } = default!;
     }
+
+
     public class PurchaseOrderAdditionalTermResponse
     {
         public int POAdditionalTermId { get; set; }
@@ -341,5 +368,83 @@
         public List<PurchaseOrderListItemResponse> PendingWithMe { get; set; } = new();
         public List<PurchaseOrderListItemResponse> InProgress { get; set; } = new();
         public List<PurchaseOrderListItemResponse> Completed { get; set; } = new();
+    }
+    public class PoLocation
+    {
+        public int LocationId { get; set; }
+        public string BranchCode { get; set; } = default!;
+        public string BranchName { get; set; } = default!;
+        public string Address { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string State { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string Region { get; set; } = default!;
+        public string Zone { get; set; } = default!;
+        public string MegaZone { get; set; } = default!;
+        public bool IsActive { get; set; }
+    }
+    public class DeliveryLocationResponse
+    {
+        public int LocationId { get; set; }
+        public string BranchCode { get; set; } = default!;
+        public string BranchName { get; set; } = default!;
+        public string Address { get; set; } = default!;
+
+        public string Region { get; set; } = default!;
+        public string Zone { get; set; } = default!;
+        public string MegaZone { get; set; } = default!;
+    }
+    public class ApprovalActionRequest
+    {
+        
+        public int POId { get; set; }
+        public string ApproverEmployeeCode { get; set; } = default!;
+        public bool IsApproved { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class AppSettingResponse
+    {
+        public string SettingKey { get; set; } = default!;
+        public string SettingValue { get; set; } = default!;
+        public string? Description { get; set; }
+    }
+
+    public class UpdateAppSettingRequest
+    {
+        public string SettingKey { get; set; } = default!;
+        public string SettingValue { get; set; } = default!;
+        public string ModifiedBy { get; set; } = default!;
+    }
+
+    public class BudgetUtilizationResponse
+    {
+        public int BudgetCategoryId { get; set; }
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public decimal AllocatedAmount { get; set; }
+        public decimal UsedAmount { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public decimal UsedPercentage { get; set; }
+    }
+
+    public class DepartmentBudgetUtilizationResponse
+    {
+        public string DepartmentCode { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public decimal TotalAllocated { get; set; }
+        public decimal TotalUsed { get; set; }
+        public decimal TotalRemaining { get; set; }
+        public decimal OverallUsedPercentage { get; set; }
+        public List<ClassificationBudgetUtilizationResponse> Classifications { get; set; } = new();   // <-- NEW grouping level
+    }
+    public class ClassificationBudgetUtilizationResponse
+    {
+        public string Classification { get; set; } = default!;   // "Capex" / "Opex"
+        public decimal TotalAllocated { get; set; }
+        public decimal TotalUsed { get; set; }
+        public decimal TotalRemaining { get; set; }
+        public decimal UsedPercentage { get; set; }
+        public List<BudgetUtilizationResponse> Categories { get; set; } = new();
     }
 }
