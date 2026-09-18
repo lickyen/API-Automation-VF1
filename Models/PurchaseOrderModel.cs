@@ -32,21 +32,59 @@
     }
     public class POVendorMaster
     {
-        public int VendorId { get; set; }
-        public string VendorCode { get; set; } = default!;
+        public long VendorId { get; set; }
+        public string? VendorCode { get; set; } = default!;
         public string VendorName { get; set; } = default!;
-        public string? BankHolderName { get; set; }
-        public string? BankAccountNo { get; set; }
-        public string? BankName { get; set; }
-        public string? IFSCCode { get; set; }
+        public string BankHolderName { get; set; } = default!;
+        public string BankAccountNo { get; set; } = default!;
+        public string BankName { get; set; } = default!;
+        public string IFSCCode { get; set; } = default!;
         public bool MSMEVendor { get; set; }
         public string? UDYAMRegnNo { get; set; }
-        public string? VendorPAN { get; set; }
+        public string VendorPAN { get; set; } = default!;
         public string Status { get; set; } = default!;
-        public string? CreatedBy { get; set; }
-        public DateTime CreatedDate { get; set; }
-        public string? ModifiedBy { get; set; }
-        public DateTime? ModifiedDate { get; set; }
+        public string? RejectionReason { get; set; }
+        public string? PANDocumentPath { get; set; }
+        public string? MSMEDocumentPath { get; set; }
+        public string? BankAccountProofPath { get; set; }
+        public string CreatedBy { get; set; } = default!;
+    }
+    public class VendorDocumentUpload
+    {
+        public string FileName { get; set; } = default!;
+        public string Base64Content { get; set; } = default!;
+    }
+    public class CreateVendorRequest
+    {
+        
+        public string VendorName { get; set; } = default!;
+        public string BankHolderName { get; set; } = default!;
+        public string BankAccountNo { get; set; } = default!;
+        public string BankName { get; set; } = default!;
+        public string IFSCCode { get; set; } = default!;
+        public bool MSMEVendor { get; set; }
+        public string? UDYAMRegnNo { get; set; }
+        public string VendorPAN { get; set; } = default!;
+        public string CreatedBy { get; set; } = default!;
+        public VendorDocumentUpload PANDocument { get; set; } = default!; 
+        public VendorDocumentUpload? MSMEDocument { get; set; } 
+        public VendorDocumentUpload BankAccountProofDocument { get; set; } = default!;
+    }
+    public class POVendorResponse
+    {
+        public long VendorId { get; set; }
+        public string VendorCode { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public bool MSMEVendor { get; set; }
+        public string Status { get; set; } = default!;
+        public VendorDocumentResponse? PANDocument { get; set; }
+        public VendorDocumentResponse? MSMEDocument { get; set; }
+        public VendorDocumentResponse? BankAccountProofDocument { get; set; }
+    }
+    public class VendorDocumentResponse
+    {
+        public string FileName { get; set; } = default!;
+        public string Base64Content { get; set; } = default!;
     }
     public class POVendorAddressMaster
     {
@@ -63,7 +101,7 @@
     }
     public class POVendorListItemResponse
     {
-        public int VendorId { get; set; }
+        public long VendorId { get; set; }
         public string VendorCode { get; set; } = default!;
         public string VendorName { get; set; } = default!;
         public bool MSMEVendor { get; set; }
@@ -83,8 +121,8 @@
     }
     public class POVendorDetailResponse
     {
-        public int VendorId { get; set; }
-        public string VendorCode { get; set; } = default!;
+        public long VendorId { get; set; }
+        public string? VendorCode { get; set; } = default!;
         public string VendorName { get; set; } = default!;
         public string? BankHolderName { get; set; }
         public string? BankAccountNo { get; set; }
@@ -94,7 +132,11 @@
         public string? UDYAMRegnNo { get; set; }
         public string? VendorPAN { get; set; }
         public string Status { get; set; } = default!;
+        public string? RejectionReason { get; set; }
         public List<POVendorAddressResponse> Addresses { get; set; } = new();
+        public VendorDocumentResponse? PANDocument { get; set; }          
+        public VendorDocumentResponse? MSMEDocument { get; set; }         
+        public VendorDocumentResponse? BankAccountProofDocument { get; set; } 
     }
     public class PoDepartment
     {
@@ -276,6 +318,9 @@
         public List<QuotationFileResponse> Quotations { get; set; } = new();
         public List<ApprovalStepSummary> ApprovalTrail { get; set; } = new();  // NEW
         public List<DeliveryLocationResponse> DeliveryLocations { get; set; } = new();
+        public decimal? AdvanceRequiredAmount { get; set; }
+        public decimal AmountPaidSoFar { get; set; }
+        public List<POPaymentResponse> Payments { get; set; } = new();
     }
     public class PurchaseOrderItemResponse
     {
@@ -447,4 +492,66 @@
         public decimal UsedPercentage { get; set; }
         public List<BudgetUtilizationResponse> Categories { get; set; } = new();
     }
+    public class PoPurchaseOrderPayment
+    {
+        public int PaymentId { get; set; }
+        public int POId { get; set; }
+        public string PaymentStatus { get; set; } = default!;
+        public string? FailReason { get; set; }
+        public string? UTRNumber { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public decimal AmountPaid { get; set; }
+        public decimal? TDSAmount { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDt { get; set; }
+    }
+    public class RecordPaymentRequest
+    {
+        public int POId { get; set; }
+        public string PaymentStatus { get; set; } = default!;   // "Success" / "Failed"
+        public string? FailReason { get; set; }
+        public string? UTRNumber { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public decimal AmountPaid { get; set; }
+        public decimal? TDSAmount { get; set; }
+        public string CreatedBy { get; set; } = default!;        // FinUser's EmployeeCode
+    }
+
+    public class POPaymentResponse
+    {
+        public int PaymentId { get; set; }
+        public string PaymentStatus { get; set; } = default!;
+        public string? FailReason { get; set; }
+        public string? UTRNumber { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public decimal AmountPaid { get; set; }
+        public decimal? TDSAmount { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDt { get; set; }
+    }
+
+    public class PendingPaymentPOResponse
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
+        public string VendorName { get; set; } = default!;
+        public decimal TotalAmount { get; set; }
+        public decimal AdvanceRequiredAmount { get; set; }
+        public decimal AmountPaidSoFar { get; set; }
+        public decimal AmountRemaining { get; set; }
+    }
+
+    public class ApproveVendorRequest
+    {
+        public long VendorId { get; set; }
+        public string VendorCode { get; set; } = default!;         // Finance User assigns this
+        public string ApprovedBy { get; set; } = default!;
+    }
+    public class RejectVendorRequest
+    {
+        public long VendorId { get; set; }
+        public string RejectionReason { get; set; } = default!;
+        public string RejectedBy { get; set; } = default!;
+    }
+
 }

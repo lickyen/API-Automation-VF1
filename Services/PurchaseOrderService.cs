@@ -70,7 +70,7 @@ namespace ProductivityApi.Services
                 Status = v.Status
             });
         }
-        public async Task<POVendorDetailResponse> GetVendorByIdAsync(int vendorId)
+        public async Task<POVendorDetailResponse> GetVendorByIdAsync(long vendorId)
         {
             var (vendor, addresses) = await _repository.GetVendorByIdAsync(vendorId);
 
@@ -101,7 +101,21 @@ namespace ProductivityApi.Services
                     GSTIN = a.GSTIN,
                     IsPrimaryAddress = a.IsPrimaryAddress,
                     Status = a.Status
-                }).ToList()
+                }).ToList(),
+                PANDocument = LoadVendorDocument(vendor.PANDocumentPath),                 
+                MSMEDocument = LoadVendorDocument(vendor.MSMEDocumentPath),                 
+                BankAccountProofDocument = LoadVendorDocument(vendor.BankAccountProofPath)    
+            };
+       
+        }
+        private static VendorDocumentResponse? LoadVendorDocument(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+
+            return new VendorDocumentResponse
+            {
+                FileName = Path.GetFileName(path),
+                Base64Content = Convert.ToBase64String(File.ReadAllBytes(path))
             };
         }
         // ---------------- Departments / Budget ----------------
@@ -619,6 +633,11 @@ namespace ProductivityApi.Services
             var approvalHistory = (await _repository.GetApprovalHistoryAsync(poId)).ToList();
             var deliveryLocations = await _repository.GetPurchaseOrderDeliveryLocationsAsync(poId);
             var vendorDetails = await _repository.GetVendorDetailsForPOAsync(poId);
+            var payments = (await _repository.GetPaymentsForPOAsync(poId)).ToList();
+            decimal? advanceRequired = string.Equals(po.TermsType, "Advance", StringComparison.OrdinalIgnoreCase) && po.AdvancePercentage is not null
+                ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
+                : null;
+            decimal paidSoFar = payments.Where(p => p.PaymentStatus == "Success").Sum(p => p.AmountPaid);
 
             var pendingStep = approvalHistory.FirstOrDefault(h => h.StepNumber == po.CurrentApprovalStep);
             string? pendingRole = po.Status == "PendingApproval" ? pendingStep?.ApproverRole : null;
@@ -704,6 +723,20 @@ namespace ProductivityApi.Services
                     Region = l.Region,
                     Zone = l.Zone,
                     MegaZone = l.MegaZone
+                }).ToList(),
+                AdvanceRequiredAmount = advanceRequired,
+                AmountPaidSoFar = paidSoFar,
+                Payments = payments.Select(p => new POPaymentResponse
+                {
+                    PaymentId = p.PaymentId,
+                    PaymentStatus = p.PaymentStatus,
+                    FailReason = p.FailReason,
+                    UTRNumber = p.UTRNumber,
+                    PaymentDate = p.PaymentDate,
+                    AmountPaid = p.AmountPaid,
+                    TDSAmount = p.TDSAmount,
+                    CreatedBy = p.CreatedBy,
+                    CreatedDt = p.CreatedDt
                 }).ToList()
             };
         }
@@ -910,7 +943,16 @@ namespace ProductivityApi.Services
                 ? await _repository.GetAllPendingAsync()
                 : await _repository.GetInProgressByDepartmentAsync(user.DepartmentCode);
 
-            var inProgress = inProgressRaw.Where(p => !pendingWithMeIds.Contains(p.POId)).ToList();
+            // NEW: also pull in POs (any department) this user personally approved a step on, still pending downstream
+            var actedByMe = isAdmin
+                ? Enumerable.Empty<PoPurchaseOrder>()   
+                : await _repository.GetInProgressActedByUserAsync(employeeCode);
+
+            var inProgress = inProgressRaw
+                .Concat(actedByMe)
+                .Where(p => !pendingWithMeIds.Contains(p.POId))
+                .DistinctBy(p => p.POId)          
+                .ToList();
 
             // ---------------- Completed ----------------
             var completed = isAdmin
@@ -1028,8 +1070,12 @@ namespace ProductivityApi.Services
             }
             else
             {
-                // Final step cleared -> PO fully approved
-                await _repository.UpdatePOStatusAsync(po.POId, "Approved", po.CurrentApprovalStep);
+                // Final step cleared. Advance-payment POs route to Finance User instead of going straight to Approved.
+                bool isAdvancePO = string.Equals(po.TermsType, "Advance", StringComparison.OrdinalIgnoreCase)
+                                    && po.AdvancePercentage is > 0;
+
+                string finalStatus = isAdvancePO ? "PendingPayment" : "Approved";
+                await _repository.UpdatePOStatusAsync(po.POId, finalStatus, po.CurrentApprovalStep);
             }
         }
         public async Task<IEnumerable<AppSettingResponse>> GetAllSettingsAsync()
@@ -1108,5 +1154,276 @@ namespace ProductivityApi.Services
                 Classifications = classifications
             };
         }
+        public async Task RecordPaymentAsync(RecordPaymentRequest request)
+        {
+            var po = await _repository.GetPurchaseOrderByIdAsync(request.POId)
+                ?? throw new KeyNotFoundException($"Purchase Order {request.POId} not found.");
+
+            if (po.Status != "PendingPayment")
+                throw new InvalidOperationException($"This Purchase Order is not awaiting payment (current status: {po.Status}).");
+            // ---------------- Authorization: caller must hold FinanceUser role ----------------
+            var user = await _repository.GetActiveUserByEmployeeCodeAsync(request.CreatedBy)
+                ?? throw new ArgumentException($"User '{request.CreatedBy}' not found or inactive.");
+
+            var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (!roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"'{request.CreatedBy}' does not hold the 'FinanceUser' role required to record payments.");
+
+            // ----------------  validation  ----------------
+
+            if (!string.Equals(request.PaymentStatus, "Success", StringComparison.OrdinalIgnoreCase) &&
+     !string.Equals(request.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase) &&
+     !string.Equals(request.PaymentStatus, "Hold", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("PaymentStatus must be 'Success', 'Failed', or 'Hold'.");
+            }
+
+            if (string.Equals(request.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(request.FailReason))
+            {
+                throw new ArgumentException("FailReason is required when PaymentStatus is 'Failed'.");
+            }
+            if (string.Equals(request.PaymentStatus, "Hold", StringComparison.OrdinalIgnoreCase) &&
+    string.IsNullOrWhiteSpace(request.FailReason))
+            {
+                throw new ArgumentException("A reason is required (in FailReason) when PaymentStatus is 'Hold'.");
+            }
+
+            decimal advanceRequired = Math.Round(po.TotalAmount * (po.AdvancePercentage ?? 0) / 100m, 2);
+            decimal alreadyPaid = await _repository.GetTotalSuccessfulPaymentsAsync(po.POId);
+
+            if (string.Equals(request.PaymentStatus, "Success", StringComparison.OrdinalIgnoreCase) &&
+                alreadyPaid + request.AmountPaid > advanceRequired)
+            {
+                throw new InvalidOperationException(
+                    $"This payment would exceed the required advance amount. Advance required: {advanceRequired:N2}, already paid: {alreadyPaid:N2}, attempted: {request.AmountPaid:N2}.");
+            }
+
+            await _repository.AddPaymentAsync(new Models.PoPurchaseOrderPayment
+            {
+                POId = request.POId,
+                PaymentStatus = request.PaymentStatus,
+                FailReason = request.FailReason,
+                UTRNumber = request.UTRNumber,
+                PaymentDate = request.PaymentDate,
+                AmountPaid = request.AmountPaid,
+                TDSAmount = request.TDSAmount,
+                CreatedBy = request.CreatedBy
+            });
+
+            if (string.Equals(request.PaymentStatus, "Success", StringComparison.OrdinalIgnoreCase))
+            {
+                decimal totalPaidNow = alreadyPaid + request.AmountPaid;
+                if (totalPaidNow >= advanceRequired)
+                {
+                    await _repository.UpdatePOStatusAsync(po.POId, "Approved", po.CurrentApprovalStep);
+                }
+                // else: stays in PendingPayment, awaiting the remaining installment(s)
+            }
+        }
+
+        public async Task<IEnumerable<PendingPaymentPOResponse>> GetPendingPaymentPOsAsync()
+        {
+            var rows = (await _repository.GetPendingPaymentPOsAsync()).ToList();
+            var result = new List<PendingPaymentPOResponse>();
+
+            foreach (var row in rows)
+            {
+                decimal advanceRequired = Math.Round((decimal)row.TotalAmount * (decimal)(row.AdvancePercentage ?? 0) / 100m, 2);
+                decimal paidSoFar = await _repository.GetTotalSuccessfulPaymentsAsync((int)row.POId);
+
+                result.Add(new PendingPaymentPOResponse
+                {
+                    POId = row.POId,
+                    PONumber = row.PONumber,
+                    VendorName = row.VendorName,
+                    TotalAmount = row.TotalAmount,
+                    AdvanceRequiredAmount = advanceRequired,
+                    AmountPaidSoFar = paidSoFar,
+                    AmountRemaining = advanceRequired - paidSoFar
+                });
+            }
+
+            return result;
+        }
+
+
+        public async Task<POVendorDetailResponse> CreateVendorAsync(CreateVendorRequest request)
+        {
+            if (await _repository.VendorPANExistsAsync(request.VendorPAN))
+                throw new ArgumentException($"A vendor with PAN '{request.VendorPAN}' is already Pending or Active.");
+
+            if (request.PANDocument is null)
+                throw new ArgumentException("PAN document is required.");
+
+            if (request.BankAccountProofDocument is null)
+                throw new ArgumentException("Bank account proof document is required.");
+
+            if (request.MSMEVendor && request.MSMEDocument is null)
+                throw new ArgumentException("MSME document is required when MSMEVendor is true.");
+
+            // Use a temp folder key since VendorCode doesn't exist yet — VendorPAN is unique, safe to use here
+            string vendorFolder = Path.Combine(_filePath, "VendorDocuments", request.VendorPAN);
+            Directory.CreateDirectory(vendorFolder);
+
+            string panPath = SaveVendorDocument(request.PANDocument, vendorFolder, "PAN");
+            string bankProofPath = SaveVendorDocument(request.BankAccountProofDocument, vendorFolder, "BankProof");
+            string? msmePath = request.MSMEVendor ? SaveVendorDocument(request.MSMEDocument!, vendorFolder, "MSME") : null;
+
+            var vendor = new Models.POVendorMaster
+            {
+                VendorName = request.VendorName,
+                BankHolderName = request.BankHolderName,
+                BankAccountNo = request.BankAccountNo,
+                BankName = request.BankName,
+                IFSCCode = request.IFSCCode,
+                MSMEVendor = request.MSMEVendor,
+                UDYAMRegnNo = request.UDYAMRegnNo,
+                VendorPAN = request.VendorPAN,
+                PANDocumentPath = panPath,
+                MSMEDocumentPath = msmePath,
+                BankAccountProofPath = bankProofPath,
+                CreatedBy = request.CreatedBy
+            };
+
+            long vendorId = await _repository.CreateVendorAsync(vendor);
+
+            var (createdVendor, createdAddresses) = await _repository.GetVendorByIdAsync(vendorId);
+            if (createdVendor is null)
+                throw new InvalidOperationException("Vendor was created but could not be reloaded.");
+
+            return MapToVendorDetailResponse(createdVendor, createdAddresses);
+        }
+
+        public async Task ApproveVendorAsync(ApproveVendorRequest request)
+        {
+            var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (vendor is null)
+                throw new KeyNotFoundException($"Vendor {request.VendorId} not found.");
+
+            if (vendor.Status != "PENDING")
+                throw new InvalidOperationException($"This vendor is not pending approval (current status: {vendor.Status}).");
+
+            if (string.IsNullOrWhiteSpace(request.VendorCode))
+                throw new ArgumentException("VendorCode is required to approve a vendor.");
+
+            if (await _repository.VendorCodeExistsAsync(request.VendorCode))
+                throw new ArgumentException($"VendorCode '{request.VendorCode}' is already in use.");
+
+            await _repository.ApproveVendorAsync(request.VendorId, request.VendorCode, request.ApprovedBy);
+        }
+
+        public async Task RejectVendorAsync(RejectVendorRequest request)
+        {
+            var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (vendor is null)
+                throw new KeyNotFoundException($"Vendor {request.VendorId} not found.");
+
+            if (vendor.Status != "PENDING")
+                throw new InvalidOperationException($"This vendor is not pending approval (current status: {vendor.Status}).");
+
+            if (string.IsNullOrWhiteSpace(request.RejectionReason))
+                throw new ArgumentException("RejectionReason is required.");
+
+            await _repository.RejectVendorAsync(request.VendorId, request.RejectionReason, request.RejectedBy);
+        }
+
+        public async Task<IEnumerable<POVendorDetailResponse>> GetPendingVendorsAsync()
+        {
+            var vendors = await _repository.GetPendingVendorsAsync();
+            var result = new List<POVendorDetailResponse>();
+
+            foreach (var v in vendors)
+            {
+                var (_, addresses) = await _repository.GetVendorByIdAsync(v.VendorId);
+                result.Add(MapToVendorDetailResponse(v, addresses));
+            }
+
+            return result;
+        }
+
+        private POVendorDetailResponse MapToVendorDetailResponse(POVendorMaster v, IEnumerable<POVendorAddressMaster> addresses) => new()
+        {
+            VendorId = v.VendorId,
+            VendorCode = v.VendorCode,
+            VendorName = v.VendorName,
+            BankHolderName = v.BankHolderName,
+            BankAccountNo = v.BankAccountNo,
+            BankName = v.BankName,
+            IFSCCode = v.IFSCCode,
+            MSMEVendor = v.MSMEVendor,
+            UDYAMRegnNo = v.UDYAMRegnNo,
+            VendorPAN = v.VendorPAN,
+            Status = v.Status,
+            RejectionReason = v.RejectionReason,
+            Addresses = addresses.Select(a => new POVendorAddressResponse
+            {
+                VendorAddressId = a.VendorAddressId,
+                AddressLine1 = a.AddressLine1,
+                City = a.City,
+                StateName = a.StateName,
+                StateCode = a.StateCode,
+                PinCode = a.PinCode,
+                GSTIN = a.GSTIN,
+                IsPrimaryAddress = a.IsPrimaryAddress,
+                Status = a.Status
+            }).ToList(),
+            PANDocument = LoadVendorDocument(v.PANDocumentPath),
+            MSMEDocument = LoadVendorDocument(v.MSMEDocumentPath),
+            BankAccountProofDocument = LoadVendorDocument(v.BankAccountProofPath)
+        };
+        private string SaveVendorDocument(VendorDocumentUpload doc, string folder, string label)
+        {
+            if (string.IsNullOrWhiteSpace(doc.FileName) || string.IsNullOrWhiteSpace(doc.Base64Content))
+                throw new ArgumentException($"{label} document must include a FileName and Base64Content.");
+
+            string extension = Path.GetExtension(doc.FileName);
+            if (!AllowedExtensions.Contains(extension))
+                throw new ArgumentException($"{label} document type '{extension}' is not allowed. Allowed types: {string.Join(", ", AllowedExtensions)}.");
+
+            byte[] fileBytes;
+            try
+            {
+                string cleanBase64 = doc.Base64Content.Contains(",")
+                    ? doc.Base64Content.Substring(doc.Base64Content.IndexOf(",") + 1)
+                    : doc.Base64Content;
+                fileBytes = Convert.FromBase64String(cleanBase64);
+            }
+            catch (FormatException)
+            {
+                throw new ArgumentException($"{label} document contains invalid base64 content.");
+            }
+
+            if (fileBytes.LongLength > MaxFileSizeBytes)
+                throw new ArgumentException($"{label} document exceeds the 5 MB size limit.");
+
+            string fileName = $"{label}{extension}";
+            string fullPath = Path.Combine(folder, fileName);
+            File.WriteAllBytes(fullPath, fileBytes);
+
+            return fullPath;
+        }
+        private static VendorDocumentResponse? LoadDocument(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+
+            return new VendorDocumentResponse
+            {
+                FileName = Path.GetFileName(path),
+                Base64Content = Convert.ToBase64String(File.ReadAllBytes(path))
+            };
+        }
+        private static POVendorResponse MapToResponse(Models.POVendorMaster v) => new()
+        {
+            VendorId = v.VendorId,
+            VendorCode = v.VendorCode,
+            VendorName = v.VendorName,
+            MSMEVendor = v.MSMEVendor,
+            Status = v.Status,
+            PANDocument = LoadDocument(v.PANDocumentPath),
+            MSMEDocument = LoadDocument(v.MSMEDocumentPath),
+            BankAccountProofDocument = LoadDocument(v.BankAccountProofPath)
+        };
     }
 }

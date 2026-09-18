@@ -55,21 +55,22 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<POVendorMaster>(sql, new { Status = status });
         }
-     
-        public async Task<(POVendorMaster? Vendor, IEnumerable<POVendorAddressMaster> Addresses)> GetVendorByIdAsync(int vendorId)
+
+        public async Task<(POVendorMaster? Vendor, IEnumerable<POVendorAddressMaster> Addresses)> GetVendorByIdAsync(long vendorId)
         {
             const string sql = @"
-                SELECT [VendorId], [VendorCode], [VendorName], [BankHolderName], [BankAccountNo],
-                       [BankName], [IFSCCode], [MSMEVendor], [UDYAMRegnNo], [VendorPAN],
-                       [Status], [CreatedBy], [CreatedDate], [ModifiedBy], [ModifiedDate]
-                FROM [dbo].[PO_VendorMaster]
-                WHERE [VendorId] = @VendorId;
+       SELECT [VendorId], [VendorCode], [VendorName], [BankHolderName], [BankAccountNo],
+       [BankName], [IFSCCode], [MSMEVendor], [UDYAMRegnNo], [VendorPAN],
+       [Status], [RejectionReason], [PANDocumentPath], [MSMEDocumentPath], [BankAccountProofPath],
+       [CreatedBy], [CreatedDate], [ModifiedBy], [ModifiedDate]
+FROM [dbo].[PO_VendorMaster]
+WHERE [VendorId] = @VendorId;
 
-                SELECT [VendorAddressId], [VendorId], [AddressLine1], [City], [StateName],
-                       [StateCode], [PinCode], [GSTIN], [IsPrimaryAddress], [Status]
-                FROM [dbo].[PO_VendorAddressMaster]
-                WHERE [VendorId] = @VendorId
-                ORDER BY [IsPrimaryAddress] DESC;";
+        SELECT [VendorAddressId], [VendorId], [AddressLine1], [City], [StateName],
+               [StateCode], [PinCode], [GSTIN], [IsPrimaryAddress], [Status]
+        FROM [dbo].[PO_VendorAddressMaster]
+        WHERE [VendorId] = @VendorId
+        ORDER BY [IsPrimaryAddress] DESC;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
             using var multi = await connection.QueryMultipleAsync(sql, new { VendorId = vendorId });
@@ -754,5 +755,123 @@ namespace ProductivityApi.Repository
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync(sql, new { DepartmentCode = departmentCode, BudgetYear = budgetYear });
         }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetInProgressActedByUserAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT po.*
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_PurchaseOrderApprovalHistory] ah ON ah.[POId] = po.[POId]
+        WHERE ah.[ApproverEmployeeCode] = @EmployeeCode
+          AND ah.[Action] = 'Approved'
+          AND po.[Status] = 'PendingApproval'
+        ORDER BY po.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { EmployeeCode = employeeCode });
+        }
+        public async Task AddPaymentAsync(PoPurchaseOrderPayment payment)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_PurchaseOrderPayments]
+            ([POId], [PaymentStatus], [FailReason], [UTRNumber], [PaymentDate], [AmountPaid], [TDSAmount], [CreatedBy], [CreatedDt])
+        VALUES
+            (@POId, @PaymentStatus, @FailReason, @UTRNumber, @PaymentDate, @AmountPaid, @TDSAmount, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, payment);
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrderPayment>> GetPaymentsForPOAsync(int poId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrderPayments] WHERE [POId] = @POId ORDER BY [CreatedDt];";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrderPayment>(sql, new { POId = poId });
+        }
+
+        public async Task<decimal> GetTotalSuccessfulPaymentsAsync(int poId)
+        {
+            const string sql = @"
+        SELECT ISNULL(SUM([AmountPaid]), 0) FROM [dbo].[PO_PurchaseOrderPayments]
+        WHERE [POId] = @POId AND [PaymentStatus] = 'Success';";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<decimal>(sql, new { POId = poId });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetPendingPaymentPOsAsync()
+        {
+            const string sql = @"
+        SELECT po.[POId], po.[PONumber], v.[VendorName], po.[TotalAmount], po.[AdvancePercentage]
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = po.[VendorId]
+        WHERE po.[Status] = 'PendingPayment'
+        ORDER BY po.[ModifiedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql);
+        }
+
+        public async Task<long> CreateVendorAsync(POVendorMaster vendor)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_VendorMaster]
+            ([VendorName], [BankHolderName], [BankAccountNo], [BankName], [IFSCCode],
+             [MSMEVendor], [UDYAMRegnNo], [VendorPAN], [Status],
+             [PANDocumentPath], [MSMEDocumentPath], [BankAccountProofPath],
+             [CreatedBy], [CreatedDate])
+        OUTPUT INSERTED.[VendorId]
+        VALUES
+            (@VendorName, @BankHolderName, @BankAccountNo, @BankName, @IFSCCode,
+             @MSMEVendor, @UDYAMRegnNo, @VendorPAN, 'PENDING',
+             @PANDocumentPath, @MSMEDocumentPath, @BankAccountProofPath,
+             @CreatedBy, GETUTCDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<long>(sql, vendor);
+        }
+        public async Task<bool> VendorCodeExistsAsync(string vendorCode)
+        {
+            const string sql = "SELECT COUNT(1) FROM [dbo].[PO_VendorMaster] WHERE [VendorCode] = @VendorCode;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new { VendorCode = vendorCode }) > 0;
+        }
+        public async Task ApproveVendorAsync(long vendorId, string vendorCode, string approvedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [VendorCode] = @VendorCode, [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETUTCDATE()
+        WHERE [VendorId] = @VendorId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, VendorCode = vendorCode, ApprovedBy = approvedBy });
+        }
+        public async Task RejectVendorAsync(long vendorId, string reason, string rejectedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [Status] = 'REJECTED', [RejectionReason] = @Reason, [ModifiedBy] = @RejectedBy, [ModifiedDate] = GETUTCDATE()
+        WHERE [VendorId] = @VendorId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, Reason = reason, RejectedBy = rejectedBy });
+        }
+
+        public async Task<IEnumerable<POVendorMaster>> GetPendingVendorsAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorMaster] WHERE [Status] = 'PENDING' ORDER BY [CreatedDate];";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorMaster>(sql);
+        }
+        public async Task<bool> VendorPANExistsAsync(string vendorPAN)
+        {
+            const string sql = @"
+        SELECT COUNT(1) FROM [dbo].[PO_VendorMaster]
+        WHERE [VendorPAN] = @VendorPAN
+          AND [Status] IN ('PENDING', 'ACTIVE');";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new { VendorPAN = vendorPAN }) > 0;
+        }
+
     }
 }

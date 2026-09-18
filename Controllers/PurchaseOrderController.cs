@@ -24,6 +24,36 @@ namespace ProductivityApi.Controllers
             var result = await _purchaseOrderService.CheckAccessAsync(employeeCode);
             return result.HasAccess ? Ok(result) : StatusCode(StatusCodes.Status403Forbidden, result);
         }
+        [HttpPost]
+        public async Task<IActionResult> CreateVendor([FromBody] CreateVendorRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateVendorAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetPendingVendors — FinanceUser queue</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPendingVendors()
+            => Ok(await _purchaseOrderService.GetPendingVendorsAsync());
+
+        /// <summary>POST /api/Purchaseorder/ApproveVendor — FinanceUser assigns VendorCode</summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveVendor([FromBody] ApproveVendorRequest request)
+        {
+            try { await _purchaseOrderService.ApproveVendorAsync(request); return Ok(new { message = "Vendor approved." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RejectVendor([FromBody] RejectVendorRequest request)
+        {
+            try { await _purchaseOrderService.RejectVendorAsync(request); return Ok(new { message = "Vendor rejected." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetVendors([FromQuery] string? status)
@@ -34,7 +64,7 @@ namespace ProductivityApi.Controllers
 
         /// <summary>GET /api/Purchaseorder/GetVendorById?vendorId=5</summary>
         [HttpGet]
-        public async Task<IActionResult> GetVendorById([FromQuery] int vendorId)
+        public async Task<IActionResult> GetVendorById([FromQuery] long vendorId)
         {
             try
             {
@@ -182,5 +212,26 @@ namespace ProductivityApi.Controllers
             }
             catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
         }
+
+        /// <summary>GET /api/Purchaseorder/GetPendingPaymentPOs — FinUser dashboard</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPendingPaymentPOs()
+            => Ok(await _purchaseOrderService.GetPendingPaymentPOsAsync());
+
+        /// <summary>POST /api/Purchaseorder/RecordPayment — FinUser logs a payment (can be called multiple times per PO)</summary>
+        [HttpPost]
+        public async Task<IActionResult> RecordPayment([FromBody] RecordPaymentRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.RecordPaymentAsync(request);
+                return Ok(new { message = "Payment recorded." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+       
     }
 }
