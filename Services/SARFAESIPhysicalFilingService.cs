@@ -73,15 +73,15 @@ namespace ProductivityApi.Services
         public async Task<(bool Success, int? CaseId, string Message)> SubmitLegalChecklistAsync(
             SARFAESIPhysicalFilingLegalChecklistSubmitDto dto)
         {
-            if (dto.DispatchDate.Date > DateTime.Today)
-                return (false, null, "Dispatch Date cannot be a future date.");
+            //if (dto.DispatchDate?.Date > DateTime.Today)
+            //    return (false, null, "Dispatch Date cannot be a future date.");
 
-            if (!SARFAESIPhysicalFilingCourierName.All.Contains(
-                dto.CourierName,
-                StringComparer.OrdinalIgnoreCase))
-            {
-                return (false, null, "Invalid Courier Name.");
-            }
+            //if (!SARFAESIPhysicalFilingCourierName.All.Contains(
+            //    dto.CourierName,
+            //    StringComparer.OrdinalIgnoreCase))
+            //{
+            //    return (false, null, "Invalid Courier Name.");
+            //}
 
             if (string.IsNullOrWhiteSpace(dto.DocumentTransmissionType))
                 return (false, null, "Document Transmission Type is required.");
