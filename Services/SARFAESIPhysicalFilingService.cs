@@ -299,6 +299,17 @@ namespace ProductivityApi.Services
             return await _repository.UpdatePhysicalDocumentRequirementAsync(dto);
         }
 
+        public async Task<(bool Success, string Message)> UpdateAdditionalDocumentRequirementAsync(SARFAESIPhysicalFilingAdditionalDocumentRequirementDto dto)
+        {
+            if (dto.CaseId <= 0)
+                return (false, "Invalid Case Id.");
+
+            if (string.IsNullOrWhiteSpace(dto.UpdatedBy))
+                return (false, "Updated By is required.");
+
+            return await _repository.UpdateAdditionalDocumentRequirementAsync(dto);
+        }
+
         public Task<List<SARFAESILanMapping>> GetNewLansAsync()
         {
             return _repository.GetNewLansAsync();

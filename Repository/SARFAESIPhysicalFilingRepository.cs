@@ -329,6 +329,22 @@ namespace ProductivityApi.Repository
             return ((int)result.Result == 1, (string)result.Message);
         }
 
+        public async Task<(bool Success, string Message)> UpdateAdditionalDocumentRequirementAsync(SARFAESIPhysicalFilingAdditionalDocumentRequirementDto dto)
+        {
+            using var conn = new SqlConnection(_conStr);
+            var result = await conn.QueryFirstAsync<dynamic>(
+                "sp_SARFAESIPhysicalFiling_UpdateAdditionalDocumentRequirement",
+                new
+                {
+                    dto.CaseId,
+                    dto.RequiresAdditionalDocuments, // Adjust property name here if it differs in your DTO
+                    UpdatedBy = dto.UpdatedBy.Trim()
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return ((int)result.Result == 1, (string)result.Message);
+        }
+
         public async Task<List<SARFAESILanMapping>> GetNewLansAsync()
         {
             using var conn = new SqlConnection(_conStr);

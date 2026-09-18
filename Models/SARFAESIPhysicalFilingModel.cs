@@ -107,6 +107,8 @@ namespace ProductivityApi.Models
         public DateTime? DocumentReturnCompletedDt { get; set; }
 
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
+
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
         public string? UpdatedBy { get; set; }
@@ -339,6 +341,7 @@ namespace ProductivityApi.Models
         public string? DocumentReturnPODNumber { get; set; }
 
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
         public DateTime CreatedDt { get; set; }
         public DateTime? UpdatedDt { get; set; }
     }
@@ -374,6 +377,8 @@ namespace ProductivityApi.Models
         public string CurrentWorkflowStage { get; set; } = string.Empty;
         public string? DocumentTransmissionType { get; set; }
         public bool? RequiresPhysicalDocuments { get; set; }
+        public bool? RequiresAdditionalDocuments { get; set; }
+
         public DateTime? DocumentDispatchDate { get; set; }
         public string? PodNumber { get; set; }
         public string? CourierName { get; set; }
@@ -507,6 +512,13 @@ namespace ProductivityApi.Models
     {
         public int CaseId { get; set; }
         public bool RequiresPhysicalDocuments { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingAdditionalDocumentRequirementDto
+    {
+        public int CaseId { get; set; }
+        public bool RequiresAdditionalDocuments { get; set; }
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
