@@ -111,7 +111,7 @@ namespace ProductivityApi.Models
     public class SOALog
     {
         public int Id { get; set; }
-        public int Main_Id { get; set; }
+        public int ReqId { get; set; }
         public string Status { get; set; }
         public string? Remarks { get; set; }
         public string CreatedBy { get; set; }
