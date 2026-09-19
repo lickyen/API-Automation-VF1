@@ -189,6 +189,8 @@ builder.Services.AddScoped<ModulesService>();
 builder.Services.AddScoped<LegalCourtsService>();
 builder.Services.AddScoped<LegalCourtsRepository>();
 
+builder.Services.AddScoped<RefundCalculatorService>();
+
 
 // Add services to the container.
 builder.Services.AddControllers();
