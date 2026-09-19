@@ -824,7 +824,7 @@ WHERE [VendorId] = @VendorId;
             (@VendorName, @BankHolderName, @BankAccountNo, @BankName, @IFSCCode,
              @MSMEVendor, @UDYAMRegnNo, @VendorPAN, 'PENDING',
              @PANDocumentPath, @MSMEDocumentPath, @BankAccountProofPath,
-             @CreatedBy, GETUTCDATE());";
+             @CreatedBy, GETDATE());";
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<long>(sql, vendor);
@@ -839,7 +839,7 @@ WHERE [VendorId] = @VendorId;
         {
             const string sql = @"
         UPDATE [dbo].[PO_VendorMaster]
-        SET [VendorCode] = @VendorCode, [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETUTCDATE()
+        SET [VendorCode] = @VendorCode, [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETDATE()
         WHERE [VendorId] = @VendorId;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -849,7 +849,7 @@ WHERE [VendorId] = @VendorId;
         {
             const string sql = @"
         UPDATE [dbo].[PO_VendorMaster]
-        SET [Status] = 'REJECTED', [RejectionReason] = @Reason, [ModifiedBy] = @RejectedBy, [ModifiedDate] = GETUTCDATE()
+        SET [Status] = 'REJECTED', [RejectionReason] = @Reason, [ModifiedBy] = @RejectedBy, [ModifiedDate] = GETDATE()
         WHERE [VendorId] = @VendorId;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -871,6 +871,70 @@ WHERE [VendorId] = @VendorId;
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<int>(sql, new { VendorPAN = vendorPAN }) > 0;
+        }
+        public async Task<POVendorMaster?> GetVendorForUpdateAsync(long vendorId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorMaster] WHERE [VendorId] = @VendorId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync<POVendorMaster>(sql, new { VendorId = vendorId });
+        }
+
+        public async Task UpdateVendorAsync(POVendorMaster vendor)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [VendorName] = @VendorName,
+            [BankHolderName] = @BankHolderName,
+            [BankAccountNo] = @BankAccountNo,
+            [BankName] = @BankName,
+            [IFSCCode] = @IFSCCode,
+            [MSMEVendor] = @MSMEVendor,
+            [UDYAMRegnNo] = @UDYAMRegnNo,
+            [VendorPAN] = @VendorPAN,
+            [Status] = 'PENDING',
+            [RejectionReason] = NULL,
+            [PANDocumentPath] = @PANDocumentPath,
+            [MSMEDocumentPath] = @MSMEDocumentPath,
+            [BankAccountProofPath] = @BankAccountProofPath,
+            [ResubmissionCount] = [ResubmissionCount] + 1,
+            [ModifiedBy] = @ModifiedBy,
+            [ModifiedDate] = GETDATE()
+        WHERE [VendorId] = @VendorId;";
+            
+    using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, vendor);
+        }
+        public async Task<IEnumerable<POVendorMaster>> GetRejectedVendorsByPreparerAsync(string preparerEmployeeCode)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_VendorMaster]
+        WHERE [Status] = 'REJECTED' AND [CreatedBy] = @PreparerEmployeeCode
+        ORDER BY [ModifiedDate] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorMaster>(sql, new { PreparerEmployeeCode = preparerEmployeeCode });
+        }
+        public async Task ApproveNewVendorAsync(long vendorId, string vendorCode, string approvedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [VendorCode] = @VendorCode, [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorId] = @VendorId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, VendorCode = vendorCode, ApprovedBy = approvedBy });
+        }
+
+        public async Task ApproveExistingVendorAsync(long vendorId, string approvedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorId] = @VendorId;";
+           
+        
+    using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, ApprovedBy = approvedBy });
         }
 
     }

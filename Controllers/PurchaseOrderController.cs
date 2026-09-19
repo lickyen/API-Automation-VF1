@@ -76,6 +76,23 @@ namespace ProductivityApi.Controllers
                 return NotFound(new { error = ex.Message });
             }
         }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateVendor — Preparer edits a rejected vendor and resubmits (Status -> PENDING)</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateVendor([FromBody] UpdateVendorRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateVendorAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetMyRejectedVendors?preparerEmployeeCode=EMP1023 — Preparer's queue to fix and resubmit</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetMyRejectedVendors([FromQuery] string preparerEmployeeCode)
+            => Ok(await _purchaseOrderService.GetMyRejectedVendorsAsync(preparerEmployeeCode));
+
+
         /// <summary>GET /api/Purchaseorder/GetDepartments</summary>
         [HttpGet]
         public async Task<IActionResult> GetDepartments()
@@ -92,24 +109,7 @@ namespace ProductivityApi.Controllers
             return Ok(result);
         }
 
-        /// <summary>GET /api/Purchaseorder/GetDepartmentWiseBudget?department=IT&budgetYear=FY2026-27&classification=Capex</summary>
-        //[HttpGet]
-        //public async Task<IActionResult> GetDepartmentWiseBudget(
-        //    [FromQuery] string? department,
-        //    [FromQuery] string? budgetYear,
-        //    [FromQuery] string? classification)
-        //{
-        //    var result = await _purchaseOrderService.GetDepartmentWiseBudgetAsync(department, budgetYear, classification);
-        //    return Ok(result);
-        //}
-
-        ///// <summary>GET /api/Purchaseorder/GetBudgetLines?departmentCode=Admin&classification=Capex&budgetYear=FY2026-27</summary>
-        //[HttpGet]
-        //public async Task<IActionResult> GetBudgetLines(
-        //    [FromQuery] string departmentCode, [FromQuery] string classification, [FromQuery] string budgetYear)
-        //{
-        //    return Ok(await _purchaseOrderService.GetBudgetLinesAsync(departmentCode, classification, budgetYear));
-        //}
+        
         /// <summary>GET /api/Purchaseorder/GetTermsMaster?termCategory=Payment</summary>
         [HttpGet]
         public async Task<IActionResult> GetTermsMaster([FromQuery] string? termCategory)

@@ -9,7 +9,7 @@ namespace ProductivityApi.Services
     public sealed class PurchaseOrderService
     {
 
-        
+
         private readonly PurchaseOrderRepository _repository;
         private readonly string _filePath;
         private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -23,7 +23,7 @@ namespace ProductivityApi.Services
 
         private readonly ILogger<PurchaseOrderService> _logger;
 
-        public PurchaseOrderService( PurchaseOrderRepository repository,
+        public PurchaseOrderService(PurchaseOrderRepository repository,
             ILogger<PurchaseOrderService> logger, AppSettings appSettings)
         {
             _repository = repository;
@@ -102,11 +102,11 @@ namespace ProductivityApi.Services
                     IsPrimaryAddress = a.IsPrimaryAddress,
                     Status = a.Status
                 }).ToList(),
-                PANDocument = LoadVendorDocument(vendor.PANDocumentPath),                 
-                MSMEDocument = LoadVendorDocument(vendor.MSMEDocumentPath),                 
-                BankAccountProofDocument = LoadVendorDocument(vendor.BankAccountProofPath)    
+                PANDocument = LoadVendorDocument(vendor.PANDocumentPath),
+                MSMEDocument = LoadVendorDocument(vendor.MSMEDocumentPath),
+                BankAccountProofDocument = LoadVendorDocument(vendor.BankAccountProofPath)
             };
-       
+
         }
         private static VendorDocumentResponse? LoadVendorDocument(string? path)
         {
@@ -178,7 +178,7 @@ namespace ProductivityApi.Services
             IsActive = b.IsActive
         };
 
-       
+
 
         public async Task<IEnumerable<PODepartmentBudgetResponse>> GetBudgetLinesAsync(string departmentCode, string classification, string budgetYear)
         {
@@ -213,7 +213,7 @@ namespace ProductivityApi.Services
 
         //    return chain;
         //}
-       
+
 
         public async Task<PurchaseOrderResponse> CreatePurchaseOrderAsync(CreatePurchaseOrderRequest request)
         {
@@ -617,8 +617,8 @@ namespace ProductivityApi.Services
                 ItemCategory = c.ItemCategory
             });
         }
-        
-        private static readonly HashSet<string> DepartmentScopedRoles = new(StringComparer.OrdinalIgnoreCase){ "DepartmentHead" };
+
+        private static readonly HashSet<string> DepartmentScopedRoles = new(StringComparer.OrdinalIgnoreCase) { "DepartmentHead" };
 
 
         public async Task<PurchaseOrderResponse> GetPurchaseOrderByIdAsync(int poId)
@@ -831,7 +831,7 @@ namespace ProductivityApi.Services
         //    return results;
         //}
 
-    
+
 
         public async Task<IEnumerable<PurchaseOrderListItemResponse>> GetPurchaseOrderListForUserAsync(string employeeCode)
         {
@@ -945,13 +945,13 @@ namespace ProductivityApi.Services
 
             // NEW: also pull in POs (any department) this user personally approved a step on, still pending downstream
             var actedByMe = isAdmin
-                ? Enumerable.Empty<PoPurchaseOrder>()   
+                ? Enumerable.Empty<PoPurchaseOrder>()
                 : await _repository.GetInProgressActedByUserAsync(employeeCode);
 
             var inProgress = inProgressRaw
                 .Concat(actedByMe)
                 .Where(p => !pendingWithMeIds.Contains(p.POId))
-                .DistinctBy(p => p.POId)          
+                .DistinctBy(p => p.POId)
                 .ToList();
 
             // ---------------- Completed ----------------
@@ -1005,14 +1005,14 @@ namespace ProductivityApi.Services
                 LocationId = l.LocationId,
                 BranchCode = l.BranchCode,
                 BranchName = l.BranchName,
-                Address= l.Address,
+                Address = l.Address,
                 Region = l.Region,
                 Zone = l.Zone,
                 MegaZone = l.MegaZone
             });
         }
 
-       
+
 
         public async Task ActOnApprovalAsync(ApprovalActionRequest request)
         {
@@ -1305,15 +1305,31 @@ namespace ProductivityApi.Services
             if (vendor.Status != "PENDING")
                 throw new InvalidOperationException($"This vendor is not pending approval (current status: {vendor.Status}).");
 
-            if (string.IsNullOrWhiteSpace(request.VendorCode))
-                throw new ArgumentException("VendorCode is required to approve a vendor.");
+            bool isNewVendor = string.IsNullOrWhiteSpace(vendor.VendorCode);
 
-            if (await _repository.VendorCodeExistsAsync(request.VendorCode))
-                throw new ArgumentException($"VendorCode '{request.VendorCode}' is already in use.");
+            if (isNewVendor)
+            {
+                // First-time approval: Finance User must assign a VendorCode
+                if (string.IsNullOrWhiteSpace(request.VendorCode))
+                    throw new ArgumentException("VendorCode is required to approve a new vendor.");
 
-            await _repository.ApproveVendorAsync(request.VendorId, request.VendorCode, request.ApprovedBy);
+                if (await _repository.VendorCodeExistsAsync(request.VendorCode))
+                    throw new ArgumentException($"VendorCode '{request.VendorCode}' is already in use.");
+
+                await _repository.ApproveNewVendorAsync(request.VendorId, request.VendorCode, request.ApprovedBy);
+            }
+            else
+            {
+                // Re-approval of an edited existing vendor: code stays as-is, just re-activate
+                if (!string.IsNullOrWhiteSpace(request.VendorCode) &&
+                    !string.Equals(request.VendorCode, vendor.VendorCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException($"This vendor already has VendorCode '{vendor.VendorCode}' — it cannot be changed during a details-only approval.");
+                }
+
+                await _repository.ApproveExistingVendorAsync(request.VendorId, request.ApprovedBy);
+            }
         }
-
         public async Task RejectVendorAsync(RejectVendorRequest request)
         {
             var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
@@ -1425,5 +1441,81 @@ namespace ProductivityApi.Services
             MSMEDocument = LoadDocument(v.MSMEDocumentPath),
             BankAccountProofDocument = LoadDocument(v.BankAccountProofPath)
         };
+
+        public async Task<POVendorDetailResponse> UpdateVendorAsync(UpdateVendorRequest request)
+        {
+            var existing = await _repository.GetVendorForUpdateAsync(request.VendorId)
+                ?? throw new KeyNotFoundException($"Vendor {request.VendorId} not found.");
+
+            // Editable from either state: REJECTED (fixing a rejection) or ACTIVE (updating a live vendor's details)
+            if (existing.Status != "REJECTED" && existing.Status != "ACTIVE")
+                throw new InvalidOperationException($"This vendor cannot be edited from its current status ({existing.Status}).");
+
+            if (!string.Equals(existing.VendorPAN, request.VendorPAN, StringComparison.OrdinalIgnoreCase))
+            {
+                if (await _repository.VendorPANExistsAsync(request.VendorPAN))
+                    throw new ArgumentException($"A vendor with PAN '{request.VendorPAN}' is already Pending or Active.");
+            }
+
+            if (request.MSMEVendor && request.MSMEDocument is null && existing.MSMEDocumentPath is null)
+                throw new ArgumentException("MSME document is required when MSMEVendor is true.");
+
+            string vendorFolder = Path.Combine(_filePath, "VendorDocuments", request.VendorPAN);
+            Directory.CreateDirectory(vendorFolder);
+
+            string panPath = request.PANDocument is not null
+                ? SaveVendorDocument(request.PANDocument, vendorFolder, "PAN")
+                : existing.PANDocumentPath ?? throw new ArgumentException("PAN document is required.");
+
+            string bankProofPath = request.BankAccountProofDocument is not null
+                ? SaveVendorDocument(request.BankAccountProofDocument, vendorFolder, "BankProof")
+                : existing.BankAccountProofPath ?? throw new ArgumentException("Bank account proof document is required.");
+
+            string? msmePath = request.MSMEVendor
+                ? (request.MSMEDocument is not null
+                    ? SaveVendorDocument(request.MSMEDocument, vendorFolder, "MSME")
+                    : existing.MSMEDocumentPath)
+                : null;
+
+            var vendor = new Models.POVendorMaster
+            {
+                VendorId = request.VendorId,
+                VendorName = request.VendorName,
+                BankHolderName = request.BankHolderName,
+                BankAccountNo = request.BankAccountNo,
+                BankName = request.BankName,
+                IFSCCode = request.IFSCCode,
+                MSMEVendor = request.MSMEVendor,
+                UDYAMRegnNo = request.UDYAMRegnNo,
+                VendorPAN = request.VendorPAN,
+                PANDocumentPath = panPath,
+                MSMEDocumentPath = msmePath,
+                BankAccountProofPath = bankProofPath,
+                ModifiedBy = request.UpdatedBy
+            };
+
+            // Sets Status back to PENDING regardless of whether it came from REJECTED or ACTIVE —
+            // VendorCode (if any) is preserved by the UPDATE statement, since it's never touched here.
+            await _repository.UpdateVendorAsync(vendor);
+
+            var (updated, addresses) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (updated is null)
+                throw new InvalidOperationException("Vendor was updated but could not be reloaded.");
+
+            return MapToVendorDetailResponse(updated, addresses);
+        }
+        public async Task<IEnumerable<POVendorDetailResponse>> GetMyRejectedVendorsAsync(string preparerEmployeeCode)
+        {
+            var vendors = await _repository.GetRejectedVendorsByPreparerAsync(preparerEmployeeCode);
+            var result = new List<POVendorDetailResponse>();
+
+            foreach (var v in vendors)
+            {
+                var (_, addresses) = await _repository.GetVendorByIdAsync(v.VendorId);
+                result.Add(MapToVendorDetailResponse(v, addresses));
+            }
+
+            return result;
+        }
     }
 }

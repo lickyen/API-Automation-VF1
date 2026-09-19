@@ -48,6 +48,7 @@
         public string? MSMEDocumentPath { get; set; }
         public string? BankAccountProofPath { get; set; }
         public string CreatedBy { get; set; } = default!;
+        public string? ModifiedBy { get; set; }
     }
     public class VendorDocumentUpload
     {
@@ -552,6 +553,25 @@
         public long VendorId { get; set; }
         public string RejectionReason { get; set; } = default!;
         public string RejectedBy { get; set; } = default!;
+    }
+
+    public class UpdateVendorRequest
+    {
+        public long VendorId { get; set; }
+        public string VendorName { get; set; } = default!;
+        public string BankHolderName { get; set; } = default!;
+        public string BankAccountNo { get; set; } = default!;
+        public string BankName { get; set; } = default!;
+        public string IFSCCode { get; set; } = default!;
+        public bool MSMEVendor { get; set; }
+        public string? UDYAMRegnNo { get; set; }
+        public string VendorPAN { get; set; } = default!;
+        public string UpdatedBy { get; set; } = default!;
+
+        // Documents optional on resubmit — only replace what changed
+        public VendorDocumentUpload? PANDocument { get; set; }
+        public VendorDocumentUpload? MSMEDocument { get; set; }
+        public VendorDocumentUpload? BankAccountProofDocument { get; set; }
     }
 
 }
