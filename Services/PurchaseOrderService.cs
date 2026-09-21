@@ -432,7 +432,7 @@ namespace ProductivityApi.Services
             var vendorDetails = await _repository.GetVendorDetailsForPOAsync(poId);
             var deliveryLocationDetails = await _repository.GetPurchaseOrderDeliveryLocationsAsync(poId);
 
-            return new PurchaseOrderResponse
+            var response = new PurchaseOrderResponse
             {
                 POId = poId,
                 PONumber = poNumber,
@@ -504,6 +504,9 @@ namespace ProductivityApi.Services
                     MegaZone = l.MegaZone
                 }).ToList()
             };
+            // Generate and save the PDF now that the PO fully exists in the DB
+            await GenerateAndSavePurchaseOrderPdfAsync(poId);
+            return response;
         }
 
         // ---------------- helpers ----------------
@@ -640,7 +643,7 @@ namespace ProductivityApi.Services
                 }).ToList();
             }
 
-            return new PurchaseOrderResponse
+            var response = new PurchaseOrderResponse
             {
                 POId = po.POId,
                 PONumber = po.PONumber,
@@ -725,6 +728,18 @@ namespace ProductivityApi.Services
                     CreatedDt = p.CreatedDt
                 }).ToList()
             };
+            response.PdfBase64 = LoadPurchaseOrderPdfBase64(poId, po.BudgetYear);
+            return response;
+        }
+        private string? LoadPurchaseOrderPdfBase64(int poId, string budgetYear)
+        {
+            string pdfPath = Path.Combine(_filePath, "GeneratedPDFs", budgetYear, $"{poId}_PO.pdf");
+
+            if (!File.Exists(pdfPath))
+                return null;   // e.g. an old PO created before this auto-generation was wired in
+
+            byte[] pdfBytes = File.ReadAllBytes(pdfPath);
+            return Convert.ToBase64String(pdfBytes);
         }
         public async Task<IEnumerable<PurchaseOrderResponse>> GetPurchaseOrderListAsync(string? departmentCode, string? status)
         {
@@ -1041,8 +1056,9 @@ namespace ProductivityApi.Services
 
             if (!request.IsApproved)
             {
-                // Rejected at any stage -> back to Maker; status becomes Rejected, all approvals must be re-taken on resubmission.
+                
                 await _repository.UpdatePOStatusAsync(po.POId, "Rejected", 0);
+                await GenerateAndSavePurchaseOrderPdfAsync(po.POId); 
                 return;
             }
 
@@ -1062,6 +1078,7 @@ namespace ProductivityApi.Services
 
                 string finalStatus = isAdvancePO ? "PendingPayment" : "Approved";
                 await _repository.UpdatePOStatusAsync(po.POId, finalStatus, po.CurrentApprovalStep);
+                await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
             }
         }
         public async Task<IEnumerable<AppSettingResponse>> GetAllSettingsAsync()
@@ -1504,67 +1521,42 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        
         //public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
         //{
         //    var po = await GetPurchaseOrderByIdAsync(poId);
         //    string html = BuildHtml(po);
 
         //    var browserFetcher = new BrowserFetcher();
-        //    var installedBrowser = await browserFetcher.DownloadAsync();   // this returns info about what got installed
+        //    var installedBrowser = await browserFetcher.DownloadAsync();
 
         //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
         //    {
         //        Headless = true,
-        //        ExecutablePath = installedBrowser.GetExecutablePath(),   // explicit path, don't rely on default resolution
+        //        ExecutablePath = installedBrowser.GetExecutablePath(),
         //        Args = new[] { "--no-sandbox", "--disable-gpu" }
         //    });
 
         //    await using var page = await browser.NewPageAsync();
         //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
 
-        //    return await page.PdfDataAsync(new PdfOptions
+        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
         //    {
         //        Format = PaperFormat.A4,
         //        PrintBackground = true,
         //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
         //    });
+
+        //    // ---------------- Save to disk before returning ----------------
+        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+        //    Directory.CreateDirectory(folder);
+
+        //    string fileName = $"{poId}_PO.pdf";
+        //    string fullPath = Path.Combine(folder, fileName);
+        //    await File.WriteAllBytesAsync(fullPath, pdfBytes);
+
+        //    return pdfBytes;
         //}
-
-        public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
-        {
-            var po = await GetPurchaseOrderByIdAsync(poId);
-            string html = BuildHtml(po);
-
-            var browserFetcher = new BrowserFetcher();
-            var installedBrowser = await browserFetcher.DownloadAsync();
-
-            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
-            {
-                Headless = true,
-                ExecutablePath = installedBrowser.GetExecutablePath(),
-                Args = new[] { "--no-sandbox", "--disable-gpu" }
-            });
-
-            await using var page = await browser.NewPageAsync();
-            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
-
-            var pdfBytes = await page.PdfDataAsync(new PdfOptions
-            {
-                Format = PaperFormat.A4,
-                PrintBackground = true,
-                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-            });
-
-            // ---------------- Save to disk before returning ----------------
-            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-            Directory.CreateDirectory(folder);
-
-            string fileName = $"{poId}_PO.pdf";
-            string fullPath = Path.Combine(folder, fileName);
-            await File.WriteAllBytesAsync(fullPath, pdfBytes);
-
-            return pdfBytes;
-        }
         private string BuildHtml(PurchaseOrderResponse po)
         {
             string template = File.ReadAllText(_templatePath);
@@ -1622,6 +1614,12 @@ namespace ProductivityApi.Services
             string balanceDisplay = balanceAmount is not null
                 ? $"₹{balanceAmount:N0}"
                 : "-";
+            // Round total amount consistently
+            decimal roundedTotalAmount = Math.Round(
+                po.TotalAmount,
+                0,
+                MidpointRounding.AwayFromZero
+            );
 
             return template
                 .Replace("{{LogoBase64}}", logoBase64)
@@ -1647,37 +1645,15 @@ namespace ProductivityApi.Services
                 .Replace("{{VendorContactMobile}}", po.VendorContactMobile ?? "-")
                 .Replace("{{VendorContactEmail}}", po.VendorContactEmail ?? "-")
                 .Replace("{{VendorContact}}", string.IsNullOrWhiteSpace(vendorContact) ? "-" : vendorContact)  // now actually used
-                .Replace("{{CompanyAddress}}", "Registered Office Address, Bengaluru, Karnataka")  // TODO: wire from a Company master if one gets built
+                .Replace("{{CompanyAddress}}", "No.59&60-23, 22nd Cross, 29th Main Rd, EWS Colony, BTM Layout 2nd Stage, BTM Layout, Bengaluru, Karnataka, 560076")  
                 .Replace("{{CompanyGSTIN}}", "29XXXXXXXXXXXZX")                                     // TODO: same as above
                 .Replace("{{TermsType}}", po.TermsType)
                 .Replace("{{SubTotal}}", po.SubTotal.ToString("N0"))
                 .Replace("{{GSTAmount}}", po.GSTAmount.ToString("N0"))
                 .Replace("{{TotalAmount}}", po.TotalAmount.ToString("N0"))
-                .Replace("{{AmountInWords}}", ConvertToWords(po.TotalAmount) + " Only")
+                .Replace("{{AmountInWords}}", ConvertToWords(roundedTotalAmount))
                 .Replace("{{ItemRows}}", itemRows.ToString())
                 .Replace("{{TermsList}}", termsList.ToString());
-        }
-        private static string ConvertToWords(decimal amount)
-        {
-            if (amount == 0)
-                return "Rupees Zero Only";
-
-            if (amount < 0)
-                return "Minus " + ConvertToWords(Math.Abs(amount));
-
-            long rupees = (long)Math.Floor(amount);
-            int paise = (int)Math.Round((amount - rupees) * 100);
-
-            string words = ConvertNumberToWords(rupees);
-
-            string result = $"Rupees {words}";
-
-            if (paise > 0)
-            {
-                result += $" and {ConvertNumberToWords(paise)} Paise";
-            }
-
-            return result + " Only";
         }
 
         private static string ConvertNumberToWords(long number)
@@ -1757,6 +1733,52 @@ namespace ProductivityApi.Services
 
             return words.Trim();
         }
+        private static string ConvertToWords(decimal amount)
+        {
+            long roundedAmount = (long)Math.Round(
+                amount,
+                0,
+                MidpointRounding.AwayFromZero
+            );
 
+            return $"Rupees {ConvertNumberToWords(roundedAmount)} Only";
+        }
+
+        private async Task<byte[]> GenerateAndSavePurchaseOrderPdfAsync(int poId)
+        {
+            var po = await GetPurchaseOrderByIdAsync(poId);
+            string html = BuildHtml(po);
+
+            var browserFetcher = new BrowserFetcher();
+            var installedBrowser = await browserFetcher.DownloadAsync();
+
+            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = true,
+                ExecutablePath = installedBrowser.GetExecutablePath(),
+                Args = new[] { "--no-sandbox", "--disable-gpu" }
+            });
+
+            await using var page = await browser.NewPageAsync();
+            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+
+            var pdfBytes = await page.PdfDataAsync(new PdfOptions
+            {
+                Format = PaperFormat.A4,
+                PrintBackground = true,
+                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+            });
+
+            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+            Directory.CreateDirectory(folder);
+
+            string fileName = $"{poId}_PO.pdf";   // overwrites — always reflects the PO's current/latest state
+            await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
+
+            return pdfBytes;
+        }
+
+        // The public endpoint method now just calls the shared helper — no duplicated logic
+        public Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId) => GenerateAndSavePurchaseOrderPdfAsync(poId);
     }
 }

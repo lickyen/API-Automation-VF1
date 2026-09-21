@@ -322,6 +322,7 @@
         public decimal? AdvanceRequiredAmount { get; set; }
         public decimal AmountPaidSoFar { get; set; }
         public List<POPaymentResponse> Payments { get; set; } = new();
+        public string? PdfBase64 { get; set; }
     }
     public class PurchaseOrderItemResponse
     {
