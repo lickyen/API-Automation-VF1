@@ -55,23 +55,26 @@
       <h1>PURCHASE<br>ORDER</h1>
       <div class="po-number">{{PONumber}}</div>
       <dl>
-        <dt>Issue date</dt>
-        <dd>{{IssueDate}}</dd>
+          <dt>Issue date</dt>
+          <dd>{{IssueDate}}</dd>
 
-        <dt>Financial year</dt>
-        <dd>{{BudgetYear}}</dd>
+          <dt>Financial year</dt>
+          <dd>{{BudgetYear}}</dd>
 
-        <dt>Department</dt>
-        <dd>{{DepartmentCode}} · {{Classification}}</dd>
+          <dt>Department</dt>
+          <dd>{{DepartmentCode}} · {{Classification}}</dd>
 
-        <dt>PO type</dt>
-        <dd>Standard</dd>
+          <dt>Sub classification</dt>
+          <dd>{{SubClassification}}</dd>
 
-        <dt>Delivery</dt>
-        <dd>{{DeliveryLocations}}</dd>
+          <dt>PO type</dt>
+          <dd>{{POType}}</dd>
 
-        <dt>Advance</dt>
-        <dd>{{Advance}}</dd>
+          <dt>Delivery</dt>
+          <dd>{{DeliveryLocations}}</dd>
+
+          <dt>Advance</dt>
+          <dd>{{Advance}}</dd>
       </dl>
       <div class="side-note">
         Vistaar Financial Services Private Limited<br><br>
@@ -91,13 +94,14 @@
       </div>
 
       <div class="party-grid">
-        <div class="party">
-          <span class="label">Supplier</span>
-          <strong>{{VendorName}}</strong><br>
-          Vendor code: {{VendorCode}}<br>
-          GSTIN: {{VendorGSTIN}}<br>
-          {{VendorState}}
-        </div>
+          <div class="party">
+              <span class="label">Supplier</span>
+              <strong>{{VendorName}}</strong><br>
+              Vendor code: {{VendorCode}}<br>
+              GSTIN: {{VendorGSTIN}}<br>
+              {{VendorState}}<br>
+              Contact: {{VendorContact}}
+          </div>
         <div class="party">
           <span class="label">Bill to</span>
           <strong>Vistaar Financial Services Private Limited</strong><br>
@@ -110,10 +114,10 @@
           {{DeliveryAddress}}
         </div>
         <div class="party">
-          <span class="label">Commercial terms</span>
-          <strong>Currency: INR</strong><br>
-          Advance: {{Advance}}<br>
-          Balance: {{TermsType}}
+            <span class="label">Commercial terms</span>
+            <strong>Currency: INR</strong><br>
+            Advance: {{Advance}}<br>
+            Balance due: {{BalanceAmount}}
         </div>
       </div>
 
@@ -146,11 +150,11 @@
       <section class="terms">
         <h3>Commercial and control terms</h3>
         <ol>
-          <li>Quote this PO number on invoices, delivery documents and correspondence.</li>
+          <!--<li>Quote this PO number on invoices, delivery documents and correspondence.</li>
           <li>Supply must conform to the description, quantity, rate, tax and delivery location stated above.</li>
           <li>Any change requires an approved PO amendment before supply or invoicing.</li>
           <li>Payment is subject to receipt, verification, statutory deductions and approved invoice processing.</li>
-          <li>Protect confidential information and personal data according to contract and applicable law.</li>
+          <li>Protect confidential information and personal data according to contract and applicable law.</li>-->
           {{TermsList}}
         </ol>
       </section>

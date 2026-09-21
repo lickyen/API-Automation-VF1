@@ -2,6 +2,9 @@
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using PuppeteerSharp;
+using PuppeteerSharp.Media;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Services
@@ -29,6 +32,8 @@ namespace ProductivityApi.Services
             _repository = repository;
             _logger = logger;
             _filePath = appSettings.FilePaths.POBasePath;
+            _templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "Purchaseordertemplate.html");
+            _logoPath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "assets", "vistaar Logo.png");
         }
         public async Task<POUserAccessResponse> CheckAccessAsync(string employeeCode)
         {
@@ -195,26 +200,7 @@ namespace ProductivityApi.Services
                 IsActive = b.IsActive
             });
         }
-        //private List<string> BuildApprovalChain(decimal totalAmount, bool budgetExceeded)
-        //{
-        //    List<string> chain;
-
-        //    if (totalAmount < Tier1Threshold)
-        //        chain = new List<string> { "DepartmentHead", "FinancialController" };
-        //    else if (totalAmount <= Tier2Threshold)
-        //        chain = new List<string> { "DepartmentHead", "FinancialController", "FinanceHead" };
-        //    else
-        //        chain = new List<string> { "DepartmentHead", "FinancialController", "FinanceHead", "ManagingDirector" };
-
-        //    // Budget-exceeded is a minimum escalation floor: bump < ₹1L POs up to include FinanceHead.
-        //    // Tiers that already include FinanceHead (or higher) are unaffected.
-        //    if (budgetExceeded && !chain.Contains("FinanceHead"))
-        //        chain.Add("FinanceHead");
-
-        //    return chain;
-        //}
-
-
+        
         public async Task<PurchaseOrderResponse> CreatePurchaseOrderAsync(CreatePurchaseOrderRequest request)
         {
             if (request.Items is null || request.Items.Count == 0)
@@ -1517,5 +1503,260 @@ namespace ProductivityApi.Services
 
             return result;
         }
+
+        //public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+        //{
+        //    var po = await GetPurchaseOrderByIdAsync(poId);
+        //    string html = BuildHtml(po);
+
+        //    var browserFetcher = new BrowserFetcher();
+        //    var installedBrowser = await browserFetcher.DownloadAsync();   // this returns info about what got installed
+
+        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+        //    {
+        //        Headless = true,
+        //        ExecutablePath = installedBrowser.GetExecutablePath(),   // explicit path, don't rely on default resolution
+        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
+        //    });
+
+        //    await using var page = await browser.NewPageAsync();
+        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+
+        //    return await page.PdfDataAsync(new PdfOptions
+        //    {
+        //        Format = PaperFormat.A4,
+        //        PrintBackground = true,
+        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+        //    });
+        //}
+
+        public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+        {
+            var po = await GetPurchaseOrderByIdAsync(poId);
+            string html = BuildHtml(po);
+
+            var browserFetcher = new BrowserFetcher();
+            var installedBrowser = await browserFetcher.DownloadAsync();
+
+            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = true,
+                ExecutablePath = installedBrowser.GetExecutablePath(),
+                Args = new[] { "--no-sandbox", "--disable-gpu" }
+            });
+
+            await using var page = await browser.NewPageAsync();
+            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+
+            var pdfBytes = await page.PdfDataAsync(new PdfOptions
+            {
+                Format = PaperFormat.A4,
+                PrintBackground = true,
+                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+            });
+
+            // ---------------- Save to disk before returning ----------------
+            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+            Directory.CreateDirectory(folder);
+
+            string fileName = $"{poId}_PO.pdf";
+            string fullPath = Path.Combine(folder, fileName);
+            await File.WriteAllBytesAsync(fullPath, pdfBytes);
+
+            return pdfBytes;
+        }
+        private string BuildHtml(PurchaseOrderResponse po)
+        {
+            string template = File.ReadAllText(_templatePath);
+
+            string logoBase64 = "data:image/png;base64," + Convert.ToBase64String(File.ReadAllBytes(_logoPath));
+
+            var itemRows = new StringBuilder();
+            int i = 1;
+            foreach (var item in po.Items)
+            {
+                itemRows.Append($@"
+<tr>
+    <td>{i}</td>
+    <td><strong>{System.Net.WebUtility.HtmlEncode(item.ItemDescription)}</strong>
+        <small>Sub-category: {System.Net.WebUtility.HtmlEncode(item.SubClassification)} &nbsp;·&nbsp; Item category: {System.Net.WebUtility.HtmlEncode(item.ItemCategory)}{(item.IsBudgetExceeded ? " &nbsp;·&nbsp; <span style='color:#A12531'>Budget Exceeded</span>" : "")}</small>
+    </td>
+    <td class=""center"">{item.Quantity:N0}</td>
+    <td class=""right"">₹{item.UnitPrice:N0}</td>
+    <td class=""right"">₹{item.Amount:N0}</td>
+    <td class=""right"">₹{item.GSTAmount:N0}</td>
+    <td class=""right""><strong>₹{item.Amount + item.GSTAmount:N0}</strong></td>
+</tr>");
+                i++;
+            }
+
+            var termsList = new StringBuilder();
+            foreach (var t in po.Terms.Select(t => t.TermsAndConditionDetails).Concat(po.AdditionalTerms.Select(a => a.TermText)))
+                termsList.Append($"<li>{System.Net.WebUtility.HtmlEncode(t)}</li>");
+
+            string statusWatermark = po.Status == "Approved" ? "" : po.Status.ToUpper();
+
+            string deliveryNames = string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName));
+            string deliveryAddresses = string.Join("<br>", po.DeliveryLocations.Select(l => System.Net.WebUtility.HtmlEncode(l.Address)));
+
+            string vendorContact = string.Join(" · ", new[]
+            {
+        po.VendorContactName,
+        po.VendorContactMobile,
+        po.VendorContactEmail
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            // ---------------- NEW: Advance / Balance amount calculation ----------------
+            decimal? advanceAmount = po.AdvancePercentage is not null
+                ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
+                : null;
+
+            decimal? balanceAmount = advanceAmount is not null
+                ? po.TotalAmount - advanceAmount
+                : null;
+
+            string advanceDisplay = po.AdvancePercentage is not null
+                ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})"
+                : "None";
+
+            string balanceDisplay = balanceAmount is not null
+                ? $"₹{balanceAmount:N0}"
+                : "-";
+
+            return template
+                .Replace("{{LogoBase64}}", logoBase64)
+                .Replace("{{PONumber}}", po.PONumber)
+                .Replace("{{IssueDate}}", DateTime.Now.ToString("dd MMM yyyy"))
+                .Replace("{{BudgetYear}}", po.BudgetYear)
+                .Replace("{{DepartmentCode}}", po.DepartmentCode)
+                .Replace("{{Classification}}", po.Classification)
+                .Replace("{{SubClassification}}", po.SubClassification ?? "-")
+                .Replace("{{POType}}", po.POType)
+                .Replace("{{DeliveryLocations}}", deliveryNames)
+                .Replace("{{DeliveryAddress}}", deliveryAddresses)
+                .Replace("{{Advance}}", advanceDisplay)                    // now includes amount, not just %
+                .Replace("{{AdvanceAmount}}", advanceAmount is not null ? $"₹{advanceAmount:N0}" : "-")
+                .Replace("{{BalanceAmount}}", balanceDisplay)               // NEW token
+                .Replace("{{Status}}", po.Status)
+                .Replace("{{StatusWatermark}}", statusWatermark)
+                .Replace("{{VendorName}}", po.VendorName)
+                .Replace("{{VendorCode}}", po.VendorCode)
+                .Replace("{{VendorGSTIN}}", po.VendorGSTIN)
+                .Replace("{{VendorState}}", po.VendorState)
+                .Replace("{{VendorContactName}}", po.VendorContactName ?? "-")
+                .Replace("{{VendorContactMobile}}", po.VendorContactMobile ?? "-")
+                .Replace("{{VendorContactEmail}}", po.VendorContactEmail ?? "-")
+                .Replace("{{VendorContact}}", string.IsNullOrWhiteSpace(vendorContact) ? "-" : vendorContact)  // now actually used
+                .Replace("{{CompanyAddress}}", "Registered Office Address, Bengaluru, Karnataka")  // TODO: wire from a Company master if one gets built
+                .Replace("{{CompanyGSTIN}}", "29XXXXXXXXXXXZX")                                     // TODO: same as above
+                .Replace("{{TermsType}}", po.TermsType)
+                .Replace("{{SubTotal}}", po.SubTotal.ToString("N0"))
+                .Replace("{{GSTAmount}}", po.GSTAmount.ToString("N0"))
+                .Replace("{{TotalAmount}}", po.TotalAmount.ToString("N0"))
+                .Replace("{{AmountInWords}}", ConvertToWords(po.TotalAmount) + " Only")
+                .Replace("{{ItemRows}}", itemRows.ToString())
+                .Replace("{{TermsList}}", termsList.ToString());
+        }
+        private static string ConvertToWords(decimal amount)
+        {
+            if (amount == 0)
+                return "Rupees Zero Only";
+
+            if (amount < 0)
+                return "Minus " + ConvertToWords(Math.Abs(amount));
+
+            long rupees = (long)Math.Floor(amount);
+            int paise = (int)Math.Round((amount - rupees) * 100);
+
+            string words = ConvertNumberToWords(rupees);
+
+            string result = $"Rupees {words}";
+
+            if (paise > 0)
+            {
+                result += $" and {ConvertNumberToWords(paise)} Paise";
+            }
+
+            return result + " Only";
+        }
+
+        private static string ConvertNumberToWords(long number)
+        {
+            if (number == 0)
+                return "Zero";
+
+            if (number < 0)
+                return "Minus " + ConvertNumberToWords(Math.Abs(number));
+
+            string words = "";
+
+            if (number >= 10000000)
+            {
+                words += ConvertNumberToWords(number / 10000000)
+                       + " Crore ";
+
+                number %= 10000000;
+            }
+
+            if (number >= 100000)
+            {
+                words += ConvertNumberToWords(number / 100000)
+                       + " Lakh ";
+
+                number %= 100000;
+            }
+
+            if (number >= 1000)
+            {
+                words += ConvertNumberToWords(number / 1000)
+                       + " Thousand ";
+
+                number %= 1000;
+            }
+
+            if (number >= 100)
+            {
+                words += ConvertNumberToWords(number / 100)
+                       + " Hundred ";
+
+                number %= 100;
+            }
+
+            if (number > 0)
+            {
+                if (words != "")
+                    words += "and ";
+
+                string[] ones =
+                {
+            "", "One", "Two", "Three", "Four", "Five",
+            "Six", "Seven", "Eight", "Nine", "Ten",
+            "Eleven", "Twelve", "Thirteen", "Fourteen",
+            "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+            "Nineteen"
+        };
+
+                string[] tens =
+                {
+            "", "", "Twenty", "Thirty", "Forty", "Fifty",
+            "Sixty", "Seventy", "Eighty", "Ninety"
+        };
+
+                if (number < 20)
+                {
+                    words += ones[number];
+                }
+                else
+                {
+                    words += tens[number / 10];
+
+                    if ((number % 10) > 0)
+                        words += " " + ones[number % 10];
+                }
+            }
+
+            return words.Trim();
+        }
+
     }
 }

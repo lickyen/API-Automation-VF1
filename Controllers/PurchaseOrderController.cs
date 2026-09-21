@@ -232,6 +232,19 @@ namespace ProductivityApi.Controllers
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
-       
+        /// <summary>GET /api/Purchaseorder/GeneratePOPdf?poId=6</summary>
+        [HttpGet]
+        public async Task<IActionResult> GeneratePOPdf([FromQuery] int poId)
+        {
+            try
+            {
+                var pdfBytes = await _purchaseOrderService.GeneratePurchaseOrderPdfAsync(poId);
+                return File(pdfBytes, "application/pdf", $"{poId}_PurchaseOrder.pdf");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
     }
 }
