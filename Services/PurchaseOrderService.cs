@@ -1759,14 +1759,16 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
         decimal? balanceAmount = advanceAmount is not null ? po.TotalAmount - advanceAmount : null;
 
         const float sidebarWidth = 100f;
+        const float a4HeightPt = 841.89f;
+        const float pageMarginPt = 8f;
 
         void PartyBox(IContainer container, string label, string boldLine, string detail)
         {
-            container.Border(1).BorderColor(Colors.White).Background(panelBg).Padding(10).Column(c =>
+            container.Border(1).BorderColor(Colors.White).Background(panelBg).Padding(8).Column(c =>
             {
-                c.Item().Text(label.ToUpper()).FontColor(grey).FontSize(7);
-                c.Item().PaddingTop(2).Text(boldLine).FontColor(navy).FontSize(10).Bold();
-                c.Item().PaddingTop(2).Text(detail).FontSize(8).LineHeight(1.4f);
+                c.Item().Text(label.ToUpper()).FontColor(grey).FontSize(6);
+                c.Item().PaddingTop(2).Text(boldLine).FontColor(navy).FontSize(9).Bold();
+                c.Item().PaddingTop(2).Text(detail).FontSize(7).LineHeight(1.35f);
             });
         }
 
@@ -1775,11 +1777,12 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(0);
+                page.Margin(pageMarginPt);
                 page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(9));
 
                 page.Content().Layers(layers =>
                 {
+                    // Watermark — declared first so it renders BEHIND the primary content layer
                     layers.Layer().AlignCenter().AlignMiddle()
                         .Rotate(-30)
                         .Text(FormatStatus(po.Status))
@@ -1787,9 +1790,9 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
 
                     layers.PrimaryLayer().Row(row =>
                     {
-                        row.ConstantItem(sidebarWidth);
+                        row.ConstantItem(sidebarWidth);   // reserved space; visual sidebar drawn in the background layer below
 
-                        row.RelativeItem().Padding(24).Column(content =>
+                        row.RelativeItem().Padding(18).Column(content =>
                         {
                             content.Item().Column(c =>
                             {
@@ -1797,7 +1800,7 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
                                 c.Item().Text("Purchase Order").FontColor(navy).FontSize(16).Bold();
                             });
 
-                            // Row 1: Supplier | Bill To — each its own bordered box
+                            // Row 1: Supplier | Bill To
                             content.Item().PaddingTop(14).Row(r =>
                             {
                                 r.RelativeItem().PaddingRight(6).Element(e =>
@@ -1809,7 +1812,7 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
                                         "Registered Office Address, Bengaluru, Karnataka\nGSTIN: 29XXXXXXXXXXXZX"));
                             });
 
-                            // Row 2: Deliver To | Commercial Terms — each its own bordered box
+                            // Row 2: Deliver To | Commercial Terms
                             content.Item().PaddingTop(8).Row(r =>
                             {
                                 r.RelativeItem().PaddingRight(6).Element(e =>
@@ -1901,36 +1904,39 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
                         });
                     });
 
+                    // Background layer: fixed-height navy sidebar
                     layers.Layer().Row(row =>
                     {
-                        row.ConstantItem(sidebarWidth).Background(navy).Padding(12).Column(side =>
-                        {
-                            side.Item().PaddingBottom(14).Image(_logoPath).FitWidth();
-                            side.Item().Text("PURCHASE\nORDER").FontColor(Colors.White).FontSize(13).Bold().LineHeight(1.05f);
-                            side.Item().PaddingTop(12).Text(po.PONumber).FontColor(Colors.White).FontSize(10).Bold();
-
-                            void Field(string label, string value)
+                        row.ConstantItem(sidebarWidth)
+                            .Height(a4HeightPt - (pageMarginPt * 2))
+                            .Background(navy).Padding(12).Column(side =>
                             {
-                                side.Item().PaddingTop(9).Text(label.ToUpper()).FontColor(mist).FontSize(6);
-                                side.Item().Text(value).FontColor(Colors.White).FontSize(7.5f).Bold();
-                            }
+                                side.Item().PaddingBottom(14).Image(_logoPath).FitWidth();
+                                side.Item().Text("PURCHASE\nORDER").FontColor(Colors.White).FontSize(13).Bold().LineHeight(1.05f);
+                                side.Item().PaddingTop(12).Text(po.PONumber).FontColor(Colors.White).FontSize(10).Bold();
 
-                            Field("Issue date", DateTime.Now.ToString("dd MMM yyyy"));
-                            Field("Financial year", po.BudgetYear);
-                            Field("Department", $"{po.DepartmentCode} · {po.Classification}");
-                            Field("Sub classification", po.SubClassification ?? "-");
-                            Field("PO type", po.POType);
-                            Field("Delivery", string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)));
-                            Field("Advance", po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None");
+                                void Field(string label, string value)
+                                {
+                                    side.Item().PaddingTop(9).Text(label.ToUpper()).FontColor(mist).FontSize(6);
+                                    side.Item().Text(value).FontColor(Colors.White).FontSize(7.5f).Bold();
+                                }
 
-                            // Spacer expands to push the divider + note down to the true bottom of the page
-                            side.Item().ExtendVertical();
+                                Field("Issue date", DateTime.Now.ToString("dd MMM yyyy"));
+                                Field("Financial year", po.BudgetYear);
+                                Field("Department", $"{po.DepartmentCode} · {po.Classification}");
+                                Field("Sub classification", po.SubClassification ?? "-");
+                                Field("PO type", po.POType);
+                                Field("Delivery", string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)));
+                                Field("Advance", po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None");
 
-                            side.Item().PaddingTop(10).LineHorizontal(1).LineColor("#5F7697");   // clearer standalone divider
-                            side.Item().PaddingTop(8)
-                                .Text("Vistaar Financial Services Private Limited\nSystem-generated controlled procurement document")
-                                .FontColor("#CBD6DF").FontSize(6).LineHeight(1.5f);
-                        });
+                                side.Item().ExtendVertical();
+
+                                side.Item().PaddingTop(10).LineHorizontal(1).LineColor("#5F7697");
+                                side.Item().PaddingTop(8).Text("Vistaar Financial Services Private Limited")
+                                .FontColor(Colors.White).FontSize(7).Bold();
+                                side.Item().PaddingTop(3).Text("System-generated controlled procurement document")
+                                .FontColor("#CBD6DF").FontSize(6).LineHeight(1.4f);
+                            });
 
                         row.RelativeItem();
                     });
@@ -1950,15 +1956,6 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
 
     private static string FormatStatus(string status)
         => System.Text.RegularExpressions.Regex.Replace(status, "(?<!^)([A-Z])", " $1").ToUpper();
-
-   
-
-
-
-
-
-
-
 
 }
 }
