@@ -1,12 +1,14 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
-using PuppeteerSharp;
-using PuppeteerSharp.Media;
+//using PuppeteerSharp;
+//using PuppeteerSharp.Media;
 using System.Text;
 using System.Text.RegularExpressions;
-
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 namespace ProductivityApi.Services
 {
     public sealed class PurchaseOrderService
@@ -507,7 +509,7 @@ namespace ProductivityApi.Services
             // Generate and save the PDF now that the PO fully exists in the DB
             try
             {
-                await GenerateAndSavePurchaseOrderPdfAsync(poId);
+                await GeneratePurchaseOrderPdfAsync(poId);
             }
             catch (Exception ex)
             {
@@ -999,7 +1001,7 @@ namespace ProductivityApi.Services
                 await _repository.UpdatePOStatusAsync(po.POId, "Rejected", 0);
                 try
                 {
-                    await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
+                    await GeneratePurchaseOrderPdfAsync(po.POId);
                 }
                 catch (Exception ex)
                 {
@@ -1029,7 +1031,7 @@ namespace ProductivityApi.Services
                 await _repository.UpdatePOStatusAsync(po.POId, finalStatus, po.CurrentApprovalStep);
                 try
                 {
-                    await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
+                    await GeneratePurchaseOrderPdfAsync(po.POId);
                 }
                 catch (Exception ex)
                 {
@@ -1481,41 +1483,41 @@ namespace ProductivityApi.Services
         }
 
 
-        public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
-        {
-            var po = await GetPurchaseOrderByIdAsync(poId);
-            string html = BuildHtml(po);
+        //public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+        //{
+        //    var po = await GetPurchaseOrderByIdAsync(poId);
+        //    string html = BuildHtml(po);
 
-            var browserFetcher = new BrowserFetcher();
-            var installedBrowser = await browserFetcher.DownloadAsync();
+        //    var browserFetcher = new BrowserFetcher();
+        //    var installedBrowser = await browserFetcher.DownloadAsync();
 
-            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
-            {
-                Headless = true,
-                ExecutablePath = installedBrowser.GetExecutablePath(),
-                Args = new[] { "--no-sandbox", "--disable-gpu" }
-            });
+        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+        //    {
+        //        Headless = true,
+        //        ExecutablePath = installedBrowser.GetExecutablePath(),
+        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
+        //    });
 
-            await using var page = await browser.NewPageAsync();
-            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+        //    await using var page = await browser.NewPageAsync();
+        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
 
-            var pdfBytes = await page.PdfDataAsync(new PdfOptions
-            {
-                Format = PaperFormat.A4,
-                PrintBackground = true,
-                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-            });
+        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
+        //    {
+        //        Format = PaperFormat.A4,
+        //        PrintBackground = true,
+        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+        //    });
 
-            // ---------------- Save to disk before returning ----------------
-            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-            Directory.CreateDirectory(folder);
+        //    // ---------------- Save to disk before returning ----------------
+        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+        //    Directory.CreateDirectory(folder);
 
-            string fileName = $"{poId}_PO.pdf";
-            string fullPath = Path.Combine(folder, fileName);
-            await File.WriteAllBytesAsync(fullPath, pdfBytes);
+        //    string fileName = $"{poId}_PO.pdf";
+        //    string fullPath = Path.Combine(folder, fileName);
+        //    await File.WriteAllBytesAsync(fullPath, pdfBytes);
 
-            return pdfBytes;
-        }
+        //    return pdfBytes;
+        //}
         private string BuildHtml(PurchaseOrderResponse po)
         {
             string template = File.ReadAllText(_templatePath);
@@ -1703,41 +1705,260 @@ namespace ProductivityApi.Services
             return $"Rupees {ConvertNumberToWords(roundedAmount)} Only";
         }
 
-        private async Task<byte[]> GenerateAndSavePurchaseOrderPdfAsync(int poId)
+        //private async Task<byte[]> GenerateAndSavePurchaseOrderPdfAsync(int poId)
+        //{
+        //    var po = await GetPurchaseOrderByIdAsync(poId);
+        //    string html = BuildHtml(po);
+
+        //    var browserFetcher = new BrowserFetcher();
+        //    var installedBrowser = await browserFetcher.DownloadAsync();
+
+        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+        //    {
+        //        Headless = true,
+        //        ExecutablePath = installedBrowser.GetExecutablePath(),
+        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
+        //    });
+
+        //    await using var page = await browser.NewPageAsync();
+        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+
+        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
+        //    {
+        //        Format = PaperFormat.A4,
+        //        PrintBackground = true,
+        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+        //    });
+
+        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+        //    Directory.CreateDirectory(folder);
+
+        //    string fileName = $"{poId}_PO.pdf";   // overwrites — always reflects the PO's current/latest state
+        //    await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
+
+        //    return pdfBytes;
+        //}
+
+  
+
+
+
+public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+    {
+        var po = await GetPurchaseOrderByIdAsync(poId);
+
+        var navy = "#1F3763";
+        var grey = "#6D6E71";
+        var mist = "#A7B6BF";
+        var line = "#D9E0E5";
+        var panelBg = "#F4F7F9";
+
+        decimal? advanceAmount = po.AdvancePercentage is not null
+            ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
+            : null;
+        decimal? balanceAmount = advanceAmount is not null ? po.TotalAmount - advanceAmount : null;
+
+        const float sidebarWidth = 100f;
+
+        void PartyBox(IContainer container, string label, string boldLine, string detail)
         {
-            var po = await GetPurchaseOrderByIdAsync(poId);
-            string html = BuildHtml(po);
-
-            var browserFetcher = new BrowserFetcher();
-            var installedBrowser = await browserFetcher.DownloadAsync();
-
-            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            container.Border(1).BorderColor(Colors.White).Background(panelBg).Padding(10).Column(c =>
             {
-                Headless = true,
-                ExecutablePath = installedBrowser.GetExecutablePath(),
-                Args = new[] { "--no-sandbox", "--disable-gpu" }
+                c.Item().Text(label.ToUpper()).FontColor(grey).FontSize(7);
+                c.Item().PaddingTop(2).Text(boldLine).FontColor(navy).FontSize(10).Bold();
+                c.Item().PaddingTop(2).Text(detail).FontSize(8).LineHeight(1.4f);
             });
-
-            await using var page = await browser.NewPageAsync();
-            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
-
-            var pdfBytes = await page.PdfDataAsync(new PdfOptions
-            {
-                Format = PaperFormat.A4,
-                PrintBackground = true,
-                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-            });
-
-            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-            Directory.CreateDirectory(folder);
-
-            string fileName = $"{poId}_PO.pdf";   // overwrites — always reflects the PO's current/latest state
-            await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
-
-            return pdfBytes;
         }
 
-        // The public endpoint method now just calls the shared helper — no duplicated logic
-        //public Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId) => GenerateAndSavePurchaseOrderPdfAsync(poId);
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(0);
+                page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(9));
+
+                page.Content().Layers(layers =>
+                {
+                    layers.Layer().AlignCenter().AlignMiddle()
+                        .Rotate(-30)
+                        .Text(FormatStatus(po.Status))
+                        .FontSize(60).Bold().FontColor("#F6D9DC");
+
+                    layers.PrimaryLayer().Row(row =>
+                    {
+                        row.ConstantItem(sidebarWidth);
+
+                        row.RelativeItem().Padding(24).Column(content =>
+                        {
+                            content.Item().Column(c =>
+                            {
+                                c.Item().Text("SUPPLIER DOCUMENT").FontColor(grey).FontSize(7);
+                                c.Item().Text("Purchase Order").FontColor(navy).FontSize(16).Bold();
+                            });
+
+                            // Row 1: Supplier | Bill To — each its own bordered box
+                            content.Item().PaddingTop(14).Row(r =>
+                            {
+                                r.RelativeItem().PaddingRight(6).Element(e =>
+                                    PartyBox(e, "Supplier", po.VendorName,
+                                        $"Vendor code: {po.VendorCode}\nGSTIN: {po.VendorGSTIN}\n{po.VendorState}"));
+
+                                r.RelativeItem().PaddingLeft(6).Element(e =>
+                                    PartyBox(e, "Bill to", "Vistaar Financial Services Private Limited",
+                                        "Registered Office Address, Bengaluru, Karnataka\nGSTIN: 29XXXXXXXXXXXZX"));
+                            });
+
+                            // Row 2: Deliver To | Commercial Terms — each its own bordered box
+                            content.Item().PaddingTop(8).Row(r =>
+                            {
+                                r.RelativeItem().PaddingRight(6).Element(e =>
+                                    PartyBox(e, "Deliver to",
+                                        string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)),
+                                        string.Join("\n", po.DeliveryLocations.Select(l => l.Address))));
+
+                                r.RelativeItem().PaddingLeft(6).Element(e =>
+                                    PartyBox(e, "Commercial terms", "Currency: INR",
+                                        $"Advance: {(po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None")}\nBalance due: {(balanceAmount is not null ? $"₹{balanceAmount:N0}" : "-")}"));
+                            });
+
+                            content.Item().PaddingTop(14).Table(table =>
+                            {
+                                table.ColumnsDefinition(c =>
+                                {
+                                    c.ConstantColumn(20);
+                                    c.RelativeColumn(4);
+                                    c.RelativeColumn(1);
+                                    c.RelativeColumn(1.5f);
+                                    c.RelativeColumn(1.5f);
+                                    c.RelativeColumn(1.5f);
+                                    c.RelativeColumn(1.5f);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    void H(string text) => header.Cell().Background(grey).Padding(5)
+                                        .Text(text.ToUpper()).FontColor(Colors.White).FontSize(6);
+
+                                    H("#"); H("Description / classification"); H("Qty"); H("Rate"); H("Taxable"); H("Tax"); H("Total");
+                                });
+
+                                int i = 1;
+                                foreach (var item in po.Items)
+                                {
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Text(i.ToString());
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Column(c =>
+                                    {
+                                        c.Item().Text(item.ItemDescription).Bold().FontColor(navy);
+                                        c.Item().Text($"Sub-category: {item.SubClassification} · Item category: {item.ItemCategory}{(item.IsBudgetExceeded ? " · Budget Exceeded" : "")}")
+                                            .FontSize(7).FontColor(item.IsBudgetExceeded ? Colors.Red.Medium : grey);
+                                    });
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignCenter().Text(item.Quantity.ToString("N0"));
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.UnitPrice.ToString("N0"));
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.Amount.ToString("N0"));
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.GSTAmount.ToString("N0"));
+                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text((item.Amount + item.GSTAmount).ToString("N0")).Bold();
+                                    i++;
+                                }
+                            });
+
+                            content.Item().PaddingTop(12).Background(navy).Padding(10).Row(t =>
+                            {
+                                t.RelativeItem().Column(c =>
+                                {
+                                    c.Item().Text("Total amount").FontColor(Colors.White).FontSize(8);
+                                    c.Item().Text($"Taxable {po.SubTotal:N0} · Tax {po.GSTAmount:N0}").FontColor("#CDD7E1").FontSize(7);
+                                });
+                                t.ConstantItem(100).AlignRight().AlignMiddle()
+                                    .Text(po.TotalAmount.ToString("N0")).FontColor(Colors.White).FontSize(16).Bold();
+                            });
+
+                            content.Item().PaddingTop(6).Text(t =>
+                            {
+                                t.Span("AMOUNT IN WORDS  ").FontColor(grey).FontSize(7);
+                                t.Span(ConvertToWords(po.TotalAmount)).FontColor(navy).Bold();
+                            });
+
+                            content.Item().PaddingTop(16).BorderTop(1).BorderColor(line).PaddingTop(8).Column(terms =>
+                            {
+                                terms.Item().Text("Commercial and control terms").FontColor(navy).FontSize(9).Bold();
+
+                                int n = 1;
+                                var allTerms = po.Terms.Select(t => t.TermsAndConditionDetails)
+                                    .Concat(po.AdditionalTerms.Select(a => a.TermText));
+
+                                foreach (var t in allTerms)
+                                {
+                                    terms.Item().PaddingTop(3).Text($"{n}. {t}").FontSize(8).LineHeight(1.4f);
+                                    n++;
+                                }
+                            });
+
+                            content.Item().PaddingTop(14).Border(1).BorderColor(mist).Background(panelBg)
+                                .Padding(8).AlignCenter()
+                                .Text("This is a system-generated Purchase Order. Hence, no signature is required.")
+                                .FontColor(navy).Bold().FontSize(8);
+                        });
+                    });
+
+                    layers.Layer().Row(row =>
+                    {
+                        row.ConstantItem(sidebarWidth).Background(navy).Padding(12).Column(side =>
+                        {
+                            side.Item().PaddingBottom(14).Image(_logoPath).FitWidth();
+                            side.Item().Text("PURCHASE\nORDER").FontColor(Colors.White).FontSize(13).Bold().LineHeight(1.05f);
+                            side.Item().PaddingTop(12).Text(po.PONumber).FontColor(Colors.White).FontSize(10).Bold();
+
+                            void Field(string label, string value)
+                            {
+                                side.Item().PaddingTop(9).Text(label.ToUpper()).FontColor(mist).FontSize(6);
+                                side.Item().Text(value).FontColor(Colors.White).FontSize(7.5f).Bold();
+                            }
+
+                            Field("Issue date", DateTime.Now.ToString("dd MMM yyyy"));
+                            Field("Financial year", po.BudgetYear);
+                            Field("Department", $"{po.DepartmentCode} · {po.Classification}");
+                            Field("Sub classification", po.SubClassification ?? "-");
+                            Field("PO type", po.POType);
+                            Field("Delivery", string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)));
+                            Field("Advance", po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None");
+
+                            // Spacer expands to push the divider + note down to the true bottom of the page
+                            side.Item().ExtendVertical();
+
+                            side.Item().PaddingTop(10).LineHorizontal(1).LineColor("#5F7697");   // clearer standalone divider
+                            side.Item().PaddingTop(8)
+                                .Text("Vistaar Financial Services Private Limited\nSystem-generated controlled procurement document")
+                                .FontColor("#CBD6DF").FontSize(6).LineHeight(1.5f);
+                        });
+
+                        row.RelativeItem();
+                    });
+                });
+            });
+        });
+
+        var pdfBytes = document.GeneratePdf();
+
+        string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+        Directory.CreateDirectory(folder);
+        string fileName = $"{poId}_PO.pdf";
+        await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
+
+        return pdfBytes;
     }
+
+    private static string FormatStatus(string status)
+        => System.Text.RegularExpressions.Regex.Replace(status, "(?<!^)([A-Z])", " $1").ToUpper();
+
+   
+
+
+
+
+
+
+
+
+}
 }

@@ -8,7 +8,7 @@ using ProductivityApi.Services;
 using Serilog;
 using Microsoft.Extensions.FileProviders;
 using ProductivityApi.Repositories;
-
+using QuestPDF.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure CORS
@@ -196,7 +196,7 @@ builder.Services.AddScoped<RefundCalculatorService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+QuestPDF.Settings.License = LicenseType.Community;
 // Configure cookie policy to enforce secure cookies and reasonable SameSite policy
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
