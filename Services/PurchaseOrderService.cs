@@ -505,7 +505,17 @@ namespace ProductivityApi.Services
                 }).ToList()
             };
             // Generate and save the PDF now that the PO fully exists in the DB
-            await GenerateAndSavePurchaseOrderPdfAsync(poId);
+            try
+            {
+                await GenerateAndSavePurchaseOrderPdfAsync(poId);
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, "PDF generation failed for PO {POId} after creation. PO was still created successfully.", poId);
+            }
+
+            //await GenerateAndSavePurchaseOrderPdfAsync(poId);
             return response;
         }
 
@@ -761,78 +771,7 @@ namespace ProductivityApi.Services
             });
         }
 
-        //private List<string> SaveQuotationFiles(List<QuotationFileUpload> quotations, string budgetYear, int poId)
-        //{
-        //    var savedPaths = new List<string>();
-        //    if (quotations is null || quotations.Count == 0) return savedPaths;
-
-        //    string yearFolder = Path.Combine(_filePath, "Quotations", budgetYear.Replace("/", "-"));
-        //    Directory.CreateDirectory(yearFolder);
-
-        //    int sequence = 1;
-        //    foreach (var quotation in quotations)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(quotation.FileName) || string.IsNullOrWhiteSpace(quotation.Base64Content))
-        //            throw new ArgumentException("Each quotation must include a FileName and Base64Content.");
-
-        //        string extension = Path.GetExtension(quotation.FileName);
-        //        if (!AllowedExtensions.Contains(extension))
-        //            throw new ArgumentException($"File type '{extension}' is not allowed. Allowed types: {string.Join(", ", AllowedExtensions)}.");
-
-        //        byte[] fileBytes;
-        //        try
-        //        {
-        //            string cleanBase64 = quotation.Base64Content.Contains(",")
-        //                ? quotation.Base64Content.Substring(quotation.Base64Content.IndexOf(",") + 1)
-        //                : quotation.Base64Content;
-
-        //            fileBytes = Convert.FromBase64String(cleanBase64);
-        //        }
-        //        catch (FormatException)
-        //        {
-        //            throw new ArgumentException($"File '{quotation.FileName}' contains invalid base64 content.");
-        //        }
-
-        //        if (fileBytes.LongLength > MaxFileSizeBytes)
-        //            throw new ArgumentException($"File '{quotation.FileName}' exceeds the 10 MB size limit.");
-
-        //        // e.g. 6_Quotation1.pdf, 6_Quotation2.pdf
-        //        string safeFileName = $"{poId}_Quotation{sequence}{extension}";
-        //        string fullPath = Path.Combine(yearFolder, safeFileName);
-
-        //        File.WriteAllBytes(fullPath, fileBytes);
-
-        //        savedPaths.Add(fullPath);
-        //        sequence++;
-        //    }
-
-        //    return savedPaths;
-        //}
-        //private List<QuotationFileResponse> LoadQuotationFiles(IEnumerable<string> filePaths)
-        //{
-        //    var results = new List<QuotationFileResponse>();
-
-        //    foreach (var path in filePaths)
-        //    {
-        //        if (!File.Exists(path))
-        //        {
-        //            // File missing on disk (moved/deleted outside the app) — skip rather than fail the whole GET
-        //            continue;
-        //        }
-
-        //        byte[] fileBytes = File.ReadAllBytes(path);
-
-        //        results.Add(new QuotationFileResponse
-        //        {
-        //            FileName = Path.GetFileName(path),          // e.g. "6_Quotation1.pdf"
-        //            Base64Content = Convert.ToBase64String(fileBytes)
-        //        });
-        //    }
-
-        //    return results;
-        //}
-
-
+        
 
         public async Task<IEnumerable<PurchaseOrderListItemResponse>> GetPurchaseOrderListForUserAsync(string employeeCode)
         {
@@ -1058,7 +997,17 @@ namespace ProductivityApi.Services
             {
                 
                 await _repository.UpdatePOStatusAsync(po.POId, "Rejected", 0);
-                await GenerateAndSavePurchaseOrderPdfAsync(po.POId); 
+                try
+                {
+                    await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
+                }
+                catch (Exception ex)
+                {
+                    
+                    _logger.LogError(ex, "PDF generation failed for PO {POId} after creation. PO was still created successfully.", po.POId);
+                }
+
+                //await GenerateAndSavePurchaseOrderPdfAsync(po.POId); 
                 return;
             }
 
@@ -1078,7 +1027,17 @@ namespace ProductivityApi.Services
 
                 string finalStatus = isAdvancePO ? "PendingPayment" : "Approved";
                 await _repository.UpdatePOStatusAsync(po.POId, finalStatus, po.CurrentApprovalStep);
-                await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
+                try
+                {
+                    await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
+                }
+                catch (Exception ex)
+                {
+
+                    _logger.LogError(ex, "PDF generation failed for PO {POId} after creation. PO was still created successfully.", po.POId);
+                }
+
+              //  await GenerateAndSavePurchaseOrderPdfAsync(po.POId);
             }
         }
         public async Task<IEnumerable<AppSettingResponse>> GetAllSettingsAsync()
@@ -1521,42 +1480,42 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        
-        //public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
-        //{
-        //    var po = await GetPurchaseOrderByIdAsync(poId);
-        //    string html = BuildHtml(po);
 
-        //    var browserFetcher = new BrowserFetcher();
-        //    var installedBrowser = await browserFetcher.DownloadAsync();
+        public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+        {
+            var po = await GetPurchaseOrderByIdAsync(poId);
+            string html = BuildHtml(po);
 
-        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
-        //    {
-        //        Headless = true,
-        //        ExecutablePath = installedBrowser.GetExecutablePath(),
-        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
-        //    });
+            var browserFetcher = new BrowserFetcher();
+            var installedBrowser = await browserFetcher.DownloadAsync();
 
-        //    await using var page = await browser.NewPageAsync();
-        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
+            await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+            {
+                Headless = true,
+                ExecutablePath = installedBrowser.GetExecutablePath(),
+                Args = new[] { "--no-sandbox", "--disable-gpu" }
+            });
 
-        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
-        //    {
-        //        Format = PaperFormat.A4,
-        //        PrintBackground = true,
-        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-        //    });
+            await using var page = await browser.NewPageAsync();
+            await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
 
-        //    // ---------------- Save to disk before returning ----------------
-        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-        //    Directory.CreateDirectory(folder);
+            var pdfBytes = await page.PdfDataAsync(new PdfOptions
+            {
+                Format = PaperFormat.A4,
+                PrintBackground = true,
+                MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
+            });
 
-        //    string fileName = $"{poId}_PO.pdf";
-        //    string fullPath = Path.Combine(folder, fileName);
-        //    await File.WriteAllBytesAsync(fullPath, pdfBytes);
+            // ---------------- Save to disk before returning ----------------
+            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+            Directory.CreateDirectory(folder);
 
-        //    return pdfBytes;
-        //}
+            string fileName = $"{poId}_PO.pdf";
+            string fullPath = Path.Combine(folder, fileName);
+            await File.WriteAllBytesAsync(fullPath, pdfBytes);
+
+            return pdfBytes;
+        }
         private string BuildHtml(PurchaseOrderResponse po)
         {
             string template = File.ReadAllText(_templatePath);
@@ -1779,6 +1738,6 @@ namespace ProductivityApi.Services
         }
 
         // The public endpoint method now just calls the shared helper — no duplicated logic
-        public Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId) => GenerateAndSavePurchaseOrderPdfAsync(poId);
+        //public Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId) => GenerateAndSavePurchaseOrderPdfAsync(poId);
     }
 }
