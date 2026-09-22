@@ -97,6 +97,27 @@
             public string CreatedBy { get; set; } = string.Empty;
         }
 
+        public class UpdateLanRequest
+        {
+            public int Id { get; set; }
+
+            public string? CustName { get; set; }
+
+            public string? EmpId { get; set; }
+
+            public string UpdatedBy { get; set; } = string.Empty;
+        }
+
+        public class UpdateLanStatusRequest
+        {
+            public int Id { get; set; }
+
+            public bool IsActive { get; set; }
+
+            public string UpdatedBy { get; set; } = string.Empty;
+        }
+
+
         public class CreateCaseRequest
         {
             public string Lan { get; set; } = string.Empty;
@@ -200,6 +221,56 @@
         public class DownloadFileRequest
         {
             public string FileName { get; set; } = string.Empty;
+        }
+
+        public class ReportRequest
+        {
+            public string? Lan { get; set; }
+
+            public DateTime? FromDate { get; set; }
+
+            public DateTime? ToDate { get; set; }
+
+            public string? Status { get; set; }
+
+            public string? PocEmpId { get; set; }
+
+            public string? MegaZone { get; set; }
+        }
+
+        public class ReportData
+        {
+            public int Id { get; set; }
+
+            public string Lan { get; set; } = string.Empty;
+
+            public string? CustName { get; set; }
+
+            public string? EmpId { get; set; }
+
+            public string? MegaZone { get; set; }
+
+            public string? CustomerIssue { get; set; }
+
+            public string? Status { get; set; }
+
+            public string? ZdshDecision { get; set; }
+
+            public string? MzdshDecision { get; set; }
+
+            public string? AuditFinding { get; set; }
+
+            public string? ActionRecommended { get; set; }
+
+            public string CreatedBy { get; set; } = string.Empty;
+
+            public DateTime CreatedDt { get; set; }
+
+            public DateTime? ZdshUpdatedDt { get; set; }
+
+            public DateTime? MzdshUpdatedDt { get; set; }
+
+            public DateTime? AuditUpdatedDt { get; set; }
         }
 
     }

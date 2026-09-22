@@ -45,6 +45,15 @@ namespace ProductivityApi.Repositories
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<VOTModel.MappedLan>> GetLansAsync()
+        {
+            return await _connection.QueryAsync<VOTModel.MappedLan>(
+                "sp_VOT_GetLans",
+                commandType: CommandType.StoredProcedure);
+        }
+
+
         public async Task<IEnumerable<VOTModel.MappedLan>> GetLansByUserAsync(
             VOTModel.GetLansByUserRequest request)
         {
@@ -54,6 +63,24 @@ namespace ProductivityApi.Repositories
                 {
                     request.EmpId
                 },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task UpdateLanAsync(
+    VOTModel.UpdateLanRequest request)
+        {
+            await _connection.ExecuteAsync(
+                "sp_VOT_UpdateLan",
+                request,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task UpdateLanStatusAsync(
+            VOTModel.UpdateLanStatusRequest request)
+        {
+            await _connection.ExecuteAsync(
+                "sp_VOT_UpdateLanStatus",
+                request,
                 commandType: CommandType.StoredProcedure);
         }
 
@@ -133,5 +160,15 @@ namespace ProductivityApi.Repositories
                 },
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<VOTModel.ReportData>> GetReportAsync(
+            VOTModel.ReportRequest request)
+        {
+            return await _connection.QueryAsync<VOTModel.ReportData>(
+                "sp_VOT_GetReport",
+                request,
+                commandType: CommandType.StoredProcedure);
+        }
     }
+
 }
