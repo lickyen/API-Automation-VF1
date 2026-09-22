@@ -854,63 +854,6 @@ namespace ProductivityApi.Services
         private static readonly HashSet<string> ApproverRoles = new(StringComparer.OrdinalIgnoreCase)
     { "DepartmentHead", "FinancialController", "FinanceHead", "CFO", "ManagingDirector" };
 
-        //public async Task<PurchaseOrderDashboardResponse> GetPurchaseOrderDashboardAsync(string employeeCode)
-        //{
-        //    var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
-        //        ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
-
-        //    var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
-
-        //    if (roles.Count == 0)
-        //        throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine PO access.");
-
-        //    bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
-        //    var myApproverRoles = roles.Where(r => ApproverRoles.Contains(r)).ToList();
-
-        //    // ---------------- Pending With Me ----------------
-        //    List<PoPurchaseOrder> pendingWithMe = new();
-        //    if (isAdmin)
-        //    {
-        //        // Admins generally aren't in the approval chain themselves; leave empty unless "Admin" ever appears as an ApproverRole.
-        //    }
-        //    else if (myApproverRoles.Count > 0)
-        //    {
-        //        pendingWithMe = (await _repository.GetPendingWithRolesAsync(myApproverRoles, user.DepartmentCode)).ToList();
-        //    }
-
-        //    var pendingWithMeIds = pendingWithMe.Select(p => p.POId).ToHashSet();
-
-        //    // ---------------- In Progress ----------------
-        //    var inProgressRaw = isAdmin
-        //        ? await _repository.GetAllPendingAsync()
-        //        : await _repository.GetInProgressByDepartmentAsync(user.DepartmentCode);
-
-        //    // NEW: also pull in POs (any department) this user personally approved a step on, still pending downstream
-        //    var actedByMe = isAdmin
-        //        ? Enumerable.Empty<PoPurchaseOrder>()
-        //        : await _repository.GetInProgressActedByUserAsync(employeeCode);
-
-        //    var inProgress = inProgressRaw
-        //        .Concat(actedByMe)
-        //        .Where(p => !pendingWithMeIds.Contains(p.POId))
-        //        .DistinctBy(p => p.POId)
-        //        .ToList();
-
-        //    // ---------------- Completed ----------------
-        //    var completed = isAdmin
-        //        ? (await _repository.GetAllCompletedAsync()).ToList()
-        //        : (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
-        //    // ---------------- Batched "who's it pending with" lookup — ONE call for everything pending across all three buckets ----------------
-        //    var allPendingPOs = pendingWithMe.Concat(inProgress).ToList();   // Completed POs are never "pending", so excluded
-        //    var pendingRoleMap = await GetPendingRolesForPOsAsync(allPendingPOs);
-
-        //    return new PurchaseOrderDashboardResponse
-        //    {
-        //        PendingWithMe = MapToListResponse(pendingWithMe, pendingRoleMap).ToList(),
-        //        InProgress = MapToListResponse(inProgress, pendingRoleMap).ToList(),
-        //        Completed = MapToListResponse(completed, pendingRoleMap).ToList()
-        //    };
-        //}
         public async Task<PurchaseOrderDashboardResponse> GetPurchaseOrderDashboardAsync(string employeeCode)
         {
             var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
@@ -922,14 +865,22 @@ namespace ProductivityApi.Services
                 throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine PO access.");
 
             bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            bool isFinanceUser = roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase);
             var myApproverRoles = roles.Where(r => ApproverRoles.Contains(r)).ToList();
 
             // ---------------- Pending With Me ----------------
             List<PoPurchaseOrder> pendingWithMe = new();
-            if (!isAdmin && myApproverRoles.Count > 0)
+
+            if (isFinanceUser)
+            {
+                // FinanceUser's "pending with me" = POs awaiting THEIR payment action, not approval
+                pendingWithMe = (await _repository.GetPendingPaymentPOEntitiesAsync()).ToList();  
+            }
+            else if (!isAdmin && myApproverRoles.Count > 0)
             {
                 pendingWithMe = (await _repository.GetPendingWithRolesAsync(myApproverRoles, user.DepartmentCode)).ToList();
             }
+
             var pendingWithMeIds = pendingWithMe.Select(p => p.POId).ToHashSet();
 
             // ---------------- In Progress ----------------
@@ -937,7 +888,7 @@ namespace ProductivityApi.Services
                 ? await _repository.GetAllPendingAsync()
                 : await _repository.GetInProgressByDepartmentAsync(user.DepartmentCode);
 
-            var actedByMe = isAdmin
+            var actedByMe = (isAdmin || isFinanceUser)
                 ? Enumerable.Empty<PoPurchaseOrder>()
                 : await _repository.GetInProgressActedByUserAsync(employeeCode);
 
@@ -947,17 +898,36 @@ namespace ProductivityApi.Services
                 .DistinctBy(p => p.POId)
                 .ToList();
 
-            // ---------------- Rejected — Needs Resubmission (NEW) ----------------
+            // ---------------- Rejected — Needs Resubmission ----------------
             var rejected = isAdmin
                 ? (await _repository.GetAllRejectedAsync()).ToList()
                 : (await _repository.GetRejectedByCreatorAsync(employeeCode)).ToList();
 
-            // ---------------- Completed (Approved / Cancelled only now) ----------------
-            var completed = isAdmin
-                ? (await _repository.GetAllCompletedAsync()).ToList()
-                : (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
+            // ---------------- Completed ----------------
+            List<PoPurchaseOrder> completed;
 
-            // ---------------- Pending-role lookup, batched across all buckets that can be 'PendingApproval' ----------------
+            if (isAdmin)
+            {
+                completed = (await _repository.GetAllCompletedAsync()).ToList();
+            }
+            else if (isFinanceUser)
+            {
+                // FinanceUser's "completed" = POs where THEY specifically recorded the payment
+                completed = (await _repository.GetCompletedPaidByFinanceUserAsync(employeeCode)).ToList();
+            }
+            else
+            {
+                var completedDept = (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
+                var actedByMeCompleted = await _repository.GetCompletedActedByUserAsync(employeeCode);
+
+                completed = completedDept
+                    .Concat(actedByMeCompleted)
+                    .DistinctBy(p => p.POId)
+                    .OrderByDescending(p => p.ModifiedDt ?? p.CreatedDt)
+                    .ToList();
+            }
+
+            // ---------------- Pending-role lookup ----------------
             var allPendingPOs = pendingWithMe.Concat(inProgress).ToList();
             var pendingRoleMap = await GetPendingRolesForPOsAsync(allPendingPOs);
 

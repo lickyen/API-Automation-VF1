@@ -207,6 +207,7 @@
         public DateTime CreatedDt { get; set; }
 
         public string? ModifiedBy { get; set; }
+        public DateTime? ModifiedDt { get; set; }
         public string? RejectionReason { get; set; }
     }
     public class PoTermsConditionsMaster

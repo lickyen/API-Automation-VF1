@@ -492,7 +492,7 @@ WHERE [VendorId] = @VendorId;
 
         public async Task<IEnumerable<PoPurchaseOrder>> GetAllPendingAsync()
         {
-            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [Status] = 'PendingApproval' ORDER BY [CreatedDt] DESC;";
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [Status] IN ('PendingApproval', 'PendingPayment') ORDER BY [CreatedDt] DESC;";
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<PoPurchaseOrder>(sql);
         }
@@ -501,7 +501,7 @@ WHERE [VendorId] = @VendorId;
         {
             const string sql = @"
         SELECT * FROM [dbo].[PO_PurchaseOrder]
-        WHERE [DepartmentCode] = @DepartmentCode AND [Status] = 'PendingApproval'
+        WHERE [DepartmentCode] = @DepartmentCode AND [Status] IN ('PendingApproval', 'PendingPayment')
         ORDER BY [CreatedDt] DESC;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -1093,6 +1093,41 @@ WHERE [VendorId] = @VendorId;
 
     using IDbConnection connection = new SqlConnection(_conStr);
             await connection.ExecuteAsync(sql, new { POId = poId, CancellationReason = cancellationReason, CancelledBy = cancelledBy });
+        }
+        public async Task<IEnumerable<PoPurchaseOrder>> GetCompletedActedByUserAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT po.*
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_PurchaseOrderApprovalHistory] ah ON ah.[POId] = po.[POId]
+        WHERE ah.[ApproverEmployeeCode] = @EmployeeCode
+          AND ah.[Action] = 'Approved'
+          AND po.[Status] IN ('Approved', 'Cancelled')
+        ORDER BY po.[ModifiedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task<IEnumerable<PoPurchaseOrder>> GetCompletedPaidByFinanceUserAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT po.*
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_PurchaseOrderPayments] p ON p.[POId] = po.[POId]
+        WHERE p.[CreatedBy] = @EmployeeCode
+          AND po.[Status] = 'Approved'
+        ORDER BY po.[ModifiedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { EmployeeCode = employeeCode });
+        }
+        // Used by the dashboard — plain entity, so it fits the same List<PoPurchaseOrder> shape as every other bucket
+        public async Task<IEnumerable<PoPurchaseOrder>> GetPendingPaymentPOEntitiesAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [Status] = 'PendingPayment' ORDER BY [ModifiedDt] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql);
         }
 
     }
