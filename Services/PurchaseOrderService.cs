@@ -1957,5 +1957,76 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
     private static string FormatStatus(string status)
         => System.Text.RegularExpressions.Regex.Replace(status, "(?<!^)([A-Z])", " $1").ToUpper();
 
-}
+        public async Task<BudgetCategoryResponse> CreateBudgetCategoryAsync(CreateBudgetCategoryRequest request)
+        {
+            if (!await _repository.DepartmentExistsAsync(request.DepartmentCode))
+                throw new ArgumentException($"DepartmentCode '{request.DepartmentCode}' does not exist or is inactive.");
+
+            if (!string.Equals(request.Classification, "Capex", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(request.Classification, "Opex", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Classification must be either 'Capex' or 'Opex'.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.SubClassification) || string.IsNullOrWhiteSpace(request.ItemCategory))
+                throw new ArgumentException("SubClassification and ItemCategory are required.");
+
+            if (await _repository.BudgetCategoryDuplicateExistsAsync(
+                request.DepartmentCode, request.Classification, request.SubClassification, request.ItemCategory))
+            {
+                throw new ArgumentException("A budget category with this Department, Classification, SubClassification and ItemCategory already exists.");
+            }
+
+            var category = new Models.PoBudgetCategory
+            {
+                DepartmentCode = request.DepartmentCode,
+                Classification = request.Classification,
+                SubClassification = request.SubClassification,
+                ItemCategory = request.ItemCategory,
+                CreatedBy = request.CreatedBy
+            };
+
+            int budgetCategoryId = await _repository.CreateBudgetCategoryAsync(category);
+
+            return new BudgetCategoryResponse
+            {
+                BudgetCategoryId = budgetCategoryId,
+                DepartmentCode = request.DepartmentCode,
+                Classification = request.Classification,
+                SubClassification = request.SubClassification,
+                ItemCategory = request.ItemCategory,
+                IsActive = true
+            };
+        }
+
+        public async Task<AllocatedBudgetResponse> AllocateBudgetAsync(AllocateBudgetRequest request)
+        {
+            var category = await _repository.GetBudgetCategoryByIdAsync(request.BudgetCategoryId)
+                ?? throw new KeyNotFoundException($"BudgetCategoryId {request.BudgetCategoryId} not found.");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.BudgetYear, @"^FY[1-2]\d{3}-\d{2}$"))
+                throw new ArgumentException("BudgetYear must be in the format 'FY2026-27'.");
+
+            if (request.Budget <= 0)
+                throw new ArgumentException("Budget must be greater than 0.");
+
+            if (await _repository.BudgetAllocationExistsAsync(request.BudgetCategoryId, request.BudgetYear))
+                throw new ArgumentException($"A budget allocation already exists for this category in {request.BudgetYear}. Use an update instead.");
+
+            int id = await _repository.AllocateBudgetAsync(request.BudgetCategoryId, request.BudgetYear, request.Budget, request.CreatedBy);
+
+            return new AllocatedBudgetResponse
+            {
+                Id = id,
+                BudgetCategoryId = category.BudgetCategoryId,
+                DepartmentCode = category.DepartmentCode,
+                Classification = category.Classification,
+                SubClassification = category.SubClassification,
+                ItemCategory = category.ItemCategory,
+                BudgetYear = request.BudgetYear,
+                Budget = request.Budget
+            };
+        }
+
+    }
 }

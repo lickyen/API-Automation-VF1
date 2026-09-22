@@ -246,5 +246,22 @@ namespace ProductivityApi.Controllers
                 return NotFound(new { error = ex.Message });
             }
         }
+
+        /// <summary>POST /api/Purchaseorder/CreateBudgetCategory</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateBudgetCategory([FromBody] CreateBudgetCategoryRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateBudgetCategoryAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/AllocateBudget</summary>
+        [HttpPost]
+        public async Task<IActionResult> AllocateBudget([FromBody] AllocateBudgetRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.AllocateBudgetAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
     }
 }

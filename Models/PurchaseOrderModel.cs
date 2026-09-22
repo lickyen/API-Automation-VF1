@@ -346,15 +346,16 @@
         public string SubClassification { get; set; } = default!;
         public string ItemCategory { get; set; } = default!;
         public bool IsActive { get; set; }
+        public string CreatedBy { get; set; } = default!;
     }
-    public class BudgetCategoryResponse
-    {
-        public int BudgetCategoryId { get; set; }
-        public string DepartmentCode { get; set; } = default!;
-        public string Classification { get; set; } = default!;
-        public string SubClassification { get; set; } = default!;
-        public string ItemCategory { get; set; } = default!;
-    }
+    //public class BudgetCategoryResponse
+    //{
+    //    public int BudgetCategoryId { get; set; }
+    //    public string DepartmentCode { get; set; } = default!;
+    //    public string Classification { get; set; } = default!;
+    //    public string SubClassification { get; set; } = default!;
+    //    public string ItemCategory { get; set; } = default!;
+    //}
 
     public class PoPurchaseOrderAdditionalTerm
     {
@@ -573,6 +574,45 @@
         public VendorDocumentUpload? PANDocument { get; set; }
         public VendorDocumentUpload? MSMEDocument { get; set; }
         public VendorDocumentUpload? BankAccountProofDocument { get; set; }
+    }
+
+    public class CreateBudgetCategoryRequest
+    {
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;      // Capex / Opex
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public string CreatedBy { get; set; } = default!;
+    }
+
+    public class BudgetCategoryResponse
+    {
+        public int BudgetCategoryId { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public bool IsActive { get; set; }
+    }
+
+    public class AllocateBudgetRequest
+    {
+        public int BudgetCategoryId { get; set; }
+        public string BudgetYear { get; set; } = default!;   // FY2026-27
+        public decimal Budget { get; set; }
+        public string CreatedBy { get; set; } = default!;
+    }
+
+    public class AllocatedBudgetResponse
+    {
+        public int Id { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public string ItemCategory { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public decimal Budget { get; set; }
     }
 
 }

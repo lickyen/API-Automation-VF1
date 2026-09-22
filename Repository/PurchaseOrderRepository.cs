@@ -937,5 +937,73 @@ WHERE [VendorId] = @VendorId;
             await connection.ExecuteAsync(sql, new { VendorId = vendorId, ApprovedBy = approvedBy });
         }
 
+        public async Task<bool> BudgetCategoryDuplicateExistsAsync(string departmentCode, string classification, string subClassification, string itemCategory)
+        {
+            const string sql = @"
+        SELECT COUNT(1) FROM [dbo].[PO_BudgetCategoryMaster]
+        WHERE [DepartmentCode] = @DepartmentCode
+          AND [Classification] = @Classification
+          AND [SubClassification] = @SubClassification
+          AND [ItemCategory] = @ItemCategory;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new
+            {
+                DepartmentCode = departmentCode,
+                Classification = classification,
+                SubClassification = subClassification,
+                ItemCategory = itemCategory
+            }) > 0;
+        }
+
+        public async Task<int> CreateBudgetCategoryAsync(PoBudgetCategory category)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_BudgetCategoryMaster]
+            ([DepartmentCode], [Classification], [SubClassification], [ItemCategory], [IsActive], [CreatedBy], [CreatedDt])
+        OUTPUT INSERTED.[BudgetCategoryId]
+        VALUES
+            (@DepartmentCode, @Classification, @SubClassification, @ItemCategory, 1, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, category);
+        }
+
+        public async Task<PoBudgetCategory?> GetBudgetCategoryByIdAsync(int budgetCategoryId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_BudgetCategoryMaster] WHERE [BudgetCategoryId] = @BudgetCategoryId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync<PoBudgetCategory>(sql, new { BudgetCategoryId = budgetCategoryId });
+        }
+
+        public async Task<bool> BudgetAllocationExistsAsync(int budgetCategoryId, string budgetYear)
+        {
+            const string sql = @"
+        SELECT COUNT(1) FROM [dbo].[PO_DeptWise_Budget]
+        WHERE [BudgetCategoryId] = @BudgetCategoryId AND [BudgetYear] = @BudgetYear;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new { BudgetCategoryId = budgetCategoryId, BudgetYear = budgetYear }) > 0;
+        }
+
+        public async Task<int> AllocateBudgetAsync(int budgetCategoryId, string budgetYear, decimal budget, string createdBy)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_DeptWise_Budget]
+            ([BudgetCategoryId], [BudgetYear], [Budget], [IsActive], [CreatedBy], [CreatedDt])
+        OUTPUT INSERTED.[Id]
+        VALUES
+            (@BudgetCategoryId, @BudgetYear, @Budget, 1, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new
+            {
+                BudgetCategoryId = budgetCategoryId,
+                BudgetYear = budgetYear,
+                Budget = budget,
+                CreatedBy = createdBy
+            });
+        }
+
     }
 }
