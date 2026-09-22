@@ -263,5 +263,42 @@ namespace ProductivityApi.Controllers
             catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
         }
+
+        /// <summary>POST /api/Purchaseorder/UpdateBudgetCategoryStatus</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateBudgetCategoryStatus([FromBody] UpdateBudgetCategoryStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateBudgetCategoryStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Budget category enabled." : "Budget category disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdatePurchaseOrder — Preparer edits a rejected PO and resubmits</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdatePurchaseOrder([FromBody] UpdatePurchaseOrderRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdatePurchaseOrderAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/CancelPurchaseOrder</summary>
+        [HttpPost]
+        public async Task<IActionResult> CancelPurchaseOrder([FromBody] CancelPurchaseOrderRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.CancelPurchaseOrderAsync(request);
+                return Ok(new { message = "Purchase Order cancelled." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
     }
 }

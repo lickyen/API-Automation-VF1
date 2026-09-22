@@ -1,5 +1,6 @@
 using Dapper;
 using DocumentFormat.OpenXml.Bibliography;
+using Humanizer;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
@@ -511,7 +512,7 @@ WHERE [VendorId] = @VendorId;
         {
             const string sql = @"
         SELECT * FROM [dbo].[PO_PurchaseOrder]
-        WHERE [DepartmentCode] = @DepartmentCode AND [Status] IN ('Approved','Rejected','Cancelled')
+        WHERE [DepartmentCode] = @DepartmentCode AND [Status] IN ('Approved','Cancelled')
         ORDER BY [ModifiedDt] DESC, [CreatedDt] DESC;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -522,7 +523,7 @@ WHERE [VendorId] = @VendorId;
         {
             const string sql = @"
         SELECT * FROM [dbo].[PO_PurchaseOrder]
-        WHERE [Status] IN ('Approved','Rejected','Cancelled')
+        WHERE [Status] IN ('Approved','Cancelled')
         ORDER BY [ModifiedDt] DESC, [CreatedDt] DESC;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -1003,6 +1004,95 @@ WHERE [VendorId] = @VendorId;
                 Budget = budget,
                 CreatedBy = createdBy
             });
+        }
+
+        public async Task UpdateBudgetCategoryStatusAsync(int budgetCategoryId, bool isActive, string modifiedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_BudgetCategoryMaster]
+        SET [IsActive] = @IsActive, [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
+        WHERE [BudgetCategoryId] = @BudgetCategoryId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            int rows = await connection.ExecuteAsync(sql, new { BudgetCategoryId = budgetCategoryId, IsActive = isActive, ModifiedBy = modifiedBy });
+
+            if (rows == 0)
+                throw new KeyNotFoundException($"BudgetCategoryId {budgetCategoryId} not found.");
+        }
+        public async Task UpdatePOStatusAndReasonAsync(int poId, string status, int currentApprovalStep, string? rejectionReason)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_PurchaseOrder]
+        SET [Status] = @Status, [CurrentApprovalStep] = @CurrentApprovalStep, [RejectionReason] = @RejectionReason, [ModifiedDt] = GETDATE()
+        WHERE [POId] = @POId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { POId = poId, Status = status, CurrentApprovalStep = currentApprovalStep, RejectionReason = rejectionReason });
+        }
+
+        public async Task<PoPurchaseOrder?> GetPurchaseOrderForUpdateAsync(int poId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [POId] = @POId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync<PoPurchaseOrder>(sql, new { POId = poId });
+        }
+
+        public async Task UpdatePurchaseOrderHeaderAsync(PoPurchaseOrder po)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_PurchaseOrder]
+        SET [VendorId] = @VendorId, [VendorAddressId] = @VendorAddressId,
+            [VendorContactName] = @VendorContactName, [VendorContactMobile] = @VendorContactMobile, [VendorContactEmail] = @VendorContactEmail,
+            [DepartmentCode] = @DepartmentCode, [POType] = @POType, [Classification] = @Classification, [SubClassification] = @SubClassification,
+            [BudgetYear] = @BudgetYear, [TermsType] = @TermsType, [AdvancePercentage] = @AdvancePercentage,
+            [SubTotal] = @SubTotal, [GSTAmount] = @GSTAmount, [TotalAmount] = @TotalAmount,
+            [IsBudgetExceeded] = @IsBudgetExceeded, [QuotationRequired] = @QuotationRequired,
+            [Status] = 'PendingApproval', [CurrentApprovalStep] = 1, [RejectionReason] = NULL,
+            [ResubmissionCount] = [ResubmissionCount] + 1,
+            [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
+        WHERE [POId] = @POId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, po);
+        }
+
+        public async Task DeletePurchaseOrderChildDataAsync(int poId)
+        {
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderItems] WHERE [POId] = @POId;", new { POId = poId });
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderQuotations] WHERE [POId] = @POId;", new { POId = poId });
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderTerms] WHERE [POId] = @POId;", new { POId = poId });
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderAdditionalTerms] WHERE [POId] = @POId;", new { POId = poId });
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderDeliveryLocations] WHERE [POId] = @POId;", new { POId = poId });
+            await connection.ExecuteAsync("DELETE FROM [dbo].[PO_PurchaseOrderApprovalHistory] WHERE [POId] = @POId;", new { POId = poId });
+        }
+        public async Task<IEnumerable<PoPurchaseOrder>> GetAllRejectedAsync()   // Admin sees all rejected, org-wide
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_PurchaseOrder] WHERE [Status] = 'Rejected' ORDER BY [ModifiedDt] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql);
+        }
+        // NEW — scoped to the creator, since only the Preparer who raised it should act on resubmitting it
+        public async Task<IEnumerable<PoPurchaseOrder>> GetRejectedByCreatorAsync(string createdBy)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_PurchaseOrder]
+        WHERE [Status] = 'Rejected' AND [CreatedBy] = @CreatedBy
+        ORDER BY [ModifiedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<PoPurchaseOrder>(sql, new { CreatedBy = createdBy });
+        }
+        public async Task CancelPurchaseOrderAsync(int poId, string cancellationReason, string cancelledBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_PurchaseOrder]
+        SET [Status] = 'Cancelled', [RejectionReason] = @CancellationReason, [ModifiedBy] = @CancelledBy, [ModifiedDt] = GETDATE()
+        WHERE [POId] = @POId;";
+            
+
+    using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { POId = poId, CancellationReason = cancellationReason, CancelledBy = cancelledBy });
         }
 
     }

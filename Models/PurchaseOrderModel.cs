@@ -205,6 +205,9 @@
         public int CurrentApprovalStep { get; set; }
         public string CreatedBy { get; set; } = default!;
         public DateTime CreatedDt { get; set; }
+
+        public string? ModifiedBy { get; set; }
+        public string? RejectionReason { get; set; }
     }
     public class PoTermsConditionsMaster
     {
@@ -323,6 +326,7 @@
         public decimal AmountPaidSoFar { get; set; }
         public List<POPaymentResponse> Payments { get; set; } = new();
         public string? PdfBase64 { get; set; }
+        public string? RejectionReason { get; set; }
     }
     public class PurchaseOrderItemResponse
     {
@@ -415,6 +419,8 @@
     {
         public List<PurchaseOrderListItemResponse> PendingWithMe { get; set; } = new();
         public List<PurchaseOrderListItemResponse> InProgress { get; set; } = new();
+        public List<PurchaseOrderListItemResponse> RejectedNeedsResubmission { get; set; } = new();   // NEW
+
         public List<PurchaseOrderListItemResponse> Completed { get; set; } = new();
     }
     public class PoLocation
@@ -613,6 +619,41 @@
         public string ItemCategory { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
         public decimal Budget { get; set; }
+    }
+
+    public class UpdateBudgetCategoryStatusRequest
+    {
+        public int BudgetCategoryId { get; set; }
+        public bool IsActive { get; set; }
+        public string ModifiedBy { get; set; } = default!;
+    }
+    public class UpdatePurchaseOrderRequest
+    {
+        public int POId { get; set; }
+        public long VendorId { get; set; }
+        public long VendorAddressId { get; set; }
+        public string? VendorContactName { get; set; }
+        public string? VendorContactMobile { get; set; }
+        public string? VendorContactEmail { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string POType { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public string BudgetYear { get; set; } = default!;
+        public string TermsType { get; set; } = default!;
+        public decimal? AdvancePercentage { get; set; }
+        public List<long> TermMasterIds { get; set; } = new();
+        public List<string> AdditionalTerms { get; set; } = new();
+        public string UpdatedBy { get; set; } = default!;
+        public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
+        public List<QuotationFileUpload> Quotations { get; set; } = new();
+        public List<int> DeliveryLocationIds { get; set; } = new();
+    }
+    public class CancelPurchaseOrderRequest
+    {
+        public int POId { get; set; }
+        public string CancelledBy { get; set; } = default!;
+        public string CancellationReason { get; set; } = default!;
     }
 
 }
