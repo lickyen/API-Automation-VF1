@@ -110,7 +110,7 @@ namespace ProductivityApi.Services
             var extension = Path.GetExtension(request.File.FileName);
 
             var fileName =
-                $"{request.FileType}_{Guid.NewGuid():N}{extension}";
+                $"{request.CaseId}_{request.FileType}{extension}";
 
             var filePath = Path.Combine(
                 _appSettings.FilePaths.VOTFilePath,
