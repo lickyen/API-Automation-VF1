@@ -21,8 +21,6 @@
         public Decimal? DisbAmount { get; set; }
         public Decimal? NetDisbAmount { get; set; }
         public Decimal? PendingAmount { get; set; }
-        //public Decimal? TotalOutstanding { get; set; }
-        //public Decimal? PrincipalOutstanding { get; set; }
         public double? Dpd { get; set; }
         public string? Action { get; set; }
         public string? Allocation { get; set; }

@@ -1,16 +1,22 @@
 ﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace ProductivityApi.Repositories
 {
     public class VOTRepository 
     {
-        private readonly IDbConnection _connection;
+        private readonly string _conStr;
 
-        public VOTRepository(IDbConnection connection)
+        public VOTRepository(IConfiguration config)
         {
-            _connection = connection;
+            _conStr = config.GetConnectionString("DBConn");
+        }
+        private IDbConnection GetConnection()
+        {
+            return new SqlConnection(_conStr);
         }
 
         public async Task BulkInsertLanAsync(
@@ -40,15 +46,30 @@ namespace ProductivityApi.Repositories
                 "@CreatedBy",
                 request.CreatedBy);
 
-            await _connection.ExecuteAsync(
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
                 "sp_VOT_BulkInsertLan",
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<VOTModel.MappedLan>> GetLansAsync()
+        {
+            using var connection = GetConnection();
+
+            return await connection.QueryAsync<VOTModel.MappedLan>(
+                "sp_VOT_GetLans",
+                commandType: CommandType.StoredProcedure);
+        }
+
+
         public async Task<IEnumerable<VOTModel.MappedLan>> GetLansByUserAsync(
             VOTModel.GetLansByUserRequest request)
         {
-            return await _connection.QueryAsync<VOTModel.MappedLan>(
+            using var connection = GetConnection();
+
+            return await connection.QueryAsync<VOTModel.MappedLan>(
                 "sp_VOT_GetLansByUser",
                 new
                 {
@@ -57,9 +78,33 @@ namespace ProductivityApi.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
+        public async Task UpdateLanAsync(
+    VOTModel.UpdateLanRequest request)
+        {
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
+                "sp_VOT_UpdateLan",
+                request,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task UpdateLanStatusAsync(
+            VOTModel.UpdateLanStatusRequest request)
+        {
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
+                "sp_VOT_UpdateLanStatus",
+                request,
+                commandType: CommandType.StoredProcedure);
+        }
+
         public async Task<int> InsertCaseAsync(VOTModel.CreateCaseRequest request)
         {
-            return await _connection.ExecuteScalarAsync<int>(
+            using var connection = GetConnection();
+
+            return await connection.ExecuteScalarAsync<int>(
                 "sp_VOT_InsertCase",
                 request,
                 commandType: CommandType.StoredProcedure);
@@ -67,7 +112,9 @@ namespace ProductivityApi.Repositories
 
         public async Task<VOTModel.CaseDetails?> GetCaseByIdAsync(int id)
         {
-            using var multi = await _connection.QueryMultipleAsync(
+            using var connection = GetConnection();
+
+            using var multi = await connection.QueryMultipleAsync(
                 "sp_VOT_GetCaseById",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
@@ -86,7 +133,9 @@ namespace ProductivityApi.Repositories
         public async Task<IEnumerable<VOTModel.Case>> GetCasesByUserAsync(
     VOTModel.GetCasesByUserRequest request)
         {
-            return await _connection.QueryAsync<VOTModel.Case>(
+            using var connection = GetConnection();
+
+            return await connection.QueryAsync<VOTModel.Case>(
                 "sp_VOT_GetCasesByUser",
                 new
                 {
@@ -99,7 +148,9 @@ namespace ProductivityApi.Repositories
 
         public async Task ZdshReviewAsync(VOTModel.ZdshReviewRequest request)
         {
-            await _connection.ExecuteAsync(
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
                 "sp_VOT_ZdshReview",
                 request,
                 commandType: CommandType.StoredProcedure);
@@ -107,7 +158,9 @@ namespace ProductivityApi.Repositories
 
         public async Task MzdshReviewAsync(VOTModel.MzdshReviewRequest request)
         {
-            await _connection.ExecuteAsync(
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
                 "sp_VOT_MzdshReview",
                 request,
                 commandType: CommandType.StoredProcedure);
@@ -115,7 +168,9 @@ namespace ProductivityApi.Repositories
 
         public async Task AuditReviewAsync(VOTModel.AuditReviewRequest request)
         {
-            await _connection.ExecuteAsync(
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
                 "sp_VOT_AuditReview",
                 request,
                 commandType: CommandType.StoredProcedure);
@@ -123,7 +178,9 @@ namespace ProductivityApi.Repositories
 
         public async Task UpdateCaseFileAsync(int caseId, string fileType, string fileName)
         {
-            await _connection.ExecuteAsync(
+            using var connection = GetConnection();
+
+            await connection.ExecuteAsync(
                 "sp_VOT_UpdateCaseFile",
                 new
                 {
@@ -133,5 +190,17 @@ namespace ProductivityApi.Repositories
                 },
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<IEnumerable<VOTModel.ReportData>> GetReportAsync(
+            VOTModel.ReportRequest request)
+        {
+            using var connection = GetConnection();
+
+            return await connection.QueryAsync<VOTModel.ReportData>(
+                "sp_VOT_GetReport",
+                request,
+                commandType: CommandType.StoredProcedure);
+        }
     }
+
 }

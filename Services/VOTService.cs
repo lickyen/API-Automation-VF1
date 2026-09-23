@@ -26,6 +26,15 @@ namespace ProductivityApi.Services
                 "LANs uploaded successfully.");
         }
 
+        public async Task<Response> GetLansAsync()
+        {
+            var result = await _repository.GetLansAsync();
+
+            return new Response(
+                true,
+                result);
+        }
+
         public async Task<Response> GetLansByUserAsync(
             VOTModel.GetLansByUserRequest request)
         {
@@ -34,6 +43,28 @@ namespace ProductivityApi.Services
             return new Response(
                 true,
                 result);
+        }
+
+        public async Task<Response> UpdateLanAsync(
+    VOTModel.UpdateLanRequest request)
+        {
+            await _repository.UpdateLanAsync(request);
+
+            return new Response(
+                true,
+                null,
+                "LAN mapping updated successfully.");
+        }
+
+        public async Task<Response> UpdateLanStatusAsync(
+            VOTModel.UpdateLanStatusRequest request)
+        {
+            await _repository.UpdateLanStatusAsync(request);
+
+            return new Response(
+                true,
+                null,
+                "LAN status updated successfully.");
         }
 
         public async Task<Response> CreateCaseAsync(
@@ -110,7 +141,7 @@ namespace ProductivityApi.Services
             var extension = Path.GetExtension(request.File.FileName);
 
             var fileName =
-                $"{request.FileType}_{Guid.NewGuid():N}{extension}";
+                $"{request.CaseId}_{request.FileType}{extension}";
 
             var filePath = Path.Combine(
                 _appSettings.FilePaths.VOTFilePath,
@@ -160,5 +191,16 @@ namespace ProductivityApi.Services
                 FileDownloadName = request.FileName
             };
         }
+
+        public async Task<Response> GetReportAsync(
+    VOTModel.ReportRequest request)
+        {
+            var result = await _repository.GetReportAsync(request);
+
+            return new Response(
+                true,
+                result);
+        }
+
     }
 }

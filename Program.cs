@@ -120,6 +120,7 @@ builder.Services.AddScoped<CRIFService>();
 builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<AirtelabankService>();
 builder.Services.AddScoped<AnnouncementService>();
+builder.Services.AddScoped<VOTService>();
 
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<SharedRepository>();
@@ -165,6 +166,7 @@ builder.Services.AddScoped<CrifWrapperRepository>();
 builder.Services.AddScoped<PurchaseOrderRepository>();
 builder.Services.AddScoped<AirtelBankRepository>();
 builder.Services.AddScoped<AnnouncementRepository>();
+builder.Services.AddScoped<VOTRepository>();
 
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
