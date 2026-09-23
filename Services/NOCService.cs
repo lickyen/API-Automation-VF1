@@ -1151,9 +1151,10 @@ namespace ProductivityApi.Services
                     if (!string.IsNullOrWhiteSpace(nocEmail))
                         to.Add(nocEmail);
 
-                    var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
-                    to.AddRange(branchRecipients);
-                    to = to.Distinct().ToList();
+                    //var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+                    //to.AddRange(branchRecipients);
+
+                    //to = to.Distinct().ToList();
 
                     if (to.Any())
                         await _emailService.SendEmail(template.Subject, body, to, new List<string>());
