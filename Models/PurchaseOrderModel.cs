@@ -48,6 +48,7 @@
         public string? MSMEDocumentPath { get; set; }
         public string? BankAccountProofPath { get; set; }
         public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDate { get; set; }
         public string? ModifiedBy { get; set; }
     }
     public class VendorDocumentUpload
@@ -107,6 +108,17 @@
         public string VendorName { get; set; } = default!;
         public bool MSMEVendor { get; set; }
         public string Status { get; set; } = default!;
+      
+        public string? RejectionReason { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDate { get; set; }
+    }
+    public class POVendorDashboardResponse
+    {
+        public List<POVendorListItemResponse> Approved { get; set; } = new();
+        public List<POVendorListItemResponse> Pending { get; set; } = new();
+        public List<POVendorListItemResponse> Rejected { get; set; } = new();
+        public List<POVendorListItemResponse> Disabled { get; set; } = new();
     }
     public class POVendorAddressResponse
     {
@@ -655,6 +667,14 @@
         public int POId { get; set; }
         public string CancelledBy { get; set; } = default!;
         public string CancellationReason { get; set; } = default!;
+    }
+
+    public class UpdateVendorStatusRequest
+    {
+        public long VendorId { get; set; }
+        public bool IsActive { get; set; }
+        public string? Reason { get; set; }
+        public string ModifiedBy { get; set; } = default!;
     }
 
 }

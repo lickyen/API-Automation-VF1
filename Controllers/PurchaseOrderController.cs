@@ -31,10 +31,24 @@ namespace ProductivityApi.Controllers
             catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
         }
 
+        /// <summary>POST /api/Purchaseorder/UpdateVendorStatus — enable/disable a vendor</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateVendorStatus([FromBody] UpdateVendorStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateVendorStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Vendor enabled." : "Vendor disabled." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
         /// <summary>GET /api/Purchaseorder/GetPendingVendors — FinanceUser queue</summary>
-        [HttpGet]
-        public async Task<IActionResult> GetPendingVendors()
-            => Ok(await _purchaseOrderService.GetPendingVendorsAsync());
+        //[HttpGet]
+        //public async Task<IActionResult> GetPendingVendors()
+        //    => Ok(await _purchaseOrderService.GetPendingVendorsAsync());
 
         /// <summary>POST /api/Purchaseorder/ApproveVendor — FinanceUser assigns VendorCode</summary>
         [HttpPost]
@@ -55,12 +69,25 @@ namespace ProductivityApi.Controllers
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
+        //[HttpGet]
+        //public async Task<IActionResult> GetVendors([FromQuery] string? status)
+        //{
+        //    var result = await _purchaseOrderService.GetAllVendorsAsync(status);
+        //    return Ok(result);
+        //}
+
+        /// <summary>GET /api/Purchaseorder/GetVendorDashboard?employeeCode=EMP1023</summary>
         [HttpGet]
-        public async Task<IActionResult> GetVendors([FromQuery] string? status)
+        public async Task<IActionResult> GetVendorDashboard([FromQuery] string employeeCode)
         {
-            var result = await _purchaseOrderService.GetAllVendorsAsync(status);
-            return Ok(result);
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            try { return Ok(await _purchaseOrderService.GetVendorDashboardAsync(employeeCode)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
 
         /// <summary>GET /api/Purchaseorder/GetVendorById?vendorId=5</summary>
         [HttpGet]
@@ -88,9 +115,9 @@ namespace ProductivityApi.Controllers
         }
 
         /// <summary>GET /api/Purchaseorder/GetMyRejectedVendors?preparerEmployeeCode=EMP1023 — Preparer's queue to fix and resubmit</summary>
-        [HttpGet]
-        public async Task<IActionResult> GetMyRejectedVendors([FromQuery] string preparerEmployeeCode)
-            => Ok(await _purchaseOrderService.GetMyRejectedVendorsAsync(preparerEmployeeCode));
+        //[HttpGet]
+        //public async Task<IActionResult> GetMyRejectedVendors([FromQuery] string preparerEmployeeCode)
+        //    => Ok(await _purchaseOrderService.GetMyRejectedVendorsAsync(preparerEmployeeCode));
 
 
         /// <summary>GET /api/Purchaseorder/GetDepartments</summary>

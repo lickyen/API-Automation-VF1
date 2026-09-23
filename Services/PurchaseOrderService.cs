@@ -2280,5 +2280,83 @@ namespace ProductivityApi.Services
             catch (Exception ex) { _logger.LogError(ex, "PDF generation failed for PO {POId} after cancellation.", request.POId); }
         }
 
+        public async Task<POVendorDashboardResponse> GetVendorDashboardAsync(string employeeCode)
+        {
+            var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
+                ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
+
+            var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (roles.Count == 0)
+                throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine vendor access.");
+
+            bool isFinanceUser = roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase);
+            bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            bool seesAllPendingRejected = isFinanceUser || isAdmin;
+
+            // Approved and Disabled are shared reference data — everyone sees the full list, regardless of role
+            var approved = (await _repository.GetVendorsByStatusAsync("ACTIVE")).ToList();
+            var disabled = (await _repository.GetDisabledVendorsAsync()).ToList();
+
+            // Pending and Rejected: FinanceUser/Admin see everything (they're the reviewers);
+            // everyone else sees only what they personally created
+            List<POVendorMaster> pending, rejected;
+
+            if (seesAllPendingRejected)
+            {
+                pending = (await _repository.GetVendorsByStatusAsync("PENDING")).ToList();
+                rejected = (await _repository.GetVendorsByStatusAsync("REJECTED")).ToList();
+            }
+            else
+            {
+                pending = (await _repository.GetVendorsByStatusAndCreatorAsync("PENDING", employeeCode)).ToList();
+                rejected = (await _repository.GetVendorsByStatusAndCreatorAsync("REJECTED", employeeCode)).ToList();
+            }
+
+            return new POVendorDashboardResponse
+            {
+                Approved = MapToVendorListResponse(approved),
+                Pending = MapToVendorListResponse(pending),
+                Rejected = MapToVendorListResponse(rejected),
+                Disabled = MapToVendorListResponse(disabled)
+            };
+        }
+
+        private static List<POVendorListItemResponse> MapToVendorListResponse(IEnumerable<POVendorMaster> vendors)
+            => vendors.Select(v => new POVendorListItemResponse
+            {
+                VendorId = v.VendorId,
+                VendorCode = v.VendorCode,
+                VendorName = v.VendorName,
+                MSMEVendor = v.MSMEVendor,
+                Status = v.Status,
+                RejectionReason = v.RejectionReason,
+                CreatedBy = v.CreatedBy,
+                CreatedDate = v.CreatedDate
+            }).ToList();
+
+        public async Task UpdateVendorStatusAsync(UpdateVendorStatusRequest request)
+        {
+            var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (vendor is null)
+                throw new KeyNotFoundException($"Vendor {request.VendorId} not found.");
+
+            // Only ACTIVE and INACTIVE vendors can be toggled this way — PENDING/REJECTED go through the approval flow instead
+            if (vendor.Status != "ACTIVE" && vendor.Status != "INACTIVE")
+                throw new InvalidOperationException($"Vendor cannot be enabled/disabled from its current status ({vendor.Status}). Only Active or Inactive vendors can be toggled.");
+
+            bool alreadyInTargetState = (request.IsActive && vendor.Status == "ACTIVE") || (!request.IsActive && vendor.Status == "INACTIVE");
+            if (alreadyInTargetState)
+                throw new InvalidOperationException($"Vendor is already {(request.IsActive ? "Active" : "Inactive")}.");
+
+            if (!request.IsActive && string.IsNullOrWhiteSpace(request.Reason))
+                throw new ArgumentException("A reason is required when disabling a vendor.");
+
+            string newStatus = request.IsActive ? "ACTIVE" : "INACTIVE";
+            string? reason = request.IsActive ? null : request.Reason;   // clear the reason when re-enabling
+
+            await _repository.UpdateVendorActiveStatusAsync(request.VendorId, newStatus, reason, request.ModifiedBy);
+        }
+
     }
 }

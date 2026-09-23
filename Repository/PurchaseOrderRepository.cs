@@ -1,10 +1,13 @@
 using Dapper;
 using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Humanizer;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
+using System.Reflection.Metadata;
+using System.Runtime.ConstrainedExecution;
 
 namespace ProductivityApi.Repository
 {
@@ -1130,5 +1133,43 @@ WHERE [VendorId] = @VendorId;
             return await connection.QueryAsync<PoPurchaseOrder>(sql);
         }
 
+        public async Task<IEnumerable<POVendorMaster>> GetVendorsByStatusAsync(string status)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorMaster] WHERE [Status] = @Status ORDER BY [CreatedDate] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorMaster>(sql, new { Status = status });
+        }
+
+        public async Task<IEnumerable<POVendorMaster>> GetVendorsByStatusAndCreatorAsync(string status, string createdBy)
+        {
+            const string sql = @"
+        SELECT * FROM [dbo].[PO_VendorMaster]
+        WHERE [Status] = @Status AND [CreatedBy] = @CreatedBy
+        ORDER BY [CreatedDate] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorMaster>(sql, new { Status = status, CreatedBy = createdBy });
+        }
+        public async Task<IEnumerable<POVendorMaster>> GetDisabledVendorsAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorMaster] WHERE [Status] IN ('INACTIVE','BLOCKED') ORDER BY [ModifiedDate] DESC;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorMaster>(sql);
+        }
+        public async Task UpdateVendorActiveStatusAsync(long vendorId, string status, string? reason, string modifiedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorMaster]
+        SET [Status] = @Status, [RejectionReason] = @Reason, [ModifiedBy] = @ModifiedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorId] = @VendorId;"
+            ;
+         
+    
+    using IDbConnection connection = new SqlConnection(_conStr);
+            int rows = await connection.ExecuteAsync(sql, new { VendorId = vendorId, Status = status, Reason = reason, ModifiedBy = modifiedBy });
+
+            if (rows == 0)
+                throw new KeyNotFoundException($"Vendor {vendorId} not found.");
+        }
     }
 }
