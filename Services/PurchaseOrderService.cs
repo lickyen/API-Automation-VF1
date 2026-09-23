@@ -865,15 +865,18 @@ namespace ProductivityApi.Services
                 throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine PO access.");
 
             bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            bool isFinanceUser = roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase);
             var myApproverRoles = roles.Where(r => ApproverRoles.Contains(r)).ToList();
 
             // ---------------- Pending With Me ----------------
             List<PoPurchaseOrder> pendingWithMe = new();
-            if (isAdmin)
+
+            if (isFinanceUser)
             {
-                // Admins generally aren't in the approval chain themselves; leave empty unless "Admin" ever appears as an ApproverRole.
+                // FinanceUser's "pending with me" = POs awaiting THEIR payment action, not approval
+                pendingWithMe = (await _repository.GetPendingPaymentPOEntitiesAsync()).ToList();  
             }
-            else if (myApproverRoles.Count > 0)
+            else if (!isAdmin && myApproverRoles.Count > 0)
             {
                 pendingWithMe = (await _repository.GetPendingWithRolesAsync(myApproverRoles, user.DepartmentCode)).ToList();
             }
@@ -885,8 +888,7 @@ namespace ProductivityApi.Services
                 ? await _repository.GetAllPendingAsync()
                 : await _repository.GetInProgressByDepartmentAsync(user.DepartmentCode);
 
-            // NEW: also pull in POs (any department) this user personally approved a step on, still pending downstream
-            var actedByMe = isAdmin
+            var actedByMe = (isAdmin || isFinanceUser)
                 ? Enumerable.Empty<PoPurchaseOrder>()
                 : await _repository.GetInProgressActedByUserAsync(employeeCode);
 
@@ -896,22 +898,47 @@ namespace ProductivityApi.Services
                 .DistinctBy(p => p.POId)
                 .ToList();
 
+            // ---------------- Rejected — Needs Resubmission ----------------
+            var rejected = isAdmin
+                ? (await _repository.GetAllRejectedAsync()).ToList()
+                : (await _repository.GetRejectedByCreatorAsync(employeeCode)).ToList();
+
             // ---------------- Completed ----------------
-            var completed = isAdmin
-                ? (await _repository.GetAllCompletedAsync()).ToList()
-                : (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
-            // ---------------- Batched "who's it pending with" lookup — ONE call for everything pending across all three buckets ----------------
-            var allPendingPOs = pendingWithMe.Concat(inProgress).ToList();   // Completed POs are never "pending", so excluded
+            List<PoPurchaseOrder> completed;
+
+            if (isAdmin)
+            {
+                completed = (await _repository.GetAllCompletedAsync()).ToList();
+            }
+            else if (isFinanceUser)
+            {
+                // FinanceUser's "completed" = POs where THEY specifically recorded the payment
+                completed = (await _repository.GetCompletedPaidByFinanceUserAsync(employeeCode)).ToList();
+            }
+            else
+            {
+                var completedDept = (await _repository.GetCompletedByDepartmentAsync(user.DepartmentCode)).ToList();
+                var actedByMeCompleted = await _repository.GetCompletedActedByUserAsync(employeeCode);
+
+                completed = completedDept
+                    .Concat(actedByMeCompleted)
+                    .DistinctBy(p => p.POId)
+                    .OrderByDescending(p => p.ModifiedDt ?? p.CreatedDt)
+                    .ToList();
+            }
+
+            // ---------------- Pending-role lookup ----------------
+            var allPendingPOs = pendingWithMe.Concat(inProgress).ToList();
             var pendingRoleMap = await GetPendingRolesForPOsAsync(allPendingPOs);
 
             return new PurchaseOrderDashboardResponse
             {
                 PendingWithMe = MapToListResponse(pendingWithMe, pendingRoleMap).ToList(),
                 InProgress = MapToListResponse(inProgress, pendingRoleMap).ToList(),
+                RejectedNeedsResubmission = MapToListResponse(rejected, pendingRoleMap).ToList(),
                 Completed = MapToListResponse(completed, pendingRoleMap).ToList()
             };
         }
-
         private static IEnumerable<PurchaseOrderListItemResponse> MapToListResponse(
       IEnumerable<PoPurchaseOrder> purchaseOrders, Dictionary<int, string?> pendingRoleMap)
       => purchaseOrders.Select(po => new PurchaseOrderListItemResponse
@@ -997,8 +1024,11 @@ namespace ProductivityApi.Services
 
             if (!request.IsApproved)
             {
-                
-                await _repository.UpdatePOStatusAsync(po.POId, "Rejected", 0);
+                await _repository.MarkApprovalStepActionedAsync(
+       currentStep.ApprovalId, request.ApproverEmployeeCode, "Rejected", request.Remarks);
+                await _repository.UpdatePOStatusAndReasonAsync(po.POId, "Rejected", 0, request.Remarks);
+
+                //await _repository.UpdatePOStatusAsync(po.POId, "Rejected", 0);
                 try
                 {
                     await GeneratePurchaseOrderPdfAsync(po.POId);
@@ -1009,7 +1039,7 @@ namespace ProductivityApi.Services
                     _logger.LogError(ex, "PDF generation failed for PO {POId} after creation. PO was still created successfully.", po.POId);
                 }
 
-                //await GenerateAndSavePurchaseOrderPdfAsync(po.POId); 
+             
                 return;
             }
 
@@ -1743,7 +1773,7 @@ namespace ProductivityApi.Services
 
 
 
-public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
+        public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
     {
         var po = await GetPurchaseOrderByIdAsync(poId);
 
@@ -1954,7 +1984,7 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
         return pdfBytes;
     }
 
-    private static string FormatStatus(string status)
+        private static string FormatStatus(string status)
         => System.Text.RegularExpressions.Regex.Replace(status, "(?<!^)([A-Z])", " $1").ToUpper();
 
         public async Task<BudgetCategoryResponse> CreateBudgetCategoryAsync(CreateBudgetCategoryRequest request)
@@ -2026,6 +2056,306 @@ public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
                 BudgetYear = request.BudgetYear,
                 Budget = request.Budget
             };
+        }
+
+        public async Task UpdateBudgetCategoryStatusAsync(UpdateBudgetCategoryStatusRequest request)
+        {
+            var category = await _repository.GetBudgetCategoryByIdAsync(request.BudgetCategoryId)
+                ?? throw new KeyNotFoundException($"BudgetCategoryId {request.BudgetCategoryId} not found.");
+
+            if (category.IsActive == request.IsActive)
+            {
+                throw new InvalidOperationException(
+                    $"BudgetCategoryId {request.BudgetCategoryId} is already {(request.IsActive ? "active" : "inactive")}.");
+            }
+
+            await _repository.UpdateBudgetCategoryStatusAsync(request.BudgetCategoryId, request.IsActive, request.ModifiedBy);
+        }
+
+        public async Task<PurchaseOrderResponse> UpdatePurchaseOrderAsync(UpdatePurchaseOrderRequest request)
+        {
+            var existing = await _repository.GetPurchaseOrderForUpdateAsync(request.POId)
+                ?? throw new KeyNotFoundException($"Purchase Order {request.POId} not found.");
+
+            if (existing.Status != "Rejected")
+                throw new InvalidOperationException($"This Purchase Order is not in Rejected status (current status: {existing.Status}). Only rejected POs can be edited and resubmitted.");
+
+            // ---------------- Same pre-validation as CreatePurchaseOrderAsync ----------------
+            if (!await _repository.VendorExistsAsync(request.VendorId))
+                throw new ArgumentException($"VendorId {request.VendorId} does not exist or is not Approved.");
+
+            if (!await _repository.VendorAddressExistsAsync(request.VendorAddressId, request.VendorId))
+                throw new ArgumentException($"VendorAddressId {request.VendorAddressId} does not exist for VendorId {request.VendorId}.");
+
+            if (!await _repository.DepartmentExistsAsync(request.DepartmentCode))
+                throw new ArgumentException($"DepartmentCode '{request.DepartmentCode}' does not exist or is inactive.");
+
+            foreach (var line in request.Items)
+            {
+                if (!await _repository.BudgetCategoryExistsAsync(line.BudgetCategoryId, request.DepartmentCode))
+                    throw new ArgumentException($"BudgetCategoryId {line.BudgetCategoryId} does not exist for department '{request.DepartmentCode}' (item: '{line.ItemDescription}').");
+            }
+
+            if (!string.Equals(request.POType, "Standard", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(request.POType, "Blanket", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("POType must be either 'Standard' or 'Blanket'.");
+
+            if (!string.Equals(request.TermsType, "Normal", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(request.TermsType, "Advance", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("TermsType must be either 'Normal' or 'Advance'.");
+
+            if (string.Equals(request.TermsType, "Advance", StringComparison.OrdinalIgnoreCase))
+            {
+                if (request.AdvancePercentage is null || request.AdvancePercentage <= 0 || request.AdvancePercentage > 100)
+                    throw new ArgumentException("AdvancePercentage is required and must be between 0 and 100 when TermsType is 'Advance'.");
+            }
+            else if (request.AdvancePercentage is not null)
+            {
+                throw new ArgumentException("AdvancePercentage should not be provided when TermsType is 'Normal'.");
+            }
+
+            if (!await _repository.SubClassificationExistsAsync(request.DepartmentCode, request.Classification, request.SubClassification))
+                throw new ArgumentException($"SubClassification '{request.SubClassification}' is not valid for department '{request.DepartmentCode}' / classification '{request.Classification}'.");
+
+            if (request.DeliveryLocationIds is null || request.DeliveryLocationIds.Count == 0)
+                throw new ArgumentException("At least one DeliveryLocationId is required.");
+
+            if (!await _repository.AllLocationsExistAsync(request.DeliveryLocationIds))
+                throw new ArgumentException("One or more DeliveryLocationIds do not exist or are inactive.");
+
+            var selectedTerms = new List<Models.PoTermsConditionsMaster>();
+            if (request.TermMasterIds is { Count: > 0 })
+            {
+                var allTerms = (await _repository.GetTermsMasterAsync()).ToList();
+                var validIds = allTerms.Select(t => t.TermMasterId).ToHashSet();
+                var invalidIds = request.TermMasterIds.Where(id => !validIds.Contains(id)).ToList();
+
+                if (invalidIds.Count > 0)
+                    throw new ArgumentException($"The following TermMasterId(s) do not exist or are inactive: {string.Join(", ", invalidIds)}.");
+
+                selectedTerms = allTerms.Where(t => request.TermMasterIds.Contains(t.TermMasterId)).ToList();
+            }
+            // ==================== LOAD CONFIGURABLE THRESHOLDS ====================
+
+            var settings = await _repository.GetSettingsAsync(
+                new[] { "QuotationThresholdAmount", "ApprovalTier1Threshold", "ApprovalTier2Threshold" });
+
+            decimal quotationThreshold = settings.TryGetValue("QuotationThresholdAmount", out var qt) && decimal.TryParse(qt, out var qtVal)
+                ? qtVal : 25000m;   // fallback default if setting missing
+
+            decimal tier1Threshold = settings.TryGetValue("ApprovalTier1Threshold", out var t1) && decimal.TryParse(t1, out var t1Val)
+                ? t1Val : 100000m;
+
+            decimal tier2Threshold = settings.TryGetValue("ApprovalTier2Threshold", out var t2) && decimal.TryParse(t2, out var t2Val)
+                ? t2Val : 3000000m;
+
+            // ---------------- Build items (same GST logic) ----------------
+            var items = new List<Models.PoPurchaseOrderItem>();
+            decimal subTotal = 0m, gstTotal = 0m;
+
+            foreach (var line in request.Items)
+            {
+                decimal amount = line.Quantity * line.UnitPrice;
+                decimal gstAmount = Math.Round(amount * line.GSTRate / 100m, 2);
+
+                items.Add(new Models.PoPurchaseOrderItem
+                {
+                    ItemDescription = line.ItemDescription,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.UnitPrice,
+                    Amount = amount,
+                    GSTRate = line.GSTRate,
+                    GSTAmount = gstAmount,
+                    BudgetCategoryId = line.BudgetCategoryId
+                });
+
+                subTotal += amount;
+                gstTotal += gstAmount;
+            }
+
+            decimal totalAmount = subTotal + gstTotal;
+
+            bool quotationRequired = totalAmount > quotationThreshold;
+            if (quotationRequired && (request.Quotations is null || request.Quotations.Count == 0))
+                throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {quotationThreshold:N0}.");
+
+            // ---------------- Budget check ----------------
+            var categoryTotals = items.GroupBy(i => i.BudgetCategoryId).ToDictionary(g => g.Key, g => g.Sum(i => i.Amount + i.GSTAmount));
+            var allocatedByCategory = await _repository.GetBudgetAmountsAsync(categoryTotals.Keys, request.BudgetYear);
+            var consumedByCategory = await _repository.GetConsumedBudgetsAsync(categoryTotals.Keys, request.BudgetYear);
+
+            var exceededCategories = new HashSet<int>();
+            foreach (var (categoryId, thisPoAmount) in categoryTotals)
+            {
+                bool hasAllocation = allocatedByCategory.TryGetValue(categoryId, out var allocated);
+                decimal consumed = consumedByCategory.TryGetValue(categoryId, out var c) ? c : 0m;
+                if (!hasAllocation || (consumed + thisPoAmount) > allocated)
+                    exceededCategories.Add(categoryId);
+            }
+
+            foreach (var item in items)
+                item.IsBudgetExceeded = exceededCategories.Contains(item.BudgetCategoryId);
+
+            bool budgetExceeded = items.Any(i => i.IsBudgetExceeded);
+
+            // ---------------- Update header, wipe & re-insert child rows ----------------
+            var po = new Models.PoPurchaseOrder
+            {
+                POId = request.POId,
+                VendorId = request.VendorId,
+                VendorAddressId = request.VendorAddressId,
+                VendorContactName = request.VendorContactName,
+                VendorContactMobile = request.VendorContactMobile,
+                VendorContactEmail = request.VendorContactEmail,
+                DepartmentCode = request.DepartmentCode,
+                POType = request.POType,
+                Classification = request.Classification,
+                SubClassification = request.SubClassification,
+                BudgetYear = request.BudgetYear,
+                TermsType = request.TermsType,
+                AdvancePercentage = request.AdvancePercentage,
+                SubTotal = subTotal,
+                GSTAmount = gstTotal,
+                TotalAmount = totalAmount,
+                IsBudgetExceeded = budgetExceeded,
+                QuotationRequired = quotationRequired,
+                ModifiedBy = request.UpdatedBy
+            };
+
+            await _repository.DeletePurchaseOrderChildDataAsync(request.POId);
+            await _repository.UpdatePurchaseOrderHeaderAsync(po);
+
+            var itemsList = items.ToList();
+            await _repository.AddPurchaseOrderItemsAsync(request.POId, itemsList);
+
+            var savedQuotationPaths = SaveQuotationFiles(request.Quotations, request.BudgetYear, request.POId);
+            await _repository.AddQuotationsAsync(request.POId, savedQuotationPaths);
+
+            if (selectedTerms.Count > 0)
+                await _repository.AddPurchaseOrderTermsAsync(request.POId, request.TermMasterIds, request.UpdatedBy);
+
+            var cleanedAdditionalTerms = (request.AdditionalTerms ?? new List<string>())
+                .Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList();
+            if (cleanedAdditionalTerms.Count > 0)
+                await _repository.AddAdditionalTermsAsync(request.POId, cleanedAdditionalTerms, request.UpdatedBy);
+
+            await _repository.AddPurchaseOrderDeliveryLocationsAsync(request.POId, request.DeliveryLocationIds, request.UpdatedBy);
+
+            // Fresh approval chain — re-enters at step 1, full re-approval required
+            var roles = BuildApprovalChain(totalAmount, budgetExceeded, tier1Threshold, tier2Threshold);
+            var steps = roles.Select((role, i) => new Models.PoPurchaseOrderApprovalHistory
+            {
+                StepNumber = i + 1,
+                ApproverRole = role
+            }).ToList();
+            await _repository.AddApprovalStepsAsync(request.POId, steps);
+
+            var response = await GetPurchaseOrderByIdAsync(request.POId);
+
+            try { await GeneratePurchaseOrderPdfAsync(request.POId); }
+            catch (Exception ex) { _logger.LogError(ex, "PDF generation failed for PO {POId} after resubmission.", request.POId); }
+
+            return response;
+        }
+        public async Task CancelPurchaseOrderAsync(CancelPurchaseOrderRequest request)
+        {
+            var po = await _repository.GetPurchaseOrderForUpdateAsync(request.POId)
+                ?? throw new KeyNotFoundException($"Purchase Order {request.POId} not found.");
+
+            // Only the Preparer who created it can cancel
+            if (!string.Equals(po.CreatedBy, request.CancelledBy, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Only the Preparer who created this Purchase Order can cancel it.");
+
+            // Can cancel at any stage EXCEPT once fully Approved (or already Cancelled/Rejected)
+            var cancellableStatuses = new[] { "Draft", "PendingApproval", "PendingPayment" };
+            if (!cancellableStatuses.Contains(po.Status))
+                throw new InvalidOperationException($"This Purchase Order cannot be cancelled from its current status ({po.Status}).");
+
+            if (string.IsNullOrWhiteSpace(request.CancellationReason))
+                throw new ArgumentException("CancellationReason is required.");
+
+            await _repository.CancelPurchaseOrderAsync(request.POId, request.CancellationReason, request.CancelledBy);
+
+            try { await GeneratePurchaseOrderPdfAsync(request.POId); }
+            catch (Exception ex) { _logger.LogError(ex, "PDF generation failed for PO {POId} after cancellation.", request.POId); }
+        }
+
+        public async Task<POVendorDashboardResponse> GetVendorDashboardAsync(string employeeCode)
+        {
+            var user = await _repository.GetActiveUserByEmployeeCodeAsync(employeeCode)
+                ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
+
+            var roles = (await _repository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (roles.Count == 0)
+                throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine vendor access.");
+
+            bool isFinanceUser = roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase);
+            bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            bool seesAllPendingRejected = isFinanceUser || isAdmin;
+
+            // Approved and Disabled are shared reference data — everyone sees the full list, regardless of role
+            var approved = (await _repository.GetVendorsByStatusAsync("ACTIVE")).ToList();
+            var disabled = (await _repository.GetDisabledVendorsAsync()).ToList();
+
+            // Pending and Rejected: FinanceUser/Admin see everything (they're the reviewers);
+            // everyone else sees only what they personally created
+            List<POVendorMaster> pending, rejected;
+
+            if (seesAllPendingRejected)
+            {
+                pending = (await _repository.GetVendorsByStatusAsync("PENDING")).ToList();
+                rejected = (await _repository.GetVendorsByStatusAsync("REJECTED")).ToList();
+            }
+            else
+            {
+                pending = (await _repository.GetVendorsByStatusAndCreatorAsync("PENDING", employeeCode)).ToList();
+                rejected = (await _repository.GetVendorsByStatusAndCreatorAsync("REJECTED", employeeCode)).ToList();
+            }
+
+            return new POVendorDashboardResponse
+            {
+                Approved = MapToVendorListResponse(approved),
+                Pending = MapToVendorListResponse(pending),
+                Rejected = MapToVendorListResponse(rejected),
+                Disabled = MapToVendorListResponse(disabled)
+            };
+        }
+
+        private static List<POVendorListItemResponse> MapToVendorListResponse(IEnumerable<POVendorMaster> vendors)
+            => vendors.Select(v => new POVendorListItemResponse
+            {
+                VendorId = v.VendorId,
+                VendorCode = v.VendorCode,
+                VendorName = v.VendorName,
+                MSMEVendor = v.MSMEVendor,
+                Status = v.Status,
+                RejectionReason = v.RejectionReason,
+                CreatedBy = v.CreatedBy,
+                CreatedDate = v.CreatedDate
+            }).ToList();
+
+        public async Task UpdateVendorStatusAsync(UpdateVendorStatusRequest request)
+        {
+            var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (vendor is null)
+                throw new KeyNotFoundException($"Vendor {request.VendorId} not found.");
+
+            // Only ACTIVE and INACTIVE vendors can be toggled this way — PENDING/REJECTED go through the approval flow instead
+            if (vendor.Status != "ACTIVE" && vendor.Status != "INACTIVE")
+                throw new InvalidOperationException($"Vendor cannot be enabled/disabled from its current status ({vendor.Status}). Only Active or Inactive vendors can be toggled.");
+
+            bool alreadyInTargetState = (request.IsActive && vendor.Status == "ACTIVE") || (!request.IsActive && vendor.Status == "INACTIVE");
+            if (alreadyInTargetState)
+                throw new InvalidOperationException($"Vendor is already {(request.IsActive ? "Active" : "Inactive")}.");
+
+            if (!request.IsActive && string.IsNullOrWhiteSpace(request.Reason))
+                throw new ArgumentException("A reason is required when disabling a vendor.");
+
+            string newStatus = request.IsActive ? "ACTIVE" : "INACTIVE";
+            string? reason = request.IsActive ? null : request.Reason;   // clear the reason when re-enabling
+
+            await _repository.UpdateVendorActiveStatusAsync(request.VendorId, newStatus, reason, request.ModifiedBy);
         }
 
     }

@@ -70,6 +70,7 @@ builder.Services.AddHangfire(config =>
 builder.Services.AddHangfireServer();
 
 builder.Services.AddHttpClient<PLFService>();
+builder.Services.AddHttpClient<CRIFService>();
 builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddScoped<EmailService>();
@@ -114,6 +115,7 @@ builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
 builder.Services.AddScoped<IndusArchivedService>();
 builder.Services.AddScoped<WabaWtsappHookService>();
 builder.Services.AddScoped<ZeroBalanceDayService>();
+builder.Services.AddScoped<CRIFService>();
 
 builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<AirtelabankService>();
@@ -159,6 +161,7 @@ builder.Services.AddScoped<IndusArchivedRepository>();
 builder.Services.AddScoped<WabaWtsappHookRepository>();
 builder.Services.AddScoped<ZeroBalanceDayRepository>();
 builder.Services.AddScoped<GoDigitRepository>();
+builder.Services.AddScoped<CrifWrapperRepository>();
 
 builder.Services.AddScoped<PurchaseOrderRepository>();
 builder.Services.AddScoped<AirtelBankRepository>();
