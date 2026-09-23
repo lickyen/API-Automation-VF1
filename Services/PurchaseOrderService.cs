@@ -1088,64 +1088,98 @@ namespace ProductivityApi.Services
         public Task<IEnumerable<string>> GetSubClassificationsAsync(string departmentCode, string classification)
     => _repository.GetSubClassificationsAsync(departmentCode, classification);
 
-        public async Task<DepartmentBudgetUtilizationResponse> GetDepartmentBudgetUtilizationAsync(string departmentCode, string budgetYear)
+        public async Task<DepartmentBudgetUtilizationResponse> GetDepartmentBudgetUtilizationAsync(string? departmentCode, string budgetYear)
         {
-            if (!await _repository.DepartmentExistsAsync(departmentCode))
+            if (!string.IsNullOrWhiteSpace(departmentCode) && !await _repository.DepartmentExistsAsync(departmentCode))
                 throw new ArgumentException($"DepartmentCode '{departmentCode}' does not exist or is inactive.");
 
             var rows = (await _repository.GetDepartmentBudgetUtilizationAsync(departmentCode, budgetYear)).ToList();
 
-            var classifications = rows
-                .GroupBy(r => (string)r.Classification)
-                .Select(group =>
-                {
-                    var categories = group.Select(r =>
+            List<ClassificationBudgetUtilizationResponse> BuildClassifications(IEnumerable<dynamic> deptRows)
+                => deptRows
+                    .GroupBy(r => (string)r.Classification)
+                    .Select(group =>
                     {
-                        decimal allocated = r.AllocatedAmount;
-                        decimal used = r.UsedAmount;
-                        decimal remaining = allocated - used;
-                        decimal usedPct = allocated > 0 ? Math.Round((used / allocated) * 100m, 2) : 0m;
-
-                        return new BudgetUtilizationResponse
+                        var categories = group.Select(r => new BudgetUtilizationResponse
                         {
                             BudgetCategoryId = r.BudgetCategoryId,
                             SubClassification = r.SubClassification,
                             ItemCategory = r.ItemCategory,
-                            AllocatedAmount = allocated,
-                            UsedAmount = used,
-                            RemainingAmount = remaining,
-                            UsedPercentage = usedPct
+                            AllocatedAmount = r.AllocatedAmount,
+                            UsedAmount = r.UsedAmount,
+                            RemainingAmount = r.AllocatedAmount - r.UsedAmount,
+                            UsedPercentage = r.AllocatedAmount > 0 ? Math.Round((decimal)r.UsedAmount / r.AllocatedAmount * 100m, 2) : 0m
+                        }).ToList();
+
+                        decimal classAllocated = categories.Sum(c => c.AllocatedAmount);
+                        decimal classUsed = categories.Sum(c => c.UsedAmount);
+
+                        return new ClassificationBudgetUtilizationResponse
+                        {
+                            Classification = group.Key,
+                            TotalAllocated = classAllocated,
+                            TotalUsed = classUsed,
+                            TotalRemaining = classAllocated - classUsed,
+                            UsedPercentage = classAllocated > 0 ? Math.Round(classUsed / classAllocated * 100m, 2) : 0m,
+                            Categories = categories
                         };
-                    }).ToList();
+                    })
+                    .OrderBy(c => c.Classification)
+                    .ToList();
 
-                    decimal classAllocated = categories.Sum(c => c.AllocatedAmount);
-                    decimal classUsed = categories.Sum(c => c.UsedAmount);
+            if (!string.IsNullOrWhiteSpace(departmentCode))
+            {
+                // Single department requested — same shape as before
+                var classifications = BuildClassifications(rows);
+                decimal totalAllocated = classifications.Sum(c => c.TotalAllocated);
+                decimal totalUsed = classifications.Sum(c => c.TotalUsed);
 
-                    return new ClassificationBudgetUtilizationResponse
+                return new DepartmentBudgetUtilizationResponse
+                {
+                    DepartmentCode = departmentCode,
+                    BudgetYear = budgetYear,
+                    TotalAllocated = totalAllocated,
+                    TotalUsed = totalUsed,
+                    TotalRemaining = totalAllocated - totalUsed,
+                    OverallUsedPercentage = totalAllocated > 0 ? Math.Round(totalUsed / totalAllocated * 100m, 2) : 0m,
+                    Classifications = classifications
+                };
+            }
+
+            // No department specified — group by department, then classification within each
+            var departments = rows
+                .GroupBy(r => (string)r.DepartmentCode)
+                .Select(deptGroup =>
+                {
+                    var classifications = BuildClassifications(deptGroup);
+                    decimal deptAllocated = classifications.Sum(c => c.TotalAllocated);
+                    decimal deptUsed = classifications.Sum(c => c.TotalUsed);
+
+                    return new DepartmentBreakdownResponse
                     {
-                        Classification = group.Key,
-                        TotalAllocated = classAllocated,
-                        TotalUsed = classUsed,
-                        TotalRemaining = classAllocated - classUsed,
-                        UsedPercentage = classAllocated > 0 ? Math.Round((classUsed / classAllocated) * 100m, 2) : 0m,
-                        Categories = categories
+                        DepartmentCode = deptGroup.Key,
+                        TotalAllocated = deptAllocated,
+                        TotalUsed = deptUsed,
+                        TotalRemaining = deptAllocated - deptUsed,
+                        UsedPercentage = deptAllocated > 0 ? Math.Round(deptUsed / deptAllocated * 100m, 2) : 0m,
+                        Classifications = classifications
                     };
                 })
-                .OrderBy(c => c.Classification)
+                .OrderBy(d => d.DepartmentCode)
                 .ToList();
 
-            decimal totalAllocated = classifications.Sum(c => c.TotalAllocated);
-            decimal totalUsed = classifications.Sum(c => c.TotalUsed);
+            decimal orgAllocated = departments.Sum(d => d.TotalAllocated);
+            decimal orgUsed = departments.Sum(d => d.TotalUsed);
 
             return new DepartmentBudgetUtilizationResponse
             {
-                DepartmentCode = departmentCode,
+                DepartmentCode = null,
                 BudgetYear = budgetYear,
-                TotalAllocated = totalAllocated,
-                TotalUsed = totalUsed,
-                TotalRemaining = totalAllocated - totalUsed,
-                OverallUsedPercentage = totalAllocated > 0 ? Math.Round((totalUsed / totalAllocated) * 100m, 2) : 0m,
-                Classifications = classifications
+                TotalAllocated = orgAllocated,
+                TotalUsed = orgUsed,
+                TotalRemaining = orgAllocated - orgUsed,
+                OverallUsedPercentage = orgAllocated > 0 ? Math.Round(orgUsed / orgAllocated * 100m, 2) : 0m,
+                Departments = departments
             };
         }
         public async Task RecordPaymentAsync(RecordPaymentRequest request)

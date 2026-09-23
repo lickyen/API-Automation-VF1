@@ -737,6 +737,7 @@ WHERE [VendorId] = @VendorId;
             const string sql = @"
         SELECT
             bc.[BudgetCategoryId],
+            bc.[DepartmentCode],
             bc.[Classification],
             bc.[SubClassification],
             bc.[ItemCategory],
@@ -752,10 +753,9 @@ WHERE [VendorId] = @VendorId;
             WHERE po.[BudgetYear] = @BudgetYear AND po.[Status] = 'Approved'
             GROUP BY poi.[BudgetCategoryId]
         ) consumed ON consumed.[BudgetCategoryId] = bc.[BudgetCategoryId]
-        WHERE bc.[DepartmentCode] = @DepartmentCode
-          AND bc.[IsActive] = 1
-        ORDER BY bc.[Classification], bc.[SubClassification], bc.[ItemCategory];";
-
+        WHERE bc.[IsActive] = 1
+          AND (@DepartmentCode IS NULL OR bc.[DepartmentCode] = @DepartmentCode)
+        ORDER BY bc.[DepartmentCode], bc.[Classification], bc.[SubClassification], bc.[ItemCategory];";
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync(sql, new { DepartmentCode = departmentCode, BudgetYear = budgetYear });
         }

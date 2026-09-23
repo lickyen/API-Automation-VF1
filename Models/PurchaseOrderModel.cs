@@ -497,13 +497,23 @@
 
     public class DepartmentBudgetUtilizationResponse
     {
-        public string DepartmentCode { get; set; } = default!;
+        public string? DepartmentCode { get; set; } = default!;
         public string BudgetYear { get; set; } = default!;
         public decimal TotalAllocated { get; set; }
         public decimal TotalUsed { get; set; }
         public decimal TotalRemaining { get; set; }
         public decimal OverallUsedPercentage { get; set; }
+        public List<DepartmentBreakdownResponse> Departments { get; set; } = new();
         public List<ClassificationBudgetUtilizationResponse> Classifications { get; set; } = new();   // <-- NEW grouping level
+    }
+    public class DepartmentBreakdownResponse
+    {
+        public string DepartmentCode { get; set; } = default!;
+        public decimal TotalAllocated { get; set; }
+        public decimal TotalUsed { get; set; }
+        public decimal TotalRemaining { get; set; }
+        public decimal UsedPercentage { get; set; }
+        public List<ClassificationBudgetUtilizationResponse> Classifications { get; set; } = new();
     }
     public class ClassificationBudgetUtilizationResponse
     {

@@ -231,7 +231,7 @@ namespace ProductivityApi.Controllers
 
         /// <summary>GET /api/Purchaseorder/GetDepartmentBudgetUtilization?departmentCode=IT&budgetYear=FY2026-27</summary>
         [HttpGet]
-        public async Task<IActionResult> GetDepartmentBudgetUtilization([FromQuery] string departmentCode, [FromQuery] string budgetYear)
+        public async Task<IActionResult> GetDepartmentBudgetUtilization([FromQuery] string? departmentCode, [FromQuery] string budgetYear)
         {
             try
             {
