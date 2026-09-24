@@ -1,6 +1,7 @@
 ﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.DirectoryServices.Protocols;
 using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Services
@@ -318,6 +319,12 @@ namespace ProductivityApi.Services
         public Task<List<SARFAESILanMapping>> GetNewLansAsync()
         {
             return _repository.GetNewLansAsync();
+        }
+
+        public Task<string> UpdateLegalDetailsAsync(
+            SARFAESIPhysicalFilingLegalDetailsUpdateDto request)
+        {
+            return _repository.UpdateLegalDetailsAsync(request);
         }
 
 

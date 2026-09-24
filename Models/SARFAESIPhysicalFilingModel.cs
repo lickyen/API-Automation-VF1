@@ -526,4 +526,23 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; } = string.Empty;
     }
 
+    public class SARFAESIPhysicalFilingLegalDetailsUpdateDto
+    {
+        public int CaseId { get; set; }
+
+        public int? AdvocateId { get; set; }
+        public DateTime? AdvocateAssignmentDate { get; set; }
+
+        public string? FilingType { get; set; }
+        public string? CourtName { get; set; }
+
+        public DateTime? EFilingDate { get; set; }
+        public string? EFilingCaseNumber { get; set; }
+
+        public DateTime? PhysicalFilingDate { get; set; }
+        public string? PhysicalFilingCaseNumber { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
 }

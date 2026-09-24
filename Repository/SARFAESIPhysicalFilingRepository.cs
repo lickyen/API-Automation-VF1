@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
+using System.DirectoryServices.Protocols;
 
 namespace ProductivityApi.Repository
 {
@@ -370,6 +371,31 @@ namespace ProductivityApi.Repository
                 "sp_SARFAESIPhysicalFiling_GetNewLans",
                 commandType: CommandType.StoredProcedure
             )).ToList();
+        }
+
+        public async Task<string> UpdateLegalDetailsAsync(
+            SARFAESIPhysicalFilingLegalDetailsUpdateDto request)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.ExecuteAsync(
+                "sp_SARFAESIPhysicalFiling_UpdateLegalDetails",
+                new
+                {
+                    request.CaseId,
+                    request.AdvocateId,
+                    request.AdvocateAssignmentDate,
+                    request.FilingType,
+                    request.CourtName,
+                    request.EFilingDate,
+                    request.EFilingCaseNumber,
+                    request.PhysicalFilingDate,
+                    request.PhysicalFilingCaseNumber,
+                    request.UpdatedBy
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return "Details updated successfully.";
         }
     }
 }
