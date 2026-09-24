@@ -23,6 +23,14 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("documentMaster/additional")]
+        public async Task<IActionResult> GetAdditionalDocuments([FromQuery] int caseId)
+        {
+            var data = await _service.GetAvailableAdditionalDocumentsAsync(caseId);
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("documentMaster/add")]
         public async Task<IActionResult> AddDocumentMaster([FromBody] SARFAESIPhysicalFilingDocumentMasterAddDto dto)
         {

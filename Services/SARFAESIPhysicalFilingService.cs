@@ -52,6 +52,11 @@ namespace ProductivityApi.Services
             return updated ? (true, dto.IsActive ? "Document enabled successfully." : "Document disabled successfully.") : (false, "Document not found.");
         }
 
+        public Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetAvailableAdditionalDocumentsAsync(int caseId)
+        {
+            return _repository.GetAvailableAdditionalDocumentsAsync(caseId);
+        }
+
         public async Task<SARFAESIPhysicalFilingCase?> GetCaseAsync(int caseId)
         {
             var data = await _repository.GetCaseAsync(caseId);
