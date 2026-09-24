@@ -605,7 +605,7 @@ namespace ProductivityApi.Services
 
             return results;
         }
-        public async Task<IEnumerable<BudgetCategoryResponse>> GetBudgetCategoriesAsync(string departmentCode, string? classification)
+        public async Task<IEnumerable<BudgetCategoryResponse>> GetBudgetCategoriesAsync(string? departmentCode, string? classification)
         {
             var categories = await _repository.GetBudgetCategoriesAsync(departmentCode, classification);
 
@@ -615,7 +615,8 @@ namespace ProductivityApi.Services
                 DepartmentCode = c.DepartmentCode,
                 Classification = c.Classification,
                 SubClassification = c.SubClassification,
-                ItemCategory = c.ItemCategory
+                ItemCategory = c.ItemCategory,
+                IsActive=c.IsActive
             });
         }
 

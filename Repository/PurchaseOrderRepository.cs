@@ -298,15 +298,16 @@ WHERE [VendorId] = @VendorId;
 
         // ---------------- Budget Category Master (scoped by Department) ----------------
 
-        public async Task<IEnumerable<PoBudgetCategory>> GetBudgetCategoriesAsync(string departmentCode, string? classification = null)
+        public async Task<IEnumerable<PoBudgetCategory>> GetBudgetCategoriesAsync(string? departmentCode, string? classification = null)
         {
             const string sql = @"
         SELECT [BudgetCategoryId], [DepartmentCode], [Classification], [SubClassification], [ItemCategory], [IsActive]
         FROM [dbo].[PO_BudgetCategoryMaster]
-        WHERE [DepartmentCode] = @DepartmentCode
-          AND [IsActive] = 1
+        WHERE [IsActive] = 1
+          AND (@DepartmentCode IS NULL OR [DepartmentCode] = @DepartmentCode)
           AND (@Classification IS NULL OR [Classification] = @Classification)
-        ORDER BY [Classification], [SubClassification], [ItemCategory];";
+        ORDER BY [DepartmentCode], [Classification], [SubClassification], [ItemCategory];";
+
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<PoBudgetCategory>(sql, new { DepartmentCode = departmentCode, Classification = classification });

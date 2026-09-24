@@ -69,12 +69,12 @@ namespace ProductivityApi.Controllers
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
-        //[HttpGet]
-        //public async Task<IActionResult> GetVendors([FromQuery] string? status)
-        //{
-        //    var result = await _purchaseOrderService.GetAllVendorsAsync(status);
-        //    return Ok(result);
-        //}
+        [HttpGet]
+        public async Task<IActionResult> GetVendors([FromQuery] string? status)
+        {
+            var result = await _purchaseOrderService.GetAllVendorsAsync(status);
+            return Ok(result);
+        }
 
         /// <summary>GET /api/Purchaseorder/GetVendorDashboard?employeeCode=EMP1023</summary>
         [HttpGet]
@@ -143,7 +143,7 @@ namespace ProductivityApi.Controllers
             => Ok(await _purchaseOrderService.GetTermsMasterAsync(termCategory));
         /// <summary>GET /api/Purchaseorder/GetBudgetCategories?departmentCode=Admin&classification=Capex</summary>
         [HttpGet]
-        public async Task<IActionResult> GetBudgetCategories([FromQuery] string departmentCode, [FromQuery] string? classification)
+        public async Task<IActionResult> GetBudgetCategories([FromQuery] string? departmentCode, [FromQuery] string? classification)
             => Ok(await _purchaseOrderService.GetBudgetCategoriesAsync(departmentCode, classification));
 
         /// <summary>POST /api/Purchaseorder/CreatePurchaseOrder</summary>
