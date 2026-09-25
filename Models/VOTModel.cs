@@ -8,6 +8,9 @@
             public Case? Case { get; set; }
 
             public List<Log> Logs { get; set; } = [];
+
+            public List<Upload> Uploads { get; set; } = [];
+
         }
 
         public class Case
@@ -81,6 +84,22 @@
             public string? CreatedBy { get; set; }
             public DateTime CreatedDt { get; set; }
         }
+
+        public class Upload
+        {
+            public long Id { get; set; }
+
+            public long CaseId { get; set; }
+
+            public string FileType { get; set; } = string.Empty;
+
+            public string FilePath { get; set; } = string.Empty;
+
+            public string? CreatedBy { get; set; }
+
+            public DateTime CreatedDate { get; set; }
+        }
+
 
         public class MappedLan
         {

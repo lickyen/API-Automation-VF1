@@ -1,4 +1,5 @@
 using Hangfire;
+using Humanizer;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
@@ -167,15 +168,10 @@ namespace ProductivityApi.Jobs
                     if (days <= 7)
                         continue;
 
-                    var to = await GetNotificationRecipientsAsync(txn.BranchCode);
+                    var to = await GetNocRecipientsAsync();
+                    var cc = await GetBranchRecipientsAsync(txn.BranchCode);
 
-                    var noc = await GetNocRecipientsAsync();
-
-                    to.AddRange(noc);
-
-                    to = to.Distinct().ToList();
-
-                    if (!to.Any())
+                    if (!to.Any() && !cc.Any())
                         continue;
 
                     var template = _templateService.GetEmailTemplate("NocCourierDelayEmail");
@@ -190,7 +186,7 @@ namespace ProductivityApi.Jobs
                         BuildPlaceholders(txn, days)
                     );
 
-                    await _emailService.SendEmail(subject, body, to, new List<string>());
+                    await _emailService.SendEmail(subject, body, to, cc);
 
                     _logger.Information("Courier delay email sent for transaction {Id}", txn.Id);
                 }
@@ -228,7 +224,6 @@ namespace ProductivityApi.Jobs
                     if (days <= 7)
                         continue;
 
-                    var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
 
                     var template = _templateService.GetEmailTemplate("NocManualStatusUpdateEmail");
 
@@ -243,15 +238,12 @@ namespace ProductivityApi.Jobs
                     );
 
                     var to = await GetNocRecipientsAsync();
+                    var cc = await GetBranchRecipientsAsync(txn.BranchCode);
 
-                    to.AddRange(branchRecipients);
-
-                    to = to.Distinct().ToList();
-
-                    if (!to.Any())
+                    if (!to.Any() && !cc.Any())
                         continue;
 
-                    await _emailService.SendEmail(subject, body, to, new List<string>());
+                    await _emailService.SendEmail(subject, body, to, cc);
 
                     _logger.Information(
                         "Manual status update reminder sent for transaction {Id}",
@@ -318,14 +310,15 @@ namespace ProductivityApi.Jobs
                     // EMAIL
                     //--------------------------------------------------------
 
-                    var to = await GetNotificationRecipientsAsync(txn.BranchCode);
+                    var to = await GetNocRecipientsAsync();
+                    var cc = await GetBranchRecipientsAsync(txn.BranchCode);
 
-                    if (!to.Any())
+                    if (!to.Any() && !cc.Any())
                     {
                         _logger.Warning("No recipients found for transaction {Id}", txn.Id);
-
                         continue;
                     }
+
 
                     var template = _templateService.GetEmailTemplate("NocDeliveredEscalationEmail");
 
@@ -336,7 +329,7 @@ namespace ProductivityApi.Jobs
 
                     var subject = $"NOC Pending Collection >35 Days - {txn.Lan}";
 
-                    await _emailService.SendEmail(subject, body, to, new List<string>());
+                    await _emailService.SendEmail(subject, body, to, cc);
 
                     _logger.Information(
                         "Delivered escalation processed for transaction {Id}",
@@ -407,9 +400,10 @@ namespace ProductivityApi.Jobs
                     // Supervisor reminder every RETURNED_TO_HO_DAYS (3 days)
                     if (days >= RETURNED_TO_HO_DAYS && days % RETURNED_TO_HO_DAYS == 0)
                     {
-                        var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+                        var to = await GetNocRecipientsAsync();
+                        var cc = await GetBranchRecipientsAsync(txn.BranchCode);
 
-                        if (branchRecipients.Any())
+                        if (to.Any() || cc.Any())
                         {
                             var supTemplate = _templateService.GetEmailTemplate(
                                 "NocReturnedReminderEmail"
@@ -428,8 +422,8 @@ namespace ProductivityApi.Jobs
                             await _emailService.SendEmail(
                                 supSubject,
                                 supBody,
-                                branchRecipients,
-                                new List<string>()
+                                to,
+                                cc
                             );
                         }
                     }
@@ -578,7 +572,8 @@ namespace ProductivityApi.Jobs
                     );
 
                     // 3) Ask branch to return documents via email
-                    var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+
+                    var branchRecipients = await GetBranchRecipientsAsync(txn.BranchCode);
 
                     if (branchRecipients.Any())
                     {
@@ -660,10 +655,9 @@ namespace ProductivityApi.Jobs
 
             return to.Distinct().ToList();
         }
-
-        private async Task<List<string>> GetNotificationRecipientsAsync(string branchCode)
+        private async Task<List<string>> GetBranchRecipientsAsync(string branchCode)
         {
-            var to = await GetNocRecipientsAsync();
+            var to = new List<string>();
 
             var branchEmails = await _repository.GetBranchEmailsAsync(branchCode);
 
@@ -681,5 +675,26 @@ namespace ProductivityApi.Jobs
 
             return to.Distinct().ToList();
         }
+
+        //private async Task<List<string>> GetNotificationRecipientsAsync(string branchCode)
+        //{
+        //    var to = await GetNocRecipientsAsync();
+
+        //    var branchEmails = await _repository.GetBranchEmailsAsync(branchCode);
+
+        //    if (branchEmails != null)
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(branchEmails.OPS_Email))
+        //            to.Add(branchEmails.OPS_Email);
+
+        //        if (!string.IsNullOrWhiteSpace(branchEmails.BM_Email))
+        //            to.Add(branchEmails.BM_Email);
+
+        //        if (!string.IsNullOrWhiteSpace(branchEmails.CM_Email))
+        //            to.Add(branchEmails.CM_Email);
+        //    }
+
+        //    return to.Distinct().ToList();
+        //}
     }
 }

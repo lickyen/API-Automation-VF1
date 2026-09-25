@@ -382,36 +382,48 @@ namespace ProductivityApi.Services
                 if (transactions == null || !transactions.Any())
                     return;
 
-                var to = new List<string>();
-
                 var nocEmail = _configuration["NocSettings:NocEmail"];
                 var supervisorEmail = _configuration["NocSettings:SupervisorEmail"];
+
+                var to = new List<string>();
+                var cc = new List<string>();
 
                 if (!string.IsNullOrWhiteSpace(nocEmail))
                     to.Add(nocEmail);
 
                 if (!string.IsNullOrWhiteSpace(supervisorEmail))
-                    to.Add(supervisorEmail);
+                    cc.Add(supervisorEmail);
 
                 to = to.Distinct().ToList();
+                cc = cc.Distinct().ToList();
 
-                if (!to.Any())
+                if (!to.Any() && !cc.Any())
                     return;
 
                 var template = _templateService.GetEmailTemplate("NocDiscrepancyEmail");
 
                 var placeholders = BuildPlaceholders(transactions);
 
-                var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    placeholders
+                );
 
-                await _emailService.SendEmail(template.Subject, body, to, new List<string>());
+                await _emailService.SendEmail(
+                    template.Subject,
+                    body,
+                    to,
+                    cc
+                );
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error sending discrepancy notifications: {ex.Message}", ex);
+                throw new Exception(
+                    $"Error sending discrepancy notifications: {ex.Message}",
+                    ex
+                );
             }
         }
-
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
         {
             return await _repository.UpdatePropertyOwnerAsync(dto);

@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using System.Data;
+using System.DirectoryServices.Protocols;
 
 namespace ProductivityApi.Repository
 {
@@ -20,6 +21,7 @@ namespace ProductivityApi.Repository
 
             return (await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>("sp_SARFAESIPhysicalFiling_GetDocumentMaster", new { IsActive = isActive }, commandType: CommandType.StoredProcedure)).ToList();
         }
+
         public async Task<int> AddDocumentMasterAsync(string documentName, bool isMandatory, string createdBy)
         {
             using var conn = new SqlConnection(_conStr);
@@ -40,6 +42,22 @@ namespace ProductivityApi.Repository
             var rowsAffected = await conn.ExecuteScalarAsync<int>("sp_SARFAESIPhysicalFiling_UpdateDocumentMasterStatus", new { Id = id, IsActive = isActive, UpdatedBy = updatedBy }, commandType: CommandType.StoredProcedure);
 
             return rowsAffected > 0;
+        }
+
+        public async Task<List<SARFAESIPhysicalFilingDocumentMaster>>
+            GetAvailableAdditionalDocumentsAsync(int caseId)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            var result = await conn.QueryAsync<SARFAESIPhysicalFilingDocumentMaster>(
+                "sp_SARFAESIPhysicalFiling_GetAvailableAdditionalDocuments",
+                new
+                {
+                    CaseId = caseId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result.ToList();
         }
 
         public async Task<SARFAESIPhysicalFilingCase?> GetCaseAsync(int caseId)
@@ -353,6 +371,31 @@ namespace ProductivityApi.Repository
                 "sp_SARFAESIPhysicalFiling_GetNewLans",
                 commandType: CommandType.StoredProcedure
             )).ToList();
+        }
+
+        public async Task<string> UpdateLegalDetailsAsync(
+            SARFAESIPhysicalFilingLegalDetailsUpdateDto request)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.ExecuteAsync(
+                "sp_SARFAESIPhysicalFiling_UpdateLegalDetails",
+                new
+                {
+                    request.CaseId,
+                    request.AdvocateId,
+                    request.AdvocateAssignmentDate,
+                    request.FilingType,
+                    request.CourtName,
+                    request.EFilingDate,
+                    request.EFilingCaseNumber,
+                    request.PhysicalFilingDate,
+                    request.PhysicalFilingCaseNumber,
+                    request.UpdatedBy
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return "Details updated successfully.";
         }
     }
 }

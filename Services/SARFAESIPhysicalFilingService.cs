@@ -1,6 +1,7 @@
 ﻿using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Repository;
+using System.DirectoryServices.Protocols;
 using System.Text.RegularExpressions;
 
 namespace ProductivityApi.Services
@@ -50,6 +51,11 @@ namespace ProductivityApi.Services
             var updated = await _repository.UpdateDocumentMasterStatusAsync(dto.Id, dto.IsActive, dto.UpdatedBy.Trim());
 
             return updated ? (true, dto.IsActive ? "Document enabled successfully." : "Document disabled successfully.") : (false, "Document not found.");
+        }
+
+        public Task<List<SARFAESIPhysicalFilingDocumentMaster>> GetAvailableAdditionalDocumentsAsync(int caseId)
+        {
+            return _repository.GetAvailableAdditionalDocumentsAsync(caseId);
         }
 
         public async Task<SARFAESIPhysicalFilingCase?> GetCaseAsync(int caseId)
@@ -313,6 +319,12 @@ namespace ProductivityApi.Services
         public Task<List<SARFAESILanMapping>> GetNewLansAsync()
         {
             return _repository.GetNewLansAsync();
+        }
+
+        public Task<string> UpdateLegalDetailsAsync(
+            SARFAESIPhysicalFilingLegalDetailsUpdateDto request)
+        {
+            return _repository.UpdateLegalDetailsAsync(request);
         }
 
 

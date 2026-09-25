@@ -19,6 +19,7 @@ namespace ProductivityApi.Services
         private readonly HttpClient _httpClient;
         private readonly DmsDocsSettings _settings;
         private readonly string _filePath;
+        private readonly string _nachDocsPath;
         private readonly ILogger<DmsDocsService> _logger;
 
         public DmsDocsService(
@@ -31,6 +32,7 @@ namespace ProductivityApi.Services
             _httpClient = httpClient;
             _settings = appSettings.DmsDocsSettings;
             _filePath = appSettings.FilePaths.DmsDocsFilePath;
+            _nachDocsPath = appSettings.FilePaths.NachDocsFilePath;
             _logger = logger;
 
             if (_settings.TimeoutSeconds > 0)
@@ -68,6 +70,18 @@ namespace ProductivityApi.Services
             var batchId = GenerateBatchId(request.CreatedBy);
 
             result.BatchId = batchId;
+
+            var batchOutput = await _repository.AddBatchAsync(
+                batchId,
+                request.Tag,
+                request.SubTag,
+                request.CreatedBy);
+
+            if (batchOutput != 1)
+            {
+                result.Errors.Add("Failed to create batch.");
+                return result;
+            }
 
             foreach (var lan in request.Lans)
             {
@@ -262,7 +276,7 @@ namespace ProductivityApi.Services
             if (!batchDocs.Any())
                 return FailDownload(result, $"No LANs found for BatchId {result.BatchId}.");
 
-            var batchFolderPath = await GetBatchFolderPathAsync(result.BatchId, batchDocs.First().CreatedBy);
+            var batchFolderPath = await GetBatchFolderPathAsync(result.BatchId, batchDocs.First().CreatedBy, batchDocs.First().SubTag);
             result.SourcePath = batchFolderPath;
 
             if (!Directory.Exists(batchFolderPath))
@@ -373,6 +387,8 @@ namespace ProductivityApi.Services
 
                 await UpdateDocStatusAsync(doc.ID, SuccessDocStatus, null, updatedBy);
 
+                await _repository.UpdateBatchStatusAsync(doc.BatchId,updatedBy);
+
                 result.Success = true;
                 result.DocStatus = SuccessDocStatus;
                 result.FileName = fileName;
@@ -382,6 +398,8 @@ namespace ProductivityApi.Services
             {
                 var errorMessage = BuildErrorMessage(ex.Message) ?? string.Empty;
                 await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
+
+                await _repository.UpdateBatchStatusAsync(doc.BatchId, updatedBy);
 
                 result.Success = false;
                 result.DocStatus = ErrorDocStatus;
@@ -464,7 +482,7 @@ namespace ProductivityApi.Services
             byte[] documentBytes,
             CancellationToken cancellationToken)
         {
-            var batchFolderPath = await GetBatchFolderPathAsync(doc.BatchId, doc.CreatedBy);
+            var batchFolderPath = await GetBatchFolderPathAsync(doc.BatchId, doc.CreatedBy, doc.SubTag);
             Directory.CreateDirectory(batchFolderPath);
 
             var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
@@ -602,9 +620,34 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        private async Task<string> GetBatchFolderPathAsync(string batchId, string? createdBy)
+        //private async Task<string> GetBatchFolderPathAsync(string batchId, string? createdBy)
+        //{
+        //    // Try to get a user-specific base path from repository. If not available, use the default _filePath.
+        //    string? userBasePath = null;
+
+        //    try
+        //    {
+        //        userBasePath = await _repository.GetUserPathAsync(createdBy);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log and fallback to default path
+        //        _logger.LogWarning(ex, "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.", createdBy);
+        //    }
+
+        //    var basePath = string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath!;
+
+        //    return Path.Combine(
+        //        basePath,
+        //        BuildSafePathSegment(createdBy, "UNKNOWN"),
+        //        BuildSafeFileName(batchId));
+        //}
+
+        private async Task<string> GetBatchFolderPathAsync(
+    string batchId,
+    string? createdBy,
+    string? subTag)
         {
-            // Try to get a user-specific base path from repository. If not available, use the default _filePath.
             string? userBasePath = null;
 
             try
@@ -613,11 +656,18 @@ namespace ProductivityApi.Services
             }
             catch (Exception ex)
             {
-                // Log and fallback to default path
-                _logger.LogWarning(ex, "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.", createdBy);
+                _logger.LogWarning(ex,
+                    "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.",
+                    createdBy);
             }
 
-            var basePath = string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath!;
+            var isNachDocument =
+                string.Equals(subTag, "NACH", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(subTag, "Security P Nach", StringComparison.OrdinalIgnoreCase);
+
+            var basePath = isNachDocument
+                ? _nachDocsPath
+                : (string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath);
 
             return Path.Combine(
                 basePath,

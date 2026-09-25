@@ -108,6 +108,7 @@ namespace ProductivityApi.Models
 
         public bool? RequiresPhysicalDocuments { get; set; }
         public bool? RequiresAdditionalDocuments { get; set; }
+        public string? AdditionalDocumentComments { get; set; }
 
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedDt { get; set; }
@@ -342,6 +343,7 @@ namespace ProductivityApi.Models
 
         public bool? RequiresPhysicalDocuments { get; set; }
         public bool? RequiresAdditionalDocuments { get; set; }
+        public string? AdditionalDocumentComments { get; set; }
         public DateTime CreatedDt { get; set; }
         public DateTime? UpdatedDt { get; set; }
     }
@@ -378,6 +380,7 @@ namespace ProductivityApi.Models
         public string? DocumentTransmissionType { get; set; }
         public bool? RequiresPhysicalDocuments { get; set; }
         public bool? RequiresAdditionalDocuments { get; set; }
+        public string? AdditionalDocumentComments { get; set; }
 
         public DateTime? DocumentDispatchDate { get; set; }
         public string? PodNumber { get; set; }
@@ -519,6 +522,26 @@ namespace ProductivityApi.Models
     {
         public int CaseId { get; set; }
         public bool RequiresAdditionalDocuments { get; set; }
+        public string? Comments { get; set; } = string.Empty;
+        public string UpdatedBy { get; set; } = string.Empty;
+    }
+
+    public class SARFAESIPhysicalFilingLegalDetailsUpdateDto
+    {
+        public int CaseId { get; set; }
+
+        public int? AdvocateId { get; set; }
+        public DateTime? AdvocateAssignmentDate { get; set; }
+
+        public string? FilingType { get; set; }
+        public string? CourtName { get; set; }
+
+        public DateTime? EFilingDate { get; set; }
+        public string? EFilingCaseNumber { get; set; }
+
+        public DateTime? PhysicalFilingDate { get; set; }
+        public string? PhysicalFilingCaseNumber { get; set; }
+
         public string UpdatedBy { get; set; } = string.Empty;
     }
 

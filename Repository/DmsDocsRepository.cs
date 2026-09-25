@@ -26,6 +26,31 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<int> AddBatchAsync(
+            string batchId,
+            string tag,
+            string subTag,
+            string createdBy)
+        {
+            using var conn = CreateConnection();
+
+            var p = new DynamicParameters();
+
+            p.Add("@BatchId", batchId);
+            p.Add("@Tag", tag);
+            p.Add("@SubTag", subTag);
+            p.Add("@CreatedBy", createdBy);
+            p.Add("@Output", dbType: DbType.Int32,
+                direction: ParameterDirection.Output);
+
+            await conn.ExecuteAsync(
+                "sp_DMSDocFetch_AddBatch",
+                p,
+                commandType: CommandType.StoredProcedure);
+
+            return p.Get<int>("@Output");
+        }
+
         // ── Add LANs ──────────────────────────────────────────
 
         public async Task<int> AddLanAsync(DmsDocsAddLan item, string createdBy, string batchId)
@@ -35,8 +60,6 @@ namespace ProductivityApi.Repository
             var p = new DynamicParameters();
             p.Add("@BatchId", batchId);
             p.Add("@LAN", item.LAN);
-            p.Add("@Tag", item.Tag);
-            p.Add("@SubTag", item.SubTag);
             p.Add("@CreatedBy", createdBy);
             p.Add("@Output", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
@@ -121,6 +144,21 @@ namespace ProductivityApi.Repository
             return p.Get<int>("@Output");
         }
 
+        public async Task UpdateBatchStatusAsync(
+            string batchId,
+            string updatedBy)
+                {
+                    using var conn = CreateConnection();
+
+                    await conn.ExecuteAsync(
+                        "sp_DMSDocFetch_UpdateBatchStatus",
+                        new
+                        {
+                            BatchId = batchId,
+                            UpdatedBy = updatedBy
+                        },
+                        commandType: CommandType.StoredProcedure);
+                }
         private static string? NullIfWhiteSpace(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();

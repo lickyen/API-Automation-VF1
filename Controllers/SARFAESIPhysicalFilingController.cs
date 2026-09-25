@@ -23,6 +23,14 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, "Success"));
         }
 
+        [HttpGet("documentMaster/additional")]
+        public async Task<IActionResult> GetAdditionalDocuments([FromQuery] int caseId)
+        {
+            var data = await _service.GetAvailableAdditionalDocumentsAsync(caseId);
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpPost("documentMaster/add")]
         public async Task<IActionResult> AddDocumentMaster([FromBody] SARFAESIPhysicalFilingDocumentMasterAddDto dto)
         {
@@ -212,6 +220,15 @@ namespace ProductivityApi.Controllers
             var data = await _service.GetNewLansAsync();
 
             return Ok(new Response(true, data, "Success"));
+        }
+
+        [HttpPost("legalEdit")]
+        public async Task<IActionResult> UpdateLegalDetails(
+            [FromBody] SARFAESIPhysicalFilingLegalDetailsUpdateDto request)
+        {
+            var message = await _service.UpdateLegalDetailsAsync(request);
+
+            return Ok(new Response(true, null, message));
         }
     }
 }
