@@ -95,7 +95,7 @@
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
-        public string StateCode { get; set; } = default!;
+     //   public string StateCode { get; set; } = default!;
         public string PinCode { get; set; } = default!;
         public string GSTIN { get; set; } = default!;
         public bool IsPrimaryAddress { get; set; }
@@ -455,6 +455,10 @@
         public string Zone { get; set; } = default!;
         public string MegaZone { get; set; } = default!;
         public bool IsActive { get; set; }
+        public string CreatedBy { get; set; } = default!;      // <-- ADD
+        public DateTime CreatedDt { get; set; }                  // <-- ADD
+        public string? ModifiedBy { get; set; }                   // <-- ADD
+        public DateTime? ModifiedDt { get; set; }
     }
     public class DeliveryLocationResponse
     {
@@ -698,7 +702,7 @@
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
-        public string StateCode { get; set; } = default!;
+       // public string StateCode { get; set; } = default!;
         public string PinCode { get; set; } = default!;
         public string? GSTIN { get; set; }
         public bool IsPrimaryAddress { get; set; }
@@ -712,7 +716,7 @@
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
-        public string StateCode { get; set; } = default!;
+       // public string StateCode { get; set; } = default!;
         public string PinCode { get; set; } = default!;
         public string? GSTIN { get; set; }
         public bool IsPrimaryAddress { get; set; }
@@ -747,13 +751,43 @@
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
-        public string StateCode { get; set; } = default!;
+       // public string StateCode { get; set; } = default!;
         public string PinCode { get; set; } = default!;
         public string? GSTIN { get; set; }
         public bool IsPrimaryAddress { get; set; }
         public string Status { get; set; } = default!;
         public string? RejectionReason { get; set; }
         public VendorDocumentResponse? GSTDocument { get; set; }
+    }
+
+    public class CreateLocationRequest
+    {
+        public string BranchCode { get; set; } = default!;
+        public string BranchName { get; set; } = default!;
+        public string Address { get; set; } = default!;
+        public string Region { get; set; } = default!;
+        public string Zone { get; set; } = default!;
+        public string MegaZone { get; set; } = default!;
+        public string CreatedBy { get; set; } = default!;
+    }
+
+    public class UpdateLocationRequest
+    {
+        public int LocationId { get; set; }
+        public string BranchCode { get; set; } = default!;
+        public string BranchName { get; set; } = default!;
+        public string Address { get; set; } = default!;
+        public string Region { get; set; } = default!;
+        public string Zone { get; set; } = default!;
+        public string MegaZone { get; set; } = default!;
+        public string ModifiedBy { get; set; } = default!;
+    }
+
+    public class UpdateLocationStatusRequest
+    {
+        public int LocationId { get; set; }
+        public bool IsActive { get; set; }
+        public string ModifiedBy { get; set; } = default!;
     }
 
 }

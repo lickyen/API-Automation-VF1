@@ -377,5 +377,35 @@ namespace ProductivityApi.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
+        /// <summary>POST /api/Purchaseorder/CreateLocation</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateLocation([FromBody] CreateLocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateLocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateLocation</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateLocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateLocationStatus — enable/disable</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateLocationStatus([FromBody] UpdateLocationStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateLocationStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Location enabled." : "Location disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
     }
 }

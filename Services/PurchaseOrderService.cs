@@ -103,7 +103,7 @@ namespace ProductivityApi.Services
                     AddressLine1 = a.AddressLine1,
                     City = a.City,
                     StateName = a.StateName,
-                    StateCode = a.StateCode,
+                    
                     PinCode = a.PinCode,
                     GSTIN = a.GSTIN,
                     IsPrimaryAddress = a.IsPrimaryAddress,
@@ -1408,7 +1408,7 @@ namespace ProductivityApi.Services
                 AddressLine1 = a.AddressLine1,
                 City = a.City,
                 StateName = a.StateName,
-                StateCode = a.StateCode,
+               
                 PinCode = a.PinCode,
                 GSTIN = a.GSTIN,
                 IsPrimaryAddress = a.IsPrimaryAddress,
@@ -2422,7 +2422,7 @@ namespace ProductivityApi.Services
                 AddressLine1 = request.AddressLine1,
                 City = request.City,
                 StateName = request.StateName,
-                StateCode = request.StateCode,
+               
                 PinCode = request.PinCode,
                 GSTIN = request.GSTIN,
                 IsPrimaryAddress = request.IsPrimaryAddress,
@@ -2467,7 +2467,7 @@ namespace ProductivityApi.Services
                 AddressLine1 = request.AddressLine1,
                 City = request.City,
                 StateName = request.StateName,
-                StateCode = request.StateCode,
+                
                 PinCode = request.PinCode,
                 GSTIN = request.GSTIN,
                 IsPrimaryAddress = request.IsPrimaryAddress,
@@ -2527,13 +2527,90 @@ namespace ProductivityApi.Services
             AddressLine1 = a.AddressLine1,
             City = a.City,
             StateName = a.StateName,
-            StateCode = a.StateCode,
+           
             PinCode = a.PinCode,
             GSTIN = a.GSTIN,
             IsPrimaryAddress = a.IsPrimaryAddress,
             Status = a.Status,
             RejectionReason = a.RejectionReason,
             GSTDocument = LoadVendorDocument(a.GSTDocumentPath)
+        };
+
+        public async Task<DeliveryLocationResponse> CreateLocationAsync(CreateLocationRequest request)
+        {
+            if (await _repository.BranchCodeExistsAsync(request.BranchCode))
+                throw new ArgumentException($"BranchCode '{request.BranchCode}' already exists.");
+
+            var location = new Models.PoLocation
+            {
+                BranchCode = request.BranchCode,
+                BranchName = request.BranchName,
+                Address = request.Address,
+                Region = request.Region,
+                Zone = request.Zone,
+                MegaZone = request.MegaZone,
+                CreatedBy = request.CreatedBy
+            };
+
+            int locationId = await _repository.CreateLocationAsync(location);
+
+            var created = await _repository.GetLocationByIdAsync(locationId)
+                ?? throw new InvalidOperationException("Location was created but could not be reloaded.");
+
+            return MapToLocationResponse(created);
+        }
+
+        public async Task<DeliveryLocationResponse> UpdateLocationAsync(UpdateLocationRequest request)
+        {
+            var existing = await _repository.GetLocationByIdAsync(request.LocationId)
+                ?? throw new KeyNotFoundException($"Location {request.LocationId} not found.");
+
+            if (!string.Equals(existing.BranchCode, request.BranchCode, StringComparison.OrdinalIgnoreCase) &&
+                await _repository.BranchCodeExistsAsync(request.BranchCode, request.LocationId))
+            {
+                throw new ArgumentException($"BranchCode '{request.BranchCode}' already exists.");
+            }
+
+            var location = new Models.PoLocation
+            {
+                LocationId = request.LocationId,
+                BranchCode = request.BranchCode,
+                BranchName = request.BranchName,
+                Address = request.Address,
+                Region = request.Region,
+                Zone = request.Zone,
+                MegaZone = request.MegaZone,
+                ModifiedBy = request.ModifiedBy
+            };
+
+            await _repository.UpdateLocationAsync(location);
+
+            var updated = await _repository.GetLocationByIdAsync(request.LocationId)
+                ?? throw new InvalidOperationException("Location was updated but could not be reloaded.");
+
+            return MapToLocationResponse(updated);
+        }
+
+        public async Task UpdateLocationStatusAsync(UpdateLocationStatusRequest request)
+        {
+            var existing = await _repository.GetLocationByIdAsync(request.LocationId)
+                ?? throw new KeyNotFoundException($"Location {request.LocationId} not found.");
+
+            if (existing.IsActive == request.IsActive)
+                throw new InvalidOperationException($"Location is already {(request.IsActive ? "active" : "inactive")}.");
+
+            await _repository.UpdateLocationStatusAsync(request.LocationId, request.IsActive, request.ModifiedBy);
+        }
+
+        private static DeliveryLocationResponse MapToLocationResponse(Models.PoLocation l) => new()
+        {
+            LocationId = l.LocationId,
+            BranchCode = l.BranchCode,
+            BranchName = l.BranchName,
+            Address = l.Address,
+            Region = l.Region,
+            Zone = l.Zone,
+            MegaZone = l.MegaZone
         };
 
     }
