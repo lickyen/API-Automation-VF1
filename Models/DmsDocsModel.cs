@@ -22,10 +22,9 @@ namespace ProductivityApi.Models
 
     public class DmsDocsAddRequest
     {
-        [Required]
-        public string Tag { get; set; }
+        public string Tag { get; set; } = String.Empty;
 
-        public string SubTag { get; set; }
+        public string SubTag { get; set; } = String.Empty;
 
         [Required]
         public string CreatedBy { get; set; }
