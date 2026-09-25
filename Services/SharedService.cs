@@ -55,6 +55,7 @@ namespace ProductivityApi.Services
             data.CustName = loan.customer?.personalInfo?.shortName;
             data.Lan = loan.finReference;
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
+            data.MaturityDate = loan.financeSchedule?.summary?.maturityDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;
             data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);

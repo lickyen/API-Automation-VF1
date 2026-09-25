@@ -17,6 +17,7 @@
         public string? ResidentialAddress { get; set; }
         public DateTime? DisbDate { get; set; }
         public List<string?> DisbModes { get; set; } = new List<string?>();
+        public DateTime? MaturityDate { get; set; }
         public Decimal? LoanAmount { get; set; }
         public Decimal? DisbAmount { get; set; }
         public Decimal? NetDisbAmount { get; set; }
