@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Models.XmlWrapper;
 using ProductivityApi.Services;
 
 namespace ProductivityApi.Controllers
@@ -15,17 +16,14 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost]
-        [Consumes("application/xml", "text/xml")]
+        [Consumes("application/json")]
         [Produces("application/xml")]
-        public async Task<IActionResult> GetRiskAlert()
+        public async Task<IActionResult> GetRiskAlert([FromBody] ReqXmlWrapper request)
         {
-            using var reader = new StreamReader(Request.Body);
-            var requestXml = await reader.ReadToEndAsync();
+            if (request == null || string.IsNullOrWhiteSpace(request.ReqXml))
+                return Content("<CIRResponse><Status>FAILED</Status><Message>Empty reqXml</Message></CIRResponse>", "application/xml");
 
-            if (string.IsNullOrWhiteSpace(requestXml))
-                return Content("<CIRResponse><Status>FAILED</Status><Message>Empty request body</Message></CIRResponse>", "application/xml");
-
-            var responseXml = await _service.GetRiskAlertAsync(requestXml);
+            var responseXml = await _service.GetRiskAlertAsync(request.ReqXml);
             return Content(responseXml, "application/xml");
         }
     }
