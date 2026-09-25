@@ -75,16 +75,8 @@ namespace ProductivityApi.Services
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            //var (statement, msg) = await GetForeclosureStatementAsync(lan);
-
-            //if (msg != "Success")
-            //    return (null, msg);
-
-            //data.TotalOutstanding = statement.TotalOutstandingExclFc;
-            //data.PrincipalOutstanding = statement.Pos;
-
            // data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
-           // data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
 
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
