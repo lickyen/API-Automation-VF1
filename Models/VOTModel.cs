@@ -41,9 +41,9 @@
             public bool? LoanRecoverable { get; set; }
             public string? NonRecoveryReason { get; set; }
 
-            public string? PropertyPhotoPath { get; set; }
-            public string? BusinessPhotoPath { get; set; }
-            public string? ResidencePhotoPath { get; set; }
+            //public string? PropertyPhotoPath { get; set; }
+            //public string? BusinessPhotoPath { get; set; }
+            //public string? ResidencePhotoPath { get; set; }
 
             public bool? ZdshVisited { get; set; }
             public bool? ZdshReviewed { get; set; }
@@ -228,7 +228,7 @@
             public int CaseId { get; set; }
 
             public string FileType { get; set; } = string.Empty;
-
+            public string CreatedBy { get; set; } = string.Empty;
             public IFormFile File { get; set; } = null!;
         }
 

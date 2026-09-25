@@ -159,7 +159,8 @@ namespace ProductivityApi.Services
             await _repository.UpdateCaseFileAsync(
                 request.CaseId,
                 request.FileType,
-                fileName);
+                fileName,
+                request.CreatedBy);
 
             return new Response(
                 true,
