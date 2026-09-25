@@ -327,5 +327,55 @@ namespace ProductivityApi.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
+        /// <summary>POST /api/Purchaseorder/CreateVendorAddress — Preparer</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateVendorAddress([FromBody] CreateVendorAddressRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateVendorAddressAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateVendorAddress — Preparer resubmits a rejected address</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateVendorAddress([FromBody] UpdateVendorAddressRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateVendorAddressAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/ApproveVendorAddress — FinanceUser</summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveVendorAddress([FromBody] ApproveVendorAddressRequest request)
+        {
+            try { await _purchaseOrderService.ApproveVendorAddressAsync(request); return Ok(new { message = "Address approved." }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/RejectVendorAddress — FinanceUser</summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectVendorAddress([FromBody] RejectVendorAddressRequest request)
+        {
+            try { await _purchaseOrderService.RejectVendorAddressAsync(request); return Ok(new { message = "Address rejected." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateVendorAddressStatus — enable/disable, FinanceUser/Admin</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateVendorAddressStatus([FromBody] UpdateVendorAddressStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateVendorAddressStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Address enabled." : "Address disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
     }
 }

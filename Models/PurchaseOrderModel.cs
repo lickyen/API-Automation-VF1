@@ -90,8 +90,8 @@
     }
     public class POVendorAddressMaster
     {
-        public int VendorAddressId { get; set; }
-        public int VendorId { get; set; }
+        public long VendorAddressId { get; set; }
+        public long VendorId { get; set; }
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
@@ -100,6 +100,12 @@
         public string GSTIN { get; set; } = default!;
         public bool IsPrimaryAddress { get; set; }
         public string Status { get; set; } = default!;
+        public string? RejectionReason { get; set; }
+        public string? GSTDocumentPath { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDate { get; set; }
+        public string? ModifiedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
     }
     public class POVendorListItemResponse
     {
@@ -122,7 +128,7 @@
     }
     public class POVendorAddressResponse
     {
-        public int VendorAddressId { get; set; }
+        public long VendorAddressId { get; set; }
         public string AddressLine1 { get; set; } = default!;
         public string City { get; set; } = default!;
         public string StateName { get; set; } = default!;
@@ -685,6 +691,69 @@
         public bool IsActive { get; set; }
         public string? Reason { get; set; }
         public string ModifiedBy { get; set; } = default!;
+    }
+    public class CreateVendorAddressRequest
+    {
+        public long VendorId { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string StateCode { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string? GSTIN { get; set; }
+        public bool IsPrimaryAddress { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public VendorDocumentUpload? GSTDocument { get; set; }   // required only if GSTIN is provided
+    }
+
+    public class UpdateVendorAddressRequest
+    {
+        public long VendorAddressId { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string StateCode { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string? GSTIN { get; set; }
+        public bool IsPrimaryAddress { get; set; }
+        public string UpdatedBy { get; set; } = default!;
+        public VendorDocumentUpload? GSTDocument { get; set; }
+    }
+
+    public class ApproveVendorAddressRequest
+    {
+        public long VendorAddressId { get; set; }
+        public string ApprovedBy { get; set; } = default!;
+    }
+
+    public class RejectVendorAddressRequest
+    {
+        public long VendorAddressId { get; set; }
+        public string RejectionReason { get; set; } = default!;
+        public string RejectedBy { get; set; } = default!;
+    }
+
+    public class UpdateVendorAddressStatusRequest
+    {
+        public long VendorAddressId { get; set; }
+        public bool IsActive { get; set; }
+        public string ModifiedBy { get; set; } = default!;
+    }
+
+    public class VendorAddressResponse
+    {
+        public long VendorAddressId { get; set; }
+        public long VendorId { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string StateCode { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string? GSTIN { get; set; }
+        public bool IsPrimaryAddress { get; set; }
+        public string Status { get; set; } = default!;
+        public string? RejectionReason { get; set; }
+        public VendorDocumentResponse? GSTDocument { get; set; }
     }
 
 }

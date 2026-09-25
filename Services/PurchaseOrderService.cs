@@ -2393,5 +2393,148 @@ namespace ProductivityApi.Services
             await _repository.UpdateVendorActiveStatusAsync(request.VendorId, newStatus, reason, request.ModifiedBy);
         }
 
+        public async Task<VendorAddressResponse> CreateVendorAddressAsync(CreateVendorAddressRequest request)
+        {
+            var (vendor, _) = await _repository.GetVendorByIdAsync(request.VendorId);
+            if (vendor is null)
+                throw new ArgumentException($"VendorId {request.VendorId} does not exist.");
+
+            if (!string.IsNullOrWhiteSpace(request.GSTIN))
+            {
+                if (await _repository.GstinExistsAsync(request.GSTIN))
+                    throw new ArgumentException($"GSTIN '{request.GSTIN}' is already registered against another address.");
+
+                if (request.GSTDocument is null)
+                    throw new ArgumentException("GSTDocument is required when GSTIN is provided.");
+            }
+
+            string? gstDocPath = null;
+            if (request.GSTDocument is not null)
+            {
+                string folder = Path.Combine(_filePath, "VendorAddressDocuments", request.VendorId.ToString());
+                Directory.CreateDirectory(folder);
+                gstDocPath = SaveVendorDocument(request.GSTDocument, folder, "GST");
+            }
+
+            var address = new Models.POVendorAddressMaster
+            {
+                VendorId = request.VendorId,
+                AddressLine1 = request.AddressLine1,
+                City = request.City,
+                StateName = request.StateName,
+                StateCode = request.StateCode,
+                PinCode = request.PinCode,
+                GSTIN = request.GSTIN,
+                IsPrimaryAddress = request.IsPrimaryAddress,
+                GSTDocumentPath = gstDocPath,
+                CreatedBy = request.CreatedBy
+            };
+
+            long vendorAddressId = await _repository.CreateVendorAddressAsync(address);
+
+            var created = await _repository.GetVendorAddressByIdAsync(vendorAddressId)
+                ?? throw new InvalidOperationException("Vendor address was created but could not be reloaded.");
+
+            return MapToAddressResponse(created);
+        }
+
+        public async Task<VendorAddressResponse> UpdateVendorAddressAsync(UpdateVendorAddressRequest request)
+        {
+            var existing = await _repository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new KeyNotFoundException($"VendorAddress {request.VendorAddressId} not found.");
+
+            if (existing.Status != "REJECTED")
+                throw new InvalidOperationException($"This address cannot be edited from its current status ({existing.Status}). Only rejected addresses can be resubmitted.");
+
+            if (!string.IsNullOrWhiteSpace(request.GSTIN) &&
+                !string.Equals(request.GSTIN, existing.GSTIN, StringComparison.OrdinalIgnoreCase) &&
+                await _repository.GstinExistsAsync(request.GSTIN))
+            {
+                throw new ArgumentException($"GSTIN '{request.GSTIN}' is already registered against another address.");
+            }
+
+            string? gstDocPath = existing.GSTDocumentPath;
+            if (request.GSTDocument is not null)
+            {
+                string folder = Path.Combine(_filePath, "VendorAddressDocuments", existing.VendorId.ToString());
+                Directory.CreateDirectory(folder);
+                gstDocPath = SaveVendorDocument(request.GSTDocument, folder, "GST");
+            }
+
+            var address = new Models.POVendorAddressMaster
+            {
+                VendorAddressId = request.VendorAddressId,
+                AddressLine1 = request.AddressLine1,
+                City = request.City,
+                StateName = request.StateName,
+                StateCode = request.StateCode,
+                PinCode = request.PinCode,
+                GSTIN = request.GSTIN,
+                IsPrimaryAddress = request.IsPrimaryAddress,
+                GSTDocumentPath = gstDocPath,
+                ModifiedBy = request.UpdatedBy
+            };
+
+            await _repository.UpdateVendorAddressAsync(address);
+
+            var updated = await _repository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new InvalidOperationException("Vendor address was updated but could not be reloaded.");
+
+            return MapToAddressResponse(updated);
+        }
+
+        public async Task ApproveVendorAddressAsync(ApproveVendorAddressRequest request)
+        {
+            var address = await _repository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new KeyNotFoundException($"VendorAddress {request.VendorAddressId} not found.");
+
+            if (address.Status != "PENDING")
+                throw new InvalidOperationException($"This address is not pending approval (current status: {address.Status}).");
+
+            await _repository.ApproveVendorAddressAsync(request.VendorAddressId, request.ApprovedBy);
+        }
+
+        public async Task RejectVendorAddressAsync(RejectVendorAddressRequest request)
+        {
+            var address = await _repository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new KeyNotFoundException($"VendorAddress {request.VendorAddressId} not found.");
+
+            if (address.Status != "PENDING")
+                throw new InvalidOperationException($"This address is not pending approval (current status: {address.Status}).");
+
+            if (string.IsNullOrWhiteSpace(request.RejectionReason))
+                throw new ArgumentException("RejectionReason is required.");
+
+            await _repository.RejectVendorAddressAsync(request.VendorAddressId, request.RejectionReason, request.RejectedBy);
+        }
+
+        public async Task UpdateVendorAddressStatusAsync(UpdateVendorAddressStatusRequest request)
+        {
+            var address = await _repository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new KeyNotFoundException($"VendorAddress {request.VendorAddressId} not found.");
+
+            if (address.Status != "ACTIVE" && address.Status != "INACTIVE")
+                throw new InvalidOperationException($"Address cannot be enabled/disabled from its current status ({address.Status}).");
+
+            string newStatus = request.IsActive ? "ACTIVE" : "INACTIVE";
+            await _repository.UpdateVendorAddressActiveStatusAsync(request.VendorAddressId, newStatus, request.ModifiedBy);
+        }
+
+        private static VendorAddressResponse MapToAddressResponse(Models.POVendorAddressMaster a) => new()
+        {
+            VendorAddressId = a.VendorAddressId,
+            VendorId = a.VendorId,
+            AddressLine1 = a.AddressLine1,
+            City = a.City,
+            StateName = a.StateName,
+            StateCode = a.StateCode,
+            PinCode = a.PinCode,
+            GSTIN = a.GSTIN,
+            IsPrimaryAddress = a.IsPrimaryAddress,
+            Status = a.Status,
+            RejectionReason = a.RejectionReason,
+            GSTDocument = LoadVendorDocument(a.GSTDocumentPath)
+        };
+
     }
 }

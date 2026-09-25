@@ -1172,5 +1172,93 @@ WHERE [VendorId] = @VendorId;
             if (rows == 0)
                 throw new KeyNotFoundException($"Vendor {vendorId} not found.");
         }
+
+        public async Task<long> CreateVendorAddressAsync(POVendorAddressMaster address)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_VendorAddressMaster]
+            ([VendorId], [AddressLine1], [City], [StateName], [StateCode], [PinCode], [GSTIN],
+             [IsPrimaryAddress], [Status], [GSTDocumentPath], [CreatedBy], [CreatedDate])
+        OUTPUT INSERTED.[VendorAddressId]
+        VALUES
+            (@VendorId, @AddressLine1, @City, @StateName, @StateCode, @PinCode, @GSTIN,
+             @IsPrimaryAddress, 'PENDING', @GSTDocumentPath, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<long>(sql, address);
+        }
+
+        public async Task<POVendorAddressMaster?> GetVendorAddressByIdAsync(long vendorAddressId)
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorAddressMaster] WHERE [VendorAddressId] = @VendorAddressId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync<POVendorAddressMaster>(sql, new { VendorAddressId = vendorAddressId });
+        }
+
+        public async Task<bool> GstinExistsAsync(string gstin)
+        {
+            const string sql = @"
+        SELECT COUNT(1) FROM [dbo].[PO_VendorAddressMaster]
+        WHERE [GSTIN] = @GSTIN AND [Status] IN ('PENDING', 'ACTIVE');";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int>(sql, new { GSTIN = gstin }) > 0;
+        }
+
+        public async Task UpdateVendorAddressAsync(POVendorAddressMaster address)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [AddressLine1] = @AddressLine1, [City] = @City, [StateName] = @StateName, [StateCode] = @StateCode,
+            [PinCode] = @PinCode, [GSTIN] = @GSTIN, [IsPrimaryAddress] = @IsPrimaryAddress,
+            [Status] = 'PENDING', [RejectionReason] = NULL, [GSTDocumentPath] = @GSTDocumentPath,
+            [ModifiedBy] = @ModifiedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorAddressId] = @VendorAddressId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, address);
+        }
+
+        public async Task ApproveVendorAddressAsync(long vendorAddressId, string approvedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [Status] = 'ACTIVE', [ModifiedBy] = @ApprovedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorAddressId] = @VendorAddressId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorAddressId = vendorAddressId, ApprovedBy = approvedBy });
+        }
+
+        public async Task RejectVendorAddressAsync(long vendorAddressId, string reason, string rejectedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [Status] = 'REJECTED', [RejectionReason] = @Reason, [ModifiedBy] = @RejectedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorAddressId] = @VendorAddressId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorAddressId = vendorAddressId, Reason = reason, RejectedBy = rejectedBy });
+        }
+
+        public async Task UpdateVendorAddressActiveStatusAsync(long vendorAddressId, string status, string modifiedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [Status] = @Status, [ModifiedBy] = @ModifiedBy, [ModifiedDate] = GETDATE()
+        WHERE [VendorAddressId] = @VendorAddressId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            int rows = await connection.ExecuteAsync(sql, new { VendorAddressId = vendorAddressId, Status = status, ModifiedBy = modifiedBy });
+
+            if (rows == 0)
+                throw new KeyNotFoundException($"VendorAddress {vendorAddressId} not found.");
+        }
+
+        public async Task<IEnumerable<POVendorAddressMaster>> GetPendingVendorAddressesAsync()
+        {
+            const string sql = "SELECT * FROM [dbo].[PO_VendorAddressMaster] WHERE [Status] = 'PENDING' ORDER BY [CreatedDate];";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync<POVendorAddressMaster>(sql);
+        }
     }
 }
