@@ -1,4 +1,6 @@
-﻿namespace ProductivityApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProductivityApi.Models
 {
     public class VOTModel
     {
@@ -100,7 +102,6 @@
             public DateTime CreatedDate { get; set; }
         }
 
-
         public class MappedLan
         {
             public int Id { get; set; }
@@ -112,37 +113,42 @@
 
         public class BulkUploadLanRequest
         {
+            [Required]
             public List<MappedLan> Lans { get; set; } = [];
+            [Required]
             public string CreatedBy { get; set; } = string.Empty;
         }
 
         public class UpdateLanRequest
         {
+            [Required]
             public int Id { get; set; }
 
             public string? CustName { get; set; }
 
             public string? EmpId { get; set; }
-
+            [Required]
             public string UpdatedBy { get; set; } = string.Empty;
         }
 
         public class UpdateLanStatusRequest
         {
+            [Required]
             public int Id { get; set; }
 
             public bool IsActive { get; set; }
-
+            [Required]
             public string UpdatedBy { get; set; } = string.Empty;
         }
 
 
         public class CreateCaseRequest
         {
+            [Required]
             public string Lan { get; set; } = string.Empty;
+            [Required]
             public string CaseType { get; set; } = string.Empty;
 
-            // System populated
             public string? CustName { get; set; }
             public string? CustAddress { get; set; }
 
@@ -152,6 +158,7 @@
             public decimal? PrincipalOutstanding { get; set; }
             public int? Dpd { get; set; }
 
+            [Required]
             public string? BranchCode { get; set; }
             public string? BranchName { get; set; }
             public string? Region { get; set; }
@@ -159,13 +166,16 @@
             public string? MegaZone { get; set; }
 
             // CDSM Inputs
+            [Required]
             public string CustomerIssue { get; set; } = string.Empty;
+            [Required]
             public string CdsmRemarks { get; set; } = string.Empty;
-
+            [Required]
             public string? PropertyCondition { get; set; }
+            [Required]
             public bool? LoanRecoverable { get; set; }
             public string? NonRecoveryReason { get; set; }
-
+            [Required]
             public string CreatedBy { get; set; } = string.Empty;
         }
         public class GetLansByUserRequest
@@ -175,6 +185,7 @@
 
         public class GetCasesByUserRequest
         {
+            [Required]
             public string EmpId { get; set; } = string.Empty;
             public string Role { get; set; } = string.Empty;
             public string Status { get; set; } = string.Empty;
@@ -182,53 +193,65 @@
 
         public class ZdshReviewRequest
         {
+            [Required]
             public int CaseId { get; set; }
-
+            [Required]
             public bool ZdshVisited { get; set; }
+            [Required]
             public bool ZdshReviewed { get; set; }
-
             public string? ZdshComments { get; set; }
             public string? ZdshResolutionPlan { get; set; }
-
+            [Required]
             public string ZdshRemarks { get; set; } = string.Empty;
+            [Required]
             public string ZdshDecision { get; set; } = string.Empty;
-
+            [Required]
             public string UpdatedBy { get; set; } = string.Empty;
         }
 
         public class MzdshReviewRequest
         {
+            [Required]
             public int CaseId { get; set; }
-
+            [Required]
             public bool MzdshVisited { get; set; }
+            [Required]
             public bool MzdshReviewed { get; set; }
-
+            [Required]
             public string MzdshRemarks { get; set; } = string.Empty;
+            [Required]
             public string MzdshDecision { get; set; } = string.Empty;
-
+            [Required]
             public string UpdatedBy { get; set; } = string.Empty;
         }
 
         public class AuditReviewRequest
         {
+            [Required]
             public int CaseId { get; set; }
-
+            [Required]
             public string AuditFinding { get; set; } = string.Empty;
+            [Required]
             public string IsSubstantiated { get; set; } = string.Empty;
+            [Required]
             public string ActionRecommended { get; set; } = string.Empty;
+            [Required]
             public string AuditRemarks { get; set; } = string.Empty;
-
+            [Required]
             public bool CanBeClosed { get; set; }
-
+            [Required]
             public string UpdatedBy { get; set; } = string.Empty;
         }
 
         public class FileUploadRequest
         {
+            [Required]
             public int CaseId { get; set; }
-
+            [Required]
             public string FileType { get; set; } = string.Empty;
+            [Required]
             public string CreatedBy { get; set; } = string.Empty;
+            [Required]
             public IFormFile File { get; set; } = null!;
         }
 
@@ -239,6 +262,7 @@
 
         public class DownloadFileRequest
         {
+            [Required]
             public string FileName { get; set; } = string.Empty;
         }
 
