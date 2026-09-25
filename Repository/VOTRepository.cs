@@ -196,7 +196,7 @@ namespace ProductivityApi.Repositories
         //        commandType: CommandType.StoredProcedure);
         //}
 
-        public async Task UpdateCaseFileAsync(int caseId, string fileType, string fileName)
+        public async Task UpdateCaseFileAsync(int caseId, string fileType, string fileName, string createdBy)
         {
             using var connection = GetConnection();
 
@@ -205,8 +205,9 @@ namespace ProductivityApi.Repositories
                 new
                 {
                     CaseId = caseId,
-                    FileName = fileType,
-                    FilePath = @fileName
+                    FileType = fileType,
+                    FilePath = @fileName,
+                    CreatedBy = createdBy
                 },
                 commandType: CommandType.StoredProcedure);
         }

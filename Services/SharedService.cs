@@ -55,6 +55,7 @@ namespace ProductivityApi.Services
             data.CustName = loan.customer?.personalInfo?.shortName;
             data.Lan = loan.finReference;
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
+            data.MaturityDate = loan.financeSchedule?.summary?.maturityDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;
             data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);
@@ -74,16 +75,8 @@ namespace ProductivityApi.Services
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            //var (statement, msg) = await GetForeclosureStatementAsync(lan);
-
-            //if (msg != "Success")
-            //    return (null, msg);
-
-            //data.TotalOutstanding = statement.TotalOutstandingExclFc;
-            //data.PrincipalOutstanding = statement.Pos;
-
            // data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
-           // data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
 
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
