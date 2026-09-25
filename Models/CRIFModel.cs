@@ -5,6 +5,11 @@ namespace ProductivityApi.Models.XmlWrapper
 {
     public class CRIFModel
     { }
+    public class ReqXmlWrapper
+    {
+        [JsonPropertyName("reqXml")]
+        public string ReqXml { get; set; }
+    }
     public class CrifJsonRequest
     {
         [JsonPropertyName("REQUEST-FILE")]
@@ -376,6 +381,8 @@ namespace ProductivityApi.Models.XmlWrapper
     public class CrifReportFileDto
     {
         [JsonPropertyName("HEADER-SEGMENT")] public CrifResponseHeaderDto HeaderSegment { get; set; }
+        [JsonPropertyName("REQUEST-DATA")] public CrifRequestDataDto RequestData { get; set; }
+
         [JsonPropertyName("REQUEST-STATUS")] public List<CrifRequestStatusDto> RequestStatus { get; set; } = new();
         [JsonPropertyName("REPORT-DATA")] public CrifReportDataDto ReportData { get; set; }
         [JsonPropertyName("PRINTABLE-REPORT")] public CrifPrintableReportDto PrintableReport { get; set; }
@@ -408,15 +415,31 @@ namespace ProductivityApi.Models.XmlWrapper
 
     public class CrifReportDataDto
     {
+        [JsonPropertyName("STANDARD-DATA")] public CrifStandardDataDto StandardData { get; set; }
+        [JsonPropertyName("REQUESTED-SERVICES")] public List<CrifRequestedServiceDto> RequestedServices { get; set; } = new();
         [JsonPropertyName("ALERTS")] public List<CrifAlertDto> Alerts { get; set; } = new();
-        // STANDARD-DATA, ACCOUNTS-SUMMARY, etc. intentionally unmapped for now —
-        // add fields here later if you need tradelines/score/summary in the output.
+    }
+    public class CrifStandardDataDto
+    {
+        //[JsonPropertyName("ALERTS")] public List<CrifAlertDto> Alerts { get; set; } = new();
+    }
+    public class CrifRequestedServiceDto
+    {
+        [JsonPropertyName("SCORE")] public CrifRequestedServiceScoreDto Score { get; set; }
+    }
+    public class CrifRequestedServiceScoreDto
+    {
+        [JsonPropertyName("SCORE-VALUE")] public string ScoreValue { get; set; }
     }
 
     public class CrifAlertDto
     {
         [JsonPropertyName("TYPE")] public string Type { get; set; }
         [JsonPropertyName("DESCRIPTION")] public string Description { get; set; }
+        [JsonPropertyName("RESERVED1")] public string Reserved1 { get; set; }
+        [JsonPropertyName("RULE-CODE")] public string RuleCode { get; set; }
+        [JsonPropertyName("RULE-DESCRIPTION")] public string RuleDescription { get; set; }
+        [JsonPropertyName("RULE-CATEGORY")] public string RuleCategory { get; set; }
         [JsonPropertyName("RULES")] public List<CrifRuleDto> Rules { get; set; } = new();
     }
 
@@ -437,5 +460,63 @@ namespace ProductivityApi.Models.XmlWrapper
     {
         [JsonPropertyName("ERROR-CODE")] public string ErrorCode { get; set; }
         [JsonPropertyName("ERROR-DESC")] public string ErrorDesc { get; set; }
+    }
+
+   
+
+    public class CrifRequestDataDto
+    {
+        [JsonPropertyName("APPLICANT-SEGMENT")]
+        public CrifRequestDataApplicantSegmentDto ApplicantSegment { get; set; }
+
+        [JsonPropertyName("APPLICATION-SEGMENT")]
+        public CrifRequestDataApplicationSegmentDto ApplicationSegment { get; set; }
+    }
+
+    public class CrifRequestDataApplicantSegmentDto
+    {
+        [JsonPropertyName("APPLICANT-ID")]
+        public string ApplicantId { get; set; }
+    }
+
+    public class CrifRequestDataApplicationSegmentDto
+    {
+        [JsonPropertyName("INQUIRY-UNIQUE-REF-NO")]
+        public string InquiryUniqueRefNo { get; set; }
+    }
+    public class CrifJsonEnvelope
+    {
+        [JsonPropertyName("CIR-REPORT-FILE")] public CrifReportFileDto ReportFile { get; set; }
+        [JsonPropertyName("ERROR-FILE")] public CrifTechErrorFileDto ErrorFile { get; set; }
+    }
+
+    public class CrifTechErrorFileDto
+    {
+        [JsonPropertyName("INQUIRY-STATUS")] public List<CrifTechInquiryStatusDto> InquiryStatus { get; set; } = new();
+    }
+
+    public class CrifTechInquiryStatusDto
+    {
+        [JsonPropertyName("INQUIRY")] public CrifTechInquiryDto Inquiry { get; set; }
+    }
+
+    public class CrifTechInquiryDto
+    {
+        [JsonPropertyName("INQUIRY-ID")] public string InquiryId { get; set; }
+        [JsonPropertyName("DATE-OF-REQUEST")] public string DateOfRequest { get; set; }
+        [JsonPropertyName("RESPONSE-DT")] public string ResponseDt { get; set; }
+        [JsonPropertyName("RESPONSE-TYPE")] public string ResponseType { get; set; }
+        [JsonPropertyName("ERRORS")] public List<CrifTechErrorWrapperDto> Errors { get; set; } = new();
+    }
+
+    public class CrifTechErrorWrapperDto
+    {
+        [JsonPropertyName("ERROR")] public CrifTechErrorDto Error { get; set; }
+    }
+
+    public class CrifTechErrorDto
+    {
+        [JsonPropertyName("CODE")] public string Code { get; set; }
+        [JsonPropertyName("DESCRIPTION")] public string Description { get; set; }
     }
 }
