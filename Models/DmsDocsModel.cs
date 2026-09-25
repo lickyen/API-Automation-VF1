@@ -23,17 +23,20 @@ namespace ProductivityApi.Models
     public class DmsDocsAddRequest
     {
         [Required]
-        public List<DmsDocsAddLan> Lans { get; set; }
+        public string Tag { get; set; }
+
+        public string SubTag { get; set; }
+
         [Required]
         public string CreatedBy { get; set; }
-    }
 
+        [Required]
+        public List<DmsDocsAddLan> Lans { get; set; }
+    }
     public class DmsDocsAddLan
     {
         [Required]
         public string LAN { get; set; }
-        public string Tag { get; set; }
-        public string SubTag { get; set; }
     }
     public class DmsDocsUpdateStatusRequest
     {

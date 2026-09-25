@@ -71,6 +71,18 @@ namespace ProductivityApi.Services
 
             result.BatchId = batchId;
 
+            var batchOutput = await _repository.AddBatchAsync(
+                batchId,
+                request.Tag,
+                request.SubTag,
+                request.CreatedBy);
+
+            if (batchOutput != 1)
+            {
+                result.Errors.Add("Failed to create batch.");
+                return result;
+            }
+
             foreach (var lan in request.Lans)
             {
                 if (string.IsNullOrWhiteSpace(lan.LAN))
@@ -375,6 +387,8 @@ namespace ProductivityApi.Services
 
                 await UpdateDocStatusAsync(doc.ID, SuccessDocStatus, null, updatedBy);
 
+                await _repository.UpdateBatchStatusAsync(doc.BatchId,updatedBy);
+
                 result.Success = true;
                 result.DocStatus = SuccessDocStatus;
                 result.FileName = fileName;
@@ -384,6 +398,8 @@ namespace ProductivityApi.Services
             {
                 var errorMessage = BuildErrorMessage(ex.Message) ?? string.Empty;
                 await TryUpdateDocStatusAsync(doc.ID, ErrorDocStatus, errorMessage, updatedBy);
+
+                await _repository.UpdateBatchStatusAsync(doc.BatchId, updatedBy);
 
                 result.Success = false;
                 result.DocStatus = ErrorDocStatus;
