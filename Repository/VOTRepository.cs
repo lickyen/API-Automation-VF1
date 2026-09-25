@@ -124,10 +124,15 @@ namespace ProductivityApi.Repositories
             var logs = (await multi.ReadAsync<VOTModel.Log>())
                 .ToList();
 
+            var uploads =(await multi.ReadAsync<VOTModel.Upload>())
+                .ToList();
+
+
             return new VOTModel.CaseDetails
             {
                 Case = caseDetails,
-                Logs = logs
+                Logs = logs,
+                Uploads = uploads
             };
         }
         public async Task<IEnumerable<VOTModel.Case>> GetCasesByUserAsync(
@@ -176,17 +181,32 @@ namespace ProductivityApi.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
+        //public async Task UpdateCaseFileAsync(int caseId, string fileType, string fileName)
+        //{
+        //    using var connection = GetConnection();
+
+        //    await connection.ExecuteAsync(
+        //        "sp_VOT_UpdateCaseFile",
+        //        new
+        //        {
+        //            CaseId = caseId,
+        //            FileType = fileType,
+        //            FileName = fileName
+        //        },
+        //        commandType: CommandType.StoredProcedure);
+        //}
+
         public async Task UpdateCaseFileAsync(int caseId, string fileType, string fileName)
         {
             using var connection = GetConnection();
 
             await connection.ExecuteAsync(
-                "sp_VOT_UpdateCaseFile",
+                "sp_VOT_SaveUpload",
                 new
                 {
                     CaseId = caseId,
-                    FileType = fileType,
-                    FileName = fileName
+                    FileName = fileType,
+                    FilePath = @fileName
                 },
                 commandType: CommandType.StoredProcedure);
         }
