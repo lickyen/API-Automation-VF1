@@ -100,7 +100,8 @@ namespace ProductivityApi.Repositories
                 commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<int> InsertCaseAsync(VOTModel.CreateCaseRequest request)
+        public async Task<int> InsertCaseAsync(
+            VOTModel.CreateCaseRequest request)
         {
             using var connection = GetConnection();
 
