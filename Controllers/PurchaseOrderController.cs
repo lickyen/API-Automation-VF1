@@ -191,8 +191,8 @@ namespace ProductivityApi.Controllers
 
         /// <summary>GET /api/Purchaseorder/GetLocations?region=South&zone=Chennai</summary>
         [HttpGet]
-        public async Task<IActionResult> GetLocations([FromQuery] string? region, [FromQuery] string? zone)
-            => Ok(await _purchaseOrderService.GetLocationsAsync(region, zone));
+        public async Task<IActionResult> GetLocations([FromQuery] string? region, [FromQuery] string? zone, [FromQuery] bool? isActive)
+            => Ok(await _purchaseOrderService.GetLocationsAsync(region, zone, isActive));
 
         /// <summary>POST /api/Purchaseorder/ActOnApproval</summary>
         [HttpPost]

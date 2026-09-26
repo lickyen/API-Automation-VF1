@@ -574,18 +574,18 @@ namespace ProductivityApi.Repository
             await connection.ExecuteAsync(sql, rows);
         }
 
-        public async Task<IEnumerable<PoLocation>> GetLocationsAsync(string? region = null, string? zone = null)
+        public async Task<IEnumerable<PoLocation>> GetLocationsAsync(string? region , string? zone , bool? isActive)
         {
             const string sql = @"
         SELECT [LocationId], [BranchCode], [BranchName], [Address], [Region], [Zone], [MegaZone], [IsActive]
         FROM [dbo].[PO_Location]
-        WHERE [IsActive] = 1
-          AND (@Region IS NULL OR [Region] = @Region)
+        WHERE (@Region IS NULL OR [Region] = @Region)
           AND (@Zone IS NULL OR [Zone] = @Zone)
+          AND (@IsActive IS NULL OR [IsActive] = @IsActive)
         ORDER BY [MegaZone], [Zone], [Region], [BranchName];";
 
             using IDbConnection connection = new SqlConnection(_conStr);
-            return await connection.QueryAsync<PoLocation>(sql, new { Region = region, Zone = zone });
+            return await connection.QueryAsync<PoLocation>(sql, new { Region = region, Zone = zone, IsActive = isActive });
         }
 
         public async Task<IEnumerable<PoLocation>> GetPurchaseOrderDeliveryLocationsAsync(int poId)
@@ -1333,6 +1333,17 @@ namespace ProductivityApi.Repository
                 throw new KeyNotFoundException($"Location {locationId} not found.");
         }
 
+        public async Task ClearPrimaryAddressFlagAsync(long vendorId, long? excludeAddressId = null)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [IsPrimaryAddress] = 0
+        WHERE [VendorId] = @VendorId
+          AND [IsPrimaryAddress] = 1
+          AND (@ExcludeAddressId IS NULL OR [VendorAddressId] <> @ExcludeAddressId);";
 
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, ExcludeAddressId = excludeAddressId });
+        }
     }
 }

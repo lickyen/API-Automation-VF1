@@ -967,9 +967,9 @@ namespace ProductivityApi.Services
                 p => history.FirstOrDefault(h => h.POId == p.POId && h.StepNumber == p.CurrentApprovalStep)?.ApproverRole
             );
         }
-        public async Task<IEnumerable<DeliveryLocationResponse>> GetLocationsAsync(string? region, string? zone)
+        public async Task<IEnumerable<DeliveryLocationResponse>> GetLocationsAsync(string? region, string? zone, bool? isActive)
         {
-            var locations = await _repository.GetLocationsAsync(region, zone);
+            var locations = await _repository.GetLocationsAsync(region, zone, isActive);
             return locations.Select(l => new DeliveryLocationResponse
             {
                 LocationId = l.LocationId,
@@ -978,7 +978,8 @@ namespace ProductivityApi.Services
                 Address = l.Address,
                 Region = l.Region,
                 Zone = l.Zone,
-                MegaZone = l.MegaZone
+                MegaZone = l.MegaZone,
+                IsActive = l.IsActive
             });
         }
 
@@ -2435,6 +2436,12 @@ namespace ProductivityApi.Services
                 Directory.CreateDirectory(folder);
                 gstDocPath = SaveVendorDocument(request.GSTDocument, folder, "GST");
             }
+            // If this new address is being marked primary, demote any existing primary for this vendor first
+            if (request.IsPrimaryAddress)
+            {
+                await _repository.ClearPrimaryAddressFlagAsync(request.VendorId);
+            }
+
 
             var address = new Models.POVendorAddressMaster
             {

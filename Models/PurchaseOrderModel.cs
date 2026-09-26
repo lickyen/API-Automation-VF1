@@ -486,6 +486,7 @@
         public string Region { get; set; } = default!;
         public string Zone { get; set; } = default!;
         public string MegaZone { get; set; } = default!;
+        public bool IsActive { get; set; }
     }
     public class ApprovalActionRequest
     {
