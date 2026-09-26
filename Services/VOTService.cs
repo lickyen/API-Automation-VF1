@@ -69,24 +69,12 @@ namespace ProductivityApi.Services
                 "LAN status updated successfully.");
         }
 
-
-        public async Task<Response> CreateCaseAsync(VOTModel.CreateCaseRequest request)
+        public async Task<int> CreateCaseAsync(
+            VOTModel.CreateCaseRequest request)
         {
-            var caseId = await _repository.InsertCaseAsync(request);
-
-            if (caseId == -1)
-            {
-                return new Response(
-                    false,
-                    null,
-                    "A case already exists for this LAN.");
-            }
-
-            return new Response(
-                true,
-                caseId,
-                "Case created successfully.");
+            return await _repository.InsertCaseAsync(request);
         }
+
         public async Task<Response> GetCaseByIdAsync(int id)
         {
             var result = await _repository.GetCaseByIdAsync(id);

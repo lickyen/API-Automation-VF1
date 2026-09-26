@@ -60,7 +60,20 @@ namespace ProductivityApi.Controllers
         public async Task<IActionResult> CreateCase(
             [FromBody] VOTModel.CreateCaseRequest request)
         {
-            return Ok(await _votService.CreateCaseAsync(request));
+            var caseId = await _votService.CreateCaseAsync(request);
+
+            if (caseId == -1)
+            {
+                return Conflict(new Response(
+                    false,
+                    null,
+                    "A case already exists for this LAN."));
+            }
+
+            return Ok(new Response(
+                true,
+                caseId,
+                "Case created successfully."));
         }
 
         [HttpGet("getCaseById/{id}")]
