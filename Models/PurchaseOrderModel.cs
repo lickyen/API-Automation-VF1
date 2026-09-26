@@ -125,6 +125,22 @@
         public List<POVendorListItemResponse> Pending { get; set; } = new();
         public List<POVendorListItemResponse> Rejected { get; set; } = new();
         public List<POVendorListItemResponse> Disabled { get; set; } = new();
+        public List<PendingVendorAddressResponse> PendingAddresses { get; set; } = new();  
+    }
+    public class PendingVendorAddressResponse
+    {
+        public long VendorAddressId { get; set; }
+        public long VendorId { get; set; }
+        public string VendorName { get; set; } = default!;
+        public string? VendorCode { get; set; }
+        public string AddressLine1 { get; set; } = default!;
+        public string City { get; set; } = default!;
+        public string StateName { get; set; } = default!;
+        public string PinCode { get; set; } = default!;
+        public string? GSTIN { get; set; }
+        public bool IsPrimaryAddress { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDate { get; set; }
     }
     public class POVendorAddressResponse
     {

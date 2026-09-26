@@ -1256,11 +1256,20 @@ namespace ProductivityApi.Repository
                 throw new KeyNotFoundException($"VendorAddress {vendorAddressId} not found.");
         }
 
-        public async Task<IEnumerable<POVendorAddressMaster>> GetPendingVendorAddressesAsync()
+        public async Task<IEnumerable<dynamic>> GetPendingVendorAddressesAsync()
         {
-            const string sql = "SELECT * FROM [dbo].[PO_VendorAddressMaster] WHERE [Status] = 'PENDING' ORDER BY [CreatedDate];";
+            const string sql = @"
+        SELECT
+            va.[VendorAddressId], va.[VendorId], v.[VendorName], v.[VendorCode],
+            va.[AddressLine1], va.[City], va.[StateName], va.[PinCode], va.[GSTIN],
+            va.[IsPrimaryAddress], va.[CreatedBy], va.[CreatedDate]
+        FROM [dbo].[PO_VendorAddressMaster] va
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = va.[VendorId]
+        WHERE va.[Status] = 'PENDING'
+        ORDER BY va.[CreatedDate];";
+
             using IDbConnection connection = new SqlConnection(_conStr);
-            return await connection.QueryAsync<POVendorAddressMaster>(sql);
+            return await connection.QueryAsync(sql);
         }
 
         public async Task<bool> BranchCodeExistsAsync(string branchCode, int? excludeLocationId = null)
@@ -1323,5 +1332,7 @@ namespace ProductivityApi.Repository
             if (rows == 0)
                 throw new KeyNotFoundException($"Location {locationId} not found.");
         }
+
+
     }
 }
