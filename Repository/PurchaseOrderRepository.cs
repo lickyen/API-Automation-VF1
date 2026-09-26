@@ -574,18 +574,18 @@ namespace ProductivityApi.Repository
             await connection.ExecuteAsync(sql, rows);
         }
 
-        public async Task<IEnumerable<PoLocation>> GetLocationsAsync(string? region = null, string? zone = null)
+        public async Task<IEnumerable<PoLocation>> GetLocationsAsync(string? region , string? zone , bool? isActive)
         {
             const string sql = @"
         SELECT [LocationId], [BranchCode], [BranchName], [Address], [Region], [Zone], [MegaZone], [IsActive]
         FROM [dbo].[PO_Location]
-        WHERE [IsActive] = 1
-          AND (@Region IS NULL OR [Region] = @Region)
+        WHERE (@Region IS NULL OR [Region] = @Region)
           AND (@Zone IS NULL OR [Zone] = @Zone)
+          AND (@IsActive IS NULL OR [IsActive] = @IsActive)
         ORDER BY [MegaZone], [Zone], [Region], [BranchName];";
 
             using IDbConnection connection = new SqlConnection(_conStr);
-            return await connection.QueryAsync<PoLocation>(sql, new { Region = region, Zone = zone });
+            return await connection.QueryAsync<PoLocation>(sql, new { Region = region, Zone = zone, IsActive = isActive });
         }
 
         public async Task<IEnumerable<PoLocation>> GetPurchaseOrderDeliveryLocationsAsync(int poId)
@@ -1256,11 +1256,20 @@ namespace ProductivityApi.Repository
                 throw new KeyNotFoundException($"VendorAddress {vendorAddressId} not found.");
         }
 
-        public async Task<IEnumerable<POVendorAddressMaster>> GetPendingVendorAddressesAsync()
+        public async Task<IEnumerable<dynamic>> GetPendingVendorAddressesAsync()
         {
-            const string sql = "SELECT * FROM [dbo].[PO_VendorAddressMaster] WHERE [Status] = 'PENDING' ORDER BY [CreatedDate];";
+            const string sql = @"
+        SELECT
+            va.[VendorAddressId], va.[VendorId], v.[VendorName], v.[VendorCode],
+            va.[AddressLine1], va.[City], va.[StateName], va.[PinCode], va.[GSTIN],
+            va.[IsPrimaryAddress], va.[CreatedBy], va.[CreatedDate]
+        FROM [dbo].[PO_VendorAddressMaster] va
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = va.[VendorId]
+        WHERE va.[Status] = 'PENDING'
+        ORDER BY va.[CreatedDate];";
+
             using IDbConnection connection = new SqlConnection(_conStr);
-            return await connection.QueryAsync<POVendorAddressMaster>(sql);
+            return await connection.QueryAsync(sql);
         }
 
         public async Task<bool> BranchCodeExistsAsync(string branchCode, int? excludeLocationId = null)
@@ -1322,6 +1331,19 @@ namespace ProductivityApi.Repository
 
             if (rows == 0)
                 throw new KeyNotFoundException($"Location {locationId} not found.");
+        }
+
+        public async Task ClearPrimaryAddressFlagAsync(long vendorId, long? excludeAddressId = null)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_VendorAddressMaster]
+        SET [IsPrimaryAddress] = 0
+        WHERE [VendorId] = @VendorId
+          AND [IsPrimaryAddress] = 1
+          AND (@ExcludeAddressId IS NULL OR [VendorAddressId] <> @ExcludeAddressId);";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { VendorId = vendorId, ExcludeAddressId = excludeAddressId });
         }
     }
 }

@@ -967,9 +967,9 @@ namespace ProductivityApi.Services
                 p => history.FirstOrDefault(h => h.POId == p.POId && h.StepNumber == p.CurrentApprovalStep)?.ApproverRole
             );
         }
-        public async Task<IEnumerable<DeliveryLocationResponse>> GetLocationsAsync(string? region, string? zone)
+        public async Task<IEnumerable<DeliveryLocationResponse>> GetLocationsAsync(string? region, string? zone, bool? isActive)
         {
-            var locations = await _repository.GetLocationsAsync(region, zone);
+            var locations = await _repository.GetLocationsAsync(region, zone, isActive);
             return locations.Select(l => new DeliveryLocationResponse
             {
                 LocationId = l.LocationId,
@@ -978,7 +978,8 @@ namespace ProductivityApi.Services
                 Address = l.Address,
                 Region = l.Region,
                 Zone = l.Zone,
-                MegaZone = l.MegaZone
+                MegaZone = l.MegaZone,
+                IsActive = l.IsActive
             });
         }
 
@@ -2329,12 +2330,9 @@ namespace ProductivityApi.Services
             bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
             bool seesAllPendingRejected = isFinanceUser || isAdmin;
 
-            // Approved and Disabled are shared reference data — everyone sees the full list, regardless of role
             var approved = (await _repository.GetVendorsByStatusAsync("ACTIVE")).ToList();
             var disabled = (await _repository.GetDisabledVendorsAsync()).ToList();
 
-            // Pending and Rejected: FinanceUser/Admin see everything (they're the reviewers);
-            // everyone else sees only what they personally created
             List<POVendorMaster> pending, rejected;
 
             if (seesAllPendingRejected)
@@ -2348,12 +2346,35 @@ namespace ProductivityApi.Services
                 rejected = (await _repository.GetVendorsByStatusAndCreatorAsync("REJECTED", employeeCode)).ToList();
             }
 
+            // NEW — pending addresses, only for FinanceUser/Admin (the ones who actually approve them)
+            var pendingAddresses = new List<PendingVendorAddressResponse>();
+            if (seesAllPendingRejected)
+            {
+                var addressRows = await _repository.GetPendingVendorAddressesAsync();
+                pendingAddresses = addressRows.Select(r => new PendingVendorAddressResponse
+                {
+                    VendorAddressId = r.VendorAddressId,
+                    VendorId = r.VendorId,
+                    VendorName = r.VendorName,
+                    VendorCode = r.VendorCode,
+                    AddressLine1 = r.AddressLine1,
+                    City = r.City,
+                    StateName = r.StateName,
+                    PinCode = r.PinCode,
+                    GSTIN = r.GSTIN,
+                    IsPrimaryAddress = r.IsPrimaryAddress,
+                    CreatedBy = r.CreatedBy,
+                    CreatedDate = r.CreatedDate
+                }).ToList();
+            }
+
             return new POVendorDashboardResponse
             {
                 Approved = MapToVendorListResponse(approved),
                 Pending = MapToVendorListResponse(pending),
                 Rejected = MapToVendorListResponse(rejected),
-                Disabled = MapToVendorListResponse(disabled)
+                Disabled = MapToVendorListResponse(disabled),
+                PendingAddresses = pendingAddresses
             };
         }
 
@@ -2415,6 +2436,12 @@ namespace ProductivityApi.Services
                 Directory.CreateDirectory(folder);
                 gstDocPath = SaveVendorDocument(request.GSTDocument, folder, "GST");
             }
+            // If this new address is being marked primary, demote any existing primary for this vendor first
+            if (request.IsPrimaryAddress)
+            {
+                await _repository.ClearPrimaryAddressFlagAsync(request.VendorId);
+            }
+
 
             var address = new Models.POVendorAddressMaster
             {
