@@ -26,6 +26,12 @@ namespace ProductivityApi.Services
 
         private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
 
+        private static readonly HashSet<string> ApproverRoles = new(StringComparer.OrdinalIgnoreCase)
+    { "DepartmentHead", "FinanceHead", "CFO", "ManagingDirector" };
+        private static readonly HashSet<string> DepartmentScopedRoles = new(StringComparer.OrdinalIgnoreCase) { "DepartmentHead" };
+        private static readonly HashSet<string> ValidPOFrequencies = new(StringComparer.OrdinalIgnoreCase)
+    { "OneTime", "Monthly", "Quarterly", "HalfYearly", "Annually" };
+
         private readonly ILogger<PurchaseOrderService> _logger;
 
         public PurchaseOrderService(PurchaseOrderRepository repository,
@@ -207,6 +213,12 @@ namespace ProductivityApi.Services
         {
             if (request.Items is null || request.Items.Count == 0)
                 throw new ArgumentException("A Purchase Order must have at least one line item.");
+            if (request.ExpectedInvoiceDate is not null && request.ExpectedInvoiceDate.Value.Date < DateTime.Today)
+                throw new ArgumentException("ExpectedInvoiceDate cannot be in the past.");
+
+            if (!ValidPOFrequencies.Contains(request.POFrequency))
+                throw new ArgumentException("POFrequency must be one of: OneTime, Monthly, Quarterly, HalfYearly, Annually.");
+
             // ==================== LOAD CONFIGURABLE THRESHOLDS ====================
 
             var settings = await _repository.GetSettingsAsync(
@@ -326,10 +338,18 @@ namespace ProductivityApi.Services
 
             // ==================== QUOTATION CHECK ====================
 
+            //bool quotationRequired = totalAmount > quotationThreshold;
+            //if (quotationRequired && (request.Quotations is null || request.Quotations.Count == 0))
+            //    throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {quotationThreshold:N0}.");
+            int quotationCount = request.Quotations?.Count ?? 0;
             bool quotationRequired = totalAmount > quotationThreshold;
-            if (quotationRequired && (request.Quotations is null || request.Quotations.Count == 0))
-                throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {quotationThreshold:N0}.");
+            bool hasThreeQuotations = quotationCount >= 2;
 
+            if (!hasThreeQuotations && string.IsNullOrWhiteSpace(request.QuotationWaiverReason))
+            {
+                throw new ArgumentException(
+                    $"Only {quotationCount} quotation(s) provided. A QuotationWaiverReason is required when fewer than 2 comparative quotations are attached.");
+            }
 
             // ==================== BUDGET CHECK — per item's category, rolled up to header ====================
 
@@ -388,7 +408,10 @@ namespace ProductivityApi.Services
                 GSTAmount = gstTotal,
                 TotalAmount = totalAmount,
                 IsBudgetExceeded = budgetExceeded,
-                QuotationRequired = quotationRequired,
+                QuotationRequired = quotationRequired,    
+                QuotationWaiverReason = hasThreeQuotations ? null : request.QuotationWaiverReason,
+                ExpectedInvoiceDate = request.ExpectedInvoiceDate,
+                POFrequency = request.POFrequency,
                 Status = request.SaveAsDraft ? "Draft" : "PendingApproval",
                 CurrentApprovalStep = request.SaveAsDraft ? 0 : 1,
                 CreatedBy = request.CreatedBy
@@ -457,7 +480,9 @@ namespace ProductivityApi.Services
                 GSTAmount = gstTotal,
                 TotalAmount = totalAmount,
                 IsBudgetExceeded = budgetExceeded,
-                QuotationRequired = quotationRequired,
+                QuotationRequired = quotationRequired,              
+                QuotationWaiverReason = hasThreeQuotations ? null : request.QuotationWaiverReason,
+                ExpectedInvoiceDate = request.ExpectedInvoiceDate,
                 Status = po.Status,
                 PendingWithRole = request.SaveAsDraft ? null : "DepartmentHead",
                 PendingWithUsers = new List<PendingApproverResponse>(),   // resolved on GetById; empty on create response
@@ -528,14 +553,14 @@ namespace ProductivityApi.Services
             List<string> chain;
 
             if (totalAmount < tier1Threshold)
-                chain = new List<string> { "DepartmentHead", "FinancialController" };
+                chain = new List<string> { "DepartmentHead", "FinanceHead" };
             else if (totalAmount <= tier2Threshold)
-                chain = new List<string> { "DepartmentHead", "FinancialController", "FinanceHead" };
+                chain = new List<string> { "DepartmentHead", "FinanceHead", "CFO" };
             else
-                chain = new List<string> { "DepartmentHead", "FinancialController", "FinanceHead", "ManagingDirector" };
+                chain = new List<string> { "DepartmentHead", "FinanceHead", "CFO", "ManagingDirector" };
 
-            if (budgetExceeded && !chain.Contains("FinanceHead"))
-                chain.Add("FinanceHead");
+            if (budgetExceeded && !chain.Contains("CFO"))
+                chain.Add("CFO");
 
             return chain;
         }
@@ -620,7 +645,7 @@ namespace ProductivityApi.Services
             });
         }
 
-        private static readonly HashSet<string> DepartmentScopedRoles = new(StringComparer.OrdinalIgnoreCase) { "DepartmentHead" };
+     
 
 
         public async Task<PurchaseOrderResponse> GetPurchaseOrderByIdAsync(int poId)
@@ -680,6 +705,8 @@ namespace ProductivityApi.Services
                 TotalAmount = po.TotalAmount,
                 IsBudgetExceeded = po.IsBudgetExceeded,
                 QuotationRequired = po.QuotationRequired,
+                QuotationWaiverReason = po.QuotationWaiverReason,
+                ExpectedInvoiceDate = po.ExpectedInvoiceDate,
                 Status = po.Status,
                 PendingWithRole = pendingRole,
                 PendingWithUsers = pendingUsers,
@@ -852,8 +879,7 @@ namespace ProductivityApi.Services
                 };
             });
         }
-        private static readonly HashSet<string> ApproverRoles = new(StringComparer.OrdinalIgnoreCase)
-    { "DepartmentHead", "FinancialController", "FinanceHead", "CFO", "ManagingDirector" };
+        
 
         public async Task<PurchaseOrderDashboardResponse> GetPurchaseOrderDashboardAsync(string employeeCode)
         {
@@ -1549,41 +1575,7 @@ namespace ProductivityApi.Services
         }
 
 
-        //public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
-        //{
-        //    var po = await GetPurchaseOrderByIdAsync(poId);
-        //    string html = BuildHtml(po);
-
-        //    var browserFetcher = new BrowserFetcher();
-        //    var installedBrowser = await browserFetcher.DownloadAsync();
-
-        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
-        //    {
-        //        Headless = true,
-        //        ExecutablePath = installedBrowser.GetExecutablePath(),
-        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
-        //    });
-
-        //    await using var page = await browser.NewPageAsync();
-        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
-
-        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
-        //    {
-        //        Format = PaperFormat.A4,
-        //        PrintBackground = true,
-        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-        //    });
-
-        //    // ---------------- Save to disk before returning ----------------
-        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-        //    Directory.CreateDirectory(folder);
-
-        //    string fileName = $"{poId}_PO.pdf";
-        //    string fullPath = Path.Combine(folder, fileName);
-        //    await File.WriteAllBytesAsync(fullPath, pdfBytes);
-
-        //    return pdfBytes;
-        //}
+      
         private string BuildHtml(PurchaseOrderResponse po)
         {
             string template = File.ReadAllText(_templatePath);
@@ -1771,42 +1763,7 @@ namespace ProductivityApi.Services
             return $"Rupees {ConvertNumberToWords(roundedAmount)} Only";
         }
 
-        //private async Task<byte[]> GenerateAndSavePurchaseOrderPdfAsync(int poId)
-        //{
-        //    var po = await GetPurchaseOrderByIdAsync(poId);
-        //    string html = BuildHtml(po);
-
-        //    var browserFetcher = new BrowserFetcher();
-        //    var installedBrowser = await browserFetcher.DownloadAsync();
-
-        //    await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
-        //    {
-        //        Headless = true,
-        //        ExecutablePath = installedBrowser.GetExecutablePath(),
-        //        Args = new[] { "--no-sandbox", "--disable-gpu" }
-        //    });
-
-        //    await using var page = await browser.NewPageAsync();
-        //    await page.SetContentAsync(html, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
-
-        //    var pdfBytes = await page.PdfDataAsync(new PdfOptions
-        //    {
-        //        Format = PaperFormat.A4,
-        //        PrintBackground = true,
-        //        MarginOptions = new MarginOptions { Top = "0", Bottom = "0", Left = "0", Right = "0" }
-        //    });
-
-        //    string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-        //    Directory.CreateDirectory(folder);
-
-        //    string fileName = $"{poId}_PO.pdf";   // overwrites — always reflects the PO's current/latest state
-        //    await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
-
-        //    return pdfBytes;
-        //}
-
-  
-
+    
 
 
         public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
@@ -2116,7 +2073,19 @@ namespace ProductivityApi.Services
             if (existing.Status != "Rejected")
                 throw new InvalidOperationException($"This Purchase Order is not in Rejected status (current status: {existing.Status}). Only rejected POs can be edited and resubmitted.");
 
-            // ---------------- Same pre-validation as CreatePurchaseOrderAsync ----------------
+            var settings = await _repository.GetSettingsAsync(
+                new[] { "QuotationThresholdAmount", "ApprovalTier1Threshold", "ApprovalTier2Threshold" });
+
+            decimal quotationThreshold = settings.TryGetValue("QuotationThresholdAmount", out var qt) && decimal.TryParse(qt, out var qtVal)
+                ? qtVal : 25000m;
+
+            decimal tier1Threshold = settings.TryGetValue("ApprovalTier1Threshold", out var t1) && decimal.TryParse(t1, out var t1Val)
+                ? t1Val : 100000m;
+
+            decimal tier2Threshold = settings.TryGetValue("ApprovalTier2Threshold", out var t2) && decimal.TryParse(t2, out var t2Val)
+                ? t2Val : 3000000m;
+
+            // ---------------- pre-validation (unchanged) ----------------
             if (!await _repository.VendorExistsAsync(request.VendorId))
                 throw new ArgumentException($"VendorId {request.VendorId} does not exist or is not Approved.");
 
@@ -2159,6 +2128,12 @@ namespace ProductivityApi.Services
             if (!await _repository.AllLocationsExistAsync(request.DeliveryLocationIds))
                 throw new ArgumentException("One or more DeliveryLocationIds do not exist or are inactive.");
 
+            if (request.ExpectedInvoiceDate is not null && request.ExpectedInvoiceDate.Value.Date < DateTime.Today)   // NEW
+                throw new ArgumentException("ExpectedInvoiceDate cannot be in the past.");
+
+            if (!ValidPOFrequencies.Contains(request.POFrequency))
+                throw new ArgumentException("POFrequency must be one of: OneTime, Monthly, Quarterly, HalfYearly, Annually.");
+
             var selectedTerms = new List<Models.PoTermsConditionsMaster>();
             if (request.TermMasterIds is { Count: > 0 })
             {
@@ -2171,21 +2146,8 @@ namespace ProductivityApi.Services
 
                 selectedTerms = allTerms.Where(t => request.TermMasterIds.Contains(t.TermMasterId)).ToList();
             }
-            // ==================== LOAD CONFIGURABLE THRESHOLDS ====================
 
-            var settings = await _repository.GetSettingsAsync(
-                new[] { "QuotationThresholdAmount", "ApprovalTier1Threshold", "ApprovalTier2Threshold" });
-
-            decimal quotationThreshold = settings.TryGetValue("QuotationThresholdAmount", out var qt) && decimal.TryParse(qt, out var qtVal)
-                ? qtVal : 25000m;   // fallback default if setting missing
-
-            decimal tier1Threshold = settings.TryGetValue("ApprovalTier1Threshold", out var t1) && decimal.TryParse(t1, out var t1Val)
-                ? t1Val : 100000m;
-
-            decimal tier2Threshold = settings.TryGetValue("ApprovalTier2Threshold", out var t2) && decimal.TryParse(t2, out var t2Val)
-                ? t2Val : 3000000m;
-
-            // ---------------- Build items (same GST logic) ----------------
+            // ---------------- Build items (GST calc unchanged) ----------------
             var items = new List<Models.PoPurchaseOrderItem>();
             decimal subTotal = 0m, gstTotal = 0m;
 
@@ -2211,11 +2173,20 @@ namespace ProductivityApi.Services
 
             decimal totalAmount = subTotal + gstTotal;
 
+            // ---------------- Quotation rule — same as Create ----------------
             bool quotationRequired = totalAmount > quotationThreshold;
-            if (quotationRequired && (request.Quotations is null || request.Quotations.Count == 0))
-                throw new InvalidOperationException($"Comparative quotations are mandatory for POs above Rs. {quotationThreshold:N0}.");
 
-            // ---------------- Budget check ----------------
+            const int MinimumQuotationsRequired = 2;
+            int quotationCount = request.Quotations?.Count ?? 0;
+            bool hasEnoughQuotations = quotationCount >= MinimumQuotationsRequired;
+
+            if (!hasEnoughQuotations && string.IsNullOrWhiteSpace(request.QuotationWaiverReason))
+            {
+                throw new ArgumentException(
+                    $"Only {quotationCount} quotation(s) provided. A QuotationWaiverReason is required when fewer than {MinimumQuotationsRequired} comparative quotations are attached.");
+            }
+
+            // ---------------- Budget check (unchanged) ----------------
             var categoryTotals = items.GroupBy(i => i.BudgetCategoryId).ToDictionary(g => g.Key, g => g.Sum(i => i.Amount + i.GSTAmount));
             var allocatedByCategory = await _repository.GetBudgetAmountsAsync(categoryTotals.Keys, request.BudgetYear);
             var consumedByCategory = await _repository.GetConsumedBudgetsAsync(categoryTotals.Keys, request.BudgetYear);
@@ -2250,11 +2221,14 @@ namespace ProductivityApi.Services
                 BudgetYear = request.BudgetYear,
                 TermsType = request.TermsType,
                 AdvancePercentage = request.AdvancePercentage,
+                QuotationRequired = quotationRequired,                                          // NEW — was missing entirely
+                QuotationWaiverReason = hasEnoughQuotations ? null : request.QuotationWaiverReason,  // NEW
+                ExpectedInvoiceDate = request.ExpectedInvoiceDate,
+                POFrequency = request.POFrequency,
                 SubTotal = subTotal,
                 GSTAmount = gstTotal,
                 TotalAmount = totalAmount,
                 IsBudgetExceeded = budgetExceeded,
-                QuotationRequired = quotationRequired,
                 ModifiedBy = request.UpdatedBy
             };
 
@@ -2277,7 +2251,7 @@ namespace ProductivityApi.Services
 
             await _repository.AddPurchaseOrderDeliveryLocationsAsync(request.POId, request.DeliveryLocationIds, request.UpdatedBy);
 
-            // Fresh approval chain — re-enters at step 1, full re-approval required
+            // Fresh approval chain — uses the current role names (FinanceHead/CFO), re-enters at step 1
             var roles = BuildApprovalChain(totalAmount, budgetExceeded, tier1Threshold, tier2Threshold);
             var steps = roles.Select((role, i) => new Models.PoPurchaseOrderApprovalHistory
             {
@@ -2639,6 +2613,46 @@ namespace ProductivityApi.Services
             Zone = l.Zone,
             MegaZone = l.MegaZone
         };
+
+        public async Task<AllocatedBudgetResponse> UpdateBudgetAllocationAsync(UpdateBudgetAllocationRequest request)
+        {
+            var category = await _repository.GetBudgetCategoryByIdAsync(request.BudgetCategoryId)
+                ?? throw new KeyNotFoundException($"BudgetCategoryId {request.BudgetCategoryId} not found.");
+
+            var existing = await _repository.GetBudgetAllocationAsync(request.BudgetCategoryId, request.BudgetYear);
+            if (existing is null)
+                throw new KeyNotFoundException($"No budget allocation found for this category in {request.BudgetYear}. Use AllocateBudget to create one first.");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.BudgetYear, @"^FY[1-2]\d{3}-\d{2}$"))
+                throw new ArgumentException("BudgetYear must be in the format 'FY2026-27'.");
+
+            if (request.Budget <= 0)
+                throw new ArgumentException("Budget must be greater than 0.");
+
+            // Warn/block if reducing below what's already been consumed by approved POs
+            var consumedByCategory = await _repository.GetConsumedBudgetsAsync(new[] { request.BudgetCategoryId }, request.BudgetYear);
+            decimal alreadyConsumed = consumedByCategory.TryGetValue(request.BudgetCategoryId, out var c) ? c : 0m;
+
+            if (request.Budget < alreadyConsumed)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot set budget to {request.Budget:N2} — {alreadyConsumed:N2} has already been consumed by approved POs against this category in {request.BudgetYear}.");
+            }
+
+            await _repository.UpdateBudgetAllocationAsync(request.BudgetCategoryId, request.BudgetYear, request.Budget, request.ModifiedBy);
+
+            return new AllocatedBudgetResponse
+            {
+                Id = (int)existing.Id,
+                BudgetCategoryId = category.BudgetCategoryId,
+                DepartmentCode = category.DepartmentCode,
+                Classification = category.Classification,
+                SubClassification = category.SubClassification,
+                ItemCategory = category.ItemCategory,
+                BudgetYear = request.BudgetYear,
+                Budget = request.Budget
+            };
+        }
 
     }
 }

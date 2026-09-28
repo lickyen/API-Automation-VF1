@@ -243,6 +243,9 @@
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedDt { get; set; }
         public string? RejectionReason { get; set; }
+        public string? QuotationWaiverReason { get; set; }
+        public DateTime? ExpectedInvoiceDate { get; set; }
+        public string POFrequency { get; set; } = default!;
     }
     public class PoTermsConditionsMaster
     {
@@ -312,8 +315,11 @@
         public bool SaveAsDraft { get; set; }
         public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
         //  public List<string> QuotationFilePaths { get; set; } = new();
-        public List<QuotationFileUpload> Quotations { get; set; } = new();   // was: List<string> QuotationFilePaths
-        public List<int> DeliveryLocationIds { get; set; } = new();   // one or more — REQUIRED, at least one
+        public List<QuotationFileUpload> Quotations { get; set; } = new();  
+        public string? QuotationWaiverReason { get; set; }
+        public List<int> DeliveryLocationIds { get; set; } = new();
+        public DateTime? ExpectedInvoiceDate { get; set; }
+        public string POFrequency { get; set; } = default!;  
     }
     public class CreatePurchaseOrderItemRequest
     {
@@ -355,6 +361,7 @@
         public List<PurchaseOrderTermResponse> Terms { get; set; } = new();
         public List<PurchaseOrderAdditionalTermResponse> AdditionalTerms { get; set; } = new();
         public List<QuotationFileResponse> Quotations { get; set; } = new();
+        public string? QuotationWaiverReason { get; set; }
         public List<ApprovalStepSummary> ApprovalTrail { get; set; } = new();  // NEW
         public List<DeliveryLocationResponse> DeliveryLocations { get; set; } = new();
         public decimal? AdvanceRequiredAmount { get; set; }
@@ -362,6 +369,8 @@
         public List<POPaymentResponse> Payments { get; set; } = new();
         public string? PdfBase64 { get; set; }
         public string? RejectionReason { get; set; }
+        public DateTime? ExpectedInvoiceDate { get; set; }
+        public string POFrequency { get; set; } = default!;
     }
     public class PurchaseOrderItemResponse
     {
@@ -698,6 +707,9 @@
         public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();
         public List<QuotationFileUpload> Quotations { get; set; } = new();
         public List<int> DeliveryLocationIds { get; set; } = new();
+        public string? QuotationWaiverReason { get; set; }   
+        public DateTime? ExpectedInvoiceDate { get; set; }     
+        public string POFrequency { get; set; } = default!;
     }
     public class CancelPurchaseOrderRequest
     {
@@ -804,6 +816,14 @@
     {
         public int LocationId { get; set; }
         public bool IsActive { get; set; }
+        public string ModifiedBy { get; set; } = default!;
+    }
+
+    public class UpdateBudgetAllocationRequest
+    {
+        public int BudgetCategoryId { get; set; }
+        public string BudgetYear { get; set; } = default!;
+        public decimal Budget { get; set; }
         public string ModifiedBy { get; set; } = default!;
     }
 
