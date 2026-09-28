@@ -210,19 +210,20 @@ namespace ProductivityApi.Repository
         public async Task<int> CreatePurchaseOrderAsync(PoPurchaseOrder po)
         {
             const string sql = @"
-        INSERT INTO [dbo].[PO_PurchaseOrder]
-            ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [SubClassification], [BudgetYear],
-             [POType], [TermsType], [AdvancePercentage],
-             [VendorContactName], [VendorContactMobile], [VendorContactEmail],
-             [SubTotal], [GSTAmount], [TotalAmount],
-             [IsBudgetExceeded], [QuotationRequired], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
-        OUTPUT INSERTED.[POId]
-        VALUES
-            (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @SubClassification, @BudgetYear,
-             @POType, @TermsType, @AdvancePercentage,
-             @VendorContactName, @VendorContactMobile, @VendorContactEmail,
-             @SubTotal, @GSTAmount, @TotalAmount,
-             @IsBudgetExceeded, @QuotationRequired, @Status, @CurrentApprovalStep, @CreatedBy, GETDATE());";
+    INSERT INTO [dbo].[PO_PurchaseOrder]
+        ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [SubClassification], [BudgetYear],
+         [POType], [POFrequency], [TermsType], [AdvancePercentage], [QuotationRequired], [QuotationWaiverReason], [ExpectedInvoiceDate],
+         [VendorContactName], [VendorContactMobile], [VendorContactEmail],
+         [SubTotal], [GSTAmount], [TotalAmount],
+         [IsBudgetExceeded], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
+    OUTPUT INSERTED.[POId]
+    VALUES
+        (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @SubClassification, @BudgetYear,
+         @POType, @POFrequency, @TermsType, @AdvancePercentage, @QuotationRequired, @QuotationWaiverReason, @ExpectedInvoiceDate,
+         @VendorContactName, @VendorContactMobile, @VendorContactEmail,
+         @SubTotal, @GSTAmount, @TotalAmount,
+         @IsBudgetExceeded, @Status, @CurrentApprovalStep, @CreatedBy, GETDATE());";
+
 
 
             using IDbConnection connection = new SqlConnection(_conStr);
@@ -1044,17 +1045,20 @@ namespace ProductivityApi.Repository
         public async Task UpdatePurchaseOrderHeaderAsync(PoPurchaseOrder po)
         {
             const string sql = @"
-        UPDATE [dbo].[PO_PurchaseOrder]
-        SET [VendorId] = @VendorId, [VendorAddressId] = @VendorAddressId,
-            [VendorContactName] = @VendorContactName, [VendorContactMobile] = @VendorContactMobile, [VendorContactEmail] = @VendorContactEmail,
-            [DepartmentCode] = @DepartmentCode, [POType] = @POType, [Classification] = @Classification, [SubClassification] = @SubClassification,
-            [BudgetYear] = @BudgetYear, [TermsType] = @TermsType, [AdvancePercentage] = @AdvancePercentage,
-            [SubTotal] = @SubTotal, [GSTAmount] = @GSTAmount, [TotalAmount] = @TotalAmount,
-            [IsBudgetExceeded] = @IsBudgetExceeded, [QuotationRequired] = @QuotationRequired,
-            [Status] = 'PendingApproval', [CurrentApprovalStep] = 1, [RejectionReason] = NULL,
-            [ResubmissionCount] = [ResubmissionCount] + 1,
-            [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
-        WHERE [POId] = @POId;";
+    UPDATE [dbo].[PO_PurchaseOrder]
+    SET [VendorId] = @VendorId, [VendorAddressId] = @VendorAddressId,
+        [VendorContactName] = @VendorContactName, [VendorContactMobile] = @VendorContactMobile, [VendorContactEmail] = @VendorContactEmail,
+        [DepartmentCode] = @DepartmentCode, [POType] = @POType, [POFrequency] = @POFrequency,
+        [Classification] = @Classification, [SubClassification] = @SubClassification,
+        [BudgetYear] = @BudgetYear, [TermsType] = @TermsType, [AdvancePercentage] = @AdvancePercentage,
+        [QuotationRequired] = @QuotationRequired, [QuotationWaiverReason] = @QuotationWaiverReason,
+        [ExpectedInvoiceDate] = @ExpectedInvoiceDate,
+        [SubTotal] = @SubTotal, [GSTAmount] = @GSTAmount, [TotalAmount] = @TotalAmount,
+        [IsBudgetExceeded] = @IsBudgetExceeded,
+        [Status] = 'PendingApproval', [CurrentApprovalStep] = 1, [RejectionReason] = NULL,
+        [ResubmissionCount] = [ResubmissionCount] + 1,
+        [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
+    WHERE [POId] = @POId;";
 
             using IDbConnection connection = new SqlConnection(_conStr);
             await connection.ExecuteAsync(sql, po);
@@ -1344,6 +1348,31 @@ namespace ProductivityApi.Repository
 
             using IDbConnection connection = new SqlConnection(_conStr);
             await connection.ExecuteAsync(sql, new { VendorId = vendorId, ExcludeAddressId = excludeAddressId });
+        }
+
+        public async Task<dynamic?> GetBudgetAllocationAsync(int budgetCategoryId, string budgetYear)
+        {
+            const string sql = @"
+        SELECT [Id], [BudgetCategoryId], [BudgetYear], [Budget], [IsActive]
+        FROM [dbo].[PO_DeptWise_Budget]
+        WHERE [BudgetCategoryId] = @BudgetCategoryId AND [BudgetYear] = @BudgetYear;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync(sql, new { BudgetCategoryId = budgetCategoryId, BudgetYear = budgetYear });
+        }
+
+        public async Task UpdateBudgetAllocationAsync(int budgetCategoryId, string budgetYear, decimal budget, string modifiedBy)
+        {
+            const string sql = @"
+        UPDATE [dbo].[PO_DeptWise_Budget]
+        SET [Budget] = @Budget, [ModifiedBy] = @ModifiedBy, [ModifiedDt] = GETDATE()
+        WHERE [BudgetCategoryId] = @BudgetCategoryId AND [BudgetYear] = @BudgetYear;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            int rows = await connection.ExecuteAsync(sql, new { BudgetCategoryId = budgetCategoryId, BudgetYear = budgetYear, Budget = budget, ModifiedBy = modifiedBy });
+
+            if (rows == 0)
+                throw new KeyNotFoundException($"No budget allocation found for BudgetCategoryId {budgetCategoryId} in {budgetYear}.");
         }
     }
 }

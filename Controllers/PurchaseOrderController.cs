@@ -407,5 +407,15 @@ namespace ProductivityApi.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateBudgetAllocation</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateBudgetAllocation([FromBody] UpdateBudgetAllocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateBudgetAllocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
     }
 }

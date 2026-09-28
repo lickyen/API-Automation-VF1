@@ -96,7 +96,16 @@ namespace ProductivityApi.Services
                 // (this already includes PRINTABLE-RPRT natively, so it is NOT stripped or modified here).
                 if (trimmedBody.StartsWith("<"))
                 {
-                    responseXml = trimmedBody;
+                    responseXml = Regex.Replace(
+                        trimmedBody,
+                        @"<PRINTABLE-RPRT>\s*<!\[CDATA\[",
+                        "<PRINTABLE-RPRT><![CDATA[");
+
+                    responseXml = Regex.Replace(
+                        responseXml,
+                        @"\s*\]\]>\s*</PRINTABLE-RPRT>",
+                        "]]></PRINTABLE-RPRT>");
+
                     _repository.LogXmlTransaction("CrifRiskAlert", requestXml, responseXml, true, null,
                         requestHeadersJson, jsonBody, rawResponseBody);
                     return responseXml;
