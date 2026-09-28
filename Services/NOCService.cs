@@ -1274,6 +1274,78 @@ namespace ProductivityApi.Services
             return (true, "Status updated successfully.");
         }
 
+        //public async Task SendCustomerOtpAsync(int transactionId)
+        //{
+        //    var transaction = await _repository.GetById(transactionId);
+
+        //    if (transaction == null)
+        //        throw new Exception("Transaction not found");
+
+        //    string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedCustMobile)
+        //        ? transaction.UpdatedCustMobile
+        //        : transaction.CustMobile;
+
+        //    if (string.IsNullOrWhiteSpace(mobile))
+        //        throw new Exception("Customer mobile number not available");
+
+        //    string referenceId = $"NOC_{transactionId}_CUSTOMER";
+
+        //    await _otpService.SendOtpToMobile(referenceId, mobile);
+
+        //    await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
+        //}
+
+        //public async Task SendOwnerOtpAsync(int transactionId)
+        //{
+        //    var transaction = await _repository.GetById(transactionId);
+
+        //    if (transaction == null)
+        //        throw new Exception("Transaction not found");
+
+        //    string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedOwnerMobile)
+        //        ? transaction.UpdatedOwnerMobile
+        //        : transaction.PropertyOwnerMobile;
+
+        //    if (string.IsNullOrWhiteSpace(mobile))
+        //        throw new Exception("Property owner mobile number not available");
+
+        //    string referenceId = $"NOC_{transactionId}_OWNER";
+
+        //    await _otpService.SendOtpToMobile(referenceId, mobile);
+
+        //    await _repository.UpdateOtpStatus(transactionId, "KYC", "Sent");
+        //}
+
+        //public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
+        //{
+
+        //    string referenceId = $"NOC_{transactionId}_CUSTOMER";
+
+        //    var result = await _otpService.VerifyOtp(referenceId, otp);
+
+        //    if (result.Success)
+        //    {
+        //        await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
+        //    }
+
+        //    return result.Success;
+        //}
+
+        //public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
+        //{
+
+        //    string referenceId = $"NOC_{transactionId}_OWNER";
+
+        //    var result = await _otpService.VerifyOtp(referenceId, otp);
+
+        //    if (result.Success)
+        //    {
+        //        await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
+        //    }
+
+        //    return result.Success;
+        //}
+
         public async Task SendCustomerOtpAsync(int transactionId)
         {
             var transaction = await _repository.GetById(transactionId);
@@ -1288,11 +1360,22 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Customer mobile number not available");
 
-            string referenceId = $"NOC_{transactionId}_CUSTOMER";
+            var template = _templateService.GetSmsTemplate("NocCustomerOtpSms");
 
-            await _otpService.SendOtpToMobile(referenceId, mobile);
+            var smsContent = _templateService.ReplacePlaceholders(
+                template.Content,
+                BuildPlaceholders(transaction));
 
-            await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
+            await _otpService.SendOtpToMobile(
+                mobile,
+                "NOC_CUSTOMER",
+                smsContent,
+                template.DltContentId);
+
+            await _repository.UpdateOtpStatus(
+                transactionId,
+                "NOC",
+                "Sent");
         }
 
         public async Task SendOwnerOtpAsync(int transactionId)
@@ -1309,23 +1392,49 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Property owner mobile number not available");
 
-            string referenceId = $"NOC_{transactionId}_OWNER";
+            var template = _templateService.GetSmsTemplate("NocOwnerOtpSms");
 
-            await _otpService.SendOtpToMobile(referenceId, mobile);
+            var smsContent = _templateService.ReplacePlaceholders(
+                template.Content,
+                BuildPlaceholders(transaction));
 
-            await _repository.UpdateOtpStatus(transactionId, "KYC", "Sent");
+            await _otpService.SendOtpToMobile(
+                mobile,
+                "NOC_OWNER",
+                smsContent,
+                template.DltContentId);
+
+            await _repository.UpdateOtpStatus(
+                transactionId,
+                "KYC",
+                "Sent");
         }
 
         public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
         {
+            var transaction = await _repository.GetById(transactionId);
 
-            string referenceId = $"NOC_{transactionId}_CUSTOMER";
+            if (transaction == null)
+                throw new Exception("Transaction not found");
 
-            var result = await _otpService.VerifyOtp(referenceId, otp);
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedCustMobile)
+                ? transaction.UpdatedCustMobile
+                : transaction.CustMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
+                throw new Exception("Customer mobile number not available");
+
+            var result = await _otpService.VerifyOtp(
+                mobile,
+                otp,
+                "NOC_CUSTOMER");
 
             if (result.Success)
             {
-                await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
+                await _repository.UpdateOtpStatus(
+                    transactionId,
+                    "NOC",
+                    "Verified");
             }
 
             return result.Success;
@@ -1333,14 +1442,29 @@ namespace ProductivityApi.Services
 
         public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
         {
+            var transaction = await _repository.GetById(transactionId);
 
-            string referenceId = $"NOC_{transactionId}_OWNER";
+            if (transaction == null)
+                throw new Exception("Transaction not found");
 
-            var result = await _otpService.VerifyOtp(referenceId, otp);
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedOwnerMobile)
+                ? transaction.UpdatedOwnerMobile
+                : transaction.PropertyOwnerMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
+                throw new Exception("Property owner mobile number not available");
+
+            var result = await _otpService.VerifyOtp(
+                mobile,
+                otp,
+                "NOC_OWNER");
 
             if (result.Success)
             {
-                await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
+                await _repository.UpdateOtpStatus(
+                    transactionId,
+                    "KYC",
+                    "Verified");
             }
 
             return result.Success;
