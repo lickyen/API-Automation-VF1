@@ -89,7 +89,6 @@ namespace ProductivityApi.Services
                         false,
                         new OtpVerificationResult
                         {
-                            Success = false,
                             MaxAttemptsExceeded = true
                         },
                         "OTP not found. Please request a new OTP.");
@@ -105,7 +104,6 @@ namespace ProductivityApi.Services
                         false,
                         new OtpVerificationResult
                         {
-                            Success = false,
                             MaxAttemptsExceeded = true
                         },
                         "OTP expired. Please request a new OTP.");
@@ -128,7 +126,6 @@ namespace ProductivityApi.Services
                         true,
                         new OtpVerificationResult
                         {
-                            Success = true,
                             ResetToken = resetToken,
                             MaxAttemptsExceeded = false
                         },
@@ -150,7 +147,6 @@ namespace ProductivityApi.Services
                         false,
                         new OtpVerificationResult
                         {
-                            Success = false,
                             MaxAttemptsExceeded = true
                         },
                         "Maximum OTP attempts exceeded.");
@@ -162,7 +158,6 @@ namespace ProductivityApi.Services
                     false,
                     new OtpVerificationResult
                     {
-                        Success = false,
                         MaxAttemptsExceeded = false
                     },
                     $"Invalid OTP. {attemptsLeft} attempt(s) remaining.");

@@ -16,7 +16,6 @@ namespace ProductivityApi.Models
 
     public class OtpVerificationResult
     {
-        public bool Success { get; set; }
         public string? ResetToken { get; set; }
         public bool MaxAttemptsExceeded { get; set; }
     }
