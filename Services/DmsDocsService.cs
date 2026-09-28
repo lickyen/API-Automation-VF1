@@ -643,10 +643,42 @@ namespace ProductivityApi.Services
         //        BuildSafeFileName(batchId));
         //}
 
+        //    private async Task<string> GetBatchFolderPathAsync(
+        //string batchId,
+        //string? createdBy,
+        //string? subTag)
+        //    {
+        //        string? userBasePath = null;
+
+        //        try
+        //        {
+        //            userBasePath = await _repository.GetUserPathAsync(createdBy);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            _logger.LogWarning(ex,
+        //                "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.",
+        //                createdBy);
+        //        }
+
+        //        var isNachDocument =
+        //            string.Equals(subTag, "NACH", StringComparison.OrdinalIgnoreCase) ||
+        //            string.Equals(subTag, "Security P Nach", StringComparison.OrdinalIgnoreCase);
+
+        //        var basePath = isNachDocument
+        //            ? _nachDocsPath
+        //            : (string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath);
+
+        //        return Path.Combine(
+        //            basePath,
+        //            BuildSafePathSegment(createdBy, "UNKNOWN"),
+        //            BuildSafeFileName(batchId));
+        //    }
+
         private async Task<string> GetBatchFolderPathAsync(
-    string batchId,
-    string? createdBy,
-    string? subTag)
+            string batchId,
+            string? createdBy,
+            string? subTag)
         {
             string? userBasePath = null;
 
@@ -665,9 +697,19 @@ namespace ProductivityApi.Services
                 string.Equals(subTag, "NACH", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(subTag, "Security P Nach", StringComparison.OrdinalIgnoreCase);
 
-            var basePath = isNachDocument
-                ? _nachDocsPath
-                : (string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath);
+            if (isNachDocument)
+            {
+                var fromDate = DateTime.Today.AddDays(-1);
+                var toDate = DateTime.Today;
+
+                return Path.Combine(
+                    _nachDocsPath,
+                    $"{fromDate:dd-MM-yyyy} TO {toDate:dd-MM-yyyy}");
+            }
+
+            var basePath = string.IsNullOrWhiteSpace(userBasePath)
+                ? _filePath
+                : userBasePath;
 
             return Path.Combine(
                 basePath,

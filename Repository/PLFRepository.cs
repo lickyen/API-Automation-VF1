@@ -204,11 +204,6 @@ GROUP BY
         }
         public async Task<List<NeolotexDisb>> GetClosedLansAsync()
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //    WHERE loan_status <> 'Active Loan'
-            //        AND loanclosure_date >= CURRENT_DATE - 1
-            //        AND loanclosure_date <  CURRENT_DATE;";
-
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
                 WHERE loan_status <> 'Active Loan'
@@ -230,8 +225,6 @@ GROUP BY
         }
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //        WHERE sz_collateral_id = @collId;";
 
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
@@ -245,8 +238,6 @@ GROUP BY
         }
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //        WHERE customerid = @custId;";
 
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
@@ -262,22 +253,6 @@ GROUP BY
         {
             try
             {
-                //var sql = $@"{NeolotexDisbDistinctColumns}
-                //WHERE customerid IN (
-                //    SELECT customerid
-                //    FROM plf.neolotex_disb
-                //    WHERE sz_loan_account_no = @lan
-                //);";
-
-                //var sql = $@"
-                //    {NeolotexDisbDistinctColumns}
-                //    WHERE customerid IN
-                //    (
-                //        SELECT customerid
-                //        FROM plf.neolotex_disb
-                //        WHERE sz_loan_account_no = @lan
-                //    )
-                //    {DistinctLoanOrderBy}";
 
                 var sql = $@"
                     {NeolotexDisbDistinctColumns}

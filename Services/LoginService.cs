@@ -1,4 +1,5 @@
 ﻿using ProductivityApi.Models;
+using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using Serilog;
 using System.DirectoryServices;
@@ -13,14 +14,16 @@ namespace ProductivityApi.Services
         private readonly AuthSettings _authSettings;
         private readonly UserRepository _userRepository;
         private readonly UserLogRepository _userLogRepository;
+        private readonly OtpRepository _otpRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, OtpRepository otpRepository, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
             _authSettings = appSettings.AuthSettings;
             _userRepository = userRepository;
             _userLogRepository = userLogRepository;
+            _otpRepository = otpRepository;
             _env = env;
         }
 
@@ -109,11 +112,44 @@ namespace ProductivityApi.Services
             return user.Password == login.Password;
         }
 
-        public ADProfile GetUserProfile(string userName)
+        public ADProfile GetUserProfile(string userName, string? loggedInUserId = null)
         {
-            ADProfile profile = new ADProfile();
+            //if (_env.IsProduction())
+            //{
+            //    if (string.IsNullOrWhiteSpace(loggedInUserId))
+            //    {
+            //        throw new UnauthorizedAccessException("User identity not found.");
+            //    }
 
-            using var dirEntry = new DirectoryEntry(_settings.LDAPPath, _settings.ServiceAccountUser, _settings.ServiceAccountPassword);
+            //    if (!string.Equals(
+            //            userName,
+            //            loggedInUserId,
+            //            StringComparison.OrdinalIgnoreCase))
+            //    {
+            //        throw new UnauthorizedAccessException("Access denied.");
+            //    }
+            //}
+
+            if (string.IsNullOrWhiteSpace(loggedInUserId))
+            {
+                throw new UnauthorizedAccessException("User identity not found.");
+            }
+
+            if (!string.Equals(
+                    userName,
+                    loggedInUserId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("Access denied.");
+            }
+
+            ADProfile profile = new();
+
+            using var dirEntry = new DirectoryEntry(
+                _settings.LDAPPath,
+                _settings.ServiceAccountUser,
+                _settings.ServiceAccountPassword);
+
             using var dirSearcher = new DirectorySearcher(dirEntry)
             {
                 Filter = $"(sAMAccountName={userName})",
@@ -122,35 +158,74 @@ namespace ProductivityApi.Services
 
             dirSearcher.PropertiesToLoad.AddRange(new[]
             {
-                 "userAccountControl", "displayName", "mail", "mobile", "title", "department", "l", "st", "manager"
+                "employeeID",
+                "sAMAccountName",
+                "userAccountControl",
+                "displayName",
+                "mail",
+                "mobile",
+                "title",
+                "department",
+                "l",
+                "st",
+                "manager"
             });
 
             var result = dirSearcher.FindOne();
+
             if (result != null)
             {
-                int accountControl = result.Properties["userAccountControl"].Count > 0
-                    ? (int)result.Properties["userAccountControl"][0]
-                    : 0;
+                int accountControl =
+                    result.Properties["userAccountControl"].Count > 0
+                        ? (int)result.Properties["userAccountControl"][0]
+                        : 0;
 
                 if (IsAccountActive(accountControl))
                 {
-                    profile.EmployeeID = result.Properties["employeeID"].Count > 0
-                        ? result.Properties["employeeID"][0].ToString()
-                        : result.Properties["sAMAccountName"].Count > 0
-                            ? result.Properties["sAMAccountName"][0].ToString()
-                            : userName;
+                    profile.EmployeeID =
+                        result.Properties["employeeID"].Count > 0
+                            ? result.Properties["employeeID"][0].ToString()
+                            : result.Properties["sAMAccountName"].Count > 0
+                                ? result.Properties["sAMAccountName"][0].ToString()
+                                : userName;
 
-                    profile.Username = result.Properties["displayName"].Count > 0 ? result.Properties["displayName"][0].ToString() : "";
-                    profile.Email = result.Properties["mail"].Count > 0 ? result.Properties["mail"][0].ToString() : "";
-                    profile.Mobile = result.Properties["mobile"].Count > 0 ? result.Properties["mobile"][0].ToString() : "";
-                    profile.JobTitle = result.Properties["title"].Count > 0 ? result.Properties["title"][0].ToString() : "";
-                    profile.Department = result.Properties["department"].Count > 0 ? result.Properties["department"][0].ToString() : "";
-                    profile.City = result.Properties["l"].Count > 0 ? result.Properties["l"][0].ToString() : "";
-                    profile.State = result.Properties["st"].Count > 0 ? result.Properties["st"][0].ToString() : "";
+                    profile.Username =
+                        result.Properties["displayName"].Count > 0
+                            ? result.Properties["displayName"][0].ToString()
+                            : string.Empty;
 
-                    // Get flattened manager chain (L1/L2/L3)
-                    //var managers = GetManagerChain(result);
+                    profile.Email =
+                        result.Properties["mail"].Count > 0
+                            ? result.Properties["mail"][0].ToString()
+                            : string.Empty;
+
+                    profile.Mobile =
+                        result.Properties["mobile"].Count > 0
+                            ? result.Properties["mobile"][0].ToString()
+                            : string.Empty;
+
+                    profile.JobTitle =
+                        result.Properties["title"].Count > 0
+                            ? result.Properties["title"][0].ToString()
+                            : string.Empty;
+
+                    profile.Department =
+                        result.Properties["department"].Count > 0
+                            ? result.Properties["department"][0].ToString()
+                            : string.Empty;
+
+                    profile.City =
+                        result.Properties["l"].Count > 0
+                            ? result.Properties["l"][0].ToString()
+                            : string.Empty;
+
+                    profile.State =
+                        result.Properties["st"].Count > 0
+                            ? result.Properties["st"][0].ToString()
+                            : string.Empty;
+
                     var managers = new List<ManagerInfo>();
+
                     if (managers.Count > 0) profile.L1Manager = managers[0];
                     if (managers.Count > 1) profile.L2Manager = managers[1];
                     if (managers.Count > 2) profile.L3Manager = managers[2];
@@ -159,7 +234,6 @@ namespace ProductivityApi.Services
 
             return profile;
         }
-
         private List<ManagerInfo> GetManagerChain(SearchResult userResult)
         {
             List<ManagerInfo> managers = new List<ManagerInfo>();
@@ -256,40 +330,111 @@ namespace ProductivityApi.Services
         //    return success;
         //}
 
-        public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
+        //public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
+        //{
+        //    bool success = false;
+        //    string? message = null;
+
+        //    try
+        //    {
+        //        success = _env.IsProduction()
+        //            ? await ResetAdPasswordAsync(userId, newPassword)
+        //            : ResetDbPassword(userId, newPassword);
+
+        //        message = success ? null : "Password reset failed";
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        message = $"Exception: {ex.GetType().Name} — {ex.Message}";
+        //        Log.Error(ex, "Password reset error for UserId={UserId}", userId);
+        //        throw;
+        //    }
+        //    finally
+        //    {
+        //        await _userLogRepository.AddAsync(new UserLog
+        //        {
+        //            UserId = userId,
+        //            Source = "ProductivityApi",
+        //            Action = "PASSWORD_RESET",
+        //            Response = success ? "SUCCESS" : "FAILURE",
+        //            Message = message
+        //        });
+
+        //        Log.Information(
+        //            "Password reset UserId={UserId} Env={Env} Success={Success}",
+        //            userId,
+        //            _env.EnvironmentName,
+        //            success);
+        //    }
+
+        //    return success;
+        //}
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
         {
             bool success = false;
             string? message = null;
 
             try
             {
+                var tokenRecord = await _otpRepository.GetResetTokenAsync(
+                    request.ResetToken,
+                    request.Source);
+
+                if (tokenRecord == null)
+                {
+                    throw new InvalidOperationException(
+                        "Invalid or expired reset token");
+                }
+
+                if (!string.Equals(
+                        tokenRecord.UserId,
+                        request.UserId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        "Invalid reset token");
+                }
+
                 success = _env.IsProduction()
-                    ? await ResetAdPasswordAsync(userId, newPassword)
-                    : ResetDbPassword(userId, newPassword);
+                    ? await ResetAdPasswordAsync(request.UserId, request.NewPassword)
+                    : ResetDbPassword(request.UserId, request.NewPassword);
+
+                if (success)
+                {
+                    await _otpRepository.DeleteOtpAsync(
+                        request.UserId,
+                        request.Source);
+                }
 
                 message = success ? null : "Password reset failed";
             }
             catch (Exception ex)
             {
-                message = $"Exception: {ex.GetType().Name} — {ex.Message}";
-                Log.Error(ex, "Password reset error for UserId={UserId}", userId);
+                message = ex.Message;
+
+                Log.Error(
+                    ex,
+                    "Password reset error for UserId={UserId}",
+                    request.UserId);
+
                 throw;
             }
             finally
             {
-                await _userLogRepository.AddAsync(new UserLog
-                {
-                    UserId = userId,
-                    Source = "ProductivityApi",
-                    Action = "PASSWORD_RESET",
-                    Response = success ? "SUCCESS" : "FAILURE",
-                    Message = message
-                });
+                await _userLogRepository.AddAsync(
+                    new UserLog
+                    {
+                        UserId = request.UserId,
+                        Source = request.Source,
+                        Action = "PASSWORD_RESET",
+                        Response = success ? "SUCCESS" : "FAILURE",
+                        Message = message
+                    });
 
                 Log.Information(
-                    "Password reset UserId={UserId} Env={Env} Success={Success}",
-                    userId,
-                    _env.EnvironmentName,
+                    "Password reset UserId={UserId} Success={Success}",
+                    request.UserId,
                     success);
             }
 

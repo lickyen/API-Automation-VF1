@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using ProductivityApi.Models;
 using ProductivityApi.Repositories;
+using ProductivityApi.Repository;
 
 namespace ProductivityApi.Services
 {
@@ -67,15 +69,10 @@ namespace ProductivityApi.Services
                 "LAN status updated successfully.");
         }
 
-        public async Task<Response> CreateCaseAsync(
+        public async Task<int> CreateCaseAsync(
             VOTModel.CreateCaseRequest request)
         {
-            var caseId = await _repository.InsertCaseAsync(request);
-
-            return new Response(
-                true,
-                caseId,
-                "Case created successfully.");
+            return await _repository.InsertCaseAsync(request);
         }
 
         public async Task<Response> GetCaseByIdAsync(int id)
