@@ -32,29 +32,55 @@ namespace ProductivityApi.Controllers
                 return Unauthorized(new Response(false, null, "Invalid username or password"));
         }
 
+        //[HttpGet("getUserProfile/{userId}")]
+        //public IActionResult GetUserProfile(string userId)
+        //{
+        //    if (string.IsNullOrWhiteSpace(userId))
+        //        return BadRequest(new Response(false, null, "User ID is required"));
+
+        //    var profile = _loginService.GetUserProfile(userId);
+
+        //    if (profile == null)
+        //        return NotFound(new Response(false, null, $"User not found"));
+
+        //    return Ok(new Response(true, profile, "Success"));
+        //}
+
         [HttpGet("getUserProfile/{userId}")]
         public IActionResult GetUserProfile(string userId)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-                return BadRequest(new Response(false, null, "User ID is required"));
+            var loggedInUserId =
+                User.FindFirst("UserId")?.Value;
 
-            var profile = _loginService.GetUserProfile(userId);
+            var profile = _loginService.GetUserProfile(
+                userId,
+                loggedInUserId);
 
-            if (profile == null)
-                return NotFound(new Response(false, null, $"User not found"));
-
-            return Ok(new Response(true, profile, "Success"));
+            return Ok(new Response(true, profile));
         }
 
+
+        //[HttpPost("resetPassword")]
+        //public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        //{
+        //    bool success = await _loginService.ResetPasswordAsync(request.UserId, request.NewPassword);
+
+        //    if (success)
+        //        return Ok(new Response(true, null, "Password reset successfully"));
+        //    else
+        //        return BadRequest(new Response(false, null, "Password reset failed"));
+        //}
+
         [HttpPost("resetPassword")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetPassword(
+            [FromBody] ResetPasswordRequest request)
         {
-            bool success = await _loginService.ResetPasswordAsync(request.UserId, request.NewPassword);
+            bool success = await _loginService.ResetPasswordAsync(request);
 
             if (success)
                 return Ok(new Response(true, null, "Password reset successfully"));
-            else
-                return BadRequest(new Response(false, null, "Password reset failed"));
+
+            return BadRequest(new Response(false, null, "Password reset failed"));
         }
 
     }

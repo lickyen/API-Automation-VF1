@@ -1322,15 +1322,16 @@ namespace ProductivityApi.Services
             //             bool result = otp == "123456";
             // #else
             string referenceId = $"NOC_{transactionId}_CUSTOMER";
-            bool result = await _otpService.VerifyOtp(referenceId, otp);
+
+            var result = await _otpService.VerifyOtp(referenceId, otp);
             // #endif
 
-            if (result)
+            if (result.Success)
             {
                 await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
             }
 
-            return result;
+            return result.Success;
         }
 
         public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
@@ -1339,15 +1340,16 @@ namespace ProductivityApi.Services
             //             bool result = otp == "123456";
             // #else
             string referenceId = $"NOC_{transactionId}_OWNER";
-            bool result = await _otpService.VerifyOtp(referenceId, otp);
+
+            var result = await _otpService.VerifyOtp(referenceId, otp);
             // #endif
 
-            if (result)
+            if (result.Success)
             {
                 await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
             }
 
-            return result;
+            return result.Success;
         }
 
         public async Task<(bool Success, string Message)> SentForDispatchAsync(
