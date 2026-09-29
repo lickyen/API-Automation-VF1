@@ -70,49 +70,6 @@ namespace ProductivityApi.Services
             return true;
         }
 
-        private async Task SendOtpInternal(
-            string userId,
-            string mobileNumber,
-            string? source,
-            string? smsContent,
-            string? dltContentId)
-        {
-            string otp = GenerateOtp();
-            string hashedOtp = HashOtp(otp);
-
-            await _otpRepository.SaveOtpAsync(
-                new OtpModel
-                {
-                    UserId = userId,
-                    OtpHash = hashedOtp,
-                    Attempts = 0,
-                    Source = source
-                });
-
-            if (string.IsNullOrWhiteSpace(smsContent))
-            {
-                var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
-
-                smsContent = _templateService.ReplacePlaceholders(
-                    smsTemplate.Content,
-                    new Dictionary<string, string>
-                    {
-                        { "OTP", otp }
-                    });
-
-                dltContentId = smsTemplate.DltContentId;
-            }
-            else
-            {
-                smsContent = smsContent.Replace("{OTP}", otp);
-            }
-
-            await _smsService.SendSms(
-                mobileNumber,
-                smsContent,
-                dltContentId ?? string.Empty);
-        }
-
         public async Task<Response> VerifyOtp(
             string userId,
             string otp,
@@ -239,6 +196,49 @@ namespace ProductivityApi.Services
         }
 
         #region Helpers
+
+        private async Task SendOtpInternal(
+            string userId,
+            string mobileNumber,
+            string? source,
+            string? smsContent,
+            string? dltContentId)
+                {
+                    string otp = GenerateOtp();
+                    string hashedOtp = HashOtp(otp);
+
+                    await _otpRepository.SaveOtpAsync(
+                        new OtpModel
+                        {
+                            UserId = userId,
+                            OtpHash = hashedOtp,
+                            Attempts = 0,
+                            Source = source
+                        });
+
+                    if (string.IsNullOrWhiteSpace(smsContent))
+                    {
+                        var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
+
+                        smsContent = _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            new Dictionary<string, string>
+                            {
+                                { "OTP", otp }
+                            });
+
+                        dltContentId = smsTemplate.DltContentId;
+                    }
+                    else
+                    {
+                        smsContent = smsContent.Replace("<<OTP>>", otp);
+                    }
+
+                    await _smsService.SendSms(
+                        mobileNumber,
+                        smsContent,
+                        dltContentId ?? string.Empty);
+                }
 
         private string GenerateOtp()
         {

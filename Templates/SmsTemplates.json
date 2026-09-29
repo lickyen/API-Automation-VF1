@@ -7,44 +7,34 @@
     "Content": "Dear <<Name>>, Vistaar Finance has requested for INR <<Amount>>. You can pay by clicking the payment link <<PayLink>>, Purpose for this link is to collect your repayment online. Regards, Vistaar Finance.",
     "DltContentId": "1007073469048586512"
   },
-  "NocDeliveredReminderSms": {
-    "Content": "Dear <<CustomerName>>, your NOC document for LAN <<LAN>> is available at branch <<BranchName>>. Kindly collect the documents.",
-    "DltContentId": "NOC_DELIVERED_TEMPLATE"
-  },
-  "NocDeliveredEscalationSms": {
-    "Content": "Reminder: Your NOC documents for LAN <<LAN>> are pending collection at branch <<BranchName>>. Kindly collect immediately.",
-    "DltContentId": "NOC_ESCALATION_TEMPLATE"
-  },
-  "NocDispatchedSms": {
-    "Content": "Dear <<CustName>>, your NOC for LAN <<LAN>> has been dispatched to branch <<BranchName>>. Regards Vistaar Finance.",
-    "DltContentId": "YOUR_DLT_TEMPLATE_ID"
-  },
-  "NocDispatchedCustomerSms": {
-    "Content": "Dear Vistaar Customer, your loan account <<LAN>> has been closed. NOC / mortgaged property documents have been dispatched via <<CourierPartner>> (Tracking No: <<POD>>). Please visit/contact your branch after 5 working days to collect the documents. – Vistaar Finance",
-    "DltContentId": "1707176060763059400"
-  },
+
   "NocDispatchedBranchSms": {
-    "Content": "Dear Branch Team, your branch loan account <<LAN>> has been successfully closed. The NOC / mortgaged property documents have been dispatched via <<CourierPartner>> against Tracking Number <<POD>>. Kindly inform the customer to visit/contact the branch after 5 working days to collect the documents. Regards, Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
+    "Content": "Dear Branch Team, your branch loan account <<LAN>> has been successfully closed. The mortgaged property documents have been dispatched via <<CourierPartner>> against Tracking Number <<POD>>. Kindly inform the customer to visit or contact the branch after 5 working days to collect the documents. Regards, Vistaar Finance",
+    "DltContentId": "1707178184481473172"
   },
-  "NocOtpRequiredSms": {
-    "Content": "Dear <<CustomerName>>, your NOC for Loan #<<LAN>> has been dispatched to your branch. Please share the OTP received on your registered mobile number with the branch team at the time of document collection. – Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
+
+  "NocDispatchedCustomerSms": {
+    "Content": "",
+    "DltContentId": ""
   },
+
   "NocDailyCollectionReminderSms": {
-    "Content": "Dear Vistaar Customer, your loan account <<LAN>> has been closed. Reminder: Please visit your branch and collect your documents for Loan #<<LAN>>. – Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
+    "Content": "Dear Vistaar Customer, your Property Documents for Loan <<LAN>> have been sent to your Vistaar branch. Please collect them within 30 days from availability at the branch to avoid return of documents to the Central Office. Regards, Vistaar Finance.",
+    "DltContentId": "1707178184497618098"
   },
-  "NocNotCollected35DaysSms": {
-    "Content": "Dear Customer, your NOC documents for Loan #<<LAN>> have not been collected for over 35 days. The documents are being returned to HO. Please contact support if required. – Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
-  },
+
   "NocOtpConfirmationSms": {
-    "Content": "Dear <<CustomerName>>, as per our records, your property documents for Loan #<<LAN>> have been collected. Please share the OTP received on your registered mobile number with the branch team for NOC processing. – Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
+    "Content": "Dear <<CustomerName>>, as per our records, your property documents for Loan #<<LAN>> have been collected by you from the branch.Please share this OTP <<OTP>> with the branch team for Signed NOC. Thank you for choosing – Vistaar Finance.",
+    "DltContentId": "1707178184549613101"
   },
+
   "NocReturnDocumentsReminderSms": {
-    "Content": "Dear Branch Team, please return documents for Loan #<<LAN>> to HO/NOC team immediately as TAT is exceeded. – Vistaar Finance",
-    "DltContentId": "TO_BE_WHITELISTED"
+    "Content": "Dear Branch Team, please return documents for Loan <<LAN>> to NOC team immediately as TAT is exceeded. – Vistaar Finance.",
+    "DltContentId": "1707178184553929863"
+  },
+
+  "NocNotCollected35DaysSms": {
+    "Content": "We regret to inform you that your NOC documents for Loan <<LAN>> have not been collected for over 35 days. The documents are now being returned to our central office. You may raise a fresh request if required. Regards, Vistaar Finance.",
+    "DltContentId": "1707178184976294004"
   }
 }
