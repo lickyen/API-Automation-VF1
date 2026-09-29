@@ -340,7 +340,7 @@ namespace ProductivityApi.Services
 
             var sb = new StringBuilder();
             sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
-            sb.Append("<RESPONSE>");
+           // sb.Append("<RESPONSE>");
             sb.Append("<INQUIRY-STATUS><INQUIRY>");
             sb.Append($"<APPLN-ID>{Escape(applnId)}</APPLN-ID>");
             sb.Append($"<DATE-OF-REQUEST>{Escape(dateOfRequest)}</DATE-OF-REQUEST>");
@@ -397,7 +397,7 @@ namespace ProductivityApi.Services
 
             sb.Append("</APPLICANT></SHERLOCK-DETAILS>");
             sb.Append("</SHERLOCK-REPORT>");
-            sb.Append("</RESPONSE>");
+           // sb.Append("</RESPONSE>");
 
             return sb.ToString();
         }
