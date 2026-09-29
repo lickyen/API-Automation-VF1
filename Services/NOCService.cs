@@ -279,32 +279,32 @@ namespace ProductivityApi.Services
                 || status.Trim().Equals("Document Collected", StringComparison.OrdinalIgnoreCase)
             )
             {
-                // Send OTP confirmation SMS to customer after collection
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
-                    {
-                        var smsTemplate = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
+                //// Send OTP confirmation SMS to customer after collection
+                //try
+                //{
+                //    if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
+                //    {
+                //        var smsTemplate = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
-                        var smsContent = _templateService.ReplacePlaceholders(
-                            smsTemplate.Content,
-                            BuildPlaceholders(transaction)
-                        );
+                //        var smsContent = _templateService.ReplacePlaceholders(
+                //            smsTemplate.Content,
+                //            BuildPlaceholders(transaction)
+                //        );
 
-                        await _smsService.SendSms(
-                            transaction.CustMobile,
-                            smsContent,
-                            smsTemplate.DltContentId
-                        );
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // swallow but log
-                    Console.WriteLine(
-                        $"Error sending collection OTP confirmation SMS: {ex.Message}"
-                    );
-                }
+                //        await _smsService.SendSms(
+                //            transaction.CustMobile,
+                //            smsContent,
+                //            smsTemplate.DltContentId
+                //        );
+                //    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    // swallow but log
+                //    Console.WriteLine(
+                //        $"Error sending collection OTP confirmation SMS: {ex.Message}"
+                //    );
+                //}
             }
         }
 
@@ -332,18 +332,18 @@ namespace ProductivityApi.Services
                     );
 
                     // Also send OTP required sms to customer (informational)
-                    var otpTemplate = _templateService.GetSmsTemplate("NocOtpRequiredSms");
+                    //var otpTemplate = _templateService.GetSmsTemplate("NocOtpRequiredSms");
 
-                    var otpContent = _templateService.ReplacePlaceholders(
-                        otpTemplate.Content,
-                        BuildPlaceholders(transaction)
-                    );
+                    //var otpContent = _templateService.ReplacePlaceholders(
+                    //    otpTemplate.Content,
+                    //    BuildPlaceholders(transaction)
+                    //);
 
-                    await _smsService.SendSms(
-                        transaction.CustMobile,
-                        otpContent,
-                        otpTemplate.DltContentId
-                    );
+                    //await _smsService.SendSms(
+                    //    transaction.CustMobile,
+                    //    otpContent,
+                    //    otpTemplate.DltContentId
+                    //);
                 }
 
                 //---------------------------------------------------
