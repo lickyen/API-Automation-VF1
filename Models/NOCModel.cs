@@ -533,13 +533,18 @@ namespace ProductivityApi.Models
 
     public class SentForDispatchDto
     {
+        [Required]
         public int TransactionId { get; set; }
+        [Required]
 
         public string POD { get; set; } = string.Empty;
+        [Required]
 
         public string? CourierVendor { get; set; }
+        [Required]
 
         public string UpdatedBy { get; set; } = string.Empty;
+        [Required]
 
         public string Role { get; set; } = string.Empty;
     }
@@ -578,13 +583,17 @@ namespace ProductivityApi.Models
 
     public class SubmitAckWithKyc
     {
+        [Required]
         public int TransactionId { get; set; }
+        [Required]
         public string CreatedBy { get; set; } = string.Empty;
+        [Required]
         public string Role { get; set; } = string.Empty;
     }
 
     public class BulkDispatchDto
     {
+        [Required]
         public List<SentForDispatchDto> Items { get; set; } = new();
     }
 }

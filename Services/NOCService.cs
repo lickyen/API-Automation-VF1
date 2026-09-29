@@ -330,20 +330,35 @@ namespace ProductivityApi.Services
                         smsContent,
                         smsTemplate.DltContentId
                     );
+                }
 
-                    // Also send OTP required sms to customer (informational)
-                    //var otpTemplate = _templateService.GetSmsTemplate("NocOtpRequiredSms");
+                //---------------------------------------------------
+                // BRANCH SMS - detailed dispatched message
+                //---------------------------------------------------
 
-                    //var otpContent = _templateService.ReplacePlaceholders(
-                    //    otpTemplate.Content,
-                    //    BuildPlaceholders(transaction)
-                    //);
+                var branchUsers = await _repository.GetBranchUsersAsync(transaction.BranchCode);
 
-                    //await _smsService.SendSms(
-                    //    transaction.CustMobile,
-                    //    otpContent,
-                    //    otpTemplate.DltContentId
-                    //);
+                var mobiles = branchUsers
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Mobile))
+                    .Select(x => x.Mobile!)
+                    .Distinct()
+                    .ToList();
+
+                if (mobiles.Any())
+                {
+                    var smsTemplate = _templateService.GetSmsTemplate("NocDispatchedBranchSms");
+
+                    var smsContent = _templateService.ReplacePlaceholders(
+                        smsTemplate.Content,
+                        BuildPlaceholders(transaction));
+
+                    foreach (var mobile in mobiles)
+                    {
+                        await _smsService.SendSms(
+                            mobile,
+                            smsContent,
+                            smsTemplate.DltContentId);
+                    }
                 }
 
                 //---------------------------------------------------
@@ -538,7 +553,7 @@ namespace ProductivityApi.Services
             return new Dictionary<string, string>
             {
                 { "LAN", txn.Lan ?? "" },
-                { "CustName", txn.CustName ?? "" },
+                { "CustName", "Customer" },
                 { "CustomerName", txn.CustName ?? "" },
                 { "BranchName", txn.BranchName ?? "" },
                 { "Status", txn.Status ?? "" },

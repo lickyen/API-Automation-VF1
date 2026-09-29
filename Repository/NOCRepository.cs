@@ -229,6 +229,24 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<List<UserModel>> GetBranchUsersAsync(string branchCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+        SELECT *
+        FROM UserMaster
+        WHERE BranchID = @BranchCode
+        AND Role = 'BM'
+        AND Status = 'Active'";
+
+            var users = await conn.QueryAsync<UserModel>(
+                sql,
+                new { BranchCode = branchCode });
+
+            return users.ToList();
+        }
+
         //--------------------------------------------------------
         // Pending before dispatch
         //--------------------------------------------------------

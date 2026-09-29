@@ -288,23 +288,23 @@ namespace ProductivityApi.Jobs
                     // SMS
                     //--------------------------------------------------------
 
-                    if (!string.IsNullOrWhiteSpace(txn.CustMobile))
-                    {
-                        var smsTemplate = _templateService.GetSmsTemplate(
-                            "NocDeliveredEscalationSms"
-                        );
+                    //if (!string.IsNullOrWhiteSpace(txn.CustMobile))
+                    //{
+                    //    var smsTemplate = _templateService.GetSmsTemplate(
+                    //        "NocDeliveredEscalationSms"
+                    //    );
 
-                        var smsContent = _templateService.ReplacePlaceholders(
-                            smsTemplate.Content,
-                            BuildPlaceholders(txn, days)
-                        );
+                    //    var smsContent = _templateService.ReplacePlaceholders(
+                    //        smsTemplate.Content,
+                    //        BuildPlaceholders(txn, days)
+                    //    );
 
-                        await _smsService.SendSms(
-                            txn.CustMobile,
-                            smsContent,
-                            smsTemplate.DltContentId
-                        );
-                    }
+                    //    await _smsService.SendSms(
+                    //        txn.CustMobile,
+                    //        smsContent,
+                    //        smsTemplate.DltContentId
+                    //    );
+                    //}
 
                     //--------------------------------------------------------
                     // EMAIL
@@ -549,6 +549,34 @@ namespace ProductivityApi.Jobs
                         );
                     }
 
+                    // 2) Send Branch SMS for > configured days
+                    var branchUsers = await _repository.GetBranchUsersAsync(txn.BranchCode);
+
+                    var mobiles = branchUsers
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Mobile))
+                        .Select(x => x.Mobile!)
+                        .Distinct()
+                        .ToList();
+
+                    if (mobiles.Any())
+                    {
+                        var smsTemplate = _templateService.GetSmsTemplate("NocReturnDocumentsReminderSms");
+
+                        var smsContent = _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            BuildPlaceholders(txn, days)
+                        );
+
+                        foreach (var mobile in mobiles)
+                        {
+                            await _smsService.SendSms(
+                                mobile,
+                                smsContent,
+                                smsTemplate.DltContentId
+                            );
+                        }
+                    }
+
                     // 2) Send retrieve file email to NOC team
                     var retrieveTemplate = _templateService.GetEmailTemplate(
                         "NocRetrieveFileEmail"
@@ -629,7 +657,7 @@ namespace ProductivityApi.Jobs
             return new Dictionary<string, string>
             {
                 { "LAN", txn.Lan ?? "" },
-                { "CustomerName", txn.CustName ?? "" },
+                { "CustomerName", "Customer" },
                 { "BranchName", txn.BranchName ?? "" },
                 { "ClosureDate", txn.ClosureDate?.ToString("dd-MMM-yyyy") ?? "" },
                 { "Status", txn.Status ?? "" },
