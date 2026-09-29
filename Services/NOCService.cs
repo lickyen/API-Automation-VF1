@@ -1360,7 +1360,7 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Customer mobile number not available");
 
-            var template = _templateService.GetSmsTemplate("NocCustomerOtpSms");
+            var template = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
             var smsContent = _templateService.ReplacePlaceholders(
                 template.Content,
@@ -1392,7 +1392,7 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Property owner mobile number not available");
 
-            var template = _templateService.GetSmsTemplate("NocOwnerOtpSms");
+            var template = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
             var smsContent = _templateService.ReplacePlaceholders(
                 template.Content,
