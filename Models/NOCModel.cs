@@ -56,6 +56,7 @@ namespace ProductivityApi.Models
         public string? NOC_PDF_Signed { get; set; }
         public string? Ack_PDF { get; set; }
         public string? Ack_PDF_Signed { get; set; }
+        public string? KYC_PDF { get; set; }
         public string? OTPStatusKYC { get; set; }
         public string? OTPStatusNOC { get; set; }
         public DateTime? OTPStatusKYCDate { get; set; }
@@ -573,5 +574,17 @@ namespace ProductivityApi.Models
     {
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+    }
+
+    public class SubmitAckWithKyc
+    {
+        public int TransactionId { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class BulkDispatchDto
+    {
+        public List<SentForDispatchDto> Items { get; set; } = new();
     }
 }

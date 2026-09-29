@@ -1051,7 +1051,6 @@ namespace ProductivityApi.Services
                 {
                     Id = dto.Id,
                     Status = "Owner Mobile Update Pending",
-                    //Status = "Mobile Update Pending",
                     Remarks = "Property owner mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
@@ -1088,7 +1087,6 @@ namespace ProductivityApi.Services
                 {
                     Id = dto.Id,
                     Status = "Customer Mobile Update Pending",
-                    //Status = "Mobile Update Pending",
                     Remarks = "Customer mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
@@ -1103,6 +1101,110 @@ namespace ProductivityApi.Services
             return (true, "Mobile number updated successfully.");
         }
 
+        //public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
+        //{
+        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+        //        return (false, "PDF file is required.");
+
+        //    using var ms = new MemoryStream();
+        //    await dto.PdfFile.CopyToAsync(ms);
+        //    byte[] pdfBytes = ms.ToArray();
+
+        //    string fileName = $"{dto.TransactionId}_kyc.pdf";
+        //    var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+        //    if (!saved.Success)
+        //        return (false, $"Failed to save KYC PDF: {saved.Error}");
+
+        //    var dbSaved = await _repository.UpdateKycPdfAsync(
+        //        dto.TransactionId,
+        //        fileName,
+        //        dto.UpdatedBy
+        //    );
+
+        //    if (!dbSaved)
+        //        return (false, "Failed to save KYC PDF record.");
+
+        //    var statusResult = await _repository.UpdateTransactionStatusAsync(
+        //        new UpdateNocStatusDto
+        //        {
+        //            Id = dto.TransactionId,
+        //            Status = "KYC Verification Pending",
+        //            Remarks = "KYC document uploaded",
+        //            CreatedBy = dto.UpdatedBy,
+        //            Role = dto.Role,
+        //        }
+        //    );
+
+        //    if (statusResult != 1)
+        //        return (false, "KYC uploaded but status update failed.");
+
+        //    try
+        //    {
+        //        var txn = await _repository.GetById(dto.TransactionId);
+
+        //        if (txn != null)
+        //        {
+        //            var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
+
+        //            var placeholders = new Dictionary<string, string>
+        //    {
+        //        { "BranchName", txn.BranchName ?? "" },
+        //        { "LAN",        txn.Lan        ?? "" },
+        //        { "UploadedBy", dto.UpdatedBy  ?? "" },
+        //        { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
+        //    };
+
+        //            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+        //            var to = new List<string>();
+
+        //            var nocEmail = _configuration["NocSettings:NocEmail"];
+        //            if (!string.IsNullOrWhiteSpace(nocEmail))
+        //                to.Add(nocEmail);
+
+        //            //var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+        //            //to.AddRange(branchRecipients);
+
+        //            //to = to.Distinct().ToList();
+
+        //            if (to.Any())
+        //                await _emailService.SendEmail(template.Subject, body, to, new List<string>());
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
+        //    }
+
+        //    return (true, "KYC uploaded successfully.");
+        //}
+
+
+        //public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
+        //{
+        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+        //        return (false, "PDF file is required.");
+
+        //    using var ms = new MemoryStream();
+        //    await dto.PdfFile.CopyToAsync(ms);
+        //    byte[] pdfBytes = ms.ToArray();
+
+        //    string fileName = $"{dto.TransactionId}_ack_signed.pdf";
+        //    var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+        //    if (!saved.Success)
+        //        return (false, $"Failed to save ACK PDF: {saved.Error}");
+
+        //    var dbSaved = await _repository.UpdateAckPdfAsync(
+        //        dto.TransactionId,
+        //        fileName,
+        //        dto.UpdatedBy
+        //    );
+
+        //    if (!dbSaved)
+        //        return (false, "Failed to save Acknowledgement PDF.");
+
+        //    return (true, "Acknowledgement uploaded successfully.");
+        //}
+
         public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
         {
             if (dto.PdfFile == null || dto.PdfFile.Length == 0)
@@ -1113,69 +1215,22 @@ namespace ProductivityApi.Services
             byte[] pdfBytes = ms.ToArray();
 
             string fileName = $"{dto.TransactionId}_kyc.pdf";
-            var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+
+            var saved = await FileHelper.SaveBytesAsync(
+                _filePaths.NOCFilePath,
+                fileName,
+                pdfBytes);
+
             if (!saved.Success)
                 return (false, $"Failed to save KYC PDF: {saved.Error}");
 
             var dbSaved = await _repository.UpdateKycPdfAsync(
                 dto.TransactionId,
                 fileName,
-                dto.UpdatedBy
-            );
+                dto.UpdatedBy);
 
             if (!dbSaved)
                 return (false, "Failed to save KYC PDF record.");
-
-            var statusResult = await _repository.UpdateTransactionStatusAsync(
-                new UpdateNocStatusDto
-                {
-                    Id = dto.TransactionId,
-                    Status = "KYC Verification Pending",
-                    Remarks = "KYC document uploaded",
-                    CreatedBy = dto.UpdatedBy,
-                    Role = dto.Role,
-                }
-            );
-
-            if (statusResult != 1)
-                return (false, "KYC uploaded but status update failed.");
-
-            try
-            {
-                var txn = await _repository.GetById(dto.TransactionId);
-
-                if (txn != null)
-                {
-                    var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
-
-                    var placeholders = new Dictionary<string, string>
-            {
-                { "BranchName", txn.BranchName ?? "" },
-                { "LAN",        txn.Lan        ?? "" },
-                { "UploadedBy", dto.UpdatedBy  ?? "" },
-                { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
-            };
-
-                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var to = new List<string>();
-
-                    var nocEmail = _configuration["NocSettings:NocEmail"];
-                    if (!string.IsNullOrWhiteSpace(nocEmail))
-                        to.Add(nocEmail);
-
-                    //var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
-                    //to.AddRange(branchRecipients);
-
-                    //to = to.Distinct().ToList();
-
-                    if (to.Any())
-                        await _emailService.SendEmail(template.Subject, body, to, new List<string>());
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
-            }
 
             return (true, "KYC uploaded successfully.");
         }
@@ -1190,20 +1245,91 @@ namespace ProductivityApi.Services
             byte[] pdfBytes = ms.ToArray();
 
             string fileName = $"{dto.TransactionId}_ack_signed.pdf";
-            var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+
+            var saved = await FileHelper.SaveBytesAsync(
+                _filePaths.NOCFilePath,
+                fileName,
+                pdfBytes);
+
             if (!saved.Success)
                 return (false, $"Failed to save ACK PDF: {saved.Error}");
 
             var dbSaved = await _repository.UpdateAckPdfAsync(
                 dto.TransactionId,
                 fileName,
-                dto.UpdatedBy
-            );
+                dto.UpdatedBy);
 
             if (!dbSaved)
                 return (false, "Failed to save Acknowledgement PDF.");
 
             return (true, "Acknowledgement uploaded successfully.");
+        }
+
+        public async Task<(bool Success, string Message)> SubmitAckWithKycAsync(
+            SubmitAckWithKyc dto)
+        {
+            var txn = await _repository.GetById(dto.TransactionId);
+
+            if (txn == null)
+                return (false, "Transaction not found.");
+
+            if (string.IsNullOrWhiteSpace(txn.KYC_PDF))
+                return (false, "Please upload KYC.");
+
+            if (string.IsNullOrWhiteSpace(txn.Ack_PDF_Signed))
+                return (false, "Please upload signed Acknowledgement.");
+
+            var statusResult = await _repository.UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.TransactionId,
+                    Status = "KYC Verification Pending",
+                    Remarks = "KYC and Acknowledgement documents submitted",
+                    CreatedBy = dto.CreatedBy,
+                    Role = dto.Role
+                });
+
+            if (statusResult != 1)
+                return (false, "Failed to update status.");
+
+            try
+            {
+                var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
+
+                var placeholders = new Dictionary<string, string>
+        {
+            { "BranchName", txn.BranchName ?? "" },
+            { "LAN", txn.Lan ?? "" },
+            { "UploadedBy", dto.CreatedBy ?? "" },
+            { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") }
+        };
+
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    placeholders);
+
+                var to = new List<string>();
+
+                var nocEmail = _configuration["NocSettings:NocEmail"];
+
+                if (!string.IsNullOrWhiteSpace(nocEmail))
+                    to.Add(nocEmail);
+
+                if (to.Any())
+                {
+                    await _emailService.SendEmail(
+                        template.Subject,
+                        body,
+                        to,
+                        new List<string>());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
+            }
+
+            return (true, "Documents submitted successfully.");
         }
 
         public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
@@ -1506,6 +1632,27 @@ namespace ProductivityApi.Services
             return statusResult;
         }
 
+        public async Task<(bool Success, string Message)> BulkDispatchAsync(
+            BulkDispatchDto dto)
+        {
+            var successCount = 0;
+            var failureCount = 0;
+
+            foreach (var item in dto.Items)
+            {
+                var result = await SentForDispatchAsync(item);
+
+                if (result.Success)
+                    successCount++;
+                else
+                    failureCount++;
+            }
+
+            return (
+                true,
+                $"Processed {dto.Items.Count}. Success: {successCount}, Failed: {failureCount}"
+            );
+        }
         public async Task<(bool Success, string Message)> ReturnToHoAsync(ReturnToHoDto dto)
         {
             //--------------------------------------------------

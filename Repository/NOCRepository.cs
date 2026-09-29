@@ -242,7 +242,7 @@ namespace ProductivityApi.Repository
                 FROM NOC_Transactions
                 WHERE Status IN
                 (
-                    'Generate NOC',
+                    'Requested to RMU',
                     'File Requested',
                     'File at NOC',
                     'Ready for dispatch'
