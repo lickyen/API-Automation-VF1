@@ -362,5 +362,10 @@ namespace ProductivityApi.Services
         {
             return await _plfRepository.GetDisbursementsAsync(request);
         }
+
+        public async Task<GetOpenEntryLostFileStatusDto?> GetOpenEntryLostFileStatus(string lan)
+        {
+            return await _repository.GetOpenEntryLostFileStatus(lan);
+        }
     }
 }
