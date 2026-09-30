@@ -236,8 +236,15 @@ namespace ProductivityApi.Services
             if (!batchDocs.Any())
                 return FailDownload(result, $"No LANs found for BatchId {result.BatchId}.");
 
-            var batchFolderPath = await GetBatchFolderPathAsync(result.BatchId, batchDocs.First().CreatedBy, batchDocs.First().SubTag);
-            result.SourcePath = batchFolderPath;
+            var firstDoc = batchDocs.First();
+
+            var batchFolderPath = await GetBatchFolderPathAsync(
+                result.BatchId,
+                firstDoc.CreatedBy,
+                firstDoc.SubTag,
+                firstDoc.FromDate,
+                firstDoc.ToDate);
+                result.SourcePath = batchFolderPath;
 
             if (!Directory.Exists(batchFolderPath))
                 return FailDownload(result, $"Batch folder was not found: {batchFolderPath}");
@@ -442,7 +449,12 @@ namespace ProductivityApi.Services
             byte[] documentBytes,
             CancellationToken cancellationToken)
         {
-            var batchFolderPath = await GetBatchFolderPathAsync(doc.BatchId, doc.CreatedBy, doc.SubTag);
+            var batchFolderPath = await GetBatchFolderPathAsync(
+                doc.BatchId,
+                doc.CreatedBy,
+                doc.SubTag,
+                doc.FromDate,
+                doc.ToDate);
             Directory.CreateDirectory(batchFolderPath);
 
             var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
@@ -574,7 +586,9 @@ namespace ProductivityApi.Services
         private async Task<string> GetBatchFolderPathAsync(
             string batchId,
             string? createdBy,
-            string? subTag)
+            string? subTag,
+            DateTime? fromDate = null,
+            DateTime? toDate = null)
         {
             string? userBasePath = null;
 
@@ -595,12 +609,15 @@ namespace ProductivityApi.Services
 
             if (isNachDocument)
             {
-                var fromDate = DateTime.Today.AddDays(-1);
-                var toDate = DateTime.Today;
+                if (fromDate.HasValue && toDate.HasValue)
+                {
+                    return Path.Combine(
+                        _nachDocsPath,
+                        $"{fromDate.Value:dd-MM-yyyy} TO {toDate.Value:dd-MM-yyyy}");
+                }
 
-                return Path.Combine(
-                    _nachDocsPath,
-                    $"{fromDate:dd-MM-yyyy} TO {toDate:dd-MM-yyyy}");
+                throw new InvalidOperationException(
+                    "FromDate and ToDate are required for NACH documents.");
             }
 
             var basePath = string.IsNullOrWhiteSpace(userBasePath)

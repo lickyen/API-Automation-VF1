@@ -31,8 +31,8 @@ namespace ProductivityApi.Repository
             string tag,
             string subTag,
             string createdBy,
-            DateOnly? fromDate,
-            DateOnly? toDate)
+            DateTime? fromDate,
+            DateTime? toDate)
         {
             using var conn = CreateConnection();
 

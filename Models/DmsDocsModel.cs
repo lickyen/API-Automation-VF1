@@ -32,9 +32,9 @@ namespace ProductivityApi.Models
         [Required]
         public List<DmsDocsAddLan> Lans { get; set; }
 
-        public DateOnly? FromDate { get; set; }
+        public DateTime? FromDate { get; set; }
 
-        public DateOnly? ToDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
     public class DmsDocsAddLan
     {
@@ -88,8 +88,11 @@ namespace ProductivityApi.Models
         public DateTime? CreatedDt { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
-    }
 
+        public DateTime? FromDate { get; set; }
+
+        public DateTime? ToDate { get; set; }
+    }
     public class DmsDocsTagItem
     {
         public int Id { get; set; }
