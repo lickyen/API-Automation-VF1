@@ -154,7 +154,7 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result));
         }
 
-        [HttpGet("searchOpenEntries/{lan}")]
+        [HttpGet("openEntryLostFile/{lan}")]
         public async Task<IActionResult> GetOpenEntryLostFileStatus(string lan)
         {
             var result = await _service.GetOpenEntryLostFileStatus(lan);
