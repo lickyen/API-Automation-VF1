@@ -30,7 +30,9 @@ namespace ProductivityApi.Repository
             string batchId,
             string tag,
             string subTag,
-            string createdBy)
+            string createdBy,
+            DateOnly? fromDate,
+            DateOnly? toDate)
         {
             using var conn = CreateConnection();
 
@@ -40,7 +42,10 @@ namespace ProductivityApi.Repository
             p.Add("@Tag", tag);
             p.Add("@SubTag", subTag);
             p.Add("@CreatedBy", createdBy);
-            p.Add("@Output", dbType: DbType.Int32,
+            p.Add("@FromDate", fromDate);
+            p.Add("@ToDate", toDate);
+            p.Add("@Output",
+                dbType: DbType.Int32,
                 direction: ParameterDirection.Output);
 
             await conn.ExecuteAsync(
