@@ -25,7 +25,7 @@ namespace ProductivityApi.Repository
         public async Task<PoUser?> GetActiveUserByEmployeeCodeAsync(string employeeCode)
         {
             const string sql = @"
-                SELECT [Id], [EmployeeCode], [Name], [DepartmentCode], [IsDepartmentHead], [IsActive]
+                SELECT [Id], [EmployeeCode], [Name], [Email], [DepartmentCode], [IsDepartmentHead], [IsActive]
                 FROM [dbo].[PO_Users]
                 WHERE [EmployeeCode] = @EmployeeCode AND [IsActive] = 1;";
 
@@ -468,14 +468,15 @@ namespace ProductivityApi.Repository
         public async Task<IEnumerable<PoUser>> GetUsersByRoleAsync(string roleName, string? departmentCode = null)
         {
             const string sql = @"
-        SELECT u.[Id], u.[EmployeeCode], u.[Name], u.[DepartmentCode], u.[IsDepartmentHead], u.[IsActive]
+        SELECT u.[Id], u.[EmployeeCode], u.[Name], u.[Email], u.[DepartmentCode], u.[IsDepartmentHead], u.[IsActive]
         FROM [dbo].[PO_Users] u
         INNER JOIN [dbo].[PO_UserRoles] ur ON ur.[UserId] = u.[Id]
         INNER JOIN [dbo].[PO_Roles] r ON r.[Id] = ur.[RoleId]
         WHERE r.[RoleName] = @RoleName
-          AND r.[Status] = 1                          -- was: r.[Status] = 'Active'
+          AND r.[Status] = 1
           AND u.[IsActive] = 1
           AND (@DepartmentCode IS NULL OR u.[DepartmentCode] = @DepartmentCode);";
+
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync<PoUser>(sql, new { RoleName = roleName, DepartmentCode = departmentCode });
@@ -1376,5 +1377,52 @@ namespace ProductivityApi.Repository
             if (rows == 0)
                 throw new KeyNotFoundException($"No budget allocation found for BudgetCategoryId {budgetCategoryId} in {budgetYear}.");
         }
+        public async Task CreateEmailActionTokenAsync(int approvalId, Guid token, string action, string approverEmployeeCode, DateTime expiresAt)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_EmailActionTokens] ([ApprovalId], [Token], [Action], [ApproverEmployeeCode], [ExpiresAt])
+        VALUES (@ApprovalId, @Token, @Action, @ApproverEmployeeCode, @ExpiresAt);";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { ApprovalId = approvalId, Token = token, Action = action, ApproverEmployeeCode = approverEmployeeCode, ExpiresAt = expiresAt });
+        }
+
+        public async Task<dynamic?> GetEmailActionTokenAsync(Guid token)
+        {
+            const string sql = @"
+        SELECT [TokenId], [ApprovalId], [Token], [Action], [ApproverEmployeeCode], [ExpiresAt], [IsUsed]
+        FROM [dbo].[PO_EmailActionTokens]
+        WHERE [Token] = @Token;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryFirstOrDefaultAsync(sql, new { Token = token });
+        }
+
+        public async Task MarkEmailActionTokenUsedAsync(int tokenId)
+        {
+            const string sql = "UPDATE [dbo].[PO_EmailActionTokens] SET [IsUsed] = 1 WHERE [TokenId] = @TokenId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { TokenId = tokenId });
+        }
+
+        public async Task InvalidateOtherTokensForApprovalAsync(int approvalId, int excludeTokenId)
+        {
+            // Once one action (approve/reject) is taken, invalidate the sibling token for the same step
+            const string sql = @"
+        UPDATE [dbo].[PO_EmailActionTokens]
+        SET [IsUsed] = 1
+        WHERE [ApprovalId] = @ApprovalId AND [TokenId] <> @ExcludeTokenId;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            await connection.ExecuteAsync(sql, new { ApprovalId = approvalId, ExcludeTokenId = excludeTokenId });
+        }
+
+        public async Task<int?> GetPOIdForApprovalAsync(int approvalId)
+        {
+            const string sql = "SELECT [POId] FROM [dbo].[PO_PurchaseOrderApprovalHistory] WHERE [ApprovalId] = @ApprovalId;";
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.ExecuteScalarAsync<int?>(sql, new { ApprovalId = approvalId });
+        }
+
     }
 }

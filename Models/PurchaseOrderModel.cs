@@ -9,6 +9,7 @@
         public int Id { get; set; }
         public string EmployeeCode { get; set; } = default!;
         public string Name { get; set; } = default!;
+        public string Email { get; set; } = default!;
         public string DepartmentCode { get; set; } = default!;
         public bool IsDepartmentHead { get; set; }
         public bool IsActive { get; set; }
@@ -374,6 +375,7 @@
         public DateTime? ExpectedInvoiceDate { get; set; }
         public string POFrequency { get; set; } = default!;
         public string? BusinessPurpose { get; set; }
+        public string? CreatedBy { get; set; }
     }
     public class PurchaseOrderItemResponse
     {

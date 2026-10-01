@@ -417,5 +417,53 @@ namespace ProductivityApi.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
+
+        /// <summary>GET /api/Purchaseorder/EmailApprovalAction?token=...&action=approve|reject</summary>
+        [HttpGet]
+        public async Task<IActionResult> EmailApprovalAction([FromQuery] Guid token, [FromQuery] string action)
+        {
+            if (string.Equals(action, "reject", StringComparison.OrdinalIgnoreCase))
+            {
+                // Reject needs a reason — show a small HTML form instead of acting immediately
+                return Content(BuildRejectReasonFormHtml(token), "text/html");
+            }
+
+            var (success, message, _) = await _purchaseOrderService.ProcessEmailApprovalActionAsync(token, action);
+            return Content(BuildConfirmationPageHtml(success, message), "text/html");
+        }
+
+        /// <summary>POST /api/Purchaseorder/EmailRejectionAction — submitted from the reason form</summary>
+        [HttpPost]
+        public async Task<IActionResult> EmailRejectionAction([FromForm] Guid token, [FromForm] string reason)
+        {
+            var (success, message) = await _purchaseOrderService.ProcessEmailRejectionAsync(token, reason);
+            return Content(BuildConfirmationPageHtml(success, message), "text/html");
+        }
+
+        private static string BuildConfirmationPageHtml(bool success, string message) => $@"
+    <html>
+    <head><title>Purchase Order Action</title></head>
+    <body style='font-family:Arial,sans-serif;text-align:center;padding:60px;'>
+        <div style='display:inline-block;padding:30px 40px;border-radius:8px;background:{(success ? "#EAF6EC" : "#FBEAEA")};border:1px solid {(success ? "#1E7A34" : "#A12531")};'>
+            <h2 style='color:{(success ? "#1E7A34" : "#A12531")};margin:0 0 10px 0;'>{(success ? "Success" : "Unable to Process")}</h2>
+            <p style='color:#263247;margin:0;'>{System.Net.WebUtility.HtmlEncode(message)}</p>
+        </div>
+    </body>
+    </html>";
+
+        private static string BuildRejectReasonFormHtml(Guid token) => $@"
+    <html>
+    <head><title>Reject Purchase Order</title></head>
+    <body style='font-family:Arial,sans-serif;max-width:480px;margin:60px auto;padding:0 20px;'>
+        <h2 style='color:#A12531;'>Reject Purchase Order</h2>
+        <p>Please provide a reason for rejecting this Purchase Order.</p>
+        <form method='post' action='/api/Purchaseorder/EmailRejectionAction'>
+            <input type='hidden' name='token' value='{token}' />
+            <textarea name='reason' rows='4' style='width:100%;padding:10px;font-size:14px;' required placeholder='Enter rejection reason...'></textarea>
+            <br/><br/>
+            <button type='submit' style='background:#A12531;color:white;border:none;padding:10px 24px;border-radius:4px;font-size:14px;cursor:pointer;'>Submit Rejection</button>
+        </form>
+    </body>
+    </html>";
     }
 }

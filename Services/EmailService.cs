@@ -37,7 +37,8 @@ namespace ProductivityApi.Services
                 body = $"[ORIGINAL RECIPIENTS: {string.Join(", ", to)} | CC: {string.Join(", ", cc)} | BCC: {string.Join(", ", bcc)}]\n\n{body}";
 
                 // Override recipients
-                to = _emailSettings.TestEmails;
+                 to = _emailSettings.TestEmails;
+                
                 cc = new List<string>();
                 bcc = new List<string>();
             }
