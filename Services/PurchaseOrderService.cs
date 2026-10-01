@@ -17,11 +17,15 @@ namespace ProductivityApi.Services
 
         private readonly PurchaseOrderRepository _repository;
         private readonly string _filePath;
+        private readonly TemplateService _templateService;      // NEW
+        private readonly EmailService _emailService;
+
         private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".pdf", ".jpg", ".jpeg", ".png", ".docx" };
 
         private readonly string _templatePath;
         private readonly string _logoPath;
+        private readonly string _baseUrl;
 
 
         private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
@@ -35,13 +39,19 @@ namespace ProductivityApi.Services
         private readonly ILogger<PurchaseOrderService> _logger;
 
         public PurchaseOrderService(PurchaseOrderRepository repository,
-            ILogger<PurchaseOrderService> logger, AppSettings appSettings)
+            ILogger<PurchaseOrderService> logger, AppSettings appSettings, TemplateService templateService,
+        EmailService emailService)
         {
             _repository = repository;
             _logger = logger;
             _filePath = appSettings.FilePaths.POBasePath;
+
+            _baseUrl = appSettings.AppBaseUrl;
+
             _templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "Purchaseordertemplate.html");
             _logoPath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "assets", "vistaar Logo.png");
+            _templateService = templateService;
+            _emailService = emailService;
         }
         public async Task<POUserAccessResponse> CheckAccessAsync(string employeeCode)
         {
@@ -451,6 +461,7 @@ namespace ProductivityApi.Services
                 }).ToList();
 
                 await _repository.AddApprovalStepsAsync(poId, steps);
+                await NotifyPendingApproverAsync(poId, roles.First(), request.DepartmentCode);
             }
 
             // ==================== BUILD RESPONSE ====================
@@ -715,6 +726,7 @@ namespace ProductivityApi.Services
                 Status = po.Status,
                 PendingWithRole = pendingRole,
                 PendingWithUsers = pendingUsers,
+                CreatedBy = po.CreatedBy,
                 Items = itemsWithCategory.Select(i => new PurchaseOrderItemResponse    // <-- uses itemsWithCategory
                 {
                     ItemDescription = i.ItemDescription,
@@ -1083,6 +1095,12 @@ namespace ProductivityApi.Services
             if (hasNextStep)
             {
                 await _repository.UpdatePOStatusAsync(po.POId, "PendingApproval", po.CurrentApprovalStep + 1);
+
+                // Fetch approval history separately — it's not a property on the PO entity
+               // var allSteps = await _repository.GetApprovalHistoryAsync(po.POId);
+                var nextStep = allSteps.First(s => s.StepNumber == po.CurrentApprovalStep + 1);
+
+                await NotifyPendingApproverAsync(po.POId, nextStep.ApproverRole, po.DepartmentCode);
             }
             else
             {
@@ -2565,5 +2583,190 @@ namespace ProductivityApi.Services
             };
         }
 
+        private async Task NotifyPendingApproverAsync(int poId, string approverRole, string departmentCode)
+        {
+            try
+            {
+                string? scopeDept = DepartmentScopedRoles.Contains(approverRole) ? departmentCode : null;
+                var approvers = await _repository.GetUsersByRoleAsync(approverRole, scopeDept);
+
+                if (!approvers.Any())
+                {
+                    _logger.LogWarning("No users found for role {Role} (department scope: {Dept}) — PO {POId} approval notification not sent.", approverRole, scopeDept, poId);
+                    return;
+                }
+
+                var po = await GetPurchaseOrderByIdAsync(poId);
+
+                // get the actual pending approval step record — we need its ApprovalId to attach tokens to
+                var poEntity = await _repository.GetPurchaseOrderByIdAsync(poId)
+             ?? throw new InvalidOperationException($"Purchase Order {poId} not found.");
+
+                var currentStep = await _repository.GetPendingApprovalStepAsync(poId, poEntity.CurrentApprovalStep)
+                    ?? throw new InvalidOperationException("No pending approval step found to attach email tokens to.");
+
+
+                var itemRows = new StringBuilder();
+                foreach (var item in po.Items)
+                {
+                    itemRows.Append($"<tr><td>{System.Net.WebUtility.HtmlEncode(item.ItemDescription)}</td>" +
+                                     $"<td style='text-align:right'>{item.Quantity:N0}</td>" +
+                                     $"<td style='text-align:right'>{item.UnitPrice:N0}</td>" +
+                                     $"<td style='text-align:right'>{(item.Amount + item.GSTAmount):N0}</td></tr>");
+                }
+
+                var termsList = new StringBuilder();
+                foreach (var t in po.Terms.Select(t => t.TermsAndConditionDetails).Concat(po.AdditionalTerms.Select(a => a.TermText)))
+                {
+                    termsList.Append($"<li>{System.Net.WebUtility.HtmlEncode(t)}</li>");
+                }
+
+                string budgetStatus = po.IsBudgetExceeded ? "OUTSIDE BUDGET" : "WITHIN BUDGET";
+
+                var template = _templateService.GetEmailTemplate("POApprovalPendingEmail");
+
+                foreach (var approver in approvers)
+                {
+                    // ---------------- NEW: generate and store tokens for THIS approver, THIS step ----------------
+                    var approveToken = Guid.NewGuid();
+                    var rejectToken = Guid.NewGuid();
+                    var expiresAt = DateTime.UtcNow.AddDays(7);
+
+                    await _repository.CreateEmailActionTokenAsync(currentStep.ApprovalId, approveToken, "Approve", approver.EmployeeCode, expiresAt);
+                    await _repository.CreateEmailActionTokenAsync(currentStep.ApprovalId, rejectToken, "Reject", approver.EmployeeCode, expiresAt);
+
+                    string approveUrl = $"{_baseUrl}/api/Purchaseorder/EmailApprovalAction?token={approveToken}&action=approve";
+                    string rejectUrl = $"{_baseUrl}/api/Purchaseorder/EmailApprovalAction?token={rejectToken}&action=reject";
+                    // ---------------------------------------------------------------------------------------------
+
+                    var placeholders = new Dictionary<string, string>
+            {
+                { "ApproverName", approver.Name },
+                { "PONumber", po.PONumber },
+                { "DepartmentCode", po.DepartmentCode },
+                { "PODate", DateTime.Now.ToString("dd MMM yyyy") },
+                { "VendorName", po.VendorName },
+                { "VendorCode", po.VendorCode },
+                { "InitiatedBy", po.CreatedBy ?? "N/A" },
+                { "BudgetStatus", budgetStatus },
+                { "ItemRows", itemRows.ToString() },
+                { "TotalAmount", po.TotalAmount.ToString("N2") },
+                { "TermsList", termsList.ToString() },
+                { "ApproveUrl", approveUrl },     // NEW placeholder for the template
+                { "RejectUrl", rejectUrl }          // NEW placeholder for the template
+            };
+
+                    string subject = _templateService.ReplacePlaceholders(template.Subject, placeholders);
+                    string body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+
+                    await _emailService.SendEmail(
+                        subject,
+                        body,
+                        new List<string> { approver.Email },
+                        new List<string>(),
+                        source: "ProductivityApi.PurchaseOrderModule"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send approval notification email for PO {POId}.", poId);
+            }
+        }
+
+        public async Task<(bool Success, string Message, bool RequiresReasonForm)> ProcessEmailApprovalActionAsync(Guid token, string action)
+        {
+            var tokenRow = await _repository.GetEmailActionTokenAsync(token);
+
+            if (tokenRow is null)
+                return (false, "This approval link is invalid.", false);
+
+            if ((bool)tokenRow.IsUsed)
+                return (false, "This approval link has already been used.", false);
+
+            if ((DateTime)tokenRow.ExpiresAt < DateTime.UtcNow)
+                return (false, "This approval link has expired. Please log in to the application to take action.", false);
+
+            if (!string.Equals((string)tokenRow.Action, action, StringComparison.OrdinalIgnoreCase))
+                return (false, "This link does not match the requested action.", false);
+
+            int approvalId = (int)tokenRow.ApprovalId;
+            string approverEmployeeCode = (string)tokenRow.ApproverEmployeeCode;
+
+            int? poId = await _repository.GetPOIdForApprovalAsync(approvalId);
+            if (poId is null)
+                return (false, "The related Purchase Order could not be found.", false);
+
+            // Reject requires a reason — can't be completed from a single click, redirect to a small form instead
+            if (string.Equals(action, "reject", StringComparison.OrdinalIgnoreCase))
+            {
+                return (true, "redirect-to-reason-form", true);
+            }
+
+            // Approve — safe to process immediately
+            try
+            {
+                await ActOnApprovalAsync(new ApprovalActionRequest
+                {
+                    POId = poId.Value,
+                    ApproverEmployeeCode = approverEmployeeCode,
+                    IsApproved = true,
+                    Remarks = "Approved via email action link."
+                });
+
+                await _repository.MarkEmailActionTokenUsedAsync((int)tokenRow.TokenId);
+                await _repository.InvalidateOtherTokensForApprovalAsync(approvalId, (int)tokenRow.TokenId);
+
+                return (true, $"Purchase Order approved successfully.", false);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Could not process approval: {ex.Message}", false);
+            }
+        }
+
+        public async Task<(bool Success, string Message)> ProcessEmailRejectionAsync(Guid token, string reason)
+        {
+            var tokenRow = await _repository.GetEmailActionTokenAsync(token);
+
+            if (tokenRow is null)
+                return (false, "This rejection link is invalid.");
+
+            if ((bool)tokenRow.IsUsed)
+                return (false, "This rejection link has already been used.");
+
+            if ((DateTime)tokenRow.ExpiresAt < DateTime.UtcNow)
+                return (false, "This rejection link has expired. Please log in to the application to take action.");
+
+            int approvalId = (int)tokenRow.ApprovalId;
+            string approverEmployeeCode = (string)tokenRow.ApproverEmployeeCode;
+
+            int? poId = await _repository.GetPOIdForApprovalAsync(approvalId);
+            if (poId is null)
+                return (false, "The related Purchase Order could not be found.");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                return (false, "A rejection reason is required.");
+
+            try
+            {
+                await ActOnApprovalAsync(new ApprovalActionRequest
+                {
+                    POId = poId.Value,
+                    ApproverEmployeeCode = approverEmployeeCode,
+                    IsApproved = false,
+                    Remarks = reason
+                });
+
+                await _repository.MarkEmailActionTokenUsedAsync((int)tokenRow.TokenId);
+                await _repository.InvalidateOtherTokensForApprovalAsync(approvalId, (int)tokenRow.TokenId);
+
+                return (true, "Purchase Order rejected successfully.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Could not process rejection: {ex.Message}");
+            }
+        }
     }
 }

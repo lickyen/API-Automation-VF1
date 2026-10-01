@@ -126,5 +126,9 @@
   },
   "JobFailureAlertEmail": {
     "Body": "<p>Hi Team,</p><p>The background job encountered an error while processing.</p><ul><li><b>Job Name:</b> <<JobName>></li><li><b>Source:</b> <<Source>></li><li><b>Error Time:</b> <<ErrorTime>></li><li><b>Error Message:</b> <<ErrorMessage>></li></ul><p>Please check the application logs for more details.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "POApprovalPendingEmail": {
+    "Subject": "Approval Required: Purchase Order <<PONumber>>",
+    "Body": "<p>Hi <<ApproverName>>,</p><p>A Purchase Order is pending your approval.</p><table style='width:100%;margin-bottom:16px;'><tr><td><b>PO Number</b></td><td><<PONumber>></td></tr><tr><td><b>Department</b></td><td><<DepartmentCode>></td></tr><tr><td><b>PO Date</b></td><td><<PODate>></td></tr><tr><td><b>Vendor</b></td><td><<VendorName>> (<<VendorCode>>)</td></tr><tr><td><b>Initiated By</b></td><td><<InitiatedBy>></td></tr><tr><td><b>Budget Status</b></td><td><<BudgetStatus>></td></tr></table><h3>Line Items</h3><table style='width:100%;border-collapse:collapse;' border='1' cellpadding='6'><tr style='background:#6D6E71;color:white;'><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr><<ItemRows>></table><p style='text-align:right;font-weight:bold;margin-top:8px;'>Total Amount: Rs. <<TotalAmount>></p><h3>Terms &amp; Conditions</h3><ol><<TermsList>></ol><div style='margin:24px 0;'><a href='<<ApproveUrl>>' style='background:#1E7A34;color:white;padding:10px 24px;text-decoration:none;border-radius:4px;margin-right:12px;display:inline-block;font-weight:bold;'>Approve</a><a href='<<RejectUrl>>' style='background:#A12531;color:white;padding:10px 24px;text-decoration:none;border-radius:4px;display:inline-block;font-weight:bold;'>Reject</a></div><p>Or log in to the Purchase Order Management System to review and act on this request.</p><p>Regards,<br/>Vistaar Finance</p>"
   }
 }
