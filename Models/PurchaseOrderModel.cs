@@ -246,6 +246,7 @@
         public string? QuotationWaiverReason { get; set; }
         public DateTime? ExpectedInvoiceDate { get; set; }
         public string POFrequency { get; set; } = default!;
+        public string? BusinessPurpose { get; set; }
     }
     public class PoTermsConditionsMaster
     {
@@ -319,7 +320,8 @@
         public string? QuotationWaiverReason { get; set; }
         public List<int> DeliveryLocationIds { get; set; } = new();
         public DateTime? ExpectedInvoiceDate { get; set; }
-        public string POFrequency { get; set; } = default!;  
+        public string POFrequency { get; set; } = default!;
+        public string? BusinessPurpose { get; set; }
     }
     public class CreatePurchaseOrderItemRequest
     {
@@ -371,6 +373,7 @@
         public string? RejectionReason { get; set; }
         public DateTime? ExpectedInvoiceDate { get; set; }
         public string POFrequency { get; set; } = default!;
+        public string? BusinessPurpose { get; set; }
     }
     public class PurchaseOrderItemResponse
     {
@@ -710,6 +713,7 @@
         public string? QuotationWaiverReason { get; set; }   
         public DateTime? ExpectedInvoiceDate { get; set; }     
         public string POFrequency { get; set; } = default!;
+        public string? BusinessPurpose { get; set; }
     }
     public class CancelPurchaseOrderRequest
     {

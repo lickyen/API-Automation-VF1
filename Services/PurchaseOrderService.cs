@@ -412,6 +412,7 @@ namespace ProductivityApi.Services
                 QuotationWaiverReason = hasThreeQuotations ? null : request.QuotationWaiverReason,
                 ExpectedInvoiceDate = request.ExpectedInvoiceDate,
                 POFrequency = request.POFrequency,
+                BusinessPurpose = request.BusinessPurpose,
                 Status = request.SaveAsDraft ? "Draft" : "PendingApproval",
                 CurrentApprovalStep = request.SaveAsDraft ? 0 : 1,
                 CreatedBy = request.CreatedBy
@@ -483,6 +484,7 @@ namespace ProductivityApi.Services
                 QuotationRequired = quotationRequired,              
                 QuotationWaiverReason = hasThreeQuotations ? null : request.QuotationWaiverReason,
                 ExpectedInvoiceDate = request.ExpectedInvoiceDate,
+                BusinessPurpose = request.BusinessPurpose,
                 Status = po.Status,
                 PendingWithRole = request.SaveAsDraft ? null : "DepartmentHead",
                 PendingWithUsers = new List<PendingApproverResponse>(),   // resolved on GetById; empty on create response
@@ -707,6 +709,9 @@ namespace ProductivityApi.Services
                 QuotationRequired = po.QuotationRequired,
                 QuotationWaiverReason = po.QuotationWaiverReason,
                 ExpectedInvoiceDate = po.ExpectedInvoiceDate,
+                BusinessPurpose = po.BusinessPurpose,
+                POFrequency = po.POFrequency,
+                RejectionReason = po.RejectionReason,
                 Status = po.Status,
                 PendingWithRole = pendingRole,
                 PendingWithUsers = pendingUsers,
@@ -1576,104 +1581,7 @@ namespace ProductivityApi.Services
 
 
       
-        private string BuildHtml(PurchaseOrderResponse po)
-        {
-            string template = File.ReadAllText(_templatePath);
 
-            string logoBase64 = "data:image/png;base64," + Convert.ToBase64String(File.ReadAllBytes(_logoPath));
-
-            var itemRows = new StringBuilder();
-            int i = 1;
-            foreach (var item in po.Items)
-            {
-                itemRows.Append($@"
-<tr>
-    <td>{i}</td>
-    <td><strong>{System.Net.WebUtility.HtmlEncode(item.ItemDescription)}</strong>
-        <small>Sub-category: {System.Net.WebUtility.HtmlEncode(item.SubClassification)} &nbsp;·&nbsp; Item category: {System.Net.WebUtility.HtmlEncode(item.ItemCategory)}{(item.IsBudgetExceeded ? " &nbsp;·&nbsp; <span style='color:#A12531'>Budget Exceeded</span>" : "")}</small>
-    </td>
-    <td class=""center"">{item.Quantity:N0}</td>
-    <td class=""right"">₹{item.UnitPrice:N0}</td>
-    <td class=""right"">₹{item.Amount:N0}</td>
-    <td class=""right"">₹{item.GSTAmount:N0}</td>
-    <td class=""right""><strong>₹{item.Amount + item.GSTAmount:N0}</strong></td>
-</tr>");
-                i++;
-            }
-
-            var termsList = new StringBuilder();
-            foreach (var t in po.Terms.Select(t => t.TermsAndConditionDetails).Concat(po.AdditionalTerms.Select(a => a.TermText)))
-                termsList.Append($"<li>{System.Net.WebUtility.HtmlEncode(t)}</li>");
-
-            string statusWatermark = po.Status == "Approved" ? "" : po.Status.ToUpper();
-
-            string deliveryNames = string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName));
-            string deliveryAddresses = string.Join("<br>", po.DeliveryLocations.Select(l => System.Net.WebUtility.HtmlEncode(l.Address)));
-
-            string vendorContact = string.Join(" · ", new[]
-            {
-        po.VendorContactName,
-        po.VendorContactMobile,
-        po.VendorContactEmail
-    }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-            // ---------------- NEW: Advance / Balance amount calculation ----------------
-            decimal? advanceAmount = po.AdvancePercentage is not null
-                ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
-                : null;
-
-            decimal? balanceAmount = advanceAmount is not null
-                ? po.TotalAmount - advanceAmount
-                : null;
-
-            string advanceDisplay = po.AdvancePercentage is not null
-                ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})"
-                : "None";
-
-            string balanceDisplay = balanceAmount is not null
-                ? $"₹{balanceAmount:N0}"
-                : "-";
-            // Round total amount consistently
-            decimal roundedTotalAmount = Math.Round(
-                po.TotalAmount,
-                0,
-                MidpointRounding.AwayFromZero
-            );
-
-            return template
-                .Replace("{{LogoBase64}}", logoBase64)
-                .Replace("{{PONumber}}", po.PONumber)
-                .Replace("{{IssueDate}}", DateTime.Now.ToString("dd MMM yyyy"))
-                .Replace("{{BudgetYear}}", po.BudgetYear)
-                .Replace("{{DepartmentCode}}", po.DepartmentCode)
-                .Replace("{{Classification}}", po.Classification)
-                .Replace("{{SubClassification}}", po.SubClassification ?? "-")
-                .Replace("{{POType}}", po.POType)
-                .Replace("{{DeliveryLocations}}", deliveryNames)
-                .Replace("{{DeliveryAddress}}", deliveryAddresses)
-                .Replace("{{Advance}}", advanceDisplay)                    // now includes amount, not just %
-                .Replace("{{AdvanceAmount}}", advanceAmount is not null ? $"₹{advanceAmount:N0}" : "-")
-                .Replace("{{BalanceAmount}}", balanceDisplay)               // NEW token
-                .Replace("{{Status}}", po.Status)
-                .Replace("{{StatusWatermark}}", statusWatermark)
-                .Replace("{{VendorName}}", po.VendorName)
-                .Replace("{{VendorCode}}", po.VendorCode)
-                .Replace("{{VendorGSTIN}}", po.VendorGSTIN)
-                .Replace("{{VendorState}}", po.VendorState)
-                .Replace("{{VendorContactName}}", po.VendorContactName ?? "-")
-                .Replace("{{VendorContactMobile}}", po.VendorContactMobile ?? "-")
-                .Replace("{{VendorContactEmail}}", po.VendorContactEmail ?? "-")
-                .Replace("{{VendorContact}}", string.IsNullOrWhiteSpace(vendorContact) ? "-" : vendorContact)  // now actually used
-                .Replace("{{CompanyAddress}}", "No.59&60-23, 22nd Cross, 29th Main Rd, EWS Colony, BTM Layout 2nd Stage, BTM Layout, Bengaluru, Karnataka, 560076")  
-                .Replace("{{CompanyGSTIN}}", "29XXXXXXXXXXXZX")                                     // TODO: same as above
-                .Replace("{{TermsType}}", po.TermsType)
-                .Replace("{{SubTotal}}", po.SubTotal.ToString("N0"))
-                .Replace("{{GSTAmount}}", po.GSTAmount.ToString("N0"))
-                .Replace("{{TotalAmount}}", po.TotalAmount.ToString("N0"))
-                .Replace("{{AmountInWords}}", ConvertToWords(roundedTotalAmount))
-                .Replace("{{ItemRows}}", itemRows.ToString())
-                .Replace("{{TermsList}}", termsList.ToString());
-        }
 
         private static string ConvertNumberToWords(long number)
         {
@@ -1763,219 +1671,221 @@ namespace ProductivityApi.Services
             return $"Rupees {ConvertNumberToWords(roundedAmount)} Only";
         }
 
-    
+
 
 
         public async Task<byte[]> GeneratePurchaseOrderPdfAsync(int poId)
-    {
-        var po = await GetPurchaseOrderByIdAsync(poId);
-
-        var navy = "#1F3763";
-        var grey = "#6D6E71";
-        var mist = "#A7B6BF";
-        var line = "#D9E0E5";
-        var panelBg = "#F4F7F9";
-
-        decimal? advanceAmount = po.AdvancePercentage is not null
-            ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
-            : null;
-        decimal? balanceAmount = advanceAmount is not null ? po.TotalAmount - advanceAmount : null;
-
-        const float sidebarWidth = 100f;
-        const float a4HeightPt = 841.89f;
-        const float pageMarginPt = 8f;
-
-        void PartyBox(IContainer container, string label, string boldLine, string detail)
         {
-            container.Border(1).BorderColor(Colors.White).Background(panelBg).Padding(8).Column(c =>
-            {
-                c.Item().Text(label.ToUpper()).FontColor(grey).FontSize(6);
-                c.Item().PaddingTop(2).Text(boldLine).FontColor(navy).FontSize(9).Bold();
-                c.Item().PaddingTop(2).Text(detail).FontSize(7).LineHeight(1.35f);
-            });
-        }
+            var po = await GetPurchaseOrderByIdAsync(poId);
 
-        var document = Document.Create(container =>
-        {
-            container.Page(page =>
-            {
-                page.Size(PageSizes.A4);
-                page.Margin(pageMarginPt);
-                page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(9));
+            var navy = "#1F3763";
+            var grey = "#6D6E71";
+            var mist = "#A7B6BF";
+            var red = "#A12531";
+            var line = "#D9E0E5";
+            var panelBg = "#F4F7F9";
 
-                page.Content().Layers(layers =>
+            decimal? advanceAmount = po.AdvancePercentage is not null
+                ? Math.Round(po.TotalAmount * po.AdvancePercentage.Value / 100m, 2)
+                : null;
+            decimal? balanceAmount = advanceAmount is not null ? po.TotalAmount - advanceAmount : null;
+
+            const float sidebarWidth = 100f;
+            const float a4HeightPt = 841.89f;
+            const float pageMarginPt = 8f;
+
+            void PartyBox(IContainer container, string label, string boldLine, string detail)
+            {
+                container.Border(1).BorderColor(Colors.White).Background(panelBg).Padding(8).Column(c =>
                 {
-                    // Watermark — declared first so it renders BEHIND the primary content layer
-                    layers.Layer().AlignCenter().AlignMiddle()
-                        .Rotate(-30)
-                        .Text(FormatStatus(po.Status))
-                        .FontSize(60).Bold().FontColor("#F6D9DC");
+                    c.Item().Text(label.ToUpper()).FontColor(grey).FontSize(6);
+                    c.Item().PaddingTop(2).Text(boldLine).FontColor(navy).FontSize(9).Bold();
+                    c.Item().PaddingTop(2).Text(detail).FontSize(7).LineHeight(1.35f);
+                });
+            }
 
-                    layers.PrimaryLayer().Row(row =>
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(pageMarginPt);
+                    page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(9));
+
+                    page.Content().Layers(layers =>
                     {
-                        row.ConstantItem(sidebarWidth);   // reserved space; visual sidebar drawn in the background layer below
+                        layers.Layer().AlignCenter().AlignMiddle()
+                            .Rotate(-30)
+                            .Text(FormatStatus(po.Status))
+                            .FontSize(60).Bold().FontColor("#F6D9DC");
 
-                        row.RelativeItem().Padding(18).Column(content =>
+                        layers.PrimaryLayer().Row(row =>
                         {
-                            content.Item().Column(c =>
-                            {
-                                c.Item().Text("SUPPLIER DOCUMENT").FontColor(grey).FontSize(7);
-                                c.Item().Text("Purchase Order").FontColor(navy).FontSize(16).Bold();
-                            });
+                            row.ConstantItem(sidebarWidth);
 
-                            // Row 1: Supplier | Bill To
-                            content.Item().PaddingTop(14).Row(r =>
+                            row.RelativeItem().Padding(18).Column(content =>
                             {
-                                r.RelativeItem().PaddingRight(6).Element(e =>
-                                    PartyBox(e, "Supplier", po.VendorName,
-                                        $"Vendor code: {po.VendorCode}\nGSTIN: {po.VendorGSTIN}\n{po.VendorState}"));
+                                content.Item().Column(c =>
+                                {
+                                    c.Item().Text("SUPPLIER DOCUMENT").FontColor(grey).FontSize(7);
+                                    c.Item().Text("Purchase Order").FontColor(navy).FontSize(16).Bold();
+                                });
 
-                                r.RelativeItem().PaddingLeft(6).Element(e =>
-                                    PartyBox(e, "Bill to", "Vistaar Financial Services Private Limited",
-                                        "Registered Office Address, Bengaluru, Karnataka\nGSTIN: 29XXXXXXXXXXXZX"));
-                            });
+                                // Row 1: Supplier | Bill To
+                                content.Item().PaddingTop(14).Row(r =>
+                                {
+                                    r.RelativeItem().PaddingRight(6).Element(e =>
+                                        PartyBox(e, "Supplier", po.VendorName,
+                                            $"Vendor code: {po.VendorCode}\nGSTIN: {po.VendorGSTIN}\n{po.VendorState}"));
 
-                            // Row 2: Deliver To | Commercial Terms
-                            content.Item().PaddingTop(8).Row(r =>
-                            {
-                                r.RelativeItem().PaddingRight(6).Element(e =>
+                                    r.RelativeItem().PaddingLeft(6).Element(e =>
+                                        PartyBox(e, "Bill to", "Vistaar Financial Services Private Limited",
+                                            "Registered Office Address, Bengaluru, Karnataka\nGSTIN: 29XXXXXXXXXXXZX"));
+                                });
+
+                                // Business purpose — full width, only shown if provided
+                                if (!string.IsNullOrWhiteSpace(po.BusinessPurpose))
+                                {
+                                    content.Item().PaddingTop(8).BorderLeft(3).BorderColor(red).Background("#FFF6F6").Padding(8).Column(p =>
+                                    {
+                                        p.Item().Text("APPROVED BUSINESS PURPOSE").FontColor(grey).FontSize(6);
+                                        p.Item().PaddingTop(2).Text(po.BusinessPurpose).FontColor(navy).FontSize(9).Bold();
+                                    });
+                                }
+
+                                // Deliver to — now full width, own row (Commercial Terms box removed)
+                                content.Item().PaddingTop(8).Element(e =>
                                     PartyBox(e, "Deliver to",
                                         string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)),
                                         string.Join("\n", po.DeliveryLocations.Select(l => l.Address))));
 
-                                r.RelativeItem().PaddingLeft(6).Element(e =>
-                                    PartyBox(e, "Commercial terms", "Currency: INR",
-                                        $"Advance: {(po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None")}\nBalance due: {(balanceAmount is not null ? $"₹{balanceAmount:N0}" : "-")}"));
-                            });
-
-                            content.Item().PaddingTop(14).Table(table =>
-                            {
-                                table.ColumnsDefinition(c =>
+                                content.Item().PaddingTop(14).Table(table =>
                                 {
-                                    c.ConstantColumn(20);
-                                    c.RelativeColumn(4);
-                                    c.RelativeColumn(1);
-                                    c.RelativeColumn(1.5f);
-                                    c.RelativeColumn(1.5f);
-                                    c.RelativeColumn(1.5f);
-                                    c.RelativeColumn(1.5f);
-                                });
-
-                                table.Header(header =>
-                                {
-                                    void H(string text) => header.Cell().Background(grey).Padding(5)
-                                        .Text(text.ToUpper()).FontColor(Colors.White).FontSize(6);
-
-                                    H("#"); H("Description / classification"); H("Qty"); H("Rate"); H("Taxable"); H("Tax"); H("Total");
-                                });
-
-                                int i = 1;
-                                foreach (var item in po.Items)
-                                {
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Text(i.ToString());
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Column(c =>
+                                    table.ColumnsDefinition(c =>
                                     {
-                                        c.Item().Text(item.ItemDescription).Bold().FontColor(navy);
-                                        c.Item().Text($"Sub-category: {item.SubClassification} · Item category: {item.ItemCategory}{(item.IsBudgetExceeded ? " · Budget Exceeded" : "")}")
-                                            .FontSize(7).FontColor(item.IsBudgetExceeded ? Colors.Red.Medium : grey);
+                                        c.ConstantColumn(20);
+                                        c.RelativeColumn(4);
+                                        c.RelativeColumn(1);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
                                     });
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignCenter().Text(item.Quantity.ToString("N0"));
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.UnitPrice.ToString("N0"));
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.Amount.ToString("N0"));
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.GSTAmount.ToString("N0"));
-                                    table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text((item.Amount + item.GSTAmount).ToString("N0")).Bold();
-                                    i++;
-                                }
-                            });
 
-                            content.Item().PaddingTop(12).Background(navy).Padding(10).Row(t =>
-                            {
-                                t.RelativeItem().Column(c =>
-                                {
-                                    c.Item().Text("Total amount").FontColor(Colors.White).FontSize(8);
-                                    c.Item().Text($"Taxable {po.SubTotal:N0} · Tax {po.GSTAmount:N0}").FontColor("#CDD7E1").FontSize(7);
+                                    table.Header(header =>
+                                    {
+                                        void H(string text) => header.Cell().Background(grey).Padding(5)
+                                            .Text(text.ToUpper()).FontColor(Colors.White).FontSize(6);
+
+                                        H("#"); H("Description / classification"); H("Qty"); H("Rate"); H("Taxable"); H("Tax"); H("Total");
+                                    });
+
+                                    int i = 1;
+                                    foreach (var item in po.Items)
+                                    {
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Text(i.ToString());
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).Column(c =>
+                                        {
+                                            c.Item().Text(item.ItemDescription).Bold().FontColor(navy);
+                                            c.Item().Text($"Sub-category: {item.SubClassification} · Item category: {item.ItemCategory}{(item.IsBudgetExceeded ? " · Budget Exceeded" : "")}")
+                                                .FontSize(7).FontColor(item.IsBudgetExceeded ? Colors.Red.Medium : grey);
+                                        });
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignCenter().Text(item.Quantity.ToString("N0"));
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.UnitPrice.ToString("N0"));
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.Amount.ToString("N0"));
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text(item.GSTAmount.ToString("N0"));
+                                        table.Cell().BorderBottom(1).BorderColor(line).Padding(5).AlignRight().Text((item.Amount + item.GSTAmount).ToString("N0")).Bold();
+                                        i++;
+                                    }
                                 });
-                                t.ConstantItem(100).AlignRight().AlignMiddle()
-                                    .Text(po.TotalAmount.ToString("N0")).FontColor(Colors.White).FontSize(16).Bold();
-                            });
 
-                            content.Item().PaddingTop(6).Text(t =>
-                            {
-                                t.Span("AMOUNT IN WORDS  ").FontColor(grey).FontSize(7);
-                                t.Span(ConvertToWords(po.TotalAmount)).FontColor(navy).Bold();
-                            });
-
-                            content.Item().PaddingTop(16).BorderTop(1).BorderColor(line).PaddingTop(8).Column(terms =>
-                            {
-                                terms.Item().Text("Commercial and control terms").FontColor(navy).FontSize(9).Bold();
-
-                                int n = 1;
-                                var allTerms = po.Terms.Select(t => t.TermsAndConditionDetails)
-                                    .Concat(po.AdditionalTerms.Select(a => a.TermText));
-
-                                foreach (var t in allTerms)
+                                content.Item().PaddingTop(12).Background(navy).Padding(10).Row(t =>
                                 {
-                                    terms.Item().PaddingTop(3).Text($"{n}. {t}").FontSize(8).LineHeight(1.4f);
-                                    n++;
-                                }
-                            });
+                                    t.RelativeItem().Column(c =>
+                                    {
+                                        c.Item().Text("Total amount").FontColor(Colors.White).FontSize(8);
+                                        c.Item().Text($"Taxable {po.SubTotal:N0} · Tax {po.GSTAmount:N0}").FontColor("#CDD7E1").FontSize(7);
+                                    });
+                                    t.ConstantItem(100).AlignRight().AlignMiddle()
+                                        .Text(po.TotalAmount.ToString("N0")).FontColor(Colors.White).FontSize(16).Bold();
+                                });
 
-                            content.Item().PaddingTop(14).Border(1).BorderColor(mist).Background(panelBg)
-                                .Padding(8).AlignCenter()
-                                .Text("This is a system-generated Purchase Order. Hence, no signature is required.")
-                                .FontColor(navy).Bold().FontSize(8);
+                                content.Item().PaddingTop(6).Text(t =>
+                                {
+                                    t.Span("AMOUNT IN WORDS  ").FontColor(grey).FontSize(7);
+                                    t.Span(ConvertToWords(po.TotalAmount)).FontColor(navy).Bold();
+                                });
+
+                                content.Item().PaddingTop(16).BorderTop(1).BorderColor(line).PaddingTop(8).Column(terms =>
+                                {
+                                    terms.Item().Text("Commercial and control terms").FontColor(navy).FontSize(9).Bold();
+
+                                    int n = 1;
+                                    var allTerms = po.Terms.Select(t => t.TermsAndConditionDetails)
+                                        .Concat(po.AdditionalTerms.Select(a => a.TermText));
+
+                                    foreach (var t in allTerms)
+                                    {
+                                        terms.Item().PaddingTop(3).Text($"{n}. {t}").FontSize(8).LineHeight(1.4f);
+                                        n++;
+                                    }
+                                });
+
+                                content.Item().PaddingTop(14).Border(1).BorderColor(mist).Background(panelBg)
+                                    .Padding(8).AlignCenter()
+                                    .Text("This is a system-generated Purchase Order. Hence, no signature is required.")
+                                    .FontColor(navy).Bold().FontSize(8);
+                            });
                         });
-                    });
 
-                    // Background layer: fixed-height navy sidebar
-                    layers.Layer().Row(row =>
-                    {
-                        row.ConstantItem(sidebarWidth)
-                            .Height(a4HeightPt - (pageMarginPt * 2))
-                            .Background(navy).Padding(12).Column(side =>
-                            {
-                                side.Item().PaddingBottom(14).Image(_logoPath).FitWidth();
-                                side.Item().Text("PURCHASE\nORDER").FontColor(Colors.White).FontSize(13).Bold().LineHeight(1.05f);
-                                side.Item().PaddingTop(12).Text(po.PONumber).FontColor(Colors.White).FontSize(10).Bold();
-
-                                void Field(string label, string value)
+                        layers.Layer().Row(row =>
+                        {
+                            row.ConstantItem(sidebarWidth)
+                                .Height(a4HeightPt - (pageMarginPt * 2))
+                                .Background(navy).Padding(12).Column(side =>
                                 {
-                                    side.Item().PaddingTop(9).Text(label.ToUpper()).FontColor(mist).FontSize(6);
-                                    side.Item().Text(value).FontColor(Colors.White).FontSize(7.5f).Bold();
-                                }
+                                    side.Item().PaddingBottom(14).Image(_logoPath).FitWidth();
+                                    side.Item().Text("PURCHASE\nORDER").FontColor(Colors.White).FontSize(13).Bold().LineHeight(1.05f);
+                                    side.Item().PaddingTop(12).Text(po.PONumber).FontColor(Colors.White).FontSize(10).Bold();
 
-                                Field("Issue date", DateTime.Now.ToString("dd MMM yyyy"));
-                                Field("Financial year", po.BudgetYear);
-                                Field("Department", $"{po.DepartmentCode} · {po.Classification}");
-                                Field("Sub classification", po.SubClassification ?? "-");
-                                Field("PO type", po.POType);
-                                Field("Delivery", string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)));
-                                Field("Advance", po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None");
+                                    void Field(string label, string value)
+                                    {
+                                        side.Item().PaddingTop(9).Text(label.ToUpper()).FontColor(mist).FontSize(6);
+                                        side.Item().Text(value).FontColor(Colors.White).FontSize(7.5f).Bold();
+                                    }
 
-                                side.Item().ExtendVertical();
+                                    Field("Issue date", DateTime.Now.ToString("dd MMM yyyy"));
+                                    Field("Financial year", po.BudgetYear);
+                                    Field("Department", $"{po.DepartmentCode} · {po.Classification}");
+                                    Field("Sub classification", po.SubClassification ?? "-");
+                                    Field("PO type", po.POType);
+                                    Field("Delivery", string.Join(", ", po.DeliveryLocations.Select(l => l.BranchName)));
+                                    Field("Advance", po.AdvancePercentage is not null ? $"{po.AdvancePercentage}% (₹{advanceAmount:N0})" : "None");
 
-                                side.Item().PaddingTop(10).LineHorizontal(1).LineColor("#5F7697");
-                                side.Item().PaddingTop(8).Text("Vistaar Financial Services Private Limited")
-                                .FontColor(Colors.White).FontSize(7).Bold();
-                                side.Item().PaddingTop(3).Text("System-generated controlled procurement document")
-                                .FontColor("#CBD6DF").FontSize(6).LineHeight(1.4f);
-                            });
+                                    side.Item().ExtendVertical();
 
-                        row.RelativeItem();
+                                    side.Item().PaddingTop(10).LineHorizontal(1).LineColor("#5F7697");
+                                    side.Item().PaddingTop(8).Text("Vistaar Financial Services Private Limited")
+                                        .FontColor(Colors.White).FontSize(7).Bold();
+                                    side.Item().PaddingTop(3).Text("System-generated controlled procurement document")
+                                        .FontColor("#CBD6DF").FontSize(6).LineHeight(1.4f);
+                                });
+
+                            row.RelativeItem();
+                        });
                     });
                 });
             });
-        });
 
-        var pdfBytes = document.GeneratePdf();
+            var pdfBytes = document.GeneratePdf();
 
-        string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
-        Directory.CreateDirectory(folder);
-        string fileName = $"{poId}_PO.pdf";
-        await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
+            string folder = Path.Combine(_filePath, "GeneratedPDFs", po.BudgetYear);
+            Directory.CreateDirectory(folder);
+            string fileName = $"{poId}_PO.pdf";
+            await File.WriteAllBytesAsync(Path.Combine(folder, fileName), pdfBytes);
 
-        return pdfBytes;
-    }
+            return pdfBytes;
+        }
 
         private static string FormatStatus(string status)
         => System.Text.RegularExpressions.Regex.Replace(status, "(?<!^)([A-Z])", " $1").ToUpper();
@@ -2225,6 +2135,7 @@ namespace ProductivityApi.Services
                 QuotationWaiverReason = hasEnoughQuotations ? null : request.QuotationWaiverReason,  // NEW
                 ExpectedInvoiceDate = request.ExpectedInvoiceDate,
                 POFrequency = request.POFrequency,
+                BusinessPurpose = request.BusinessPurpose,
                 SubTotal = subTotal,
                 GSTAmount = gstTotal,
                 TotalAmount = totalAmount,
