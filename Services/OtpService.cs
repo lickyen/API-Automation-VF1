@@ -34,7 +34,6 @@ namespace ProductivityApi.Services
             string? smsContent = null,
             string? dltContentId = null)
         {
-
             var user = _userRepository.GetUser(userId)
                 ?? throw new InvalidOperationException("User not found");
 
@@ -48,7 +47,7 @@ namespace ProductivityApi.Services
                 smsContent,
                 dltContentId);
 
-            return user.Mobile;
+            return MaskMobile(user.Mobile);
         }
 
         public async Task<bool> SendOtpToMobile(
@@ -277,6 +276,14 @@ namespace ProductivityApi.Services
             return CryptographicOperations.FixedTimeEquals(
                 computedHash,
                 storedHash);
+        }
+
+        private static string MaskMobile(string mobile)
+        {
+            if (string.IsNullOrWhiteSpace(mobile) || mobile.Length < 4)
+                return mobile;
+
+            return $"{mobile[..2]}XXXXXX{mobile[^2..]}";
         }
 
         #endregion

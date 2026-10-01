@@ -17,6 +17,7 @@ namespace ProductivityApi.Models
         public AuthSettings AuthSettings { get; set; } = new AuthSettings();
         public DmsDocsSettings DmsDocsSettings { get; set; } = new DmsDocsSettings();
         public GoDigitSettings GoDigitSettings { get; set; } = new GoDigitSettings();
+        public JwtSettings JwtSettings { get; set; } = new JwtSettings();
         public List<string> JobFailureAlertEmails { get; set; } = new List<string>();
     }
 
@@ -130,5 +131,13 @@ namespace ProductivityApi.Models
     {
         public string UserName { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class JwtSettings
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Issuer { get; set; } = string.Empty;
+        public string Audience { get; set; } = string.Empty;
+        public int ExpiryMinutes { get; set; }
     }
 }

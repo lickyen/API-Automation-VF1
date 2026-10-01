@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
@@ -15,21 +16,46 @@ namespace ProductivityApi.Controllers
         {
             _loginService = loginService;
         }
+        //[HttpPost]
+        //public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
+        //{
+        //    bool success = await _loginService.ValidateLoginAsync(loginRequest);
+
+        //    if (success)
+        //        return Ok(new Response(
+        //            true,
+        //            new LoginResponse
+        //            {
+        //                TwoFactorEnabled = _loginService.IsTwoFactorAuthEnabled
+        //            },
+        //            "Success"));
+        //    else
+        //        return Unauthorized(new Response(false, null, "Invalid username or password"));
+        //}
+
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
             bool success = await _loginService.ValidateLoginAsync(loginRequest);
 
-            if (success)
-                return Ok(new Response(
+            if (!success)
+            {
+                return Unauthorized(
+                    new Response(false, null, "Invalid username or password"));
+            }
+
+            var token = _loginService.GenerateJwtToken(
+                loginRequest.UserId);
+
+            return Ok(
+                new Response(
                     true,
                     new LoginResponse
                     {
+                        Token = token,
                         TwoFactorEnabled = _loginService.IsTwoFactorAuthEnabled
                     },
                     "Success"));
-            else
-                return Unauthorized(new Response(false, null, "Invalid username or password"));
         }
 
         //[HttpGet("getUserProfile/{userId}")]
@@ -46,6 +72,7 @@ namespace ProductivityApi.Controllers
         //    return Ok(new Response(true, profile, "Success"));
         //}
 
+        [Authorize]
         [HttpGet("getUserProfile/{userId}")]
         public IActionResult GetUserProfile(string userId)
         {

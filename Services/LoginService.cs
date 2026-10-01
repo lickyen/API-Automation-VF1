@@ -1,9 +1,7 @@
 ﻿using ProductivityApi.Models;
-using ProductivityApi.Repositories;
 using ProductivityApi.Repository;
 using Serilog;
 using System.DirectoryServices;
-using System.Runtime.InteropServices;
 
 
 namespace ProductivityApi.Services
@@ -12,15 +10,19 @@ namespace ProductivityApi.Services
     {
         private readonly ADSettings _settings;
         private readonly AuthSettings _authSettings;
+        private readonly JwtSettings _jwtSettings;
+        private readonly JwtHelper _jwtHelper;
         private readonly UserRepository _userRepository;
         private readonly UserLogRepository _userLogRepository;
         private readonly OtpRepository _otpRepository;
         private readonly IWebHostEnvironment _env;
 
-        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, OtpRepository otpRepository, IWebHostEnvironment env)
+        public LoginService(AppSettings appSettings,  UserRepository userRepository, UserLogRepository userLogRepository, OtpRepository otpRepository, JwtHelper jwtHelper, IWebHostEnvironment env)
         {
             _settings = appSettings.ADSettings;
             _authSettings = appSettings.AuthSettings;
+            _jwtSettings = appSettings.JwtSettings;
+            _jwtHelper = jwtHelper;
             _userRepository = userRepository;
             _userLogRepository = userLogRepository;
             _otpRepository = otpRepository;
@@ -485,6 +487,11 @@ namespace ProductivityApi.Services
         {
             const int ADS_UF_ACCOUNTDISABLE = 0x0002; // Bit flag for disabled accounts
             return (accountControl & ADS_UF_ACCOUNTDISABLE) == 0;
+        }
+
+        public string GenerateJwtToken(string userId)
+        {
+            return _jwtHelper.GenerateToken(userId);
         }
 
     }

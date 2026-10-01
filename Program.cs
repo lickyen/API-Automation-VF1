@@ -6,9 +6,12 @@ using ProductivityApi.Models;
 using ProductivityApi.Repository;
 using ProductivityApi.Services;
 using Serilog;
-using Microsoft.Extensions.FileProviders;
 using ProductivityApi.Repositories;
 using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure CORS
@@ -69,107 +72,166 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
-builder.Services.AddHttpClient<PLFService>();
+builder.Services.AddScoped<AirtelabankService>();
+builder.Services.AddScoped<AirtelBankRepository>();
+
+builder.Services.AddScoped<AnnouncementService>();
+builder.Services.AddScoped<AnnouncementRepository>();
+
+builder.Services.AddScoped<AxisService>();
+builder.Services.AddScoped<AxisRepository>();
+
+builder.Services.AddScoped<BranchServices>();
+builder.Services.AddScoped<BranchRepository>();
+
+builder.Services.AddScoped<BranchVisitService>();
+builder.Services.AddScoped<BranchVisitRepository>();
+
+builder.Services.AddScoped<BTLettersService>();
+builder.Services.AddScoped<BTLettersRepository>();
+
+builder.Services.AddScoped<BulkDocsService>();
+builder.Services.AddScoped<BulkDocsRepository>();
+
+builder.Services.AddScoped<BulkFclService>();
+builder.Services.AddScoped<BulkFclRepository>();
+
+builder.Services.AddScoped<CersaiService>();
+builder.Services.AddScoped<CersaiRepository>();
+
+builder.Services.AddScoped<CibilCorrectionService>();
+builder.Services.AddScoped<CibilCorrectionRepository>();
+
+builder.Services.AddScoped<ClosureService>();
+builder.Services.AddScoped<ClosureRepository>();
+
 builder.Services.AddHttpClient<CRIFService>();
+builder.Services.AddScoped<CrifWrapperRepository>();
+
+builder.Services.AddScoped<CustEmailUpdateService>();
+builder.Services.AddScoped<CustEmailUpdateRepository>();
+
+builder.Services.AddScoped<DCServices>();
+builder.Services.AddScoped<DCRepository>();
+
+builder.Services.AddScoped<DeathClaimService>();
+builder.Services.AddScoped<DeathClaimRepository>();
+
+builder.Services.AddHttpClient<DmsDocsService>();
+builder.Services.AddScoped<DmsDocsRepository>();
+
+builder.Services.AddScoped<FcRefundService>();
+builder.Services.AddScoped<FcRefundRepository>();
+
+builder.Services.AddScoped<FixedAssetService>();
+builder.Services.AddScoped<FixedAssetRepository>();
+
+builder.Services.AddHttpClient<GoDigitService>();
+builder.Services.AddScoped<GoDigitRepository>();
+
+builder.Services.AddScoped<GoldLoanLeadService>();
+builder.Services.AddScoped<GoldLoanLeadRepository>();
+
+builder.Services.AddScoped<GoldLoanVendorService>();
+builder.Services.AddScoped<GoldLoanVendorRepository>();
+
+builder.Services.AddScoped<GurukulUserService>();
+builder.Services.AddScoped<GurukulUserRepository>();
+
+builder.Services.AddScoped<IndusArchivedService>();
+builder.Services.AddScoped<IndusArchivedRepository>();
+
+builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<InvoiceRepository>();
+
+builder.Services.AddScoped<LcRefundService>();
+builder.Services.AddScoped<LcRefundRepository>();
+
+builder.Services.AddScoped<LegalBillingService>();
+builder.Services.AddScoped<LegalBillingRepository>();
+
+builder.Services.AddScoped<LegalCourtsService>();
+builder.Services.AddScoped<LegalCourtsRepository>();
+
+builder.Services.AddScoped<LegalNoticeService>();
+builder.Services.AddScoped<LegalNoticeRepository>();
+
+builder.Services.AddScoped<LoanCancellationService>();
+builder.Services.AddScoped<LoanCancellationRepository>();
+
+builder.Services.AddScoped<ModService>();
+builder.Services.AddScoped<ModRepository>();
+
+builder.Services.AddScoped<ModulesService>();
+builder.Services.AddScoped<ModulesRepository>();
+
+builder.Services.AddScoped<NewBranchServices>();
+builder.Services.AddScoped<NewBranchRepository>();
+
+builder.Services.AddScoped<NOCService>();
+builder.Services.AddScoped<NOCRepository>();
+
+builder.Services.AddScoped<OtpService>();
+builder.Services.AddScoped<OtpRepository>();
+
+builder.Services.AddHttpClient<PLFService>();
+builder.Services.AddScoped<PLFRepository>();
+
+builder.Services.AddScoped<PurchaseOrderService>();
+builder.Services.AddScoped<PurchaseOrderRepository>();
+
+builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
+builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
+
+builder.Services.AddScoped<SARFAESIService>();
+builder.Services.AddScoped<SARFAESIRepository>();
+
+builder.Services.AddScoped<SettlementService>();
+builder.Services.AddScoped<SettlementRepository>();
+
+builder.Services.AddScoped<SharedService>();
+builder.Services.AddScoped<SharedRepository>();
+
+builder.Services.AddScoped<SOALODFCLService>();
+builder.Services.AddScoped<SOALODFCLRepository>();
+
+builder.Services.AddScoped<TrainingDashboardService>();
+builder.Services.AddScoped<TrainingDashboardRepository>();
+
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<UserRepository>();
+
+builder.Services.AddScoped<VCPService>();
+builder.Services.AddScoped<VCPRepository>();
+
+builder.Services.AddScoped<VOTService>();
+builder.Services.AddScoped<VOTRepository>();
+
+builder.Services.AddScoped<WabaService>();
+builder.Services.AddScoped<WabaRepository>();
+
+builder.Services.AddScoped<WabaWtsappHookService>();
+builder.Services.AddScoped<WabaWtsappHookRepository>();
+
+builder.Services.AddScoped<ZeroBalanceDayService>();
+builder.Services.AddScoped<ZeroBalanceDayRepository>();
+
+// Standalone services
 builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<SmsService>();
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<OtpService>();
-builder.Services.AddScoped<SharedService>();
-
 builder.Services.AddScoped<LoginService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<BranchServices>();
-builder.Services.AddScoped<SettlementService>();
-builder.Services.AddScoped<DCServices>();
-builder.Services.AddScoped<CersaiService>();
-builder.Services.AddScoped<BranchVisitService>();
-builder.Services.AddScoped<LegalNoticeService>();
-builder.Services.AddScoped<NOCService>();
-builder.Services.AddScoped<ModService>();
-builder.Services.AddScoped<FcRefundService>();
-builder.Services.AddScoped<LcRefundService>();
-builder.Services.AddScoped<LegalBillingService>();
-builder.Services.AddScoped<CustEmailUpdateService>();
-builder.Services.AddScoped<WabaService>();
-builder.Services.AddScoped<LoanCancellationService>();
-builder.Services.AddScoped<SOALODFCLService>();
-builder.Services.AddScoped<ClosureService>();
-builder.Services.AddScoped<GoldLoanLeadService>();
-builder.Services.AddScoped<GoldLoanVendorService>();
-builder.Services.AddScoped<SARFAESIService>();
-builder.Services.AddScoped<NewBranchServices>();
 builder.Services.AddScoped<KotakService>();
-builder.Services.AddScoped<DeathClaimService>();
-builder.Services.AddScoped<GurukulUserService>();
-builder.Services.AddScoped<VCPService>();
-builder.Services.AddScoped<AxisService>();
-builder.Services.AddScoped<BTLettersService>();
-builder.Services.AddScoped<TrainingDashboardService>();
 builder.Services.AddScoped<RazorpayService>();
-builder.Services.AddHttpClient<DmsDocsService>();
-builder.Services.AddHttpClient<GoDigitService>();
-builder.Services.AddScoped<BulkDocsService>();
-builder.Services.AddScoped<BulkFclService>();
-builder.Services.AddScoped<SARFAESIPhysicalFilingService>();
-builder.Services.AddScoped<IndusArchivedService>();
-builder.Services.AddScoped<WabaWtsappHookService>();
-builder.Services.AddScoped<ZeroBalanceDayService>();
-builder.Services.AddScoped<CRIFService>();
+builder.Services.AddScoped<RefundCalculatorService>();
 
-builder.Services.AddScoped<PurchaseOrderService>();
-builder.Services.AddScoped<AirtelabankService>();
-builder.Services.AddScoped<AnnouncementService>();
-builder.Services.AddScoped<VOTService>();
-builder.Services.AddScoped<InvoiceService>();
-
-builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<SharedRepository>();
-builder.Services.AddScoped<BranchRepository>();
-builder.Services.AddScoped<OtpRepository>();
-builder.Services.AddScoped<SettlementRepository>();
-builder.Services.AddScoped<DCRepository>();
-builder.Services.AddScoped<CersaiRepository>();
-builder.Services.AddScoped<BranchVisitRepository>();
-builder.Services.AddScoped<LegalNoticeRepository>();
-builder.Services.AddScoped<NOCRepository>();
-builder.Services.AddScoped<ModRepository>();
-builder.Services.AddScoped<FcRefundRepository>();
-builder.Services.AddScoped<LcRefundRepository>();
-builder.Services.AddScoped<LegalBillingRepository>();
-builder.Services.AddScoped<CustEmailUpdateRepository>();
-builder.Services.AddScoped<WabaRepository>();
+// Standalone repositories
 builder.Services.AddScoped<UserLogRepository>();
-builder.Services.AddScoped<LoanCancellationRepository>();
-builder.Services.AddScoped<PLFRepository>();
-builder.Services.AddScoped<SOALODFCLRepository>();
-builder.Services.AddScoped<ClosureRepository>();
-builder.Services.AddScoped<GoldLoanLeadRepository>();
-builder.Services.AddScoped<GoldLoanVendorRepository>();
-builder.Services.AddScoped<SARFAESIRepository>();
-builder.Services.AddScoped<NewBranchRepository>();
-builder.Services.AddScoped<DeathClaimRepository>();
-builder.Services.AddScoped<GurukulUserRepository>();
-builder.Services.AddScoped<VCPRepository>();
-builder.Services.AddScoped<AxisRepository>();
-builder.Services.AddScoped<BTLettersRepository>();
-builder.Services.AddScoped<TrainingDashboardRepository>();
-builder.Services.AddScoped<DmsDocsRepository>();
-builder.Services.AddScoped<BulkDocsRepository>();
-builder.Services.AddScoped<BulkFclRepository>();
-builder.Services.AddScoped<SARFAESIPhysicalFilingRepository>();
-builder.Services.AddScoped<IndusArchivedRepository>();
-builder.Services.AddScoped<WabaWtsappHookRepository>();
-builder.Services.AddScoped<ZeroBalanceDayRepository>();
-builder.Services.AddScoped<GoDigitRepository>();
-builder.Services.AddScoped<CrifWrapperRepository>();
 
-builder.Services.AddScoped<PurchaseOrderRepository>();
-builder.Services.AddScoped<AirtelBankRepository>();
-builder.Services.AddScoped<AnnouncementRepository>();
-builder.Services.AddScoped<VOTRepository>();
-builder.Services.AddScoped<InvoiceRepository>();
+// Helper
+builder.Services.AddScoped<JwtHelper>();
 
+// Jobs
 builder.Services.AddScoped<IJob, BranchVisitJob>();
 builder.Services.AddScoped<IJob, FcRefundJob>();
 builder.Services.AddScoped<IJob, LcRefundJob>();
@@ -184,20 +246,6 @@ builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1130Job>();
 builder.Services.AddScoped<IJob, ZeroBalanceDayNotSubmittedReminder1155Job>();
 builder.Services.AddScoped<IJob, ZeroBalanceDayRchZchEscalationJob>();
 
-builder.Services.AddScoped<CibilCorrectionRepository>();
-builder.Services.AddScoped<CibilCorrectionService>();
-
-builder.Services.AddScoped<FixedAssetRepository>();
-builder.Services.AddScoped<FixedAssetService>();
-
-builder.Services.AddScoped<ModulesRepository>();
-builder.Services.AddScoped<ModulesService>();
-
-builder.Services.AddScoped<LegalCourtsService>();
-builder.Services.AddScoped<LegalCourtsRepository>();
-
-builder.Services.AddScoped<RefundCalculatorService>();
-
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -211,6 +259,32 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
     options.Secure = CookieSecurePolicy.Always;
     options.MinimumSameSitePolicy = SameSiteMode.Lax;
 });
+
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
+builder.Services.AddAuthentication(
+    JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = jwtSettings!.Issuer,
+                ValidAudience = jwtSettings.Audience,
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            jwtSettings.Key))
+            };
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -248,18 +322,12 @@ app.UseCors("AllowFrontend");
 
 app.UseStaticFiles(); // keeps default wwwroot working
 
-//app.UseStaticFiles(new StaticFileOptions
-//{
-//    FileProvider = new PhysicalFileProvider(
-//        Path.Combine(builder.Environment.WebRootPath, "wb")),
-//    RequestPath = "/wb"
-//});
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseMiddleware<ApiKeyMiddleware>();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
