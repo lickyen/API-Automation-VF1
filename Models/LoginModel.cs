@@ -13,8 +13,14 @@ namespace ProductivityApi.Models
         public string? Source { get; set; }
     }
 
+    //public class LoginResponse
+    //{
+    //    public bool TwoFactorEnabled { get; set; }
+    //}
+
     public class LoginResponse
     {
+        public string Token { get; set; } = string.Empty;
         public bool TwoFactorEnabled { get; set; }
     }
 
