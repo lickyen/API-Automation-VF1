@@ -212,14 +212,16 @@ namespace ProductivityApi.Repository
             const string sql = @"
     INSERT INTO [dbo].[PO_PurchaseOrder]
         ([PONumber], [VendorId], [VendorAddressId], [DepartmentCode], [Classification], [SubClassification], [BudgetYear],
-         [POType], [POFrequency], [TermsType], [AdvancePercentage], [QuotationRequired], [QuotationWaiverReason], [ExpectedInvoiceDate],
+         [POType], [POFrequency], [BusinessPurpose], [TermsType], [AdvancePercentage],
+         [QuotationRequired], [QuotationWaiverReason], [ExpectedInvoiceDate],
          [VendorContactName], [VendorContactMobile], [VendorContactEmail],
          [SubTotal], [GSTAmount], [TotalAmount],
          [IsBudgetExceeded], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
     OUTPUT INSERTED.[POId]
     VALUES
         (@PONumber, @VendorId, @VendorAddressId, @DepartmentCode, @Classification, @SubClassification, @BudgetYear,
-         @POType, @POFrequency, @TermsType, @AdvancePercentage, @QuotationRequired, @QuotationWaiverReason, @ExpectedInvoiceDate,
+         @POType, @POFrequency, @BusinessPurpose, @TermsType, @AdvancePercentage,
+         @QuotationRequired, @QuotationWaiverReason, @ExpectedInvoiceDate,
          @VendorContactName, @VendorContactMobile, @VendorContactEmail,
          @SubTotal, @GSTAmount, @TotalAmount,
          @IsBudgetExceeded, @Status, @CurrentApprovalStep, @CreatedBy, GETDATE());";
@@ -1048,7 +1050,7 @@ namespace ProductivityApi.Repository
     UPDATE [dbo].[PO_PurchaseOrder]
     SET [VendorId] = @VendorId, [VendorAddressId] = @VendorAddressId,
         [VendorContactName] = @VendorContactName, [VendorContactMobile] = @VendorContactMobile, [VendorContactEmail] = @VendorContactEmail,
-        [DepartmentCode] = @DepartmentCode, [POType] = @POType, [POFrequency] = @POFrequency,
+        [DepartmentCode] = @DepartmentCode, [POType] = @POType, [POFrequency] = @POFrequency, [BusinessPurpose] = @BusinessPurpose,
         [Classification] = @Classification, [SubClassification] = @SubClassification,
         [BudgetYear] = @BudgetYear, [TermsType] = @TermsType, [AdvancePercentage] = @AdvancePercentage,
         [QuotationRequired] = @QuotationRequired, [QuotationWaiverReason] = @QuotationWaiverReason,
