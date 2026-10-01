@@ -95,6 +95,18 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<GetOpenEntryLostFileStatusDto?> GetOpenEntryLostFileStatus(string lan)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            return await conn.QueryFirstOrDefaultAsync<GetOpenEntryLostFileStatusDto>(
+                "sp_Check_OpenEntries_LostFiles",
+                new { Lan = lan },
+                commandType: CommandType.StoredProcedure
+
+            );
+        }
+
 
     }
 }

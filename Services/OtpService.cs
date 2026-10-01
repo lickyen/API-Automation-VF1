@@ -224,6 +224,7 @@ namespace ProductivityApi.Services
                             smsTemplate.Content,
                             new Dictionary<string, string>
                             {
+                                { "Name", "Vistaarian" },
                                 { "OTP", otp }
                             });
 

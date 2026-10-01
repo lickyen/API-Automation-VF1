@@ -339,6 +339,18 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result.Message));
         }
 
+        [HttpPost("submitAckWithKyc")]
+        public async Task<IActionResult> SubmitAckWithKyc(
+            [FromBody] SubmitAckWithKyc dto)
+        {
+            var result = await _service.SubmitAckWithKycAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, null, result.Message));
+
+            return Ok(new Response(true, null, result.Message));
+        }
+
         [HttpGet("downloadKycPdf/{transactionId}")]
         public async Task<IActionResult> DownloadKycPdf(int transactionId)
         {
@@ -442,6 +454,21 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, result.Message));
+        }
+
+        [HttpPost("bulkDispatch")]
+        public async Task<IActionResult> BulkDispatch([FromBody] BulkDispatchDto dto)
+        {
+            if (dto.Items == null || !dto.Items.Any())
+            {
+                return BadRequest(
+                    new Response(false, null, "No records provided."));
+            }
+
+            var result = await _service.BulkDispatchAsync(dto);
+
+            return Ok(
+                new Response(true, null, result.Message));
         }
 
         [HttpPost("returnToHo")]

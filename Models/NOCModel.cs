@@ -56,6 +56,7 @@ namespace ProductivityApi.Models
         public string? NOC_PDF_Signed { get; set; }
         public string? Ack_PDF { get; set; }
         public string? Ack_PDF_Signed { get; set; }
+        public string? KYC_PDF { get; set; }
         public string? OTPStatusKYC { get; set; }
         public string? OTPStatusNOC { get; set; }
         public DateTime? OTPStatusKYCDate { get; set; }
@@ -532,13 +533,18 @@ namespace ProductivityApi.Models
 
     public class SentForDispatchDto
     {
+        [Required]
         public int TransactionId { get; set; }
+        [Required]
 
         public string POD { get; set; } = string.Empty;
+        [Required]
 
         public string? CourierVendor { get; set; }
+        [Required]
 
         public string UpdatedBy { get; set; } = string.Empty;
+        [Required]
 
         public string Role { get; set; } = string.Empty;
     }
@@ -573,5 +579,21 @@ namespace ProductivityApi.Models
     {
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+    }
+
+    public class SubmitAckWithKyc
+    {
+        [Required]
+        public int TransactionId { get; set; }
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+        [Required]
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class BulkDispatchDto
+    {
+        [Required]
+        public List<SentForDispatchDto> Items { get; set; } = new();
     }
 }

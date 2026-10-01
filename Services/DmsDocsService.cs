@@ -75,7 +75,9 @@ namespace ProductivityApi.Services
                 batchId,
                 request.Tag,
                 request.SubTag,
-                request.CreatedBy);
+                request.CreatedBy,
+                request.FromDate,
+                request.ToDate);
 
             if (batchOutput != 1)
             {
@@ -117,48 +119,6 @@ namespace ProductivityApi.Services
 
             return result;
         }
-
-        //public async Task<DmsDocsAddResult> AddLansAsync(DmsDocsAddRequest request)
-        //{
-        //    var batchId = GenerateBatchId(request.CreatedBy);
-        //    var result = new DmsDocsAddResult
-        //    {
-        //        BatchId = batchId
-        //    };
-
-        //    if (request.Lans == null || !request.Lans.Any())
-        //    {
-        //        result.Errors.Add("No LANs provided.");
-        //        return result;
-        //    }
-
-        //    foreach (var lan in request.Lans)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(lan.LAN))
-        //        {
-        //            result.Errors.Add("Empty LAN skipped.");
-        //            continue;
-        //        }
-
-        //        try
-        //        {
-        //            var output = await _repository.AddLanAsync(lan, request.CreatedBy, batchId);
-        //            if (output == 1)
-        //                result.RowsAdded++;
-        //            else if (output == -1)
-        //                result.Errors.Add($"LAN {lan.LAN}: Already exists.");
-        //            else
-        //                result.Errors.Add($"LAN {lan.LAN}: Could not be added.");
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            result.Errors.Add($"LAN {lan.LAN}: {ex.Message}");
-        //        }
-        //    }
-
-        //    return result;
-        //}
-
         public async Task<List<DmsDocsBatchListItem>> GetBatchesAsync(DmsDocsGetBatchesRequest request)
         {
             var items = await _repository.GetBatchesAsync(request);
@@ -276,8 +236,15 @@ namespace ProductivityApi.Services
             if (!batchDocs.Any())
                 return FailDownload(result, $"No LANs found for BatchId {result.BatchId}.");
 
-            var batchFolderPath = await GetBatchFolderPathAsync(result.BatchId, batchDocs.First().CreatedBy, batchDocs.First().SubTag);
-            result.SourcePath = batchFolderPath;
+            var firstDoc = batchDocs.First();
+
+            var batchFolderPath = await GetBatchFolderPathAsync(
+                result.BatchId,
+                firstDoc.CreatedBy,
+                firstDoc.SubTag,
+                firstDoc.FromDate,
+                firstDoc.ToDate);
+                result.SourcePath = batchFolderPath;
 
             if (!Directory.Exists(batchFolderPath))
                 return FailDownload(result, $"Batch folder was not found: {batchFolderPath}");
@@ -482,7 +449,12 @@ namespace ProductivityApi.Services
             byte[] documentBytes,
             CancellationToken cancellationToken)
         {
-            var batchFolderPath = await GetBatchFolderPathAsync(doc.BatchId, doc.CreatedBy, doc.SubTag);
+            var batchFolderPath = await GetBatchFolderPathAsync(
+                doc.BatchId,
+                doc.CreatedBy,
+                doc.SubTag,
+                doc.FromDate,
+                doc.ToDate);
             Directory.CreateDirectory(batchFolderPath);
 
             var fileName = $"{BuildSafeFileName(doc.LAN)}.pdf";
@@ -576,15 +548,6 @@ namespace ProductivityApi.Services
                 : trimmed[..MaxErrorMessageLength];
         }
 
-        private static DmsDocsFetchResult Fail(DmsDocsFetchResult result, string message)
-        {
-            result.Success = false;
-            result.DocStatus = ErrorDocStatus;
-            result.ErrorMessage = BuildErrorMessage(message) ?? string.Empty;
-            result.Message = message;
-            return result;
-        }
-
         private static DmsDocsFetchBatchResult FailBatch(DmsDocsFetchBatchResult result, string message)
         {
             result.Success = false;
@@ -620,65 +583,12 @@ namespace ProductivityApi.Services
             return result;
         }
 
-        //private async Task<string> GetBatchFolderPathAsync(string batchId, string? createdBy)
-        //{
-        //    // Try to get a user-specific base path from repository. If not available, use the default _filePath.
-        //    string? userBasePath = null;
-
-        //    try
-        //    {
-        //        userBasePath = await _repository.GetUserPathAsync(createdBy);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log and fallback to default path
-        //        _logger.LogWarning(ex, "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.", createdBy);
-        //    }
-
-        //    var basePath = string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath!;
-
-        //    return Path.Combine(
-        //        basePath,
-        //        BuildSafePathSegment(createdBy, "UNKNOWN"),
-        //        BuildSafeFileName(batchId));
-        //}
-
-        //    private async Task<string> GetBatchFolderPathAsync(
-        //string batchId,
-        //string? createdBy,
-        //string? subTag)
-        //    {
-        //        string? userBasePath = null;
-
-        //        try
-        //        {
-        //            userBasePath = await _repository.GetUserPathAsync(createdBy);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            _logger.LogWarning(ex,
-        //                "Failed to retrieve user-specific path for {CreatedBy}. Falling back to default path.",
-        //                createdBy);
-        //        }
-
-        //        var isNachDocument =
-        //            string.Equals(subTag, "NACH", StringComparison.OrdinalIgnoreCase) ||
-        //            string.Equals(subTag, "Security P Nach", StringComparison.OrdinalIgnoreCase);
-
-        //        var basePath = isNachDocument
-        //            ? _nachDocsPath
-        //            : (string.IsNullOrWhiteSpace(userBasePath) ? _filePath : userBasePath);
-
-        //        return Path.Combine(
-        //            basePath,
-        //            BuildSafePathSegment(createdBy, "UNKNOWN"),
-        //            BuildSafeFileName(batchId));
-        //    }
-
         private async Task<string> GetBatchFolderPathAsync(
             string batchId,
             string? createdBy,
-            string? subTag)
+            string? subTag,
+            DateTime? fromDate = null,
+            DateTime? toDate = null)
         {
             string? userBasePath = null;
 
@@ -699,12 +609,15 @@ namespace ProductivityApi.Services
 
             if (isNachDocument)
             {
-                var fromDate = DateTime.Today.AddDays(-1);
-                var toDate = DateTime.Today;
+                if (fromDate.HasValue && toDate.HasValue)
+                {
+                    return Path.Combine(
+                        _nachDocsPath,
+                        $"{fromDate.Value:dd-MM-yyyy} TO {toDate.Value:dd-MM-yyyy}");
+                }
 
-                return Path.Combine(
-                    _nachDocsPath,
-                    $"{fromDate:dd-MM-yyyy} TO {toDate:dd-MM-yyyy}");
+                throw new InvalidOperationException(
+                    "FromDate and ToDate are required for NACH documents.");
             }
 
             var basePath = string.IsNullOrWhiteSpace(userBasePath)

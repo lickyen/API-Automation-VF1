@@ -22,15 +22,19 @@ namespace ProductivityApi.Models
 
     public class DmsDocsAddRequest
     {
-        public string Tag { get; set; } = String.Empty;
+        public string Tag { get; set; } = string.Empty;
 
-        public string SubTag { get; set; } = String.Empty;
+        public string SubTag { get; set; } = string.Empty;
 
         [Required]
         public string CreatedBy { get; set; }
 
         [Required]
         public List<DmsDocsAddLan> Lans { get; set; }
+
+        public DateTime? FromDate { get; set; }
+
+        public DateTime? ToDate { get; set; }
     }
     public class DmsDocsAddLan
     {
@@ -84,8 +88,11 @@ namespace ProductivityApi.Models
         public DateTime? CreatedDt { get; set; }
         public string UpdatedBy { get; set; }
         public DateTime? UpdatedDt { get; set; }
-    }
 
+        public DateTime? FromDate { get; set; }
+
+        public DateTime? ToDate { get; set; }
+    }
     public class DmsDocsTagItem
     {
         public int Id { get; set; }
