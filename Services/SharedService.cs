@@ -367,5 +367,23 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetOpenEntryLostFileStatus(lan);
         }
+
+
+        // added on 05-10-2026 Harika
+        public async Task<IEnumerable<CountryProvinceModel>> GetApprovedCountryProvincesAsync()
+        {
+            var result = await _plfRepository.GetApprovedCountryProvincesAsync();
+            return result ?? Enumerable.Empty<CountryProvinceModel>();
+        }
+        public async Task<IEnumerable<ProvinceCityModel>> GetCitiesByProvinceAsync(string pcProvince)
+        {
+            var result = await _plfRepository.GetCitiesByProvinceAsync(pcProvince.Trim());
+            return result ?? Enumerable.Empty<ProvinceCityModel>();
+        }
+        public async Task<IEnumerable<PincodeModel>> GetPincodesByCityAsync(string city)
+        {
+            var result = await _plfRepository.GetPincodesByCityAsync(city.Trim());
+            return result ?? Enumerable.Empty<PincodeModel>();
+        }
     }
 }

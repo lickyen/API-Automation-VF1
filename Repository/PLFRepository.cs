@@ -545,6 +545,41 @@ GROUP BY
                 return new List<DisbLansResponseDto>();
             }
         }
+
+        public async Task<IEnumerable<CountryProvinceModel>> GetApprovedCountryProvincesAsync()
+        {
+            const string sql = @"
+                SELECT cpcountry, cpprovince, cpprovincename, recordstatus
+                FROM plf.rmtcountryvsprovince
+                WHERE recordstatus = @RecordStatus;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<CountryProvinceModel>(
+                sql, new { RecordStatus = "Approved" });
+        }
+
+        public async Task<IEnumerable<ProvinceCityModel>> GetCitiesByProvinceAsync(string pcProvince)
+        {
+            const string sql = @"
+        SELECT r.pcprovince, r.pccity, r.pccityname
+        FROM plf.rmtprovincevscity r
+        WHERE r.pcprovince = @PcProvince;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<ProvinceCityModel>(
+                sql, new { PcProvince = pcProvince });
+        }
+        public async Task<IEnumerable<PincodeModel>> GetPincodesByCityAsync(string city)
+        {
+            const string sql = @"
+        SELECT p.pincodeid, p.pincode, p.city
+        FROM plf.pincodes p
+        WHERE p.city = @City;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<PincodeModel>(
+                sql, new { City = city });
+        }
     }
 }
 
