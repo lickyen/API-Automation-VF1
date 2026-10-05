@@ -27,6 +27,25 @@ namespace ProductivityApi.Controllers
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
+        /// <summary>POST /api/Purchaseorder/CreateInvoiceAgainstAgreement — Maker</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateInvoiceAgainstAgreement([FromBody] CreateInvoiceAgainstAgreementRequest request)
+        {
+            try { return Ok(await _invoiceService.CreateInvoiceAgainstAgreementAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Invoice/CreateInvoiceWithoutPO — Maker</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateInvoiceWithoutPO([FromBody] CreateInvoiceWithoutPORequest request)
+        {
+            try { return Ok(await _invoiceService.CreateInvoiceWithoutPOAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+
         /// <summary>GET /api/Purchaseorder/GetInvoiceById?invoiceId=1</summary>
         [HttpGet]
         public async Task<IActionResult> GetInvoiceById([FromQuery] int invoiceId)
@@ -63,14 +82,7 @@ namespace ProductivityApi.Controllers
             catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
         }
 
-        /// <summary>POST /api/Purchaseorder/CreateInvoiceAgainstAgreement — Maker</summary>
-        [HttpPost]
-        public async Task<IActionResult> CreateInvoiceAgainstAgreement([FromBody] CreateInvoiceAgainstAgreementRequest request)
-        {
-            try { return Ok(await _invoiceService.CreateInvoiceAgainstAgreementAsync(request)); }
-            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
-            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
-        }
+        
 
         /// <summary>POST /api/Purchaseorder/CreateAgreement — LegalUser</summary>
         [HttpPost]
@@ -110,5 +122,19 @@ namespace ProductivityApi.Controllers
         public async Task<IActionResult> GetAgreementsByVendor([FromQuery] long vendorId)
             => Ok(await _invoiceService.GetAgreementsByVendorAsync(vendorId));
 
+
+        /// <summary>GET /api/Invoice/GetInvoiceDashboard?employeeCode=EMP1023</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetInvoiceDashboard([FromQuery] string employeeCode)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            try { return Ok(await _invoiceService.GetInvoiceDashboardAsync(employeeCode)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+       
     }
 }

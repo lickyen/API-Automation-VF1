@@ -2,6 +2,11 @@
 using ProductivityApi.Models;
 using System.Data;
 using Dapper;
+using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Drawing.Diagrams;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Presentation;
+using Org.BouncyCastle.Crypto.Agreement;
 namespace ProductivityApi.Repository
 {
     public class InvoiceRepository
@@ -50,14 +55,18 @@ namespace ProductivityApi.Repository
         {
             const string sql = @"
         INSERT INTO [dbo].[PO_Invoice]
-            ([InvoiceNumber], [InvoiceType], [POId], [VendorId], [VendorAddressId],
+            ([InvoiceNumber], [InvoiceType], [POId], [AgreementId], [DepartmentCode], [Classification], [SubClassification],
+             [VendorId], [VendorAddressId],
              [VendorContactName], [VendorContactMobile], [VendorContactEmail],
-             [InvoiceDate], [InvoiceAmount], [IsFinalInvoice], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
+             [InvoiceDate], [InvoiceAmount], [SubTotal], [GSTAmount], [TotalAmount], [IsBudgetExceeded],
+             [IsFinalInvoice], [InvoiceCopyPath], [Status], [CurrentApprovalStep], [CreatedBy], [CreatedDt])
         OUTPUT INSERTED.[InvoiceId]
         VALUES
-            (@InvoiceNumber, @InvoiceType, @POId, @VendorId, @VendorAddressId,
+            (@InvoiceNumber, @InvoiceType, @POId, @AgreementId, @DepartmentCode, @Classification, @SubClassification,
+             @VendorId, @VendorAddressId,
              @VendorContactName, @VendorContactMobile, @VendorContactEmail,
-             @InvoiceDate, @InvoiceAmount, @IsFinalInvoice, 'PendingApproval', 1, @CreatedBy, GETDATE());";
+             @InvoiceDate, @InvoiceAmount, @SubTotal, @GSTAmount, @TotalAmount, @IsBudgetExceeded,
+             @IsFinalInvoice, @InvoiceCopyPath, 'PendingApproval', 1, @CreatedBy, GETDATE());";
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.ExecuteScalarAsync<int>(sql, invoice);
@@ -211,6 +220,167 @@ namespace ProductivityApi.Repository
 
             using IDbConnection connection = new SqlConnection(_conStr);
             return await connection.QueryAsync(sql, new { VendorId = vendorId });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesCreatedByAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt], i.[CurrentApprovalStep]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        WHERE i.[CreatedBy] = @EmployeeCode
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesPendingForDeptHeadAsync(string departmentCode)
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        INNER JOIN [dbo].[PO_InvoiceApprovalHistory] ah
+            ON ah.[InvoiceId] = i.[InvoiceId] AND ah.[StepNumber] = i.[CurrentApprovalStep]
+        WHERE i.[Status] = 'PendingApproval'
+          AND ah.[ApproverRole] = 'DepartmentHead'
+          AND i.[DepartmentCode] = @DepartmentCode;";
+
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { DepartmentCode = departmentCode });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesActedByUserAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        INNER JOIN [dbo].[PO_InvoiceApprovalHistory] ah ON ah.[InvoiceId] = i.[InvoiceId]
+        WHERE ah.[ApproverEmployeeCode] = @EmployeeCode
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesPendingPaymentAllAsync()
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        WHERE i.[Status] = 'PendingPayment'
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql);
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesPaidByUserAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT DISTINCT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        INNER JOIN [dbo].[PO_InvoicePayments] p ON p.[InvoiceId] = i.[InvoiceId]
+        WHERE p.[CreatedBy] = @EmployeeCode AND i.[Status] = 'Paid'
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+        public async Task<IEnumerable<dynamic>> GetInvoicesRejectedByCreatorAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        WHERE i.[CreatedBy] = @EmployeeCode AND i.[Status] = 'Rejected'
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesInProgressByCreatorAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        WHERE i.[CreatedBy] = @EmployeeCode AND i.[Status] IN ('PendingApproval', 'PendingPayment')
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetInvoicesPaidByCreatorAsync(string employeeCode)
+        {
+            const string sql = @"
+        SELECT i.[InvoiceId], i.[InvoiceNumber], i.[InvoiceType], i.[POId], po.[PONumber],
+               v.[VendorName], i.[InvoiceAmount], i.[Status], i.[CreatedBy], i.[CreatedDt]
+        FROM [dbo].[PO_Invoice] i
+        LEFT JOIN [dbo].[PO_PurchaseOrder] po ON po.[POId] = i.[POId]
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = i.[VendorId]
+        WHERE i.[CreatedBy] = @EmployeeCode AND i.[Status] = 'Paid'
+        ORDER BY i.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { EmployeeCode = employeeCode });
+        }
+
+        public async Task AddInvoiceItemsAsync(int invoiceId, IEnumerable<PoInvoiceItem> items)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_InvoiceItems]
+            ([InvoiceId], [ItemDescription], [Quantity], [UnitPrice], [Amount], [GSTRate], [GSTAmount], [BudgetCategoryId], [IsBudgetExceeded])
+        VALUES
+            (@InvoiceId, @ItemDescription, @Quantity, @UnitPrice, @Amount, @GSTRate, @GSTAmount, @BudgetCategoryId, @IsBudgetExceeded);";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var list = items.ToList();
+            foreach (var item in list) item.InvoiceId = invoiceId;
+            await connection.ExecuteAsync(sql, list);
+        }
+
+        public async Task AddInvoiceDeliveryLocationsAsync(int invoiceId, IEnumerable<int> locationIds, string createdBy)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_InvoiceDeliveryLocations] ([InvoiceId], [LocationId], [CreatedBy], [CreatedDt])
+        VALUES (@InvoiceId, @LocationId, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = locationIds.Select(id => new { InvoiceId = invoiceId, LocationId = id, CreatedBy = createdBy }).ToList();
+            await connection.ExecuteAsync(sql, rows);
+        }
+
+        public async Task AddInvoiceTermsAsync(int invoiceId, IEnumerable<long> termMasterIds, string createdBy)
+        {
+            const string sql = @"
+        INSERT INTO [dbo].[PO_InvoiceTerms] ([InvoiceId], [TermMasterId], [CreatedBy], [CreatedDt])
+        VALUES (@InvoiceId, @TermMasterId, @CreatedBy, GETDATE());";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            var rows = termMasterIds.Select(id => new { InvoiceId = invoiceId, TermMasterId = id, CreatedBy = createdBy }).ToList();
+            await connection.ExecuteAsync(sql, rows);
         }
     }
 }

@@ -46,7 +46,7 @@ namespace ProductivityApi.Services
             _logger = logger;
             _filePath = appSettings.FilePaths.POBasePath;
 
-            _baseUrl = appSettings.AppBaseUrl;
+            _baseUrl = appSettings.BaseUrl;
 
             _templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "Purchaseordertemplate.html");
             _logoPath = Path.Combine(AppContext.BaseDirectory, "Templates", "PO", "assets", "vistaar Logo.png");
