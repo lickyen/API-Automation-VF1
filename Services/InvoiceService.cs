@@ -60,12 +60,18 @@ namespace ProductivityApi.Services
                 throw new InvalidOperationException(
                     $"This invoice would exceed the PO's total amount. PO Total: {po.TotalAmount:N2}, Already Invoiced: {alreadyInvoiced:N2}, This Invoice: {request.InvoiceAmount:N2}.");
             }
+            if (request.InvoiceCopy is null)
+                throw new ArgumentException("InvoiceCopy is required.");
+            string folder = Path.Combine(_filePath, "InvoiceDocuments", request.InvoiceNumber.Replace("/", "_"));
+            Directory.CreateDirectory(folder);
+            string invoiceCopyPath = SaveVendorDocument(request.InvoiceCopy, folder, "InvoiceCopy");
 
             var invoice = new Models.PoInvoice
             {
                 InvoiceNumber = request.InvoiceNumber,
                 InvoiceType = "AgainstPO",
                 POId = request.POId,
+                DepartmentCode = po.DepartmentCode,
                 VendorId = po.VendorId,
                 VendorAddressId = request.VendorAddressId,
                 VendorContactName = request.VendorContactName,    
@@ -74,16 +80,20 @@ namespace ProductivityApi.Services
                 InvoiceDate = request.InvoiceDate,
                 InvoiceAmount = request.InvoiceAmount,
                 IsFinalInvoice = request.IsFinalInvoice,
+                InvoiceCopyPath = invoiceCopyPath,
                 CreatedBy = request.CreatedBy
             };
 
             int invoiceId = await _repository.CreateInvoiceAsync(invoice);
 
-            // Fixed, single-tier chain regardless of amount: DepartmentHead approves, then FinanceUser pays
-            await _repository.AddInvoiceApprovalStepsAsync(invoiceId, new[]
+            var roles = await BuildInvoiceApprovalChainAsync("AgainstPO", request.InvoiceAmount);
+            var steps = roles.Select((role, i) => new Models.PoInvoiceApprovalHistory
             {
-        new Models.PoInvoiceApprovalHistory { StepNumber = 1, ApproverRole = "DepartmentHead" }
-    });
+                StepNumber = i + 1,
+                ApproverRole = role
+            }).ToList();
+
+            await _repository.AddInvoiceApprovalStepsAsync(invoiceId, steps);
 
             return await GetInvoiceByIdAsync(invoiceId);
         }
@@ -115,6 +125,7 @@ namespace ProductivityApi.Services
                 InvoiceId = invoice.InvoiceId,
                 InvoiceNumber = invoice.InvoiceNumber,
                 InvoiceType = invoice.InvoiceType,
+                DepartmentCode = invoice.DepartmentCode,
                 POId = invoice.POId,
                 PONumber = po?.PONumber,
                 VendorId = invoice.VendorId,
@@ -150,7 +161,8 @@ namespace ProductivityApi.Services
                     PaymentDate = p.PaymentDate,
                     AmountPaid = p.AmountPaid,
                     TDSAmount = p.TDSAmount
-                }).ToList()
+                }).ToList(),
+                InvoiceCopy = LoadVendorDocument(invoice.InvoiceCopyPath),
             };
         }
 
@@ -181,10 +193,21 @@ namespace ProductivityApi.Services
                 return;
             }
 
-            // Single-tier chain — DeptHead approval alone clears the approval stage, then moves to Finance for payment
-            await _repository.UpdateInvoiceStatusAsync(invoice.InvoiceId, "PendingPayment", invoice.CurrentApprovalStep);
-        }
+            // Check if there's a next step — now relevant for multi-step WithoutPO chains
+            var allSteps = await _repository.GetInvoiceApprovalHistoryAsync(invoice.InvoiceId);
+            bool hasNextStep = allSteps.Any(s => s.StepNumber == invoice.CurrentApprovalStep + 1);
 
+            if (hasNextStep)
+            {
+                await _repository.UpdateInvoiceStatusAsync(invoice.InvoiceId, "PendingApproval", invoice.CurrentApprovalStep + 1);
+                // optionally: NotifyPendingInvoiceApproverAsync(...) here, mirroring the PO email notification
+            }
+            else
+            {
+                // Final step cleared — moves to Finance for payment, same as before
+                await _repository.UpdateInvoiceStatusAsync(invoice.InvoiceId, "PendingPayment", invoice.CurrentApprovalStep);
+            }
+        }
         public async Task RecordInvoicePaymentAsync(RecordInvoicePaymentRequest request)
         {
             var invoice = await _repository.GetInvoiceByIdAsync(request.InvoiceId)
@@ -282,11 +305,14 @@ namespace ProductivityApi.Services
 
             int invoiceId = await _repository.CreateInvoiceAsync(invoice);
 
-            // Same approval flow as Against-PO: DeptHead approves, then FinanceUser pays
-            await _repository.AddInvoiceApprovalStepsAsync(invoiceId, new[]
+            var roles = await BuildInvoiceApprovalChainAsync("AgainstAgreement", request.InvoiceAmount);
+            var steps = roles.Select((role, i) => new Models.PoInvoiceApprovalHistory
             {
-        new Models.PoInvoiceApprovalHistory { StepNumber = 1, ApproverRole = "DepartmentHead" }
-    });
+                StepNumber = i + 1,
+                ApproverRole = role
+            }).ToList();
+
+            await _repository.AddInvoiceApprovalStepsAsync(invoiceId, steps);
 
             return await GetInvoiceByIdAsync(invoiceId);
         }
@@ -450,6 +476,317 @@ namespace ProductivityApi.Services
                 FileName = Path.GetFileName(path),
                 Base64Content = Convert.ToBase64String(File.ReadAllBytes(path))
             };
+        }
+
+        public async Task<InvoiceDashboardResponse> GetInvoiceDashboardAsync(string employeeCode)
+        {
+            var user = await _Prepository.GetActiveUserByEmployeeCodeAsync(employeeCode)
+                ?? throw new ArgumentException($"User '{employeeCode}' not found or inactive.");
+
+            var roles = (await _Prepository.GetActiveRoleNamesForUserAsync(user.Id)).ToList();
+
+            if (roles.Count == 0)
+                throw new InvalidOperationException($"User '{employeeCode}' has no active role mapped — cannot determine invoice access.");
+
+            bool isDeptHead = roles.Contains("DepartmentHead", StringComparer.OrdinalIgnoreCase);
+            bool isFinanceUser = roles.Contains("FinanceUser", StringComparer.OrdinalIgnoreCase);
+            bool isAdmin = roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            bool hasAnyApprovalOrFinanceRole = isDeptHead || isFinanceUser || isAdmin;
+
+            List<InvoiceListItemResponse> pendingWithMe = new();
+            List<InvoiceListItemResponse> inProgress = new();
+            List<InvoiceListItemResponse> completed = new();
+
+            // ---------------- Preparer buckets — always included, every employee can be a Maker ----------------
+            var rejectedRaw = await _repository.GetInvoicesRejectedByCreatorAsync(employeeCode);
+            pendingWithMe.AddRange(MapToInvoiceListResponse(rejectedRaw));
+
+            var myInProgressRaw = await _repository.GetInvoicesInProgressByCreatorAsync(employeeCode);
+            inProgress.AddRange(MapToInvoiceListResponse(myInProgressRaw));
+
+            var myPaidRaw = await _repository.GetInvoicesPaidByCreatorAsync(employeeCode);
+            completed.AddRange(MapToInvoiceListResponse(myPaidRaw));
+
+            // ---------------- DepartmentHead buckets — merged in on top of Preparer buckets ----------------
+            if (isDeptHead)
+            {
+                var pendingApprovalRaw = await _repository.GetInvoicesPendingForDeptHeadAsync(user.DepartmentCode);
+                List<InvoiceListItemResponse> pendingApprovalMapped = MapToInvoiceListResponse(pendingApprovalRaw);
+
+                var existingPendingIds = pendingWithMe.Select(p => p.InvoiceId).ToHashSet();
+                pendingWithMe.AddRange(pendingApprovalMapped.Where(x => !existingPendingIds.Contains(x.InvoiceId)));
+
+                var actedRaw = await _repository.GetInvoicesActedByUserAsync(employeeCode);
+                List<InvoiceListItemResponse> actedMapped = MapToInvoiceListResponse(actedRaw);
+
+                var currentPendingIds = pendingWithMe.Select(p => p.InvoiceId).ToHashSet();
+                var existingInProgressIds = inProgress.Select(i => i.InvoiceId).ToHashSet();
+                var existingCompletedIds = completed.Select(c => c.InvoiceId).ToHashSet();
+
+                foreach (var item in actedMapped)
+                {
+                    if (currentPendingIds.Contains(item.InvoiceId)) continue;
+
+                    if (item.Status is "PendingPayment" or "PendingApproval")
+                    {
+                        if (!existingInProgressIds.Contains(item.InvoiceId)) inProgress.Add(item);
+                    }
+                    else
+                    {
+                        if (!existingCompletedIds.Contains(item.InvoiceId)) completed.Add(item);
+                    }
+                }
+            }
+
+            // ---------------- FinanceUser / Admin buckets — merged in on top ----------------
+            if (isFinanceUser || isAdmin)
+            {
+                var pendingPaymentRaw = await _repository.GetInvoicesPendingPaymentAllAsync();
+                List<InvoiceListItemResponse> pendingPaymentMapped = MapToInvoiceListResponse(pendingPaymentRaw);
+
+                var existingPendingIds = pendingWithMe.Select(p => p.InvoiceId).ToHashSet();
+                pendingWithMe.AddRange(pendingPaymentMapped.Where(x => !existingPendingIds.Contains(x.InvoiceId)));
+
+                var paidByMeRaw = await _repository.GetInvoicesPaidByUserAsync(employeeCode);
+                List<InvoiceListItemResponse> paidByMeMapped = MapToInvoiceListResponse(paidByMeRaw);
+
+                var existingCompletedIds = completed.Select(c => c.InvoiceId).ToHashSet();
+                completed.AddRange(paidByMeMapped.Where(x => !existingCompletedIds.Contains(x.InvoiceId)));
+            }
+
+            return new InvoiceDashboardResponse
+            {
+                PendingWithMe = pendingWithMe,
+                InProgress = inProgress,
+                Completed = completed
+            };
+        }
+
+        private static InvoiceListItemResponse MapSingle(dynamic row) => new()
+        {
+            InvoiceId = row.InvoiceId,
+            InvoiceNumber = row.InvoiceNumber,
+            InvoiceType = row.InvoiceType,
+            POId = row.POId,
+            PONumber = row.PONumber,
+            VendorName = row.VendorName,
+            InvoiceAmount = row.InvoiceAmount,
+            Status = row.Status,
+            CreatedBy = row.CreatedBy,
+            CreatedDt = row.CreatedDt
+        };
+
+        private static List<InvoiceListItemResponse> MapToInvoiceListResponse(IEnumerable<dynamic> rows)
+            => rows.Select(r => (InvoiceListItemResponse)MapSingle(r)).ToList();
+
+        private async Task<List<string>> BuildInvoiceApprovalChainAsync(string invoiceType, decimal invoiceAmount)
+        {
+            if (string.Equals(invoiceType, "WithoutPO", StringComparison.OrdinalIgnoreCase))
+            {
+                // Same amount-tiered chain as PO, using the same configurable thresholds
+                var settings = await _Prepository.GetSettingsAsync(
+                    new[] { "ApprovalTier1Threshold", "ApprovalTier2Threshold" });
+
+                decimal tier1Threshold = settings.TryGetValue("ApprovalTier1Threshold", out var t1) && decimal.TryParse(t1, out var t1Val)
+                    ? t1Val : 100000m;
+
+                decimal tier2Threshold = settings.TryGetValue("ApprovalTier2Threshold", out var t2) && decimal.TryParse(t2, out var t2Val)
+                    ? t2Val : 3000000m;
+
+                if (invoiceAmount < tier1Threshold)
+                    return new List<string> { "DepartmentHead", "FinanceHead" };
+
+                if (invoiceAmount <= tier2Threshold)
+                    return new List<string> { "DepartmentHead", "FinanceHead", "CFO" };
+
+                return new List<string> { "DepartmentHead", "FinanceHead", "CFO", "ManagingDirector" };
+            }
+
+            // AgainstPO and AgainstAgreement — single step, DeptHead only, then straight to Finance for payment
+            return new List<string> { "DepartmentHead" };
+        }
+
+        public async Task<InvoiceResponse> CreateInvoiceWithoutPOAsync(CreateInvoiceWithoutPORequest request)
+        {
+            if (request.Items is null || request.Items.Count == 0)
+                throw new ArgumentException("An invoice must have at least one line item.");
+
+            if (!await _Prepository.VendorExistsAsync(request.VendorId))
+                throw new ArgumentException($"VendorId {request.VendorId} does not exist or is not Approved.");
+
+            var vendorAddress = await _Prepository.GetVendorAddressByIdAsync(request.VendorAddressId)
+                ?? throw new ArgumentException($"VendorAddressId {request.VendorAddressId} does not exist.");
+
+            if (vendorAddress.VendorId != request.VendorId)
+                throw new ArgumentException("The selected VendorAddressId does not belong to this vendor.");
+
+            if (!await _Prepository.DepartmentExistsAsync(request.DepartmentCode))
+                throw new ArgumentException($"DepartmentCode '{request.DepartmentCode}' does not exist or is inactive.");
+
+            if (!await _Prepository.SubClassificationExistsAsync(request.DepartmentCode, request.Classification, request.SubClassification))
+                throw new ArgumentException($"SubClassification '{request.SubClassification}' is not valid for department '{request.DepartmentCode}' / classification '{request.Classification}'.");
+
+            foreach (var line in request.Items)
+            {
+                if (!await _Prepository.BudgetCategoryExistsAsync(line.BudgetCategoryId, request.DepartmentCode))
+                    throw new ArgumentException($"BudgetCategoryId {line.BudgetCategoryId} does not exist for department '{request.DepartmentCode}' (item: '{line.ItemDescription}').");
+            }
+
+            if (request.DeliveryLocationIds is null || request.DeliveryLocationIds.Count == 0)
+                throw new ArgumentException("At least one DeliveryLocationId is required.");
+
+            if (!await _Prepository.AllLocationsExistAsync(request.DeliveryLocationIds))
+                throw new ArgumentException("One or more DeliveryLocationIds do not exist or are inactive.");
+
+            var selectedTerms = new List<Models.PoTermsConditionsMaster>();
+            if (request.TermMasterIds is { Count: > 0 })
+            {
+                var allTerms = (await _Prepository.GetTermsMasterAsync()).ToList();
+                var validIds = allTerms.Select(t => t.TermMasterId).ToHashSet();
+                var invalidIds = request.TermMasterIds.Where(id => !validIds.Contains(id)).ToList();
+
+                if (invalidIds.Count > 0)
+                    throw new ArgumentException($"The following TermMasterId(s) do not exist or are inactive: {string.Join(", ", invalidIds)}.");
+
+                selectedTerms = allTerms.Where(t => request.TermMasterIds.Contains(t.TermMasterId)).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.VendorContactEmail) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.VendorContactEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                throw new ArgumentException("VendorContactEmail is not a valid email address.");
+
+            if (!string.IsNullOrWhiteSpace(request.VendorContactMobile) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(request.VendorContactMobile, @"^\d{10}$"))
+                throw new ArgumentException("VendorContactMobile must be a 10-digit number.");
+
+            if (request.InvoiceCopy is null)
+                throw new ArgumentException("InvoiceCopy is required.");
+
+            // ---------------- Items + GST calc (same pattern as PO) ----------------
+            var items = new List<Models.PoInvoiceItem>();
+            decimal subTotal = 0m, gstTotal = 0m;
+
+            foreach (var line in request.Items)
+            {
+                decimal amount = line.Quantity * line.UnitPrice;
+                decimal gstAmount = Math.Round(amount * line.GSTRate / 100m, 2);
+
+                items.Add(new Models.PoInvoiceItem
+                {
+                    ItemDescription = line.ItemDescription,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.UnitPrice,
+                    Amount = amount,
+                    GSTRate = line.GSTRate,
+                    GSTAmount = gstAmount,
+                    BudgetCategoryId = line.BudgetCategoryId
+                });
+
+                subTotal += amount;
+                gstTotal += gstAmount;
+            }
+
+            decimal totalAmount = subTotal + gstTotal;
+
+            // ---------------- Budget check (same pattern as PO) ----------------
+            var categoryTotals = items.GroupBy(i => i.BudgetCategoryId).ToDictionary(g => g.Key, g => g.Sum(i => i.Amount + i.GSTAmount));
+            var allocatedByCategory = await _Prepository.GetBudgetAmountsAsync(categoryTotals.Keys, GetCurrentBudgetYear());
+            var consumedByCategory = await _Prepository.GetConsumedBudgetsAsync(categoryTotals.Keys, GetCurrentBudgetYear());
+
+            var exceededCategories = new HashSet<int>();
+            foreach (var (categoryId, thisInvoiceAmount) in categoryTotals)
+            {
+                bool hasAllocation = allocatedByCategory.TryGetValue(categoryId, out var allocated);
+                decimal consumed = consumedByCategory.TryGetValue(categoryId, out var c) ? c : 0m;
+                if (!hasAllocation || (consumed + thisInvoiceAmount) > allocated)
+                    exceededCategories.Add(categoryId);
+            }
+
+            foreach (var item in items)
+                item.IsBudgetExceeded = exceededCategories.Contains(item.BudgetCategoryId);
+
+            bool budgetExceeded = items.Any(i => i.IsBudgetExceeded);
+
+            // ---------------- File save ----------------
+            string folder = Path.Combine(_filePath, "InvoiceDocuments", request.InvoiceNumber.Replace("/", "_"));
+            Directory.CreateDirectory(folder);
+            string invoiceCopyPath = SaveVendorDocument(request.InvoiceCopy, folder, "InvoiceCopy");
+
+            // ---------------- Header insert ----------------
+            var invoice = new Models.PoInvoice
+            {
+                InvoiceNumber = request.InvoiceNumber,
+                InvoiceType = "WithoutPO",
+                DepartmentCode = request.DepartmentCode,
+                Classification = request.Classification,
+                SubClassification = request.SubClassification,
+                VendorId = request.VendorId,
+                VendorAddressId = request.VendorAddressId,
+                VendorContactName = request.VendorContactName,
+                VendorContactMobile = request.VendorContactMobile,
+                VendorContactEmail = request.VendorContactEmail,
+                InvoiceDate = request.InvoiceDate,
+                InvoiceAmount = totalAmount,     
+                SubTotal = subTotal,
+                GSTAmount = gstTotal,
+                TotalAmount = totalAmount,
+                IsBudgetExceeded = budgetExceeded,
+                IsFinalInvoice = false,
+                InvoiceCopyPath = invoiceCopyPath,
+                CreatedBy = request.CreatedBy
+            };
+
+            int invoiceId = await _repository.CreateInvoiceAsync(invoice);
+
+            var itemsList = items.ToList();
+            await _repository.AddInvoiceItemsAsync(invoiceId, itemsList);
+
+            if (selectedTerms.Count > 0)
+                await _repository.AddInvoiceTermsAsync(invoiceId, request.TermMasterIds, request.CreatedBy);
+
+            await _repository.AddInvoiceDeliveryLocationsAsync(invoiceId, request.DeliveryLocationIds, request.CreatedBy);
+
+            // ---------------- Approval chain — amount-tiered, same as PO ----------------
+            var roles = await BuildInvoiceApprovalChainAsync("WithoutPO", totalAmount);
+            var steps = roles.Select((role, i) => new Models.PoInvoiceApprovalHistory
+            {
+                StepNumber = i + 1,
+                ApproverRole = role
+            }).ToList();
+
+            await _repository.AddInvoiceApprovalStepsAsync(invoiceId, steps);
+
+            return await GetInvoiceByIdAsync(invoiceId);
+        }
+
+        private static string GetCurrentBudgetYear()
+        {
+            var today = DateTime.UtcNow;
+            int startYear = today.Month >= 4 ? today.Year : today.Year - 1;
+            return $"FY{startYear}-{(startYear + 1).ToString().Substring(2)}";
+        }
+
+        public async Task<IEnumerable<InvoiceablePOResponse>> GetInvoiceablePOsAsync(string? departmentCode, long? vendorId, string? search)
+        {
+            var rows = await _repository.GetInvoiceablePOsAsync(departmentCode, vendorId, search);
+
+            List<InvoiceablePOResponse> result = new();
+            foreach (var r in rows)
+            {
+                result.Add(new InvoiceablePOResponse
+                {
+                    POId = r.POId,
+                    PONumber = r.PONumber,
+                    DepartmentCode = r.DepartmentCode,
+                    VendorId = r.VendorId,
+                    VendorName = r.VendorName,
+                    POAmount = r.POAmount,
+                    TotalInvoiced = r.TotalInvoiced,
+                    RemainingAmount = r.RemainingAmount,
+                    CreatedDt = r.CreatedDt
+                });
+            }
+            return result;
         }
 
     }

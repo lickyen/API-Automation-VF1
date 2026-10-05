@@ -10,25 +10,30 @@
         public string InvoiceType { get; set; } = default!;
         public int? POId { get; set; }
         public int? AgreementId { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string? Classification { get; set; }          // ADD
+        public string? SubClassification { get; set; }         // ADD
         public long VendorId { get; set; }
         public long VendorAddressId { get; set; }
-        public DateTime InvoiceDate { get; set; }
-        public decimal InvoiceAmount { get; set; }
-        public bool IsFinalInvoice { get; set; }
-        public string Status { get; set; } = default!;
-        public int CurrentApprovalStep { get; set; }
-        public string? RejectionReason { get; set; }
-
         public string? VendorContactName { get; set; }
         public string? VendorContactMobile { get; set; }
         public string? VendorContactEmail { get; set; }
-
+        public DateTime InvoiceDate { get; set; }
+        public decimal InvoiceAmount { get; set; }
+        public decimal? SubTotal { get; set; }                 // ADD
+        public decimal? GSTAmount { get; set; }                  // ADD
+        public decimal? TotalAmount { get; set; }                 // ADD
+        public bool IsBudgetExceeded { get; set; }                  // ADD
+        public bool IsFinalInvoice { get; set; }
+        public string? InvoiceCopyPath { get; set; }
+        public string Status { get; set; } = default!;
+        public int CurrentApprovalStep { get; set; }
+        public string? RejectionReason { get; set; }
         public string CreatedBy { get; set; } = default!;
         public DateTime CreatedDt { get; set; }
         public string? ModifiedBy { get; set; }
         public DateTime? ModifiedDt { get; set; }
     }
-
     public class PoInvoiceApprovalHistory
     {
         public int ApprovalId { get; set; }
@@ -66,6 +71,7 @@
         public decimal InvoiceAmount { get; set; }
         public bool IsFinalInvoice { get; set; }
         public string CreatedBy { get; set; } = default!;
+        public VendorDocumentUpload InvoiceCopy { get; set; } = default!;
     }
 
     public class InvoiceApprovalActionRequest
@@ -93,6 +99,7 @@
         public int InvoiceId { get; set; }
         public string InvoiceNumber { get; set; } = default!;
         public string InvoiceType { get; set; } = default!;
+        public string? DepartmentCode { get; set; }
         public int? POId { get; set; }
         public string? PONumber { get; set; }
         public long VendorId { get; set; }
@@ -113,6 +120,7 @@
         public string? PendingWithRole { get; set; }
         public List<InvoiceApprovalStepResponse> ApprovalTrail { get; set; } = new();
         public List<InvoicePaymentResponse> Payments { get; set; } = new();
+        public VendorDocumentResponse? InvoiceCopy { get; set; }
     }
 
     public class InvoiceApprovalStepResponse
@@ -199,6 +207,71 @@
         public DateTime InvoiceDate { get; set; }
         public decimal InvoiceAmount { get; set; }
         public string CreatedBy { get; set; } = default!;
+        public VendorDocumentUpload InvoiceCopy { get; set; } = default!;
+    }
+    public class InvoiceListItemResponse
+    {
+        public int InvoiceId { get; set; }
+        public string InvoiceNumber { get; set; } = default!;
+        public string InvoiceType { get; set; } = default!;
+        public int? POId { get; set; }
+        public string? PONumber { get; set; }
+        public string VendorName { get; set; } = default!;
+        public decimal InvoiceAmount { get; set; }
+        public string Status { get; set; } = default!;
+        public string? PendingWithRole { get; set; }
+        public string CreatedBy { get; set; } = default!;
+        public DateTime CreatedDt { get; set; }
     }
 
+    public class InvoiceDashboardResponse
+    {
+       
+        public List<InvoiceListItemResponse> PendingWithMe { get; set; } = new();     
+        public List<InvoiceListItemResponse> InProgress { get; set; } = new();        
+        public List<InvoiceListItemResponse> Completed { get; set; } = new();          
+    }
+    public class PoInvoiceItem
+    {
+        public int InvoiceItemId { get; set; }
+        public int InvoiceId { get; set; }
+        public string ItemDescription { get; set; } = default!;
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal Amount { get; set; }
+        public decimal GSTRate { get; set; }
+        public decimal GSTAmount { get; set; }
+        public int BudgetCategoryId { get; set; }
+        public bool IsBudgetExceeded { get; set; }
+    }
+    public class CreateInvoiceWithoutPORequest
+    {
+        public string InvoiceNumber { get; set; } = default!;
+        public long VendorId { get; set; }
+        public long VendorAddressId { get; set; }
+        public string? VendorContactName { get; set; }
+        public string? VendorContactMobile { get; set; }
+        public string? VendorContactEmail { get; set; }
+        public string DepartmentCode { get; set; } = default!;
+        public string Classification { get; set; } = default!;
+        public string SubClassification { get; set; } = default!;
+        public DateTime InvoiceDate { get; set; }
+        public List<long> TermMasterIds { get; set; } = new();
+        public List<int> DeliveryLocationIds { get; set; } = new();
+        public List<CreatePurchaseOrderItemRequest> Items { get; set; } = new();   // reused, same shape: description/qty/unitPrice/gstRate/budgetCategoryId
+        public VendorDocumentUpload InvoiceCopy { get; set; } = default!;
+        public string CreatedBy { get; set; } = default!;
+    }
+    public class InvoiceablePOResponse
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public long VendorId { get; set; }
+        public string VendorName { get; set; } = default!;
+        public decimal POAmount { get; set; }
+        public decimal TotalInvoiced { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public DateTime CreatedDt { get; set; }
+    }
 }
