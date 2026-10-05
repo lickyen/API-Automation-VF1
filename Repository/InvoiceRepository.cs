@@ -382,5 +382,39 @@ namespace ProductivityApi.Repository
             var rows = termMasterIds.Select(id => new { InvoiceId = invoiceId, TermMasterId = id, CreatedBy = createdBy }).ToList();
             await connection.ExecuteAsync(sql, rows);
         }
+
+        public async Task<IEnumerable<dynamic>> GetInvoiceablePOsAsync(string? departmentCode, long? vendorId, string? search)
+        {
+            const string sql = @"
+        SELECT po.[POId], po.[PONumber], po.[DepartmentCode], po.[VendorId], v.[VendorName],
+               po.[TotalAmount] AS POAmount,
+               ISNULL(inv.TotalInvoiced, 0) AS TotalInvoiced,
+               po.[TotalAmount] - ISNULL(inv.TotalInvoiced, 0) AS RemainingAmount,
+               po.[CreatedDt]
+        FROM [dbo].[PO_PurchaseOrder] po
+        INNER JOIN [dbo].[PO_VendorMaster] v ON v.[VendorId] = po.[VendorId]
+        LEFT JOIN (
+            SELECT [POId], SUM([InvoiceAmount]) AS TotalInvoiced
+            FROM [dbo].[PO_Invoice]
+            WHERE [POId] IS NOT NULL
+              AND [Status] IN ('PendingApproval', 'Approved', 'PendingPayment', 'Paid')
+            GROUP BY [POId]
+        ) inv ON inv.[POId] = po.[POId]
+        WHERE po.[Status] = 'Approved'
+          AND NOT EXISTS (
+              SELECT 1 FROM [dbo].[PO_Invoice] fi
+              WHERE fi.[POId] = po.[POId]
+                AND fi.[IsFinalInvoice] = 1
+                AND fi.[Status] IN ('PendingApproval', 'Approved', 'PendingPayment', 'Paid')
+          )
+          AND po.[TotalAmount] - ISNULL(inv.TotalInvoiced, 0) > 0
+          AND (@DepartmentCode IS NULL OR po.[DepartmentCode] = @DepartmentCode)
+          AND (@VendorId IS NULL OR po.[VendorId] = @VendorId)
+          AND (@Search IS NULL OR po.[PONumber] LIKE '%' + @Search + '%' OR v.[VendorName] LIKE '%' + @Search + '%')
+        ORDER BY po.[CreatedDt] DESC;";
+
+            using IDbConnection connection = new SqlConnection(_conStr);
+            return await connection.QueryAsync(sql, new { DepartmentCode = departmentCode, VendorId = vendorId, Search = search });
+        }
     }
 }

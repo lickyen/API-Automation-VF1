@@ -262,4 +262,16 @@
         public VendorDocumentUpload InvoiceCopy { get; set; } = default!;
         public string CreatedBy { get; set; } = default!;
     }
+    public class InvoiceablePOResponse
+    {
+        public int POId { get; set; }
+        public string PONumber { get; set; } = default!;
+        public string DepartmentCode { get; set; } = default!;
+        public long VendorId { get; set; }
+        public string VendorName { get; set; } = default!;
+        public decimal POAmount { get; set; }
+        public decimal TotalInvoiced { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public DateTime CreatedDt { get; set; }
+    }
 }

@@ -17,6 +17,10 @@ namespace ProductivityApi.Controllers
             _invoiceService = invoiceService;
         }
 
+        /// <summary>GET /api/Invoice/GetInvoiceablePOs?departmentCode=IT&vendorId=1&search=00019</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetInvoiceablePOs([FromQuery] string? departmentCode, [FromQuery] long? vendorId, [FromQuery] string? search)
+            => Ok(await _invoiceService.GetInvoiceablePOsAsync(departmentCode, vendorId, search));
 
         /// <summary>POST /api/Purchaseorder/CreateInvoiceAgainstPO</summary>
         [HttpPost]

@@ -766,5 +766,28 @@ namespace ProductivityApi.Services
             return $"FY{startYear}-{(startYear + 1).ToString().Substring(2)}";
         }
 
+        public async Task<IEnumerable<InvoiceablePOResponse>> GetInvoiceablePOsAsync(string? departmentCode, long? vendorId, string? search)
+        {
+            var rows = await _repository.GetInvoiceablePOsAsync(departmentCode, vendorId, search);
+
+            List<InvoiceablePOResponse> result = new();
+            foreach (var r in rows)
+            {
+                result.Add(new InvoiceablePOResponse
+                {
+                    POId = r.POId,
+                    PONumber = r.PONumber,
+                    DepartmentCode = r.DepartmentCode,
+                    VendorId = r.VendorId,
+                    VendorName = r.VendorName,
+                    POAmount = r.POAmount,
+                    TotalInvoiced = r.TotalInvoiced,
+                    RemainingAmount = r.RemainingAmount,
+                    CreatedDt = r.CreatedDt
+                });
+            }
+            return result;
+        }
+
     }
 }
