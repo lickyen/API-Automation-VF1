@@ -139,12 +139,14 @@ namespace ProductivityApi.Services
         public async Task<int> SubmitCops1Async(SubmitCops1RequestDto dto)
         {
             string status = "";
-            if (dto.Action == "Approved")
-                status = "CO_A_1";
-            else if (dto.Action == "Rejected")
-                status = "CO_R_1";
-            else if (dto.Action == "SentBack")
-                status = "CO_SB_1";
+
+            status = dto.Action switch
+            {
+                "Approved" => "CO_A_1",
+                "Rejected" => "CO_R_1",
+                "SentBack" => "CO_SB_1",
+                _ => status
+            };
 
             var result = await _repository.SubmitCops1Async(dto, status);
 
@@ -166,15 +168,14 @@ namespace ProductivityApi.Services
         {
             string status = "";
 
-            if (dto.Action == "Save")
-                status = "";
-            else if (dto.Action == "Submit")
-                if (dto.AdditionalReq == "Y")
-                    status = "CO_A_2";
-                else if (dto.AdditionalReq == "N")
-                    status = "CO_A_3";
-                else if (dto.Action == "SentBack")
-                    status = "CO_SB_2";
+            status = dto.Action switch
+            {
+                "Save" => "",
+                "Submit" when dto.AdditionalReq == "Y" => "CO_A_2",
+                "Submit" when dto.AdditionalReq == "N" => "CO_A_3",
+                "SentBack" => "CO_SB_2",
+                _ => status
+            };
 
             var result = await _repository.SubmitCops2Async(dto, status);
 
@@ -196,11 +197,13 @@ namespace ProductivityApi.Services
         {
             string status = "";
 
-            if (dto.Action == "Approved")
-                status = "CO_A_3";
-            else if (dto.Action == "SentBack")
-                status = "CO_SB_3";
-            
+            status = dto.Action switch
+            {
+                "Approved" => "CO_A_3",
+                "SentBack" => "CO_SB_3",
+                _ => status
+            };
+
             var result = await _repository.SubmitCops3Async(dto, status);
 
             if (result > 0)
@@ -221,14 +224,14 @@ namespace ProductivityApi.Services
         {
             string status = "";
 
-            if (dto.ClaimStatus == "Rejected")
-                status = "CO_R_4";
-            if (dto.ClaimStatus == "SentBack")
-                status = "CO_SB_3";
-            else if (dto.ClaimStatus == "Received" && dto.Deficit <= 0)
-                status = "CO_A_5";
-            else if (dto.ClaimStatus == "Received" && dto.Deficit > 0)
-                status = "CO_A_4";
+            status = dto.ClaimStatus switch
+            {
+                "Rejected" => "CO_R_4",
+                "SentBack" => "CO_SB_3",
+                "Received" when dto.Deficit <= 0 => "CO_A_5",
+                "Received" when dto.Deficit > 0 => "CO_A_4",
+                _ => status
+            };
 
             var result = await _repository.SubmitCops4Async(dto, status);
 
@@ -250,10 +253,12 @@ namespace ProductivityApi.Services
         {
             string status = "";
 
-            if (dto.Action == "Approved")
-                status = "CO_A_5";
-            else if (dto.Action == "SentBack")
-                status = "CO_SB_5";
+            status = dto.Action switch
+            {
+                "Approved" => "CO_A_5",
+                "SentBack" => "CO_SB_5",
+                _ => status
+            };
 
             var result = await _repository.SubmitCops5Async(dto, status);
 

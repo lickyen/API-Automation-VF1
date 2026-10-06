@@ -111,6 +111,12 @@ namespace ProductivityApi.Services
             return SendRequest<CollateralApiResponse>(HttpMethod.Post, endPoint, request, serviceName: "getCollateralsByRef", serviceVersion: "1");
         }
 
+        public Task<AgreementResponse> GetAgreements(AgreementRequest request)
+        {
+            var endPoint = "pff-api/services/createFinanceRest/finance/getAgreements";
+
+            return SendRequest<AgreementResponse>(HttpMethod.Post, endPoint, request, serviceName: "getAgreements", serviceVersion: "2");
+        }
         private async Task<TResponse> SendRequest<TResponse>(HttpMethod method, string endPoint, object requestBodyObj = null, string serviceName = "", string serviceVersion="3")
         {
             var apiUrl = $"{_plfconfig.BaseUrl}{endPoint}";

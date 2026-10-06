@@ -32,6 +32,9 @@ namespace ProductivityApi.Services
             return result;
         }
 
+        public Task<List<ClosureCamLmsValues>> GetClosureCamLmsAsync(string lan)
+            => _plfRepository.GetClosureCamLmsAsync(lan);
+
         public async Task<(LanDetailsPlf? Data, string Message)> GetLanDetailsAsync(string lan)
         {
             var loan = await _plfService.GetFinance(lan);
@@ -52,6 +55,7 @@ namespace ProductivityApi.Services
             data.CustName = loan.customer?.personalInfo?.shortName;
             data.Lan = loan.finReference;
             data.DisbDate = loan.financeSchedule?.financeDetail?.finStartDate;
+            data.MaturityDate = loan.financeSchedule?.summary?.maturityDate;
             data.FinActiveStatus = loan.financeSchedule?.summary?.finActiveStatus;
             data.Dpd = loan.financeSchedule?.summary?.dpd;
             data.LoanAmount = Convert.ToDecimal(loan.financeSchedule?.financeDetail?.finAssetValue / 100);
@@ -71,16 +75,8 @@ namespace ProductivityApi.Services
                 ?? new List<string?>();
             data.DisbModes = disbModes;
 
-            //var (statement, msg) = await GetForeclosureStatementAsync(lan);
-
-            //if (msg != "Success")
-            //    return (null, msg);
-
-            //data.TotalOutstanding = statement.TotalOutstandingExclFc;
-            //data.PrincipalOutstanding = statement.Pos;
-
            // data.TotalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingTotal / 100);
-           // data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
+            data.PrincipalOutstanding = Convert.ToDecimal(loan.financeSchedule?.summary?.outstandingPri / 100);
 
             data.BranchCode = loan.financeSchedule?.financeDetail?.finBranch;
 
@@ -180,7 +176,8 @@ namespace ProductivityApi.Services
                 Interest = Interest,
                 Charges = Charges,
                 TotalOutstanding = Pos + Interest + Charges,
-                TotalOutstandingExclFc = Pos + InterestExclBpi + ChargesExclFc  
+                TotalOutstandingExclFc = Pos + Interest + ChargesExclFc, 
+                TotalOutstandingExclFcBpi = Pos + InterestExclBpi + ChargesExclFc  
             };
 
             return (statement, response.ReturnStatus.returnText);
@@ -364,6 +361,29 @@ namespace ProductivityApi.Services
         public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
         {
             return await _plfRepository.GetDisbursementsAsync(request);
+        }
+
+        public async Task<GetOpenEntryLostFileStatusDto?> GetOpenEntryLostFileStatus(string lan)
+        {
+            return await _repository.GetOpenEntryLostFileStatus(lan);
+        }
+
+
+        // added on 05-10-2026 Harika
+        public async Task<IEnumerable<CountryProvinceModel>> GetApprovedCountryProvincesAsync()
+        {
+            var result = await _plfRepository.GetApprovedCountryProvincesAsync();
+            return result ?? Enumerable.Empty<CountryProvinceModel>();
+        }
+        public async Task<IEnumerable<ProvinceCityModel>> GetCitiesByProvinceAsync(string pcProvince)
+        {
+            var result = await _plfRepository.GetCitiesByProvinceAsync(pcProvince.Trim());
+            return result ?? Enumerable.Empty<ProvinceCityModel>();
+        }
+        public async Task<IEnumerable<PincodeModel>> GetPincodesByCityAsync(string city)
+        {
+            var result = await _plfRepository.GetPincodesByCityAsync(city.Trim());
+            return result ?? Enumerable.Empty<PincodeModel>();
         }
     }
 }

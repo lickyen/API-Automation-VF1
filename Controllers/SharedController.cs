@@ -60,6 +60,20 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, data, msg));
         }
 
+        [HttpGet("getClosureCamLms/{lan}")]
+        public async Task<IActionResult> GetClosureCamLms(string lan)
+        {
+            if (string.IsNullOrWhiteSpace(lan))
+                return BadRequest(new Response(false, null, "LAN is required"));
+
+            var data = await _service.GetClosureCamLmsAsync(lan);
+
+            if (data == null || !data.Any())
+                return NotFound(new Response(false, null, "Record not found"));
+
+            return Ok(new Response(true, data, "Success"));
+        }
+
         [HttpGet("getForeclosureStatement/{lan}")]
         public async Task<IActionResult> GetForeclosureStatement(string lan)
         {
@@ -138,6 +152,85 @@ namespace ProductivityApi.Controllers
                 return Ok(new Response(false, null, "No disbursement records found for given date range."));
 
             return Ok(new Response(true, result));
+        }
+
+        [HttpGet("openEntryLostFile/{lan}")]
+        public async Task<IActionResult> GetOpenEntryLostFileStatus(string lan)
+        {
+            var result = await _service.GetOpenEntryLostFileStatus(lan);
+
+            if (result == null)
+                return Ok(new Response(false, null, "No records present for this LAN"));
+
+            return Ok(new Response(
+                true,
+                result,
+                "Success"
+            ));
+        }
+
+
+        // added on 05-10-2026 Harika
+
+
+        [HttpGet("GetStateList")]
+        public async Task<IActionResult> GetApprovedCountryProvinces()
+        {
+            try
+            {
+                var result = await _service.GetApprovedCountryProvincesAsync();
+
+                if (!result.Any())
+                    return Ok(new { status = true, message = "No approved records found.", data = result });
+
+                return Ok(new { status = true, message = "Success", data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = false, message = "Failed to fetch country/province data.", error = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCitiesByState([FromQuery] string pcProvince)
+        {
+            if (string.IsNullOrWhiteSpace(pcProvince))
+                return BadRequest(new { status = false, message = "pcProvince is required." });
+
+            try
+            {
+                var result = await _service.GetCitiesByProvinceAsync(pcProvince);
+
+                if (!result.Any())
+                    return Ok(new { status = true, message = $"No cities found for province {pcProvince}.", data = result });
+
+                return Ok(new { status = true, message = "Success", data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = false, message = "Failed to fetch city data.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("GetPincodesByCity")]
+        public async Task<IActionResult> GetPincodesByCity([FromQuery] string city)
+        {
+            if (string.IsNullOrWhiteSpace(city))
+                return BadRequest(new { status = false, message = "city is required." });
+
+            try
+            {
+                var result = await _service.GetPincodesByCityAsync(city);
+
+                if (!result.Any())
+                    return Ok(new { status = true, message = $"No pincodes found for city {city}.", data = result });
+
+                return Ok(new { status = true, message = "Success", data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = false, message = "Failed to fetch pincode data.", error = ex.Message });
+            }
         }
     }
 }

@@ -90,28 +90,37 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task<int> AddOfflinePaymentDetailsAsync(AxisOfflineReqModel dto, string CustName)
+        public async Task<int> AddOfflinePaymentDetailsAsync(AxisOfflineReqModel dto, string CustName,string BankRef)
         {
-            
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
 
-            return await connection.ExecuteScalarAsync<int>(
-                "sp_InsertAxisBankOfflineCollection",
-              new
-              {
-                  UTR = dto.UTR,
-                  Bene_Acc_No = dto.Loan_acc_no,
-                  Cust_Name= CustName,
-                  Req_Type = dto.Req_type,
-                  Req_Date = dto.Req_date,
-                  Txn_Amnt = dto.Txn_amnt,
-                  Pmode = dto.Pmode
-              },
-                commandType: CommandType.StoredProcedure
-            );
+                return await connection.ExecuteScalarAsync<int>(
+                    "sp_InsertAxisBankOfflineCollection",
+                    new
+                    {
+                        Reference_No = BankRef,
+                        Bene_Acc_No = dto.Loan_acc_no,
+                        Cust_Name = CustName,
+                        Req_Type = dto.Req_type,
+                        Req_Date = dto.Req_date,
+                        Txn_Amnt = dto.Txn_amnt,
+                        Pmode = dto.Pmode,
+                        PAN = dto.PAN
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+            catch (Exception ex)
+            {
+                // Log exception here
+                // Example: _logger.LogError(ex, "Error while inserting offline payment details");
+
+                throw;
+            }
         }
-
         public async Task<int> UpdateOfflinePaymentDetailsAsync(AxisOfflineNotifReqModel request)
         {
             await using var connection = new SqlConnection(_conStr);
@@ -123,6 +132,7 @@ namespace ProductivityApi.Repository
                 {
                     request.UTR,
                     Bene_Acc_No = request.Loan_acc_no,
+                    Reference_No= request.RefNo,
                     Req_Type = request.Req_type,
                     Req_Date = request.Req_date,
                     Txn_Amnt = request.Txn_amnt,
@@ -155,5 +165,38 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
         }
 
+        public async Task<string?> GenerateBankReferenceNoAsync(string bankName)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_conStr);
+                await connection.OpenAsync();
+
+                var result = await connection.QuerySingleAsync<BankReferenceResponse>(
+                    "sp_GenerateBankReferenceNo",
+                    new
+                    {
+                        BankName = bankName
+                    },
+                    commandType: CommandType.StoredProcedure
+                );
+
+                if (result.Result == 1)
+                {
+                    return result.Reference_No;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(
+                //    ex,
+                //    "Error while generating reference number for bank: {BankName}",
+                //    bankName);
+
+                throw;
+            }
+        }
     }
 }

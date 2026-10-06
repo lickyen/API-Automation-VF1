@@ -1,12 +1,8 @@
 ﻿using ProductivityApi.Models;
 using ProductivityApi.Repository;
-using ProductivityApi.Services;
 using Serilog;
-using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ProductivityApi.Services
 {
@@ -18,7 +14,12 @@ namespace ProductivityApi.Services
         private readonly TemplateService _templateService;
         private readonly UserLogRepository _userLogRepository;
 
-        public OtpService(UserRepository userRepository, OtpRepository otpRepository, SmsService smsService, TemplateService templateService, UserLogRepository userLogRepository)
+        public OtpService(
+            UserRepository userRepository,
+            OtpRepository otpRepository,
+            SmsService smsService,
+            TemplateService templateService,
+            UserLogRepository userLogRepository)
         {
             _userRepository = userRepository;
             _otpRepository = otpRepository;
@@ -27,184 +28,264 @@ namespace ProductivityApi.Services
             _userLogRepository = userLogRepository;
         }
 
-        //public async Task<bool> SendOtp(string userId)
-        //{
-        //    var user = _userRepository.GetUser(userId)
-        //               ?? throw new InvalidOperationException("User not found");
-
-        //    if (string.IsNullOrWhiteSpace(user.Mobile))
-        //        throw new InvalidOperationException("Contact details not found");
-
-        //    string otp = GenerateOtp();
-        //    string hashedOtp = HashOtp(otp);
-
-        //    await _otpRepository.SaveOtpAsync(new OtpModel
-        //    {
-        //        UserId = userId,
-        //        OtpHash = hashedOtp,
-        //        Attempts = 0
-        //    });
-
-        //    var placeholders = new Dictionary<string, string>
-        //    {
-        //        { "OTP", otp }
-        //    };
-
-        //    var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
-        //    var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
-
-        //    await _smsService.SendSms(user.Mobile, smsBody, smsTemplate.DltContentId);
-
-        //    return true;
-        //}
-
-        public async Task<string> SendOtp(string userId)
+        public async Task<string> SendOtp(
+            string userId,
+            string? source = null,
+            string? smsContent = null,
+            string? dltContentId = null)
         {
             var user = _userRepository.GetUser(userId)
-                       ?? throw new InvalidOperationException("User not found");
+                ?? throw new InvalidOperationException("User not found");
 
             if (string.IsNullOrWhiteSpace(user.Mobile))
                 throw new InvalidOperationException("Contact details not found");
 
-            string otp = GenerateOtp();
-            string hashedOtp = HashOtp(otp);
-
-            await _otpRepository.SaveOtpAsync(new OtpModel
-            {
-                UserId = userId,
-                OtpHash = hashedOtp,
-                Attempts = 0
-            });
-
-            var placeholders = new Dictionary<string, string>
-            {
-                { "OTP", otp }
-            };
-
-            var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
-            var smsBody = _templateService.ReplacePlaceholders(
-                smsTemplate.Content,
-                placeholders);
-
-            await _smsService.SendSms(
+            await SendOtpInternal(
+                userId,
                 user.Mobile,
-                smsBody,
-                smsTemplate.DltContentId);
+                source,
+                smsContent,
+                dltContentId);
 
-            return user.Mobile;
+            return MaskMobile(user.Mobile);
         }
 
-        public async Task<bool> SendOtpToMobile(string referenceId, string mobileNumber)
+        public async Task<bool> SendOtpToMobile(
+            string mobileNumber,
+            string? source = null,
+            string? smsContent = null,
+            string? dltContentId = null)
         {
             if (string.IsNullOrWhiteSpace(mobileNumber))
                 throw new InvalidOperationException("Mobile number not found");
 
-            string otp = GenerateOtp();
-            string hashedOtp = HashOtp(otp);
-
-            await _otpRepository.SaveOtpAsync(
-                new OtpModel
-                {
-                    UserId = referenceId,
-                    OtpHash = hashedOtp,
-                    Attempts = 0,
-                }
-            );
-
-            var placeholders = new Dictionary<string, string> { { "OTP", otp } };
-
-            var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
-
-            var smsBody = _templateService.ReplacePlaceholders(smsTemplate.Content, placeholders);
-
-            await _smsService.SendSms(mobileNumber, smsBody, smsTemplate.DltContentId);
+            await SendOtpInternal(
+                mobileNumber,
+                mobileNumber,
+                source,
+                smsContent,
+                dltContentId);
 
             return true;
         }
-        public async Task<bool> VerifyOtp(string userId, string otp)
+
+        public async Task<Response> VerifyOtp(
+            string userId,
+            string otp,
+            string? source = null)
         {
             bool isValid = false;
             string? message = null;
 
             try
             {
-                var storedOtp = await _otpRepository.GetOtpByUserIdAsync(userId);
+                var storedOtp = await _otpRepository.GetOtpByUserIdAsync(
+                    userId,
+                    source);
 
                 if (storedOtp == null)
                 {
-                    message = "OTP not found";
-                    return false;
+                    return new Response(
+                        false,
+                        new OtpVerificationResult
+                        {
+                            MaxAttemptsExceeded = true
+                        },
+                        "OTP not found. Please request a new OTP.");
                 }
 
                 if (storedOtp.ExpiryTime < DateTime.UtcNow)
                 {
-                    message = "OTP expired";
-                    return false;
+                    await _otpRepository.DeleteOtpAsync(
+                        userId,
+                        source);
+
+                    return new Response(
+                        false,
+                        new OtpVerificationResult
+                        {
+                            MaxAttemptsExceeded = true
+                        },
+                        "OTP expired. Please request a new OTP.");
                 }
 
-                // Increment first, persist it, then check the limit
-                storedOtp.Attempts++;
-                await _otpRepository.UpdateAttemptAsync(storedOtp);
-
-                if (storedOtp.Attempts > 5)
-                {
-                    message = "Max attempts exceeded";
-                    return false;
-                }
-
-                isValid = VerifyHash(otp, storedOtp.OtpHash);
-                message = isValid ? null : $"Invalid OTP ({storedOtp.Attempts})";
+                isValid = VerifyHash(
+                    otp,
+                    storedOtp.OtpHash);
 
                 if (isValid)
-                    await _otpRepository.DeleteOtpAsync(userId);
+                {
+                    var resetToken = GenerateResetToken();
+
+                    await _otpRepository.SaveResetTokenAsync(
+                        userId,
+                        resetToken,
+                        source);
+
+                    return new Response(
+                        true,
+                        new OtpVerificationResult
+                        {
+                            ResetToken = resetToken,
+                            MaxAttemptsExceeded = false
+                        },
+                        "OTP verified successfully");
+                }
+
+                storedOtp.Attempts++;
+                //storedOtp.Source = source;
+
+                await _otpRepository.UpdateAttemptAsync(storedOtp);
+
+                if (storedOtp.Attempts >= 5)
+                {
+                    await _otpRepository.DeleteOtpAsync(
+                        userId,
+                        source);
+
+                    return new Response(
+                        false,
+                        new OtpVerificationResult
+                        {
+                            MaxAttemptsExceeded = true
+                        },
+                        "Maximum OTP attempts exceeded.");
+                }
+
+                var attemptsLeft = 5 - storedOtp.Attempts;
+
+                return new Response(
+                    false,
+                    new OtpVerificationResult
+                    {
+                        MaxAttemptsExceeded = false
+                    },
+                    $"Invalid OTP. {attemptsLeft} attempt(s) remaining.");
             }
             catch (Exception ex)
             {
-                message = $"Exception: {ex.GetType().Name} — {ex.Message}";
-                Log.Error(ex, "OTP verification error for UserId={UserId}", userId);
+                message = ex.Message;
+
+                Log.Error(
+                    ex,
+                    "OTP verification error for UserId={UserId} Source={Source}",
+                    userId,
+                    source);
+
                 throw;
             }
             finally
             {
-                await _userLogRepository.AddAsync(new UserLog
-                {
-                    UserId = userId,
-                    Action = "OTP_VERIFICATION",
-                    Response = isValid ? "SUCCESS" : "FAILURE",
-                    Message = message
-                });
+                await _userLogRepository.AddAsync(
+                    new UserLog
+                    {
+                        UserId = userId,
+                        Source = source,
+                        Action = "OTP_VERIFICATION",
+                        Response = isValid ? "SUCCESS" : "FAILURE",
+                        Message = message
+                    });
 
                 Log.Information(
-                    "OTP verification UserId={UserId} Success={Success}",
+                    "OTP verification UserId={UserId} Source={Source} Success={Success}",
                     userId,
-                    isValid
-                );
+                    source,
+                    isValid);
             }
-
-            return isValid;
         }
+
         #region Helpers
+
+        private async Task SendOtpInternal(
+            string userId,
+            string mobileNumber,
+            string? source,
+            string? smsContent,
+            string? dltContentId)
+                {
+                    string otp = GenerateOtp();
+                    string hashedOtp = HashOtp(otp);
+
+                    await _otpRepository.SaveOtpAsync(
+                        new OtpModel
+                        {
+                            UserId = userId,
+                            OtpHash = hashedOtp,
+                            Attempts = 0,
+                            Source = source
+                        });
+
+                    if (string.IsNullOrWhiteSpace(smsContent))
+                    {
+                        var smsTemplate = _templateService.GetSmsTemplate("OtpSms");
+
+                        smsContent = _templateService.ReplacePlaceholders(
+                            smsTemplate.Content,
+                            new Dictionary<string, string>
+                            {
+                                { "Name", "Vistaarian" },
+                                { "OTP", otp }
+                            });
+
+                        dltContentId = smsTemplate.DltContentId;
+                    }
+                    else
+                    {
+                        smsContent = smsContent.Replace("<<OTP>>", otp);
+                    }
+
+                    await _smsService.SendSms(
+                        mobileNumber,
+                        smsContent,
+                        dltContentId ?? string.Empty);
+                }
+
         private string GenerateOtp()
         {
-            var rng = RandomNumberGenerator.Create();
-            byte[] bytes = new byte[4];
-            rng.GetBytes(bytes);
-            int otp = BitConverter.ToInt32(bytes, 0) % 1000000;
-            otp = Math.Abs(otp); // ensure positive
-            return otp.ToString("D6"); // 6-digit OTP
+            return RandomNumberGenerator
+                .GetInt32(0, 1000000)
+                .ToString("D6");
+        }
+
+        private string GenerateResetToken()
+        {
+            return Convert.ToHexString(
+                RandomNumberGenerator.GetBytes(16));
         }
 
         private string HashOtp(string otp)
         {
             using var sha256 = SHA256.Create();
-            byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(otp));
+
+            byte[] bytes = sha256.ComputeHash(
+                Encoding.UTF8.GetBytes(otp));
+
             return Convert.ToBase64String(bytes);
         }
 
-        private bool VerifyHash(string otp, string hashedOtp)
+        private bool VerifyHash(
+            string otp,
+            string hashedOtp)
         {
-            return HashOtp(otp) == hashedOtp;
+            var computedHash =
+                Convert.FromBase64String(HashOtp(otp));
+
+            var storedHash =
+                Convert.FromBase64String(hashedOtp);
+
+            return CryptographicOperations.FixedTimeEquals(
+                computedHash,
+                storedHash);
         }
+
+        private static string MaskMobile(string mobile)
+        {
+            if (string.IsNullOrWhiteSpace(mobile) || mobile.Length < 4)
+                return mobile;
+
+            return $"{mobile[..2]}XXXXXX{mobile[^2..]}";
+        }
+
         #endregion
     }
 }

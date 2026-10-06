@@ -1,0 +1,469 @@
+using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Models;
+using ProductivityApi.Services;
+
+namespace ProductivityApi.Controllers
+{
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    public sealed class PurchaseOrderController : ControllerBase
+    {
+        private readonly PurchaseOrderService _purchaseOrderService;
+
+        public PurchaseOrderController(PurchaseOrderService purchaseOrderService)
+        {
+            _purchaseOrderService = purchaseOrderService;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckUserAccess([FromQuery] string employeeCode)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            var result = await _purchaseOrderService.CheckAccessAsync(employeeCode);
+            return result.HasAccess ? Ok(result) : StatusCode(StatusCodes.Status403Forbidden, result);
+        }
+        [HttpPost]
+        public async Task<IActionResult> CreateVendor([FromBody] CreateVendorRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateVendorAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateVendorStatus — enable/disable a vendor</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateVendorStatus([FromBody] UpdateVendorStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateVendorStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Vendor enabled." : "Vendor disabled." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetPendingVendors — FinanceUser queue</summary>
+        //[HttpGet]
+        //public async Task<IActionResult> GetPendingVendors()
+        //    => Ok(await _purchaseOrderService.GetPendingVendorsAsync());
+
+        /// <summary>POST /api/Purchaseorder/ApproveVendor — FinanceUser assigns VendorCode</summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveVendor([FromBody] ApproveVendorRequest request)
+        {
+            try { await _purchaseOrderService.ApproveVendorAsync(request); return Ok(new { message = "Vendor approved." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RejectVendor([FromBody] RejectVendorRequest request)
+        {
+            try { await _purchaseOrderService.RejectVendorAsync(request); return Ok(new { message = "Vendor rejected." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetVendors([FromQuery] string? status)
+        {
+            var result = await _purchaseOrderService.GetAllVendorsAsync(status);
+            return Ok(result);
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetVendorDashboard?employeeCode=EMP1023</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetVendorDashboard([FromQuery] string employeeCode)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            try { return Ok(await _purchaseOrderService.GetVendorDashboardAsync(employeeCode)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+
+        /// <summary>GET /api/Purchaseorder/GetVendorById?vendorId=5</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetVendorById([FromQuery] long vendorId)
+        {
+            try
+            {
+                var result = await _purchaseOrderService.GetVendorByIdAsync(vendorId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateVendor — Preparer edits a rejected vendor and resubmits (Status -> PENDING)</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateVendor([FromBody] UpdateVendorRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateVendorAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetMyRejectedVendors?preparerEmployeeCode=EMP1023 — Preparer's queue to fix and resubmit</summary>
+        //[HttpGet]
+        //public async Task<IActionResult> GetMyRejectedVendors([FromQuery] string preparerEmployeeCode)
+        //    => Ok(await _purchaseOrderService.GetMyRejectedVendorsAsync(preparerEmployeeCode));
+
+
+        /// <summary>GET /api/Purchaseorder/GetDepartments</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDepartments()
+        {
+            var result = await _purchaseOrderService.GetDepartmentsAsync();
+            return Ok(result);
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetBudget?budgetYear=FY2026-27 — Admin view of all departments' budgets.</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetBudget([FromQuery] string? budgetYear)
+        {
+            var result = await _purchaseOrderService.GetBudgetAsync(budgetYear);
+            return Ok(result);
+        }
+
+        
+        /// <summary>GET /api/Purchaseorder/GetTermsMaster?termCategory=Payment</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetTermsMaster([FromQuery] string? termCategory)
+            => Ok(await _purchaseOrderService.GetTermsMasterAsync(termCategory));
+        /// <summary>GET /api/Purchaseorder/GetBudgetCategories?departmentCode=Admin&classification=Capex</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetBudgetCategories([FromQuery] string? departmentCode, [FromQuery] string? classification)
+            => Ok(await _purchaseOrderService.GetBudgetCategoriesAsync(departmentCode, classification));
+
+        /// <summary>POST /api/Purchaseorder/CreatePurchaseOrder</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreatePurchaseOrder([FromBody] CreatePurchaseOrderRequest request)
+        {
+            try
+            {
+                var result = await _purchaseOrderService.CreatePurchaseOrderAsync(request);
+                return Ok(result);
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderById?poId=5</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseOrderById([FromQuery] int poId)
+        {
+            try
+            {
+                return Ok(await _purchaseOrderService.GetPurchaseOrderByIdAsync(poId));
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+
+      
+
+        
+
+        /// <summary>GET /api/Purchaseorder/GetPurchaseOrderDashboard?employeeCode=EMP1023</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseOrderDashboard([FromQuery] string employeeCode)
+        {
+            if (string.IsNullOrWhiteSpace(employeeCode))
+                return BadRequest(new { error = "employeeCode is required." });
+
+            try
+            {
+                return Ok(await _purchaseOrderService.GetPurchaseOrderDashboardAsync(employeeCode));
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetLocations?region=South&zone=Chennai</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetLocations([FromQuery] string? region, [FromQuery] string? zone, [FromQuery] bool? isActive)
+            => Ok(await _purchaseOrderService.GetLocationsAsync(region, zone, isActive));
+
+        /// <summary>POST /api/Purchaseorder/ActOnApproval</summary>
+        [HttpPost]
+        public async Task<IActionResult> ActOnApproval([FromBody] ApprovalActionRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.ActOnApprovalAsync(request);
+                return Ok(new { message = request.IsApproved ? "Approved successfully." : "Rejected." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetSettings</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetSettings()
+            => Ok(await _purchaseOrderService.GetAllSettingsAsync());
+
+        /// <summary>POST /api/Purchaseorder/UpdateSetting — Admin only</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateSetting([FromBody] UpdateAppSettingRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateSettingAsync(request);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+        /// <summary>GET /api/Purchaseorder/GetSubClassifications?departmentCode=IT&classification=Opex</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetSubClassifications([FromQuery] string departmentCode, [FromQuery] string classification)
+            => Ok(await _purchaseOrderService.GetSubClassificationsAsync(departmentCode, classification));
+
+        /// <summary>GET /api/Purchaseorder/GetDepartmentBudgetUtilization?departmentCode=IT&budgetYear=FY2026-27</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentBudgetUtilization([FromQuery] string? departmentCode, [FromQuery] string budgetYear)
+        {
+            try
+            {
+                return Ok(await _purchaseOrderService.GetDepartmentBudgetUtilizationAsync(departmentCode, budgetYear));
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GetPendingPaymentPOs — FinUser dashboard</summary>
+        [HttpGet]
+        public async Task<IActionResult> GetPendingPaymentPOs()
+            => Ok(await _purchaseOrderService.GetPendingPaymentPOsAsync());
+
+        /// <summary>POST /api/Purchaseorder/RecordPayment — FinUser logs a payment (can be called multiple times per PO)</summary>
+        [HttpPost]
+        public async Task<IActionResult> RecordPayment([FromBody] RecordPaymentRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.RecordPaymentAsync(request);
+                return Ok(new { message = "Payment recorded." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/GeneratePOPdf?poId=6</summary>
+        [HttpGet]
+        public async Task<IActionResult> GeneratePOPdf([FromQuery] int poId)
+        {
+            try
+            {
+                var pdfBytes = await _purchaseOrderService.GeneratePurchaseOrderPdfAsync(poId);
+                return File(pdfBytes, "application/pdf", $"{poId}_PurchaseOrder.pdf");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>POST /api/Purchaseorder/CreateBudgetCategory</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateBudgetCategory([FromBody] CreateBudgetCategoryRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateBudgetCategoryAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/AllocateBudget</summary>
+        [HttpPost]
+        public async Task<IActionResult> AllocateBudget([FromBody] AllocateBudgetRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.AllocateBudgetAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateBudgetCategoryStatus</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateBudgetCategoryStatus([FromBody] UpdateBudgetCategoryStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateBudgetCategoryStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Budget category enabled." : "Budget category disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdatePurchaseOrder — Preparer edits a rejected PO and resubmits</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdatePurchaseOrder([FromBody] UpdatePurchaseOrderRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdatePurchaseOrderAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/CancelPurchaseOrder</summary>
+        [HttpPost]
+        public async Task<IActionResult> CancelPurchaseOrder([FromBody] CancelPurchaseOrderRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.CancelPurchaseOrderAsync(request);
+                return Ok(new { message = "Purchase Order cancelled." });
+            }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/CreateVendorAddress — Preparer</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateVendorAddress([FromBody] CreateVendorAddressRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateVendorAddressAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateVendorAddress — Preparer resubmits a rejected address</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateVendorAddress([FromBody] UpdateVendorAddressRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateVendorAddressAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/ApproveVendorAddress — FinanceUser</summary>
+        [HttpPost]
+        public async Task<IActionResult> ApproveVendorAddress([FromBody] ApproveVendorAddressRequest request)
+        {
+            try { await _purchaseOrderService.ApproveVendorAddressAsync(request); return Ok(new { message = "Address approved." }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/RejectVendorAddress — FinanceUser</summary>
+        [HttpPost]
+        public async Task<IActionResult> RejectVendorAddress([FromBody] RejectVendorAddressRequest request)
+        {
+            try { await _purchaseOrderService.RejectVendorAddressAsync(request); return Ok(new { message = "Address rejected." }); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateVendorAddressStatus — enable/disable, FinanceUser/Admin</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateVendorAddressStatus([FromBody] UpdateVendorAddressStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateVendorAddressStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Address enabled." : "Address disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/CreateLocation</summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateLocation([FromBody] CreateLocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.CreateLocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateLocation</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateLocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        }
+
+        /// <summary>POST /api/Purchaseorder/UpdateLocationStatus — enable/disable</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateLocationStatus([FromBody] UpdateLocationStatusRequest request)
+        {
+            try
+            {
+                await _purchaseOrderService.UpdateLocationStatusAsync(request);
+                return Ok(new { message = request.IsActive ? "Location enabled." : "Location disabled." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>PUT /api/Purchaseorder/UpdateBudgetAllocation</summary>
+        [HttpPut]
+        public async Task<IActionResult> UpdateBudgetAllocation([FromBody] UpdateBudgetAllocationRequest request)
+        {
+            try { return Ok(await _purchaseOrderService.UpdateBudgetAllocationAsync(request)); }
+            catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+            catch (InvalidOperationException ex) { return UnprocessableEntity(new { error = ex.Message }); }
+        }
+
+        /// <summary>GET /api/Purchaseorder/EmailApprovalAction?token=...&action=approve|reject</summary>
+        [HttpGet]
+        public async Task<IActionResult> EmailApprovalAction([FromQuery] Guid token, [FromQuery] string action)
+        {
+            if (string.Equals(action, "reject", StringComparison.OrdinalIgnoreCase))
+            {
+                // Reject needs a reason — show a small HTML form instead of acting immediately
+                return Content(BuildRejectReasonFormHtml(token), "text/html");
+            }
+
+            var (success, message, _) = await _purchaseOrderService.ProcessEmailApprovalActionAsync(token, action);
+            return Content(BuildConfirmationPageHtml(success, message), "text/html");
+        }
+
+        /// <summary>POST /api/Purchaseorder/EmailRejectionAction — submitted from the reason form</summary>
+        [HttpPost]
+        public async Task<IActionResult> EmailRejectionAction([FromForm] Guid token, [FromForm] string reason)
+        {
+            var (success, message) = await _purchaseOrderService.ProcessEmailRejectionAsync(token, reason);
+            return Content(BuildConfirmationPageHtml(success, message), "text/html");
+        }
+
+        private static string BuildConfirmationPageHtml(bool success, string message) => $@"
+    <html>
+    <head><title>Purchase Order Action</title></head>
+    <body style='font-family:Arial,sans-serif;text-align:center;padding:60px;'>
+        <div style='display:inline-block;padding:30px 40px;border-radius:8px;background:{(success ? "#EAF6EC" : "#FBEAEA")};border:1px solid {(success ? "#1E7A34" : "#A12531")};'>
+            <h2 style='color:{(success ? "#1E7A34" : "#A12531")};margin:0 0 10px 0;'>{(success ? "Success" : "Unable to Process")}</h2>
+            <p style='color:#263247;margin:0;'>{System.Net.WebUtility.HtmlEncode(message)}</p>
+        </div>
+    </body>
+    </html>";
+
+        private static string BuildRejectReasonFormHtml(Guid token) => $@"
+    <html>
+    <head><title>Reject Purchase Order</title></head>
+    <body style='font-family:Arial,sans-serif;max-width:480px;margin:60px auto;padding:0 20px;'>
+        <h2 style='color:#A12531;'>Reject Purchase Order</h2>
+        <p>Please provide a reason for rejecting this Purchase Order.</p>
+        <form method='post' action='/api/Purchaseorder/EmailRejectionAction'>
+            <input type='hidden' name='token' value='{token}' />
+            <textarea name='reason' rows='4' style='width:100%;padding:10px;font-size:14px;' required placeholder='Enter rejection reason...'></textarea>
+            <br/><br/>
+            <button type='submit' style='background:#A12531;color:white;border:none;padding:10px 24px;border-radius:4px;font-size:14px;cursor:pointer;'>Submit Rejection</button>
+        </form>
+    </body>
+    </html>";
+    }
+}

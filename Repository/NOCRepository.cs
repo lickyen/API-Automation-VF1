@@ -63,7 +63,7 @@ namespace ProductivityApi.Repository
             );
         }
 
-        public async Task InsertTransactionAsync(NocTransactionInsertDto dto)
+        public async Task InsertTransactionAsync(NocTransactionInsertModel dto)
         {
             using var conn = new SqlConnection(_conStr);
             await conn.OpenAsync();
@@ -73,6 +73,32 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<(IEnumerable<NocDashboardDto>? Data, string? Error)>
+        GetDashboardByUserAsync(NocDashboardRequestDto dto)
+            {
+                try
+                {
+                    using var conn = new SqlConnection(_conStr);
+
+                    var result = await conn.QueryAsync<NocDashboardDto>(
+                        "sp_NOC_GetDashboardByUser",
+                        new
+                        {
+                            UserId = dto.UserId,
+                            Role = dto.Role,
+                            TabName = dto.TabName
+                        },
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    return (result, null);
+                }
+                catch (SqlException ex)
+                {
+                    return (null, ex.Message);
+                }
+            }
 
         public async Task<NocTransaction?> GetById(int id)
         {
@@ -98,40 +124,31 @@ namespace ProductivityApi.Repository
             return transaction;
         }
 
-        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)> GetLansByUserAsync(
-            string userId,
-            string? role,
-            string? status
-        )
-        {
-            try
+        public async Task<(IEnumerable<UserLanDto>? Data, string? Error)>
+        GetLansByUserAsync(string userId, string role, string status)
             {
-                using var conn = new SqlConnection(_conStr);
-
-                var result = await conn.QueryAsync<UserLanDto>(
-                    "sp_NOC_GetLansByUser",
-                    new
-                    {
-                        UserId = userId,
-                        Role = role,
-                        Status = status,
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
-
-                // 🔥 DEBUG SAFETY CHECK (add temporarily)
-                if (!result.Any())
+                try
                 {
-                    return (result, null); // DO NOT treat as error
-                }
+                    using var conn = new SqlConnection(_conStr);
 
-                return (result, null);
+                    var result = await conn.QueryAsync<UserLanDto>(
+                        "sp_NOC_GetLansByUser",
+                        new
+                        {
+                            UserId = userId,
+                            Role = role,
+                            Status = status
+                        },
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    return (result, null);
+                }
+                catch (SqlException ex)
+                {
+                    return (null, ex.Message);
+                }
             }
-            catch (SqlException ex)
-            {
-                return (null, ex.Message);
-            }
-        }
 
         public async Task<(bool IsValid, string? Error)> ValidateRoleExistsAsync(string role)
         {
@@ -212,6 +229,24 @@ namespace ProductivityApi.Repository
             );
         }
 
+        public async Task<List<UserModel>> GetBranchUsersAsync(string branchCode)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            string sql = @"
+        SELECT *
+        FROM UserMaster
+        WHERE BranchID = @BranchCode
+        AND Role = 'BM'
+        AND Status = 'Active'";
+
+            var users = await conn.QueryAsync<UserModel>(
+                sql,
+                new { BranchCode = branchCode });
+
+            return users.ToList();
+        }
+
         //--------------------------------------------------------
         // Pending before dispatch
         //--------------------------------------------------------
@@ -225,7 +260,7 @@ namespace ProductivityApi.Repository
                 FROM NOC_Transactions
                 WHERE Status IN
                 (
-                    'Generate NOC',
+                    'Requested to RMU',
                     'File Requested',
                     'File at NOC',
                     'Ready for dispatch'
@@ -328,32 +363,6 @@ namespace ProductivityApi.Repository
             ";
 
             return await conn.QueryAsync<NocTransaction>(sql);
-        }
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
-        {
-            using var conn = new SqlConnection(_conStr);
-
-            //const string sql = @"
-            //    SELECT Status
-            //    FROM NOC_RoleStatusMap
-            //    WHERE IsActive = 1
-            //      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
-            //    ORDER BY Id;";
-
-            const string sql = @"
-                SELECT Status
-                FROM
-                (
-                    SELECT Status, MIN(Id) AS Id
-                    FROM NOC_RoleStatusMap
-                    WHERE IsActive = 1
-                      AND (@Role IS NULL OR @Role = '' OR Role = @Role)
-                    GROUP BY Status
-                ) AS T
-                ORDER BY Id;";
-
-
-            return await conn.QueryAsync<string>(sql, new { Role = role });
         }
         public async Task<IEnumerable<dynamic>> GetOneilReportDataAsync(List<int> ids)
         {
@@ -477,36 +486,6 @@ namespace ProductivityApi.Repository
             );
         }
 
-        //public async Task<bool> UploadNOCAndAckPdfAsync(
-        //    int transactionId,
-        //    string nocPdfBase64,
-        //    string ackPdfBase64,
-        //    string updatedBy
-        //)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql =
-        //        @"
-        //UPDATE NOC_Transactions
-        //SET
-        //    NOC_PDF = @NocPdf,
-        //    Ack_PDF = @AckPdf,
-        //    Updated_By = @UpdatedBy,
-        //    Updated_Dt = GETDATE()
-        //WHERE Id = @TransactionId";
-
-        //    return await conn.ExecuteAsync(
-        //            sql,
-        //            new
-        //            {
-        //                TransactionId = transactionId,
-        //                NocPdf = nocPdfBase64,
-        //                AckPdf = ackPdfBase64,
-        //                UpdatedBy = updatedBy,
-        //            }
-        //        ) > 0;
-        //}
         public async Task<bool> UploadNOCAndAckPdfAsync(
     int transactionId,
     string nocFileName,
@@ -532,48 +511,6 @@ namespace ProductivityApi.Repository
                 UpdatedBy = updatedBy,
             }) > 0;
         }
-
-        //        public async Task<(string Pdf, byte[] SignImage)> GetNocPdfForSigningAsync(
-        //            int transactionId,
-        //            int signUserId
-        //        )
-        //        {
-        //            using var conn = new SqlConnection(_conStr);
-
-        //            string sql =
-        //                @"
-        //        SELECT
-        //    t.NOC_PDF,
-        //    s.SignImage
-        //FROM NOC_Transactions t
-        //CROSS JOIN NOC_SignMaster s
-        //WHERE t.Id = @TransactionId
-        //  AND s.EmpId = @SignUserId";
-
-        //            var row = await conn.QueryFirstOrDefaultAsync(
-        //                sql,
-        //                new { TransactionId = transactionId, SignUserId = signUserId }
-        //            );
-
-        //            if (row == null)
-        //            {
-        //                throw new Exception(
-        //                    $"Transaction {transactionId} or SignUser {signUserId} not found"
-        //                );
-        //            }
-
-        //            if (string.IsNullOrWhiteSpace((string?)row.NOC_PDF))
-        //            {
-        //                throw new Exception($"NOC_PDF is empty for transaction {transactionId}");
-        //            }
-
-        //            if (row.SignImage == null)
-        //            {
-        //                throw new Exception($"Signature image not found for SignUserId {signUserId}");
-        //            }
-
-        //            return ((string)row.NOC_PDF, (byte[])row.SignImage);
-        //        }
 
         public async Task<(string Pdf, string SignImage)> GetNocPdfForSigningAsync(
     int transactionId,
@@ -605,37 +542,6 @@ namespace ProductivityApi.Repository
 
             return ((string)row.NOC_PDF, (string)row.SignImage);
         }
-
-        //public async Task<bool> SaveSignedNocAsync(
-        //    int transactionId,
-        //    int signUserId,
-        //    string signedPdfBase64,
-        //    string updatedBy
-        //)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql =
-        //        @"
-        //UPDATE NOC_Transactions
-        //SET
-        //    NOC_PDF_Signed = @Pdf,
-        //    SignUserId = @SignUserId,
-        //    Updated_By = @UpdatedBy,
-        //    Updated_Dt = GETDATE()
-        //WHERE Id = @TransactionId";
-
-        //    return await conn.ExecuteAsync(
-        //            sql,
-        //            new
-        //            {
-        //                TransactionId = transactionId,
-        //                SignUserId = signUserId,
-        //                Pdf = signedPdfBase64,
-        //                UpdatedBy = updatedBy,
-        //            }
-        //        ) > 0;
-        //}
 
         public async Task<bool> SaveSignedNocAsync(
     int transactionId,
@@ -695,34 +601,6 @@ namespace ProductivityApi.Repository
             return ((string)row.Ack_PDF, row.PropertyOwner_Name.ToString());
         }
 
-        //    public async Task<bool> SaveSignedAckAsync(
-        //        int transactionId,
-        //        string signedPdfBase64,
-        //        string updatedBy
-        //    )
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql =
-        //            @"
-        //UPDATE NOC_Transactions
-        //SET
-        //    Ack_PDF_Signed=@Pdf,
-        //    Updated_By=@UpdatedBy,
-        //    Updated_Dt=GETDATE()
-        //WHERE Id=@TransactionId";
-
-        //        return await conn.ExecuteAsync(
-        //                sql,
-        //                new
-        //                {
-        //                    TransactionId = transactionId,
-        //                    Pdf = signedPdfBase64,
-        //                    UpdatedBy = updatedBy,
-        //                }
-        //            ) > 0;
-        //    }
-
         public async Task<bool> SaveSignedAckAsync(
     int transactionId,
     string fileName,
@@ -746,22 +624,6 @@ namespace ProductivityApi.Repository
             }) > 0;
         }
 
-        //public async Task<string?> GetSignedNocPdfAsync(int transactionId)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql =
-        //        @"
-        //SELECT NOC_PDF_Signed
-        //FROM NOC_Transactions
-        //WHERE Id = @TransactionId";
-
-        //    return await conn.ExecuteScalarAsync<string?>(
-        //        sql,
-        //        new { TransactionId = transactionId }
-        //    );
-        //}
-
         public async Task<string?> GetSignedNocPdfAsync(int transactionId)
         {
             using var conn = new SqlConnection(_conStr);
@@ -769,21 +631,6 @@ namespace ProductivityApi.Repository
                 "SELECT NOC_PDF_Signed FROM NOC_Transactions WHERE Id = @TransactionId",
                 new { TransactionId = transactionId });
         }
-        //public async Task<string?> GetSignedAckPdfAsync(int transactionId)
-        //{
-        //    using var conn = new SqlConnection(_conStr);
-
-        //    string sql =
-        //        @"
-        //SELECT Ack_PDF_Signed
-        //FROM NOC_Transactions
-        //WHERE Id = @TransactionId";
-
-        //    return await conn.ExecuteScalarAsync<string?>(
-        //        sql,
-        //        new { TransactionId = transactionId }
-        //    );
-        //}
 
         public async Task<string?> GetSignedAckPdfAsync(int transactionId)
         {
@@ -851,37 +698,6 @@ namespace ProductivityApi.Repository
             return rows > 0;
         }
 
-        //    public async Task<bool> UpdateKycPdfAsync(
-        //        int transactionId,
-        //        string pdfBase64,
-        //        string updatedBy
-        //    )
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql =
-        //            @"
-        //    UPDATE NOC_Transactions
-        //    SET
-        //        KYC_PDF = @PdfBase64,
-        //        Updated_By = @UpdatedBy,
-        //        Updated_Dt = GETDATE()
-        //    WHERE Id = @TransactionId
-        //";
-
-        //        var rows = await conn.ExecuteAsync(
-        //            sql,
-        //            new
-        //            {
-        //                TransactionId = transactionId,
-        //                PdfBase64 = pdfBase64,
-        //                UpdatedBy = updatedBy,
-        //            }
-        //        );
-
-        //        return rows > 0;
-        //    }
-
         public async Task<bool> UpdateKycPdfAsync(
     int transactionId,
     string fileName,
@@ -905,37 +721,6 @@ namespace ProductivityApi.Repository
             }) > 0;
         }
 
-        //    public async Task<bool> UpdateAckPdfAsync(
-        //        int transactionId,
-        //        string pdfBase64,
-        //        string updatedBy
-        //    )
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql =
-        //            @"
-        //    UPDATE NOC_Transactions
-        //    SET
-        //        Ack_PDF_Signed = @PdfBase64,
-        //        Updated_By = @UpdatedBy,
-        //        Updated_Dt = GETDATE()
-        //    WHERE Id = @TransactionId
-        //";
-
-        //        var rows = await conn.ExecuteAsync(
-        //            sql,
-        //            new
-        //            {
-        //                TransactionId = transactionId,
-        //                PdfBase64 = pdfBase64,
-        //                UpdatedBy = updatedBy,
-        //            }
-        //        );
-
-        //        return rows > 0;
-        //    }
-
         public async Task<bool> UpdateAckPdfAsync(
     int transactionId,
     string fileName,
@@ -958,23 +743,6 @@ namespace ProductivityApi.Repository
                 UpdatedBy = updatedBy,
             }) > 0;
         }
-
-        //    public async Task<string?> GetKycPdfAsync(int transactionId)
-        //    {
-        //        using var conn = new SqlConnection(_conStr);
-
-        //        string sql =
-        //            @"
-        //    SELECT KYC_PDF
-        //    FROM NOC_Transactions
-        //    WHERE Id = @TransactionId
-        //";
-
-        //        return await conn.ExecuteScalarAsync<string?>(
-        //            sql,
-        //            new { TransactionId = transactionId }
-        //        );
-        //    }
 
         public async Task<string?> GetKycPdfAsync(int transactionId)
         {
@@ -1045,6 +813,24 @@ namespace ProductivityApi.Repository
             };
 
             await conn.ExecuteAsync(sql, new { TransactionId = transactionId, Status = status });
+        }
+
+        public async Task<IEnumerable<dynamic>> GetTransactionReportAsync(
+            DateTime? fromDate,
+            DateTime? toDate)
+        {
+            using var conn = new SqlConnection(_conStr);
+
+            await conn.OpenAsync();
+
+            return await conn.QueryAsync(
+                "sp_NOC_Report",
+                new
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate
+                },
+                commandType: CommandType.StoredProcedure);
         }
     }
 }

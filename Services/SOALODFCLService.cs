@@ -25,6 +25,8 @@ namespace ProductivityApi.Services
     public class SOALODFCLService
     {
         private readonly SOALODFCLRepository _repository;
+        private readonly ClosureRepository _crepository;
+
         private readonly EmailService _emailService;
         private readonly TemplateService _templateService;
         private readonly UserService _userService;
@@ -35,7 +37,7 @@ namespace ProductivityApi.Services
         private readonly SmsService _smsservice;
 
 
-        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice, SharedRepository sharedRepository, SmsService smsService)
+        public SOALODFCLService(SOALODFCLRepository repository, EmailService emailService, TemplateService templateService, UserService userService, AppSettings appSettings, PLFService plfService, SharedService sharedservice, SharedRepository sharedRepository, SmsService smsService, ClosureRepository crepository)
         {
             _repository = repository;
             _emailService = emailService;
@@ -46,6 +48,7 @@ namespace ProductivityApi.Services
             _sharedservice = sharedservice;
             _sharedRepository = sharedRepository;
             _smsservice = smsService;
+            _crepository = crepository;
         }
         public async Task<IEnumerable<SOADashboard>> GetDashboardByUserAsync(SOADashboardRequestDto dto)
         {
@@ -54,6 +57,12 @@ namespace ProductivityApi.Services
         public async Task<SOADashboard?> GetSettlementByIdAsync(int id)
         {
             var result = await _repository.GetSettlementByIdAsync(id);
+            if (result.RetentionId.HasValue)
+            {
+                result.Questionnaire = await _crepository.GetQuestionnaireAsync(id, "SOA/LOD/FCL", result.RetentionId);
+            
+                result.CAM = await _crepository.GetCAMAsync(result.RetentionId.Value);
+            }
             return result;
         }
         //public async Task<SOACategoryResponseDto?> GetLoanCategoryAsync(SOACategoryRequestDto dto)
@@ -80,43 +89,64 @@ namespace ProductivityApi.Services
         {
 
             bool isWaiver = false;
+            string Soa= dto.SOA == 1 ? "SOA" : "";
+            string Lod = dto.LOD == 1 ? "LOD" : "";
+            string Fcl = dto.FCL == 1 ? "FCL" : "";
+
+            string REQ_SOURCE = string.Join("+",
+                new[] { Soa, Lod, Fcl }.Where(value => !string.IsNullOrEmpty(value)));
+
+           
+        isWaiver = dto.charges.Any(x => x.IsWaiver == 1);
 
 
-            isWaiver = dto.charges.Any(x => x.IsWaiver == 1);
-
-
-            if ((dto.Category == "Critical" || dto.Category == "High Critical" || dto.Bucket == "B1-B3" || dto.Bucket == "NPA")) //Critical / High Critical / B1-B3 / NPA
-            {
-                if (!isWaiver) //No Waiver
-                {
-                    dto.status = "Auto-Approved";
-                }
-                else // Waiver
-                {
-                    dto.status = "Initiated";
-                }
-
-            }
-            else if (dto.SOA == 1 && dto.LOD == 0 && dto.FCL == 0) // ONLY SOA Selected
+           
+             if (dto.SOA == 1 && dto.LOD == 0 && dto.FCL == 0) // ONLY SOA Selected
             {
                 dto.status = "Auto-Approved";
             }
-
-            else if (dto.FCL == 1 || dto.LOD == 1)  //FCL or LOD Selected
+            else if (IsCritical(dto.Category) || IsBucket(dto.Bucket))
             {
-                dto.status = "New";
+
+                dto.status = "Auto-Approved";
             }
 
             else //default
             {
-                dto.status = "Initiated";
+                dto.status = "New";
+            }
+            //retentionId Logic added on 31-08-2026
+            var isCritical = IsCritical(dto.Category);
+            var isBucket = IsBucket(dto.Bucket);
+            var hasValidRequestSource = dto.LOD == 1 || dto.FCL == 1;
+            var isRetention = !isCritical && !isBucket && hasValidRequestSource;
+            int? retentionId = null;
+            if (isRetention)
+            {
+                var activeRetentionId = await _crepository.GetActiveApprovedRetentionIdAsync(dto.LAN);
+                if (activeRetentionId.HasValue)
+                {
+                    retentionId = activeRetentionId.Value;
+                    //hasActiveApprovedRetention = true;
+                    dto.status = "Auto-Approved";
+                }
+                else
+                {
+                    retentionId = await _crepository.CreateRetentionAsync(dto.LAN, "SOA/LOD/FCL", null, dto.CreatedBy);
+                   
+                }
             }
 
-            var result = await _repository.CreateSOALODFCLAsync(dto);
+            int retention = isRetention ? 1 : 0;
+            var result = await _repository.CreateSOALODFCLAsync(dto,retentionId, retention, REQ_SOURCE);
 
             return result;
         }
+        public static bool IsCritical(string? criticality)
+           => criticality == "Critical" || criticality == "High Critical";
 
+        public static bool IsBucket(string? bucket)
+            => bucket == "B1-B3" || bucket == "NPA";
         public async Task<int> AddChargesAsync(AddChargesDto dto)
         {
             var result = await _repository.AddChargesAsync(dto);

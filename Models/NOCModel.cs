@@ -56,6 +56,7 @@ namespace ProductivityApi.Models
         public string? NOC_PDF_Signed { get; set; }
         public string? Ack_PDF { get; set; }
         public string? Ack_PDF_Signed { get; set; }
+        public string? KYC_PDF { get; set; }
         public string? OTPStatusKYC { get; set; }
         public string? OTPStatusNOC { get; set; }
         public DateTime? OTPStatusKYCDate { get; set; }
@@ -121,6 +122,54 @@ namespace ProductivityApi.Models
         public string? Remarks { get; set; }
     }
 
+    //public class NocTransactionInsertDto
+    //{
+    //    [Required]
+    //    public string Lan { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string BranchCode { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string BranchName { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string Region { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string Zone { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string MegaZone { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string CustId { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string CustName { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string CustMobile { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string CollId { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public string LoanStatus { get; set; } = string.Empty;
+
+    //    [Required]
+    //    public DateTime DisbDate { get; set; }
+
+    //    public DateTime? ClosureDate { get; set; }
+
+    //    [Required]
+    //    public string NocStatus { get; set; } = string.Empty;
+    //    [Required]
+    //    public string CreatedBy { get; set; } = string.Empty;
+    //    [Required]
+    //    public bool GenerateNOC { get; set; }
+    //}
+
     public class NocTransactionInsertDto
     {
         [Required]
@@ -130,25 +179,10 @@ namespace ProductivityApi.Models
         public string BranchCode { get; set; } = string.Empty;
 
         [Required]
-        public string BranchName { get; set; } = string.Empty;
-
-        [Required]
-        public string Region { get; set; } = string.Empty;
-
-        [Required]
-        public string Zone { get; set; } = string.Empty;
-
-        [Required]
-        public string MegaZone { get; set; } = string.Empty;
-
-        [Required]
         public string CustId { get; set; } = string.Empty;
 
         [Required]
         public string CustName { get; set; } = string.Empty;
-
-        [Required]
-        public string CustMobile { get; set; } = string.Empty;
 
         [Required]
         public string CollId { get; set; } = string.Empty;
@@ -159,8 +193,7 @@ namespace ProductivityApi.Models
         [Required]
         public DateTime DisbDate { get; set; }
 
-        [Required]
-        public DateTime ClosureDate { get; set; }
+        public DateTime? ClosureDate { get; set; }
 
         [Required]
         public string NocStatus { get; set; } = string.Empty;
@@ -169,6 +202,28 @@ namespace ProductivityApi.Models
         [Required]
         public bool GenerateNOC { get; set; }
     }
+
+    public class NocTransactionInsertModel
+    {
+        public string Lan { get; set; } = string.Empty;
+        public string? CustId { get; set; }
+        public string? CustName { get; set; }
+        public string? CustMobile { get; set; }
+        public string? CollId { get; set; }
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? Region { get; set; }
+        public string? Zone { get; set; }
+        public string? MegaZone { get; set; }
+        public DateTime? DisbDate { get; set; }
+
+        public string? LoanStatus { get; set; } = string.Empty;
+        public DateTime? ClosureDate { get; set; }
+        public string? NocStatus { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public bool GenerateNOC { get; set; }
+    }
+
 
     public class NocApplicantDetails
     {
@@ -478,13 +533,18 @@ namespace ProductivityApi.Models
 
     public class SentForDispatchDto
     {
+        [Required]
         public int TransactionId { get; set; }
+        [Required]
 
         public string POD { get; set; } = string.Empty;
+        [Required]
 
         public string? CourierVendor { get; set; }
+        [Required]
 
         public string UpdatedBy { get; set; } = string.Empty;
+        [Required]
 
         public string Role { get; set; } = string.Empty;
     }
@@ -500,5 +560,40 @@ namespace ProductivityApi.Models
         public string UpdatedBy { get; set; } = string.Empty;
 
         public string Role { get; set; } = string.Empty;
+    }
+
+    public class NocDashboardDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public int LanCount { get; set; }
+    }
+
+    public class NocDashboardRequestDto
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string TabName { get; set; } = string.Empty;
+    }
+
+    public class NocReportRequest
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+    }
+
+    public class SubmitAckWithKyc
+    {
+        [Required]
+        public int TransactionId { get; set; }
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+        [Required]
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class BulkDispatchDto
+    {
+        [Required]
+        public List<SentForDispatchDto> Items { get; set; } = new();
     }
 }

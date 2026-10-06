@@ -19,10 +19,12 @@ namespace ProductivityApi.Services
         private readonly AppSettings _appSettings;
         private readonly UserService _userService;
         private readonly SharedService _sharedService;
+        private readonly PLFService _plfService;
+        private readonly BranchServices _branchService;
 
         private const long MaxAttachmentSizeBytes = 10 * 1024 * 1024; // 10MB
 
-        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService )
+        public FcRefundService(FcRefundRepository repository, EmailService emailService, TemplateService templateService, AppSettings appSettings, UserService userService, SharedService sharedService, PLFService plfService, BranchServices branchService)
         {
             _repository = repository;
             _emailService = emailService;
@@ -30,6 +32,8 @@ namespace ProductivityApi.Services
             _appSettings = appSettings;
             _userService = userService;
             _sharedService = sharedService;
+            _plfService = plfService;
+            _branchService = branchService;
         }
 
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
@@ -110,18 +114,70 @@ namespace ProductivityApi.Services
             return totalSize <= MaxAttachmentSizeBytes;
         }
 
+        //public async Task<int> TriggerMailAsync(FcRefundTriggerMailDto dto)
+        //{
+        //    if (dto.Lans == null || dto.Lans.Count == 0)
+        //        throw new ArgumentException("No LANs selected");
+
+        //    var distinctLans = dto.Lans.Distinct().ToList();
+
+        //    // Fetch records
+        //    var records = new List<FcRefundModel>();
+        //    foreach (var lan in distinctLans)
+        //    {
+        //        var record = await _repository.GetByLanAsync(lan);
+        //        if (record != null)
+        //            records.Add(record);
+        //    }
+
+        //    if (!records.Any())
+        //        throw new Exception("No matching records found");
+
+        //    // Determine mode based on status of records
+        //    var firstStatus = records.First().Status ?? string.Empty;
+        //    var isQuery = string.Equals(firstStatus, FcRefundStatus.ReSubmitted, StringComparison.OrdinalIgnoreCase);
+
+        //    // Split by insurer
+        //    var kotakRecords = records.Where(r => r.InsurerName == "Kotak").ToList();
+        //    var goDigitRecords = records.Where(r => r.InsurerName == "GoDigit").ToList();
+
+        //    int totalUpdated = 0;
+
+        //    if (kotakRecords.Any())
+        //    {
+        //        var (sent, msg) = isQuery ? await SendKotakQueryMailAsync(kotakRecords) : await SendKotakMailAsync(kotakRecords);
+        //        if (!sent) throw new Exception("Kotak: " + msg);
+
+        //        var lans = kotakRecords.Select(x => x.Lan).ToList();
+        //        totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "Kotak");
+        //    }
+
+        //    if (goDigitRecords.Any())
+        //    {
+        //        var (sent, msg) = isQuery ? await SendGoDigitQueryMailAsync(goDigitRecords) : await SendGoDigitMailAsync(goDigitRecords);
+        //        if (!sent) throw new Exception("GoDigit: " + msg);
+
+        //        var lans = goDigitRecords.Select(x => x.Lan).ToList();
+        //        totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "GoDigit");
+        //    }
+
+        //    return totalUpdated;
+        //}
+
+        //Added on 12-08-26
+        //EB Foreclose
         public async Task<int> TriggerMailAsync(FcRefundTriggerMailDto dto)
         {
             if (dto.Lans == null || dto.Lans.Count == 0)
                 throw new ArgumentException("No LANs selected");
 
             var distinctLans = dto.Lans.Distinct().ToList();
-
-            // Fetch records
             var records = new List<FcRefundModel>();
+
             foreach (var lan in distinctLans)
             {
                 var record = await _repository.GetByLanAsync(lan);
+
                 if (record != null)
                     records.Add(record);
             }
@@ -129,20 +185,53 @@ namespace ProductivityApi.Services
             if (!records.Any())
                 throw new Exception("No matching records found");
 
-            // Determine mode based on status of records
             var firstStatus = records.First().Status ?? string.Empty;
+            var isEb = string.Equals(firstStatus, FcRefundStatus.PendingForActionEB, StringComparison.OrdinalIgnoreCase);
             var isQuery = string.Equals(firstStatus, FcRefundStatus.ReSubmitted, StringComparison.OrdinalIgnoreCase);
 
+            // EB: Check loan status from PLF and skip active loans
+            if (isEb)
+            {
+                var eligibleRecords = new List<FcRefundModel>();
+
+                foreach (var record in records)
+                {
+                    if (!record.IsEB)
+                    {
+                        eligibleRecords.Add(record);
+                        continue;
+                    }
+
+                    var finance = await _plfService.GetFinance(record.Lan);
+                    var loanStatus = finance?.financeSchedule?.summary?.finActiveStatus;
+
+                    if (string.IsNullOrWhiteSpace(loanStatus))
+                        continue;
+
+                    if (string.Equals(loanStatus, "A", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    eligibleRecords.Add(record);
+                }
+
+                records = eligibleRecords;
+
+                if (!records.Any())
+                    return 0;
+            }
+
             // Split by insurer
-            var kotakRecords = records.Where(r => r.InsurerName == "Kotak").ToList();
-            var goDigitRecords = records.Where(r => r.InsurerName == "GoDigit").ToList();
+            var kotakRecords = records.Where(r => string.Equals(r.InsurerName, "Kotak", StringComparison.OrdinalIgnoreCase)).ToList();
+            var goDigitRecords = records.Where(r => string.Equals(r.InsurerName, "GoDigit", StringComparison.OrdinalIgnoreCase)).ToList();
 
             int totalUpdated = 0;
 
             if (kotakRecords.Any())
             {
                 var (sent, msg) = isQuery ? await SendKotakQueryMailAsync(kotakRecords) : await SendKotakMailAsync(kotakRecords);
-                if (!sent) throw new Exception("Kotak: " + msg);
+
+                if (!sent)
+                    throw new Exception("Kotak: " + msg);
 
                 var lans = kotakRecords.Select(x => x.Lan).ToList();
                 totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "Kotak");
@@ -151,7 +240,9 @@ namespace ProductivityApi.Services
             if (goDigitRecords.Any())
             {
                 var (sent, msg) = isQuery ? await SendGoDigitQueryMailAsync(goDigitRecords) : await SendGoDigitMailAsync(goDigitRecords);
-                if (!sent) throw new Exception("GoDigit: " + msg);
+
+                if (!sent)
+                    throw new Exception("GoDigit: " + msg);
 
                 var lans = goDigitRecords.Select(x => x.Lan).ToList();
                 totalUpdated += await _repository.UpdateMailTriggerAsync(lans, dto.UpdatedBy, "GoDigit");
@@ -511,6 +602,96 @@ namespace ProductivityApi.Services
 
         public async Task<PagedResult<FcRefundModel>> GetAllAsync(PaginationRequestDto request)
             => await _repository.GetAllAsync(request);
+
+        public async Task<(bool Success, FcRefundLanSearchDto? Data, string Message)> SearchLanAsync(string lan)
+        {
+            lan = lan.Trim();
+
+            if (await _repository.ExistsByLanAsync(lan))
+                return (false, null, "LAN already exists in premium refund");
+
+            var finance = await _plfService.GetFinance(lan);
+
+            if (finance?.financeSchedule?.financeDetail == null)
+                return (false, null, "LAN not found");
+
+            var personalInfo = finance.customer?.personalInfo;
+            var insurer = await _repository.GetInsurerByLanAsync(lan);
+
+            var fullName = string.Join(" ",
+                new[]
+                {
+            personalInfo?.firstName,
+            personalInfo?.middleName,
+            personalInfo?.lastName
+                }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            var branchCode = finance.financeSchedule.financeDetail.finBranch;
+            var branch = _branchService.GetBranchByID(branchCode);
+
+            var data = new FcRefundLanSearchDto
+            {
+                BranchCode = branchCode,
+                BranchName = branch?.BranchName,
+                Lan = lan,
+                FullName = fullName,
+                DisbDate = finance.financeSchedule.financeDetail.firstDisbDate,
+                ForeclosedDate = null,
+                Status = finance.financeSchedule.summary?.finActiveStatus,
+                PolicyNo = insurer?.PolicyNo,
+                MemberName = insurer?.MemberName,
+                CoverExpiredDate = insurer?.CoverExpiredDate,
+                SgNo = insurer?.SgNo,
+                InsurerName = insurer?.InsurerName
+            };
+            return (true, data, "Success");
+        }
+
+        public async Task<int> BranchSubmitEBAsync(FcRefundBranchSubmitEBDto dto)
+        {
+            var existingRecord = await _repository.GetByLanAsync(dto.Lan);
+            if (existingRecord != null) return -1;
+
+            var finance = await _plfService.GetFinance(dto.Lan);
+            if (finance?.financeSchedule?.financeDetail == null) return -2;
+
+            var personalInfo = finance.customer?.personalInfo;
+            var fullName = string.Join(" ", new[] { personalInfo?.firstName, personalInfo?.middleName, personalInfo?.lastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            var branchCode = finance.financeSchedule.financeDetail.finBranch;
+            var disbDate = finance.financeSchedule.financeDetail.firstDisbDate;
+
+            var basePath = _appSettings.FilePaths.FcRefundFilePath;
+
+            string? bankProofFilePath = "";
+            string? requestLetterFilePath = "";
+
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+
+                if (dto.BankProof != null && !string.IsNullOrEmpty(dto.BankProof.Base64))
+                {
+                    var bankProofExt = Path.GetExtension(dto.BankProof.FileName);
+                    var bankProofName = $"{dto.Lan}_BankProof{bankProofExt}";
+
+                    await File.WriteAllBytesAsync(Path.Combine(basePath, bankProofName), Convert.FromBase64String(dto.BankProof.Base64));
+
+                    bankProofFilePath = bankProofName;
+                }
+
+                if (dto.RequestLetter != null && !string.IsNullOrEmpty(dto.RequestLetter.Base64))
+                {
+                    var requestLetterExt = Path.GetExtension(dto.RequestLetter.FileName);
+                    var requestLetterName = $"{dto.Lan}_ReqLetter{requestLetterExt}";
+
+                    await File.WriteAllBytesAsync(Path.Combine(basePath, requestLetterName), Convert.FromBase64String(dto.RequestLetter.Base64));
+
+                    requestLetterFilePath = requestLetterName;
+                }
+            }
+
+            return await _repository.BranchSubmitEBAsync(dto, branchCode, fullName, disbDate, bankProofFilePath, requestLetterFilePath);
+        }
     }
 
 }

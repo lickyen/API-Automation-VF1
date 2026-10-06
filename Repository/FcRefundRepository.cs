@@ -16,6 +16,45 @@ namespace ProductivityApi.Repository
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
 
+        //public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
+        //{
+        //    using var connection = new SqlConnection(_conStr);
+        //    await connection.OpenAsync();
+
+        //    var added = new List<string>();
+        //    var skipped = new List<string>();
+
+        //    foreach (var dto in dtos)
+        //    {
+        //        var status = await connection.ExecuteScalarAsync<int>(
+        //            "sp_FcRefund_AddLan",
+        //            new
+        //            {
+        //                dto.BranchCode,
+        //                dto.Lan,
+        //                dto.FullName,
+        //                dto.DisbDate,
+        //                dto.ForeclosedDate,
+        //                dto.CreatedBy
+        //            },
+        //            commandType: CommandType.StoredProcedure
+        //        );
+
+        //        if (status == 1)
+        //            added.Add(dto.Lan);
+        //        else
+        //            skipped.Add(dto.Lan);
+        //    }
+
+        //    return new FcRefundBulkUploadResult
+        //    {
+        //        Added = added.Count,
+        //        Skipped = skipped.Count,
+        //        AddedLans = added,
+        //        SkippedLans = skipped
+        //    };
+        //}
+
         public async Task<FcRefundBulkUploadResult> AddLanAsync(List<FcRefundAddLanDto> dtos)
         {
             using var connection = new SqlConnection(_conStr);
@@ -23,6 +62,7 @@ namespace ProductivityApi.Repository
 
             var added = new List<string>();
             var skipped = new List<string>();
+            var synced = new List<string>();
 
             foreach (var dto in dtos)
             {
@@ -37,11 +77,12 @@ namespace ProductivityApi.Repository
                         dto.ForeclosedDate,
                         dto.CreatedBy
                     },
-                    commandType: CommandType.StoredProcedure
-                );
+                    commandType: CommandType.StoredProcedure);
 
                 if (status == 1)
                     added.Add(dto.Lan);
+                else if (status == 2)
+                    synced.Add(dto.Lan);
                 else
                     skipped.Add(dto.Lan);
             }
@@ -50,8 +91,10 @@ namespace ProductivityApi.Repository
             {
                 Added = added.Count,
                 Skipped = skipped.Count,
+                Synced = synced.Count,
                 AddedLans = added,
-                SkippedLans = skipped
+                SkippedLans = skipped,
+                SyncedLans = synced
             };
         }
 
@@ -116,7 +159,7 @@ namespace ProductivityApi.Repository
                     dto.InsurerName,
                     dto.UpdatedBy,
                     BankProofFilePath = bankProofFilePath,
-                    RequestLetterFilePath = requestLetterFilePath                
+                    RequestLetterFilePath = requestLetterFilePath
                 },
                 commandType: CommandType.StoredProcedure
             );
@@ -253,5 +296,65 @@ namespace ProductivityApi.Repository
             };
         }
 
+        public async Task<FcRefundLanSearchDto?> GetInsurerByLanAsync(string lan)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.QueryFirstOrDefaultAsync<FcRefundLanSearchDto>(
+                @"SELECT TOP 1
+              PolicyNo,
+              MemberName,
+              CoverExpiredDate,
+              SgNo,
+              InsurerName
+          FROM vw_FcRefund_InsurerDetails WITH (NOLOCK)
+          WHERE Lan = @Lan",
+                new { Lan = lan }
+            );
+        }
+
+        public async Task<bool> ExistsByLanAsync(string lan)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var count = await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM FC_PremiumRefund WITH (NOLOCK) WHERE LAN = @Lan",
+                new { Lan = lan }
+            );
+
+            return count > 0;
+        }
+
+        public async Task<int> BranchSubmitEBAsync(FcRefundBranchSubmitEBDto dto, string branchCode, string fullName, DateTime disbDate, string? bankProofFilePath, string? requestLetterFilePath)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_FcRefund_BranchSubmit_EB",
+                new
+                {
+                    dto.Lan,
+                    BranchCode = branchCode,
+                    FullName = fullName,
+                    DisbDate = disbDate,
+                    dto.FullNameAsPerBankProof,
+                    dto.AccountNo,
+                    dto.Ifsc,
+                    dto.InsurerName,
+                    dto.PolicyNo,
+                    dto.MemberName,
+                    dto.SgNo,
+                    dto.ClientName,
+                    dto.PayoutLevel,
+                    BankProofFilePath = bankProofFilePath,
+                    RequestLetterFilePath = requestLetterFilePath,
+                    dto.UpdatedBy
+                },
+                commandType: CommandType.StoredProcedure
+            );
+        }
     }
 }

@@ -63,48 +63,72 @@
   },
   "NocDispatchedEmail": {
     "Subject": "NOC Dispatched - LAN <<LAN>>",
-    "Body": "<p>Dear Team,</p><br/><p>NOC for below LAN has been dispatched.</p><br/><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><br/><p>Regards,<br/>NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>NOC for below LAN has been dispatched.</p><p><b>LAN:</b> <<LAN>></p><p><b>Customer:</b> <<CustName>></p><p><b>Branch:</b> <<BranchName>></p><br/><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocDiscrepancyEmail": {
     "Subject": "NOC Discrepancy Notification",
-    "Body": "<p>Dear Team,</p><br/><p>The following NOCs have been marked as <b>Received with Discrepancy</b>.</p><br/><<Table>><br/><p>Please review the discrepancies.</p><br/><p>Regards,<br/>NOC System</p>"
+    "Body": "<p>Dear Team,</p><p>The following NOCs have been marked as <b>Received with Discrepancy</b>.</p><<Table>><p>Please review the discrepancies.</p><br/><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocNotDispatchedEmail": {
     "Subject": "Alert: NOC Not Dispatched – Loan #<<LAN>>",
-    "Body": "<p>Dear Team,</p><p>This is to inform you that 15 days have crossed since loan closure, but the NOC for the below Loan Account has not yet been dispatched.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Closure Date: <<ClosureDate>></li><li>Current TAT: <<Days>> days</li><li>Date of Email Trigger: <<TodayDate>></li></ul><p>Kindly review the case and take necessary action to dispatch the NOC at the earliest.</p><p>Please treat this as urgent to ensure timely delivery as per TAT.</p><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>This is to inform you that 15 days have crossed since loan closure, but the NOC for the below Loan Account has not yet been dispatched.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Closure Date: <<ClosureDate>></li><li>Current TAT: <<Days>> days</li><li>Date of Email Trigger: <<TodayDate>></li></ul><p>Kindly review the case and take necessary action to dispatch the NOC at the earliest.</p><p>Please treat this as urgent to ensure timely delivery as per TAT.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocCourierDelayEmail": {
     "Subject": "Alert: Courier Delay – Documents Not Delivered for Loan #<<LAN>>",
-    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days and are yet to be delivered.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly follow up with the courier partner and ensure timely delivery to the branch.</p><p>Please update the status in the system accordingly.</p><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days and are yet to be delivered.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly follow up with the courier partner and ensure timely delivery to the branch.</p><p>Please update the status in the system accordingly.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocManualStatusUpdateEmail": {
     "Subject": "Alert: Status Update Required – Loan #<<LAN>> (Dispatched > 7 Days)",
-    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days, and the delivery status is not updated in the system.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly verify and update the delivery status manually, if already delivered.</p><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>The NOC documents for the below Loan Account have been in <b>Dispatched</b> status for more than 7 days, and the delivery status is not updated in the system.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Dispatch Date: <<DispatchDate>></li><li>Courier Partner: <<CourierPartner>></li><li>Tracking Number (POD): <<POD>></li></ul><p>Kindly verify and update the delivery status manually, if already delivered.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocKycVerificationEmail": {
     "Subject": "Action Required: KYC Verification for NOC Download",
-    "Body": "<p>Dear Central NOC Team,</p><p>A signed acknowledgment letter has been uploaded by the branch.</p><ul><li>Branch Code & Name: <<BranchName>></li><li>Loan Account Number: <<LAN>></li><li>Branch User ID & Name: <<UploadedBy>></li><li>Date of Upload: <<UploadDate>></li></ul><p>Kindly verify the KYC documents. NOC download will be enabled only after successful verification.</p><p>Regards,<br/>System Notification</p>"
+    "Body": "<p>Dear Central NOC Team,</p><p>A signed acknowledgment letter has been uploaded by the branch.</p><ul><li>Branch Code & Name: <<BranchName>></li><li>Loan Account Number: <<LAN>></li><li>Branch User ID & Name: <<UploadedBy>></li><li>Date of Upload: <<UploadDate>></li></ul><p>Kindly verify the KYC documents. NOC download will be enabled only after successful verification.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocReturnDocumentsEmail": {
     "Subject": "Request to Return Documents – Loan #<<LAN>>",
-    "Body": "<p>Dear Branch Team,</p><p>Documents for Loan #<<LAN>> are pending at the branch beyond the defined timeline.</p><p>Kindly return the documents to the NOC team at the earliest.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Branch Team,</p><p>Documents for Loan #<<LAN>> are pending at the branch beyond the defined timeline.</p><p>Kindly return the documents to the NOC team at the earliest.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocRetrieveFileEmail": {
     "Subject": "Alert: TAT Exceeded – Retrieve File – Loan #<<LAN>>",
-    "Body": "<p>Dear Team,</p><p>The TAT of 35 days has been exceeded, and documents are not yet collected.</p><p>Kindly arrange to retrieve the file from the branch and update the system status.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>The TAT of 35 days has been exceeded, and documents are not yet collected.</p><p>Kindly arrange to retrieve the file from the branch and update the system status.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li><li>Branch Name: <<BranchName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocReturnedReminderEmail": {
     "Subject": "Reminder: Documents Not Received – Loan #<<LAN>>",
-    "Body": "<p>Dear Team,</p><p>The file has been marked as returned by the branch, but documents are not yet received at NOC.</p><p>This is an automated reminder triggered every 3 days until status is updated.</p><p>Kindly take necessary action.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>The file has been marked as returned by the branch, but documents are not yet received at NOC.</p><p>This is an automated reminder triggered every 3 days until status is updated.</p><p>Kindly take necessary action.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NocReturnedDailyAlertEmail": {
     "Subject": "Urgent: Returned File Not Received – Loan #<<LAN>>",
-    "Body": "<p>Dear Team,</p><p>The file is marked as returned, but documents are not received at NOC.</p><p>This is a daily alert and will continue until status is updated.</p><p>Kindly trace and update immediately.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>COPS NOC Team</p>"
+    "Body": "<p>Dear Team,</p><p>The file is marked as returned, but documents are not received at NOC.</p><p>This is a daily alert and will continue until status is updated.</p><p>Kindly trace and update immediately.</p><ul><li>Loan Account Number: <<LAN>></li><li>Customer Name: <<CustomerName>></li></ul><p>Regards,<br/>Vistaar Finance</p>"
   },
   "NewBranchMovedToQEmail": {
     "Body": "<p>Dear Team,</p><p>A new branch workflow task has been assigned to your queue.</p><p><b>Branch Name:</b> <<BranchName>></p><p><b>Checklist Item:</b> <<ChecklistName>></p><p><b>Assigned Team:</b> <<Team>></p><p>Please take the necessary action by logging in to <a href=\"https://productivity.vistaarfinance.com/\" target=\"_blank\">Productivity</a>.</p><p>Regards,<br/>Vistaar Finance</p>"
   },
+  "ZeroBalanceDayIntimationEmail": {
+    "Subject": "<<ZbdDate>> Is a Zero Balance Day: 100% of opening Balance to be deposited",
+    "Body": "<p>Dear Branches,</p><p>It is a Zero Balance Day on <b><<ZbdDate>></b>. Please ensure that 100% of opening balance is deposited in the bank.</p><p>Please confirm by uploading the bank deposit slip. Please note, even if the opening balance is zero, confirmation in the app is required.</p><p>Miss outs would be reviewed for disciplinary action.</p><p><b>Cut off Time for submitting confirmation: 12:00 PM</b></p><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayReminderEmail": {
+    "Subject": "Pending branches for Zero Balance Day confirmation",
+    "Body": "<p>Dear All,</p><p>Shared herewith are the branches which are pending for update of Zero Balance status for <b><<ZbdDate>></b>.</p><p><b>Reminder Time:</b> <<ReminderTime>></p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayEscalationEmail": {
+    "Subject": "Escalation - Late/Non-Submission of ZBD",
+    "Body": "<p>Dear All,</p><p>Shared herewith are the branches which are late submitted or not submitted for Zero Balance Day <b><<ZbdDate>></b>.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayShowCauseEmail": {
+    "Subject": "Defaulters Zero Balance Day <<ZbdDate>>",
+    "Body": "<p>Dear All,</p><p>Shared is the list of branches that updated the form post 12 PM or did not update at all. Request you to share the show cause notice to the concerned staff of the branch.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
+  "ZeroBalanceDayWarningLetterEmail": {
+    "Subject": "Warning Letter Action Required",
+    "Body": "<p>Dear HR Team,</p><p>Shared is the final action suggested for Zero Balance Day <b><<ZbdDate>></b>.</p><<Table>><p>Regards,<br/>Cash Recon Team</p>"
+  },
   "JobFailureAlertEmail": {
     "Body": "<p>Hi Team,</p><p>The background job encountered an error while processing.</p><ul><li><b>Job Name:</b> <<JobName>></li><li><b>Source:</b> <<Source>></li><li><b>Error Time:</b> <<ErrorTime>></li><li><b>Error Message:</b> <<ErrorMessage>></li></ul><p>Please check the application logs for more details.</p><p>Regards,<br/>Vistaar Finance</p>"
+  },
+  "POApprovalPendingEmail": {
+    "Subject": "Approval Required: Purchase Order <<PONumber>>",
+    "Body": "<p>Hi <<ApproverName>>,</p><p>A Purchase Order is pending your approval.</p><table style='width:100%;margin-bottom:16px;'><tr><td><b>PO Number</b></td><td><<PONumber>></td></tr><tr><td><b>Department</b></td><td><<DepartmentCode>></td></tr><tr><td><b>PO Date</b></td><td><<PODate>></td></tr><tr><td><b>Vendor</b></td><td><<VendorName>> (<<VendorCode>>)</td></tr><tr><td><b>Initiated By</b></td><td><<InitiatedBy>></td></tr><tr><td><b>Budget Status</b></td><td><<BudgetStatus>></td></tr></table><h3>Line Items</h3><table style='width:100%;border-collapse:collapse;' border='1' cellpadding='6'><tr style='background:#6D6E71;color:white;'><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr><<ItemRows>></table><p style='text-align:right;font-weight:bold;margin-top:8px;'>Total Amount: Rs. <<TotalAmount>></p><h3>Terms &amp; Conditions</h3><ol><<TermsList>></ol><div style='margin:24px 0;'><a href='<<ApproveUrl>>' style='background:#1E7A34;color:white;padding:10px 24px;text-decoration:none;border-radius:4px;margin-right:12px;display:inline-block;font-weight:bold;'>Approve</a><a href='<<RejectUrl>>' style='background:#A12531;color:white;padding:10px 24px;text-decoration:none;border-radius:4px;display:inline-block;font-weight:bold;'>Reject</a></div><p>Or log in to the Purchase Order Management System to review and act on this request.</p><p>Regards,<br/>Vistaar Finance</p>"
   }
 }

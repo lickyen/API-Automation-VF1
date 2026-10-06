@@ -13,7 +13,92 @@ namespace ProductivityApi.Repository
         {
             _conStr = configuration.GetConnectionString("DBConn")!;
         }
-        public async Task<int> AddRequestAsync(AddClosureRequestDto dto, string status)
+
+        public async Task<T> ExecuteInTransactionAsync<T>(Func<SqlConnection, SqlTransaction, Task<T>> action)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                var result = await action(connection, transaction);
+                transaction.Commit();
+                return result;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public async Task<int?> GetActiveApprovedRetentionIdAsync(string lan)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            const string sql = @"
+                SELECT TOP 1 Id
+                FROM dbo.Closure_Retention
+                WHERE LAN = @Lan
+                  AND ApprovedDt IS NOT NULL
+                  AND ExpiredDt >= GETDATE()
+                ORDER BY
+                    ApprovedDt DESC,
+                    Id DESC;";
+
+            return await connection.ExecuteScalarAsync<int?>(
+                sql,
+                new { Lan = lan });
+        }
+
+        public async Task<int> CreateRetentionAsync(string lan, string source, int? reqId, string createdBy)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            const string sql = @"
+                INSERT INTO dbo.Closure_Retention
+                (
+                    LAN,
+                    Source,
+                    ReqId,
+                    CreatedBy,
+                    CreatedDt
+                )
+                VALUES
+                (
+                    @Lan,
+                    @Source,
+                    @ReqId,
+                    @CreatedBy,
+                    GETDATE()
+                );
+
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            return await connection.ExecuteScalarAsync<int>(
+                sql,
+                new
+                {
+                    Lan = lan,
+                    Source = source,
+                    ReqId = reqId,
+                    CreatedBy = createdBy
+                });
+        }
+
+        public async Task<int> ApplyExistingRetentionApprovalAsync(int id, int retentionId, string updatedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_ApplyExistingRetentionApproval",
+                new { Id = id, RetentionId = retentionId, UpdatedBy = updatedBy },
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> AddRequestAsync(AddClosureRequestDto dto, string status, bool isRetention, int? retentionId)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
@@ -21,6 +106,9 @@ namespace ProductivityApi.Repository
             var parameters = new
             {
                 dto.Lan,
+                dto.CustId,
+                dto.CustName,
+                dto.CustMobile,
                 dto.BranchCode,
                 dto.BranchName,
                 dto.Region,
@@ -35,7 +123,8 @@ namespace ProductivityApi.Repository
                 dto.ReasonAmountCollected,
                 dto.TotalPaidAmount,
                 dto.IsWaiver,
-                dto.LetterId,
+                IsRetention = isRetention,
+                RetentionId = retentionId,
                 dto.FinalApprover,
                 dto.Remarks,
                 dto.CreatedBy,
@@ -52,7 +141,28 @@ namespace ProductivityApi.Repository
                 dto.ChargesProposed,
                 dto.POSWaiverPer,
                 dto.InterestWaiverPer,
-                dto.ChargesWaiverPer
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
             };
 
             return await connection.ExecuteScalarAsync<int>(
@@ -60,14 +170,20 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
-        public async Task<int> ReinitiateRequestAsync(ReinitiateClosureRequestDto dto, string status)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
 
+        public async Task<int> AddRequestAsync(AddClosureRequestDto dto, string status, bool isRetention, int? retentionId, SqlConnection connection, SqlTransaction transaction)
+        {
             var parameters = new
             {
-                dto.Id,
+                dto.Lan,
+                dto.CustId,
+                dto.CustName,
+                dto.CustMobile,
+                dto.BranchCode,
+                dto.BranchName,
+                dto.Region,
+                dto.Zone,
+                dto.MegaZone,
                 dto.DPD,
                 dto.LoanAmount,
                 dto.Criticality,
@@ -77,6 +193,82 @@ namespace ProductivityApi.Repository
                 dto.ReasonAmountCollected,
                 dto.TotalPaidAmount,
                 dto.IsWaiver,
+                IsRetention = isRetention,
+                RetentionId = retentionId,
+                dto.FinalApprover,
+                dto.Remarks,
+                dto.CreatedBy,
+                status,
+
+                dto.TotalOutstanding,
+                dto.ExcessAmount,
+                dto.POS,
+                dto.Interest,
+                dto.Charges,
+                dto.AmountProposed,
+                dto.POSProposed,
+                dto.InterestProposed,
+                dto.ChargesProposed,
+                dto.POSWaiverPer,
+                dto.InterestWaiverPer,
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
+            };
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_AddRequest",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> ReinitiateRequestAsync(ReinitiateClosureRequestDto dto, string status, bool isRetention, int? retentionId)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var parameters = new
+            {
+                dto.Id,
+                dto.CustId,
+                dto.CustName,
+                dto.CustMobile,
+                dto.BranchCode,
+                dto.BranchName,
+                dto.Region,
+                dto.Zone,
+                dto.MegaZone,
+                dto.DPD,
+                dto.LoanAmount,
+                dto.Criticality,
+                dto.Allocation,
+                dto.Bucket,
+                dto.IsAmountCollected,
+                dto.ReasonAmountCollected,
+                dto.TotalPaidAmount,
+                dto.IsWaiver,
+                IsRetention = isRetention,
+                RetentionId = retentionId,
                 dto.FinalApprover,
                 dto.Remarks,
                 dto.UpdatedBy,
@@ -93,7 +285,28 @@ namespace ProductivityApi.Repository
                 dto.ChargesProposed,
                 dto.POSWaiverPer,
                 dto.InterestWaiverPer,
-                dto.ChargesWaiverPer
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
             };
 
             return await connection.ExecuteScalarAsync<int>(
@@ -101,6 +314,78 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> ReinitiateRequestAsync(ReinitiateClosureRequestDto dto, string status, bool isRetention, int? retentionId, SqlConnection connection, SqlTransaction transaction)
+        {
+            var parameters = new
+            {
+                dto.Id,
+                dto.CustId,
+                dto.CustName,
+                dto.CustMobile,
+                dto.BranchCode,
+                dto.BranchName,
+                dto.Region,
+                dto.Zone,
+                dto.MegaZone,
+                dto.DPD,
+                dto.LoanAmount,
+                dto.Criticality,
+                dto.Allocation,
+                dto.Bucket,
+                dto.IsAmountCollected,
+                dto.ReasonAmountCollected,
+                dto.TotalPaidAmount,
+                dto.IsWaiver,
+                IsRetention = isRetention,
+                RetentionId = retentionId,
+                dto.FinalApprover,
+                dto.Remarks,
+                dto.UpdatedBy,
+                status,
+
+                dto.TotalOutstanding,
+                dto.ExcessAmount,
+                dto.POS,
+                dto.Interest,
+                dto.Charges,
+                dto.AmountProposed,
+                dto.POSProposed,
+                dto.InterestProposed,
+                dto.ChargesProposed,
+                dto.POSWaiverPer,
+                dto.InterestWaiverPer,
+                dto.ChargesWaiverPer,
+
+                dto.BusinessProfile,
+                dto.CurrentPOS,
+                dto.CurrentMOB,
+                dto.ProductDesc,
+                dto.PromotionDesc,
+                dto.DisbursedAmt,
+                dto.TranchePendingAmount,
+                dto.CurrentLTVPer,
+                dto.CurrentLTVAmt,
+                dto.CurrentDSR,
+                dto.Income,
+                dto.CIBILScore,
+                dto.Obligation,
+                dto.Tenure,
+                dto.Valuation,
+                dto.EndUseDesc,
+                dto.TypeOfProperty,
+                dto.CurrentROI,
+                dto.LastEMIPaid,
+                dto.EMIPending
+            };
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_ReInitiateRequest",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
         public async Task<int> UpdateAmountCollectedAsync(UpdateAmountCollectedDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
@@ -124,6 +409,29 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> UpdateAmountCollectedAsync(UpdateAmountCollectedDto dto, string status, SqlConnection connection, SqlTransaction transaction)
+        {
+            var parameters = new
+            {
+                dto.Id,
+                dto.Remarks,
+                dto.UpdatedBy,
+                dto.DiffAmount,
+                dto.UpdatedTotal,
+                dto.DiffAmountIncWaiver,
+                dto.UpdatedTotalIncWaiver,
+                dto.TotalPaidAmount,
+                Status = status
+            };
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_UpdateAmountCollected",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
         public async Task<int> ResubmitRequestAsync(ResubmitClosureRequestDto dto, string status)
         {
             using var connection = new SqlConnection(_conStr);
@@ -147,6 +455,29 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> ResubmitRequestAsync(ResubmitClosureRequestDto dto, string status, SqlConnection connection, SqlTransaction transaction)
+        {
+            var parameters = new
+            {
+                dto.Id,
+                dto.Remarks,
+                dto.UpdatedBy,
+                dto.DiffAmount,
+                dto.UpdatedTotal,
+                dto.DiffAmountIncWaiver,
+                dto.UpdatedTotalIncWaiver,
+                dto.TotalPaidAmount,
+                Status = status
+            };
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_ReSubmitRequest",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
         public async Task<int> AddLogAsync(AddClosureLogDto dto)
         {
             using var connection = new SqlConnection(_conStr);
@@ -188,7 +519,6 @@ namespace ProductivityApi.Repository
             {
                 dto.Id,
                 dto.Role,
-                dto.ApprovalType,
                 dto.Status,
                 dto.Remarks,
                 dto.UserId,
@@ -209,6 +539,90 @@ namespace ProductivityApi.Repository
             return await connection.ExecuteScalarAsync<int>(
                 "sp_newClosure_Approval",
                 parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> AddLogAsync(AddClosureLogDto dto, SqlConnection connection, SqlTransaction transaction)
+        {
+            var parameters = new
+            {
+                dto.ReqId,
+                dto.Role,
+                dto.Action,
+                dto.Status,
+                dto.Remarks,
+                dto.TotalOutstanding,
+                dto.ExcessAmount,
+                dto.POS,
+                dto.Interest,
+                dto.Charges,
+                dto.AmountProposed,
+                dto.POSProposed,
+                dto.InterestProposed,
+                dto.ChargesProposed,
+                dto.POSWaiverPer,
+                dto.InterestWaiverPer,
+                dto.ChargesWaiverPer,
+                dto.CreatedBy
+            };
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_AddLog",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
+
+        public async Task<int> RetentionApprovalAsync(ClosureRetentionApprovalDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_RetentionApproval",
+                new
+                {
+                    dto.Id,
+                    dto.RetentionId,
+                    dto.Role,
+                    dto.Status,
+                    dto.Remarks,
+                    dto.UserId,
+
+                    dto.TotalOutstanding,
+                    dto.POS,
+                    dto.Interest,
+                    dto.Charges,
+                    dto.ExcessAmount,
+                    dto.AmountProposed,
+                    dto.POSProposed,
+                    dto.InterestProposed,
+                    dto.ChargesProposed,
+                    dto.POSWaiverPer,
+                    dto.InterestWaiverPer,
+                    dto.ChargesWaiverPer
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> StartRetentionApprovalAsync(int retentionId, string updatedBy)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_StartRetentionApproval",
+                new { RetentionId = retentionId, UpdatedBy = updatedBy },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        public async Task<int> StartRetentionApprovalAsync(int retentionId, string updatedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_StartRetentionApproval",
+                new { RetentionId = retentionId, UpdatedBy = updatedBy },
+                transaction,
                 commandType: CommandType.StoredProcedure);
         }
 
@@ -256,22 +670,34 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-        public async Task<List<ClosureTransaction>> GetByUserAsync(string userId, string role, string? status)
+        public async Task<PagedResult<ClosureTransaction>> GetByUserAsync(GetClosureListDto request)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
 
-            var rows = await connection.QueryAsync<ClosureTransaction>(
+            using var multi = await connection.QueryMultipleAsync(
                 "sp_newClosure_GetByUser",
                 new
                 {
-                    UserId = userId,
-                    Role = role,
-                    Status = status
+                    request.UserId,
+                    request.Role,
+                    request.Status,
+                    request.PageNumber,
+                    request.PageSize,
+                    request.Search
                 },
                 commandType: CommandType.StoredProcedure);
 
-            return rows.ToList();
+            var totalRecords = await multi.ReadSingleAsync<int>();
+            var items = (await multi.ReadAsync<ClosureTransaction>()).ToList();
+
+            return new PagedResult<ClosureTransaction>
+            {
+                Items = items,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                TotalRecords = totalRecords
+            };
         }
         public async Task<List<ClosurePayment>> GetPaymentsAsync(int reqId)
         {
@@ -293,15 +719,69 @@ namespace ProductivityApi.Repository
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
         }
-        public async Task<List<ClosureQuestionnaireResponse>> GetQuestionnaireAsync(int reqId, string reqSource)
+        public async Task<List<ClosureQuestionnaireResponse>> GetQuestionnaireAsync(int? reqId, string? reqSource, int? retentionId = null)
         {
             using var connection = new SqlConnection(_conStr);
             await connection.OpenAsync();
             var rows = await connection.QueryAsync<ClosureQuestionnaireResponse>(
                 "sp_newClosure_GetQuestionnaire",
-                new { ReqId = reqId, ReqSource = reqSource },
+                new { RetentionId = retentionId, ReqId = reqId, ReqSource = reqSource },
                 commandType: CommandType.StoredProcedure);
             return rows.ToList();
+        }
+        public async Task<List<ClosureCamResponse>> GetCAMAsync(int retentionId)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var rows = await connection.QueryAsync<ClosureCamResponse>(
+                "sp_newClosure_GetCAM",
+                new { RetentionId = retentionId },
+                commandType: CommandType.StoredProcedure);
+
+            return rows.ToList();
+        }
+        public async Task<List<ClosureCamMaster>> GetCAMMasterAsync()
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var rows = await connection.QueryAsync<ClosureCamMaster>(
+                "sp_newClosure_GetCAMMaster",
+                commandType: CommandType.StoredProcedure);
+
+            return rows.ToList();
+        }
+        public async Task<int> SubmitCAMAsync(SubmitClosureCamDto dto)
+        {
+            using var connection = new SqlConnection(_conStr);
+            await connection.OpenAsync();
+
+            var table = new DataTable();
+
+            table.Columns.Add("FieldId", typeof(int));
+            table.Columns.Add("FieldCode", typeof(string));
+            table.Columns.Add("ResponseValue", typeof(string));
+
+            foreach (var response in dto.Responses)
+            {
+                table.Rows.Add(
+                    response.FieldId,
+                    response.FieldCode,
+                    response.ResponseValue
+                );
+            }
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@RetentionId", dto.RetentionId);
+            parameters.Add("@Responses", table.AsTableValuedParameter("dbo.CAMResponseType"));
+            parameters.Add("@CreatedBy", dto.CreatedBy);
+            parameters.Add("@CreatedRole", dto.CreatedRole);
+
+            return await connection.ExecuteScalarAsync<int>(
+                "sp_newClosure_SubmitCAM",
+                parameters,
+                commandType: CommandType.StoredProcedure);
         }
         public async Task<int> AddPaymentAsync(AddClosurePaymentDto dto, string? proofPath)
         {
@@ -367,8 +847,9 @@ namespace ProductivityApi.Repository
             return rows.ToList();
         }
         public async Task<int> AddQuestionnaireResponseAsync(
-            int reqId,
-            string reqSource,
+            int? reqId,
+            string? reqSource,
+            int? retentionId,
             List<AddQuestionnaireResponseDto> responses,
             string createdBy)
         {
@@ -392,6 +873,7 @@ namespace ProductivityApi.Repository
 
             var parameters = new DynamicParameters();
 
+            parameters.Add("@RetentionId", retentionId);
             parameters.Add("@ReqId", reqId);
             parameters.Add("@ReqSource", reqSource);
             parameters.Add("@Responses", table.AsTableValuedParameter("dbo.QuestionnaireResponseType"));
@@ -408,7 +890,7 @@ namespace ProductivityApi.Repository
             await connection.OpenAsync();
             return await connection.ExecuteScalarAsync<int>(
                 "sp_newClosure_SubmitQuestionnaire",
-                new { Id = dto.Id, Source = dto.Source, CreatedBy = dto.CreatedBy, status },
+                new { Id = dto.Id, RetentionId = dto.RetentionId, Source = dto.Source, CreatedBy = dto.CreatedBy, status },
                 commandType: CommandType.StoredProcedure);
         }
 
@@ -451,6 +933,23 @@ namespace ProductivityApi.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+
+        public async Task<int> UpdateFilePathAsync(int reqId, string fileType, string? filePath, SqlConnection connection, SqlTransaction transaction)
+        {
+            var parameters = new
+            {
+                Id = reqId,
+                FileType = fileType,
+                FilePath = filePath
+            };
+
+            return await connection.ExecuteAsync(
+                "sp_newClosure_UpdateFilePath",
+                parameters,
+                transaction,
+                commandType: CommandType.StoredProcedure);
+        }
+
         public async Task<int> CancelRequestAsync(CancelClosureRequestDto dto)
         {
             using var connection = new SqlConnection(_conStr);
@@ -464,17 +963,6 @@ namespace ProductivityApi.Repository
                     dto.Remarks,
                     dto.CancelledBy
                 },
-                commandType: CommandType.StoredProcedure);
-        }
-
-        public async Task<int?> GetLetterIdAsync(string lan)
-        {
-            using var connection = new SqlConnection(_conStr);
-            await connection.OpenAsync();
-
-            return await connection.ExecuteScalarAsync<int?>(
-                "sp_newClosure_getLetterId",
-                new { LAN = lan },
                 commandType: CommandType.StoredProcedure);
         }
 

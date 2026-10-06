@@ -1,9 +1,15 @@
-﻿namespace ProductivityApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ProductivityApi.Models
 {
     public class ClosureTransaction
     {
         public int Id { get; set; }
+        public int? RetentionId { get; set; }
         public string Lan { get; set; }
+        public string CustId { get; set; }
+        public string CustName { get; set; }
+        public string CustMobile { get; set; }
         public string BranchCode { get; set; }
         public string BranchName { get; set; }
         public string Region { get; set; }
@@ -36,6 +42,27 @@
         public decimal UpdatedTotalIncWaiver { get; set; }
         public decimal TotalPaidAmount { get; set; }
 
+        public string? BusinessProfile { get; set; }
+        public decimal? CurrentPOS { get; set; }
+        public int? CurrentMOB { get; set; }
+        public string? ProductDesc { get; set; }
+        public string? PromotionDesc { get; set; }
+        public decimal? DisbursedAmt { get; set; }
+        public decimal? TranchePendingAmount { get; set; }
+        public decimal? CurrentLTVPer { get; set; }
+        public decimal? CurrentLTVAmt { get; set; }
+        public decimal? CurrentDSR { get; set; }
+        public decimal? Income { get; set; }
+        public int? CIBILScore { get; set; }
+        public decimal? Obligation { get; set; }
+        public int? Tenure { get; set; }
+        public decimal? Valuation { get; set; }
+        public string? EndUseDesc { get; set; }
+        public string? TypeOfProperty { get; set; }
+        public decimal? CurrentROI { get; set; }
+        public DateTime? LastEMIPaid { get; set; }
+        public int? EMIPending { get; set; }
+
         public string Status { get; set; }
         public string PendingRole { get; set; }
         public string PendingUser { get; set; }
@@ -53,7 +80,6 @@
         public string ReasonAmountCollected { get; set; }
 
         public bool IsRetention { get; set; }
-        public bool IsQuestionnaire { get; set; }
         public bool IsWaiver { get; set; }
         public bool IsApproved { get; set; }
         public DateTime? ApprovedDate { get; set; }
@@ -62,7 +88,6 @@
         public string AckLetterPath { get; set; }
         public string CheckListPath { get; set; }
         public string FCLetterPath { get; set; }
-        public int? LetterId { get; set; }
         public bool PLFIsActive { get; set; }
         public DateTime? PLFUpdatedDt { get; set; }
 
@@ -88,6 +113,7 @@
         public List<ClosurePayment> Payments { get; set; }
         public List<ClosureLog> Logs { get; set; }
         public List<ClosureQuestionnaireResponse> Questionnaire { get; set; }
+        public List<ClosureCamResponse> CAM { get; set; }
     }
 
     public class ClosurePayment
@@ -136,8 +162,9 @@
     public class ClosureQuestionnaireResponse
     {
         public int Id { get; set; }
-        public int ReqId { get; set; }
-        public string ReqSource { get; set; }
+        public int? RetentionId { get; set; }
+        public int? ReqId { get; set; }
+        public string? ReqSource { get; set; }
         public int QuestionId { get; set; }
         public string QuestionCode { get; set; }
         public string ResponseValue { get; set; }
@@ -152,6 +179,55 @@
         public string TriggerValue { get; set; }
         public int DisplayOrder { get; set; }
         public bool IsMandatory { get; set; }
+    }
+
+    public class ClosureCamMaster
+    {
+        public int Id { get; set; }
+        public string FieldCode { get; set; }
+        public string FieldLabel { get; set; }
+        public string SectionName { get; set; }
+        public string InputType { get; set; }
+        public string? OptionsJson { get; set; }
+        public int DisplayOrder { get; set; }
+        public bool IsMandatory { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class ClosureCamResponse
+    {
+        public int Id { get; set; }
+        public int RetentionId { get; set; }
+        public int FieldId { get; set; }
+        public string FieldCode { get; set; }
+        public string? ResponseValue { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? CreatedRole { get; set; }
+        public DateTime CreatedDt { get; set; }
+        public string? UpdatedBy { get; set; }
+        public string? UpdatedRole { get; set; }
+        public DateTime? UpdatedDt { get; set; }
+        public string FieldLabel { get; set; }
+        public string SectionName { get; set; }
+        public string InputType { get; set; }
+        public string? OptionsJson { get; set; }
+        public int DisplayOrder { get; set; }
+        public bool IsMandatory { get; set; }
+    }
+
+    public class AddCamResponseDto
+    {
+        public int FieldId { get; set; }
+        public string FieldCode { get; set; }
+        public string? ResponseValue { get; set; }
+    }
+
+    public class SubmitClosureCamDto
+    {
+        public int RetentionId { get; set; }
+        public string CreatedBy { get; set; }
+        public string? CreatedRole { get; set; }
+        public List<AddCamResponseDto> Responses { get; set; }
     }
 
     // ── Shared financial block ──────────────────────────────────────────
@@ -170,60 +246,78 @@
         public decimal? InterestWaiverPer { get; set; }
         public decimal? ChargesWaiverPer { get; set; }
     }
-    // ── Add Request ─────────────────────────────────────────────────────
-    public class AddClosureRequestDto : ClosureFinancialDto
+
+    // ── Shared initiate/reinitiate request fields ───────────────────────
+    public class ClosureRequestFieldsDto : ClosureFinancialDto
     {
-        public string Lan { get; set; }
-        public string BranchCode { get; set; }
-        public string BranchName { get; set; }
-        public string Region { get; set; }
-        public string Zone { get; set; }
-        public string MegaZone { get; set; }
+        public string CustId { get; set; } = String.Empty;
+        public string CustName { get; set; } = String.Empty;
+        public string CustMobile { get; set; } = String.Empty;
+        public string BranchCode { get; set; } = String.Empty;
+        public string BranchName { get; set; } = String.Empty;
+        public string Region { get; set; } = String.Empty;
+        public string Zone { get; set; } = String.Empty;
+        public string MegaZone { get; set; } = String.Empty;
         public int DPD { get; set; }
         public decimal LoanAmount { get; set; }
-        public string Criticality { get; set; }
-        public string Allocation { get; set; }
-        public string Bucket { get; set; }
+        public string Criticality { get; set; } = String.Empty;
+        public string Allocation { get; set; } = String.Empty;
+        public string Bucket { get; set; } = String.Empty;
         public bool IsAmountCollected { get; set; }
         public string? ReasonAmountCollected { get; set; }
         public bool IsWaiver { get; set; }
-        public int? LetterId { get; set; }
-        public string FinalApprover { get; set; }
-        public string Remarks { get; set; }
-        public string CreatedBy { get; set; }
+        public string FinalApprover { get; set; } = String.Empty;
+        public string Remarks { get; set; } = String.Empty;
         public decimal? TotalPaidAmount { get; set; }
+        public string? BusinessProfile { get; set; }
+        public decimal? CurrentPOS { get; set; }
+        public int? CurrentMOB { get; set; }
+        public string? ProductDesc { get; set; }
+        public string? PromotionDesc { get; set; }
+        public decimal? DisbursedAmt { get; set; }
+        public decimal? TranchePendingAmount { get; set; }
+        public decimal? CurrentLTVPer { get; set; }
+        public decimal? CurrentLTVAmt { get; set; }
+        public decimal? CurrentDSR { get; set; }
+        public decimal? Income { get; set; }
+        public int? CIBILScore { get; set; }
+        public decimal? Obligation { get; set; }
+        public int? Tenure { get; set; }
+        public decimal? Valuation { get; set; }
+        public string? EndUseDesc { get; set; }
+        public string? TypeOfProperty { get; set; }
+        public decimal? CurrentROI { get; set; }
+        public DateTime? LastEMIPaid { get; set; }
+        public int? EMIPending { get; set; }
         public FileUploadBase64? AckFile { get; set; }
         public FileUploadBase64? ChecklistFile { get; set; }
         public FileUploadBase64? FCLetterFile { get; set; }
     }
 
-    // ── Reinitiate Request ──────────────────────────────────────────────
-    public class ReinitiateClosureRequestDto : ClosureFinancialDto
+    // ── Add Request ─────────────────────────────────────────────────────
+    public class AddClosureRequestDto : ClosureRequestFieldsDto
     {
+        [Required]
+        public string Lan { get; set; } = String.Empty;
+        [Required]
+        public string CreatedBy { get; set; } = String.Empty;
+    }
+
+    // ── Reinitiate Request ──────────────────────────────────────────────
+    public class ReinitiateClosureRequestDto : ClosureRequestFieldsDto
+    {
+        [Required]
         public int Id { get; set; }
-        public int DPD { get; set; }
-        public decimal LoanAmount { get; set; }
-        public string Criticality { get; set; }
-        public string Allocation { get; set; }
-        public string Bucket { get; set; }
-        public bool IsAmountCollected { get; set; }
-        public string ReasonAmountCollected { get; set; }
-        public bool IsWaiver { get; set; }
-        public string FinalApprover { get; set; }
-        public string Remarks { get; set; }
-        public string UpdatedBy { get; set; }
-        public decimal? TotalPaidAmount { get; set; }
-        public FileUploadBase64? AckFile { get; set; }
-        public FileUploadBase64? ChecklistFile { get; set; }
-        public FileUploadBase64? FCLetterFile { get; set; }
+        [Required]
+        public string UpdatedBy { get; set; } = String.Empty;
     }
 
     // ── Update Amount Collected ─────────────────────────────────────────
     public class UpdateAmountCollectedDto
     {
         public int Id { get; set; }
-        public string Remarks { get; set; }
-        public string UpdatedBy { get; set; }
+        public string Remarks { get; set; } = String.Empty;
+        public string UpdatedBy { get; set; } = String.Empty;
         public decimal DiffAmount { get; set; }
         public decimal UpdatedTotal { get; set; }
         public decimal DiffAmountIncWaiver { get; set; }
@@ -266,9 +360,18 @@
     {
         public int Id { get; set; }
         public string Role { get; set; }
-        public string? ApprovalType { get; set; }    // Waiver / Retention
         public string Status { get; set; }          // Approved / Rejected / SentBack
         public string Remarks { get; set; }
+        public string UserId { get; set; }
+    }
+
+    public class ClosureRetentionApprovalDto : ClosureFinancialDto
+    {
+        public int Id { get; set; }
+        public int RetentionId { get; set; }
+        public string Role { get; set; }
+        public string Status { get; set; }          // Approved / Rejected / SentBack
+        public string? Remarks { get; set; }
         public string UserId { get; set; }
     }
 
@@ -299,6 +402,7 @@
     public class UpdateClosurePaymentDto
     {
         public int Id { get; set; }
+        public int ReqId { get; set; }
         public string? PaymentMode { get; set; }
         public decimal? Amount { get; set; }
         public string? PaymentDetails { get; set; }
@@ -324,22 +428,35 @@
         public int QuestionId { get; set; }
         public string QuestionCode { get; set; }
         public string ResponseValue { get; set; }
+        public string? FileName { get; set; }
+    }
+
+    public class SubmitQuestionnaireResultDto
+    {
+        public int Result { get; set; }
+        public List<AddQuestionnaireResponseDto>? Responses { get; set; }
     }
 
     // ── Submit Questionnaire ────────────────────────────────────────────
     public class SubmitQuestionnaireDto
     {
-        public int Id { get; set; }
-        public string Source { get; set; }
+        public int? Id { get; set; }
+        public int? RetentionId { get; set; }
+        public string? Source { get; set; }
         public string CreatedBy { get; set; }
         public List<AddQuestionnaireResponseDto>? Responses { get; set; }
     }
 
     // ── Get List ────────────────────────────────────────────────────────
-    public class GetClosureListDto
+    public class GetClosureListDto : PaginationRequestDto
     {
-        public string UserId { get; set; }
-        public string Role { get; set; }
+        [Required(ErrorMessage = "User ID is required")]
+        public string UserId { get; set; } = String.Empty;
+
+        [Required(ErrorMessage = "Role is required")]
+        public string Role { get; set; } = String.Empty;
+
+        public string? Status { get; set; }
     }
 
     public class GetWaiverApproverDto

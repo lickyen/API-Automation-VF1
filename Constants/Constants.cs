@@ -8,6 +8,7 @@
         public const string Completed = "Completed";
         public const string SentBack = "SentBack";
         public const string ReSubmitted = "Re-Submitted";
+        public const string PendingForActionEB = "Pending For Action - EB";
     }
 
     public static class ClosureStatus

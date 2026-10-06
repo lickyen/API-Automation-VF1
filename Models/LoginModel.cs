@@ -9,6 +9,19 @@ namespace ProductivityApi.Models
 
         [Required(ErrorMessage = "Password is required.")]
         public string Password { get; set; }
+
+        public string? Source { get; set; }
+    }
+
+    //public class LoginResponse
+    //{
+    //    public bool TwoFactorEnabled { get; set; }
+    //}
+
+    public class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public bool TwoFactorEnabled { get; set; }
     }
 
     public class ADProfile
@@ -38,10 +51,15 @@ namespace ProductivityApi.Models
     public class ResetPasswordRequest
     {
         [Required(ErrorMessage = "User ID is required.")]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = null!;
+
+        [Required(ErrorMessage = "Reset Token is required.")]
+        public string ResetToken { get; set; } = null!;
 
         [Required(ErrorMessage = "New Password is required.")]
-        public string NewPassword { get; set; }
+        public string NewPassword { get; set; } = null!;
+
+        public string? Source { get; set; }
     }
 
 }

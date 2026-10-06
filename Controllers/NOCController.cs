@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Services;
 
@@ -37,12 +38,24 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.InsertTransactionAsync(dto);
 
-            if (!result)
-            {
-                return BadRequest(new Response(false, message: "Failed to insert transaction."));
-            }
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
 
-            return Ok(new Response(true, message: "Transaction inserted successfully."));
+            return Ok(new Response(true, message: result.Message));
+        }
+
+
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetDashboardByUser(
+            [FromQuery] NocDashboardRequestDto dto
+        )
+        {
+            var result = await _service.GetDashboardByUserAsync(dto);
+
+            if (result.Error != null)
+                return BadRequest(new Response(false, result.Error));
+
+            return Ok(new Response(true, result.Data));
         }
 
         [HttpGet("getById/{id}")]
@@ -134,14 +147,6 @@ namespace ProductivityApi.Controllers
             );
         }
 
-        [HttpGet("getAllowedStatuses")]
-        public async Task<IActionResult> GetAllowedStatuses([FromQuery] string? role)
-        {
-            var statuses = await _service.GetAllowedStatusesAsync(role);
-
-            return Ok(new Response(true, statuses));
-        }
-
         [HttpGet("signusers")]
         public async Task<IActionResult> GetSignUsers()
         {
@@ -183,7 +188,7 @@ namespace ProductivityApi.Controllers
         {
             var result = await _service.UploadNOCandAckAsync(dto);
 
-            return Ok(new Response(result));
+            return Ok(new Response(result.Success, null, result.Message));
         }
 
         [HttpPost("signNocPdf")]
@@ -334,6 +339,18 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result.Message));
         }
 
+        [HttpPost("submitAckWithKyc")]
+        public async Task<IActionResult> SubmitAckWithKyc(
+            [FromBody] SubmitAckWithKyc dto)
+        {
+            var result = await _service.SubmitAckWithKycAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, null, result.Message));
+
+            return Ok(new Response(true, null, result.Message));
+        }
+
         [HttpGet("downloadKycPdf/{transactionId}")]
         public async Task<IActionResult> DownloadKycPdf(int transactionId)
         {
@@ -439,6 +456,21 @@ namespace ProductivityApi.Controllers
             return Ok(new Response(true, result.Message));
         }
 
+        [HttpPost("bulkDispatch")]
+        public async Task<IActionResult> BulkDispatch([FromBody] BulkDispatchDto dto)
+        {
+            if (dto.Items == null || !dto.Items.Any())
+            {
+                return BadRequest(
+                    new Response(false, null, "No records provided."));
+            }
+
+            var result = await _service.BulkDispatchAsync(dto);
+
+            return Ok(
+                new Response(true, null, result.Message));
+        }
+
         [HttpPost("returnToHo")]
         public async Task<IActionResult> ReturnToHo([FromBody] ReturnToHoDto dto)
         {
@@ -465,6 +497,21 @@ namespace ProductivityApi.Controllers
             }
 
             return Ok(new Response(true, result.Message));
+        }
+
+        [HttpGet("report")]
+        public async Task<IActionResult> GetTransactionReport(
+            [FromQuery] NocReportRequest request)
+        {
+            var result = await _service.GetTransactionReportAsync(request);
+
+            if (!result.Success)
+                return BadRequest(new Response(false, message: result.Message));
+
+            return File(
+                result.Data!,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"NOC_Report_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
         }
     }
 }

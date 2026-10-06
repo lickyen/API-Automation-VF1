@@ -17,12 +17,12 @@
         public string? ResidentialAddress { get; set; }
         public DateTime? DisbDate { get; set; }
         public List<string?> DisbModes { get; set; } = new List<string?>();
+        public DateTime? MaturityDate { get; set; }
         public Decimal? LoanAmount { get; set; }
         public Decimal? DisbAmount { get; set; }
         public Decimal? NetDisbAmount { get; set; }
         public Decimal? PendingAmount { get; set; }
-        //public Decimal? TotalOutstanding { get; set; }
-        //public Decimal? PrincipalOutstanding { get; set; }
+        public Decimal? PrincipalOutstanding { get; set; }
         public double? Dpd { get; set; }
         public string? Action { get; set; }
         public string? Allocation { get; set; }

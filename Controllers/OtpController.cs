@@ -24,7 +24,7 @@ namespace ProductivityApi.Controllers
 
             try
             {
-                var mobile = await _otpService.SendOtp(request.UserId);
+                var mobile = await _otpService.SendOtp(request.UserId, request.Source);
 
                 return Ok(new Response(
                     true,
@@ -38,17 +38,17 @@ namespace ProductivityApi.Controllers
         }
 
         [HttpPost("verifyOTP")]
-        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        public async Task<IActionResult> VerifyOtp(
+            [FromBody] VerifyOtpRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.UserId) || string.IsNullOrWhiteSpace(request.Otp))
-                return BadRequest(new Response(false, null, "Invalid request"));
+            var response = await _otpService.VerifyOtp(
+                request.UserId,
+                request.Otp,
+                request.Source);
 
-            bool result = await _otpService.VerifyOtp(request.UserId, request.Otp);
-
-            if (result)
-                return Ok(new Response(true, null, "OTP verified successfully"));
-            else
-                return BadRequest(new Response(false, null, "Invalid OTP"));
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response);
         }
     }
 }

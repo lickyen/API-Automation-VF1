@@ -10,7 +10,7 @@
         public string Lan { get; set; } = String.Empty;
         public string FullName { get; set; } = String.Empty;
         public DateTime DisbDate { get; set; }
-        public DateTime ForeclosedDate { get; set; }
+        public DateTime? ForeclosedDate { get; set; }
         public string Status { get; set; } = String.Empty;
         public bool MailTrigger { get; set; }
         public DateTime? MailTriggerDate { get; set; }
@@ -36,9 +36,11 @@
         public DateTime? BranchRequestedDate { get; set; }
         public string? BranchRequestedBy { get; set; }
         public DateTime? BranchResubmittedDate { get; set; } // ← new
-        public string? BranchResubmittedBy { get; set; }     // ← new
+        public string? BranchResubmittedBy { get; set; }    
         public DateTime? UpdatedDate { get; set; }
         public string? UpdatedBy { get; set; }
+
+        public bool IsEB { get; set; }
     }
     public class FcRefundBranchSubmitDto
     {
@@ -120,13 +122,26 @@
         public string CreatedBy { get; set; } = string.Empty;
     }
 
+    //public class FcRefundBulkUploadResult
+    //{
+    //    public int Added { get; set; }
+    //    public int Skipped { get; set; }
+    //    public List<string> AddedLans { get; set; } = new();
+    //    public List<string> SkippedLans { get; set; } = new();
+    //    public bool Success => Added > 0 || Skipped > 0;
+    //}
+
     public class FcRefundBulkUploadResult
     {
         public int Added { get; set; }
         public int Skipped { get; set; }
+        public int Synced { get; set; }
+
         public List<string> AddedLans { get; set; } = new();
         public List<string> SkippedLans { get; set; } = new();
-        public bool Success => Added > 0 || Skipped > 0;
+        public List<string> SyncedLans { get; set; } = new();
+
+        public bool Success => Added > 0 || Skipped > 0 || Synced > 0;
     }
     public class FcRefundLanResult
     {
@@ -142,6 +157,65 @@
         public string Base64 { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
     }
+
+    // EB Foreclose lans
+    public class FcRefundLanSearchDto
+    {
+        public string? BranchCode { get; set; }
+        public string? BranchName { get; set; }
+        public string? Lan { get; set; }
+        public string? FullName { get; set; }
+        public DateTime? DisbDate { get; set; }
+        public DateTime? ForeclosedDate { get; set; }
+        public string? Status { get; set; }
+
+        public string? PolicyNo { get; set; }
+        public string? MemberName { get; set; }
+        public DateTime? CoverExpiredDate { get; set; }
+        public string? SgNo { get; set; }
+        public string? InsurerName { get; set; }
+        public string? ClientName { get; set; } = "Vistaar Financial Services Pvt. Ltd.";
+        public string? PayoutLevel { get; set; } = "Member";
+    }
+
+    public class FcRefundBranchSubmitEBDto
+    {
+        [Required]
+        public string Lan { get; set; } = string.Empty;
+
+        [Required]
+        public string FullNameAsPerBankProof { get; set; } = string.Empty;
+
+        [Required]
+        public string AccountNo { get; set; } = string.Empty;
+
+        [Required]
+        public string Ifsc { get; set; } = string.Empty;
+
+        [Required]
+        public string InsurerName { get; set; } = string.Empty;
+
+        [Required]
+        public string PolicyNo { get; set; } = string.Empty;
+
+        [Required]
+        public string MemberName { get; set; } = string.Empty;
+
+        public string SgNo { get; set; } = string.Empty;
+
+        [Required]
+        public string ClientName { get; set; } = string.Empty;
+
+        [Required]
+        public string PayoutLevel { get; set; } = string.Empty;
+
+        [Required]
+        public string UpdatedBy { get; set; } = string.Empty;
+
+        public FileUploadBase64? BankProof { get; set; }
+        public FileUploadBase64? RequestLetter { get; set; }
+    }
+
 }
 
 

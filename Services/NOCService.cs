@@ -1,11 +1,12 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using ClosedXML.Excel;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using ProductivityApi.Helpers;
 using ProductivityApi.Models;
 using ProductivityApi.Models.PLF;
 using ProductivityApi.Repository;
+using System.Text;
+using System.Text.Json;
 
 namespace ProductivityApi.Services
 {
@@ -15,6 +16,7 @@ namespace ProductivityApi.Services
         private readonly PLFRepository _plfRepository;
         private readonly IndusArchivedRepository _indusArchivedRepository;
         private readonly BranchServices _branchService;
+        private readonly PLFService _plfService;
 
         private readonly EmailService _emailService;
         private readonly SmsService _smsService;
@@ -34,6 +36,8 @@ namespace ProductivityApi.Services
             TemplateService templateService,
             HttpClient httpClient,
             OtpService otpService,
+            PLFService plfService,
+            BranchServices branchService,
             AppSettings appSettings
         )
         {
@@ -45,6 +49,8 @@ namespace ProductivityApi.Services
             _configuration = configuration;
             _templateService = templateService;
             _httpClient = httpClient;
+            _plfService = plfService;
+            _branchService = branchService;
             _otpService = otpService;
             _filePaths = appSettings.FilePaths;
         }
@@ -58,51 +64,6 @@ namespace ProductivityApi.Services
         {
             return await _repository.GetClosedLansAsync(isEligible);
         }
-
-        //public async Task<object> GetLinkedLoansByLanAsync(string lan)
-        //{
-        //    // Step 1: Get linked loans
-        //    var loans = await _plfRepository.GetLinkedLoansByLanAsync(lan);
-
-        //    if (!loans.Any())
-        //        return Enumerable.Empty<object>();
-
-        //    // Step 2: Fetch applicants/co-applicants for all linked loans
-        //    var loanAccountNos = loans
-        //        .Select(x => x.LoanAccountNo)
-        //        .Distinct()
-        //        .ToArray();
-
-        //    var applicants = await _plfRepository.GetApplicantsByLansAsync(loanAccountNos);
-
-        //    // Step 3: Attach applicants to each loan
-        //    var applicantsLookup = applicants.ToLookup(a => a.LoanAccountNo);
-
-        //    var result = loans.Select(loan => new
-        //    {
-        //        LoanAccountNo = loan.LoanAccountNo,
-        //        BranchCode = loan.BranchCode,
-        //        LoanStatus = loan.LoanStatus,
-        //        NocStatus = loan.NocStatus,
-        //        DisbDate = loan.DisbursementDate,
-        //        ClosureDate = loan.LoanClosureDate,
-        //        CustomerId = loan.CustomerId,
-        //        CustomerName = loan.CustomerName,
-        //        CollateralId = loan.CollateralId,
-
-        //        Customers = applicantsLookup[loan.LoanAccountNo]
-        //            .Select(a => new
-        //            {
-        //                CustId = a.CustomerId,
-        //                CustName = a.CustomerName,
-        //                ApplicantType = a.ApplicantType
-        //            })
-        //            .ToList()
-        //    });
-
-        //    return result;
-        //}
-
         public async Task<object> GetLinkedLoansByLanAsync(string lan)
         {
             // Step 1: Get linked loans from PLF and INDUS
@@ -211,10 +172,62 @@ namespace ProductivityApi.Services
                 .Concat(indusResult.Cast<object>())
                 .ToList();
         }
-        public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
+        //public async Task<bool> InsertTransactionAsync(NocTransactionInsertDto dto)
+        //{
+        //    await _repository.InsertTransactionAsync(dto);
+        //    return true;
+        //}
+
+        public async Task<(bool Success, string Message)> InsertTransactionAsync(NocTransactionInsertDto dto)
         {
-            await _repository.InsertTransactionAsync(dto);
-            return true;
+            var customer = await _plfService.GetCustomerDetails(dto.CustId);
+
+            if (customer?.ReturnStatus == null)
+                return (false, "Failed to retrieve customer details");
+
+            if (customer.ReturnStatus.returnCode != "0000")
+                return (false, customer.ReturnStatus.returnText);
+
+            var mobile = customer.Phones?
+                .OrderByDescending(p => p.priority)
+                .Select(p => p.phoneNumber)
+                .FirstOrDefault();
+
+            var branch = _branchService.GetBranchByID(dto.BranchCode);
+
+            if (branch == null)
+                return (false, "Branch not found");
+
+            var transaction = new NocTransactionInsertModel
+            {
+                Lan = dto.Lan,
+                CustId = dto.CustId,
+                CustName = dto.CustName,
+                CollId = dto.CollId,
+                CustMobile = mobile,
+
+                BranchCode = dto.BranchCode,
+                BranchName = branch.BranchName,
+                Region = branch.Region,
+                Zone = branch.Zone,
+                MegaZone = branch.MegaZone,
+
+                DisbDate = dto.DisbDate,
+                LoanStatus = dto.LoanStatus,
+                ClosureDate = dto.ClosureDate,
+                NocStatus = dto.NocStatus,
+                CreatedBy = dto.CreatedBy,
+                GenerateNOC = dto.GenerateNOC
+            };
+
+            await _repository.InsertTransactionAsync(transaction);
+
+            return (true, "Transaction inserted successfully.");
+        }
+        public async Task<(IEnumerable<NocDashboardDto>? Data, string? Error)>
+        GetDashboardByUserAsync(NocDashboardRequestDto dto)
+        {
+            return await _repository.GetDashboardByUserAsync(dto);
         }
 
         public async Task<NocTransaction?> GetByIdAsync(int id)
@@ -266,32 +279,32 @@ namespace ProductivityApi.Services
                 || status.Trim().Equals("Document Collected", StringComparison.OrdinalIgnoreCase)
             )
             {
-                // Send OTP confirmation SMS to customer after collection
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
-                    {
-                        var smsTemplate = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
+                //// Send OTP confirmation SMS to customer after collection
+                //try
+                //{
+                //    if (!string.IsNullOrWhiteSpace(transaction.CustMobile))
+                //    {
+                //        var smsTemplate = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
-                        var smsContent = _templateService.ReplacePlaceholders(
-                            smsTemplate.Content,
-                            BuildPlaceholders(transaction)
-                        );
+                //        var smsContent = _templateService.ReplacePlaceholders(
+                //            smsTemplate.Content,
+                //            BuildPlaceholders(transaction)
+                //        );
 
-                        await _smsService.SendSms(
-                            transaction.CustMobile,
-                            smsContent,
-                            smsTemplate.DltContentId
-                        );
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // swallow but log
-                    Console.WriteLine(
-                        $"Error sending collection OTP confirmation SMS: {ex.Message}"
-                    );
-                }
+                //        await _smsService.SendSms(
+                //            transaction.CustMobile,
+                //            smsContent,
+                //            smsTemplate.DltContentId
+                //        );
+                //    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    // swallow but log
+                //    Console.WriteLine(
+                //        $"Error sending collection OTP confirmation SMS: {ex.Message}"
+                //    );
+                //}
             }
         }
 
@@ -317,20 +330,35 @@ namespace ProductivityApi.Services
                         smsContent,
                         smsTemplate.DltContentId
                     );
+                }
 
-                    // Also send OTP required sms to customer (informational)
-                    var otpTemplate = _templateService.GetSmsTemplate("NocOtpRequiredSms");
+                //---------------------------------------------------
+                // BRANCH SMS - detailed dispatched message
+                //---------------------------------------------------
 
-                    var otpContent = _templateService.ReplacePlaceholders(
-                        otpTemplate.Content,
-                        BuildPlaceholders(transaction)
-                    );
+                var branchUsers = await _repository.GetBranchUsersAsync(transaction.BranchCode);
 
-                    await _smsService.SendSms(
-                        transaction.CustMobile,
-                        otpContent,
-                        otpTemplate.DltContentId
-                    );
+                var mobiles = branchUsers
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Mobile))
+                    .Select(x => x.Mobile!)
+                    .Distinct()
+                    .ToList();
+
+                if (mobiles.Any())
+                {
+                    var smsTemplate = _templateService.GetSmsTemplate("NocDispatchedBranchSms");
+
+                    var smsContent = _templateService.ReplacePlaceholders(
+                        smsTemplate.Content,
+                        BuildPlaceholders(transaction));
+
+                    foreach (var mobile in mobiles)
+                    {
+                        await _smsService.SendSms(
+                            mobile,
+                            smsContent,
+                            smsTemplate.DltContentId);
+                    }
                 }
 
                 //---------------------------------------------------
@@ -369,36 +397,48 @@ namespace ProductivityApi.Services
                 if (transactions == null || !transactions.Any())
                     return;
 
-                var to = new List<string>();
-
                 var nocEmail = _configuration["NocSettings:NocEmail"];
                 var supervisorEmail = _configuration["NocSettings:SupervisorEmail"];
+
+                var to = new List<string>();
+                var cc = new List<string>();
 
                 if (!string.IsNullOrWhiteSpace(nocEmail))
                     to.Add(nocEmail);
 
                 if (!string.IsNullOrWhiteSpace(supervisorEmail))
-                    to.Add(supervisorEmail);
+                    cc.Add(supervisorEmail);
 
                 to = to.Distinct().ToList();
+                cc = cc.Distinct().ToList();
 
-                if (!to.Any())
+                if (!to.Any() && !cc.Any())
                     return;
 
                 var template = _templateService.GetEmailTemplate("NocDiscrepancyEmail");
 
                 var placeholders = BuildPlaceholders(transactions);
 
-                var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    placeholders
+                );
 
-                await _emailService.SendEmail(template.Subject, body, to, new List<string>());
+                await _emailService.SendEmail(
+                    template.Subject,
+                    body,
+                    to,
+                    cc
+                );
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error sending discrepancy notifications: {ex.Message}", ex);
+                throw new Exception(
+                    $"Error sending discrepancy notifications: {ex.Message}",
+                    ex
+                );
             }
         }
-
         public async Task<bool> UpdatePropertyOwnerAsync(UpdatePropertyOwnerDto dto)
         {
             return await _repository.UpdatePropertyOwnerAsync(dto);
@@ -513,7 +553,7 @@ namespace ProductivityApi.Services
             return new Dictionary<string, string>
             {
                 { "LAN", txn.Lan ?? "" },
-                { "CustName", txn.CustName ?? "" },
+                { "CustName", "Customer" },
                 { "CustomerName", txn.CustName ?? "" },
                 { "BranchName", txn.BranchName ?? "" },
                 { "Status", txn.Status ?? "" },
@@ -584,10 +624,6 @@ namespace ProductivityApi.Services
             return to.Distinct().ToList();
         }
 
-        public async Task<IEnumerable<string>> GetAllowedStatusesAsync(string? role)
-        {
-            return await _repository.GetAllowedStatusesAsync(role);
-        }
         public async Task<List<SignUser>> GetSignUsersAsync()
         {
             return await _repository.GetSignUsersAsync();
@@ -742,50 +778,21 @@ namespace ProductivityApi.Services
 
         //public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
         //{
-        //    _httpClient.DefaultRequestHeaders.Clear();
-
-        //    _httpClient.DefaultRequestHeaders.Add("authorization", "dXNlcjpBRE1JTjp0ZXN0");
-
-        //    _httpClient.DefaultRequestHeaders.Add("entityid", "Auxilo");
-
-        //    _httpClient.DefaultRequestHeaders.Add("language", "ENG");
-
-        //    _httpClient.DefaultRequestHeaders.Add("messageid", Guid.NewGuid().ToString());
-
-        //    _httpClient.DefaultRequestHeaders.Add(
-        //        "requesttime",
-        //        DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
-        //    );
-
-        //    _httpClient.DefaultRequestHeaders.Add("servicename", "getAgreements");
-
-        //    _httpClient.DefaultRequestHeaders.Add("serviceversion", "2");
-
-        //    var request = new { finReference = dto.LanNumber, agreementType = "NOC" };
-
-        //    var response = await _httpClient.PostAsJsonAsync(
-        //        "https://uatlms.vistaarfinance.net.in/pff-api/services/createFinanceRest/finance/getAgreements",
-        //        request
-        //    );
-
-        //    response.EnsureSuccessStatusCode();
-
-        //    var agreementResponse = await response.Content.ReadFromJsonAsync<AgreementResponse>();
-
-        //    if (agreementResponse == null || agreementResponse.returnStatus?.returnCode != "0000")
+        //    var request = new AgreementRequest
         //    {
-        //        throw new Exception(
-        //            agreementResponse?.returnStatus?.returnText
-        //                ?? "Unable to fetch agreement document."
-        //        );
-        //    }
+        //        finReference = dto.LanNumber,
+        //        agreementType = "NOC"
+        //    };
 
-        //    var agreement = agreementResponse.agreementsList?.FirstOrDefault();
+        //    var response = _plfService.GetAgreements(request);
+
+        //    if (response == null || response.Result?.returnStatus?.returnCode != "0000")
+        //        throw new Exception(response?.Result?.returnStatus?.returnText ?? "Unable to fetch agreement document.");
+
+        //    var agreement = response.Result?.agreementsList?.FirstOrDefault();
 
         //    if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
-        //    {
         //        throw new Exception("Document content not found.");
-        //    }
 
         //    byte[] uploadedPdf = Convert.FromBase64String(
         //        agreement.docContent.Replace("\r", "").Replace("\n", "")
@@ -794,81 +801,105 @@ namespace ProductivityApi.Services
         //    using var reader = new PdfReader(uploadedPdf);
 
         //    if (reader.NumberOfPages < 2)
-        //    {
         //        throw new Exception("Agreement PDF must contain at least 2 pages.");
-        //    }
 
-        //    string nocBase64 = Convert.ToBase64String(ExtractPage(reader, 1));
+        //    byte[] nocBytes = ExtractPage(reader, 1);
+        //    byte[] ackBytes = ExtractPage(reader, 2);
 
-        //    string ackBase64 = Convert.ToBase64String(ExtractPage(reader, 2));
+        //    string nocFileName = $"{dto.TransactionId}_noc.pdf";
+        //    string ackFileName = $"{dto.TransactionId}_ack.pdf";
+
+        //    var nocSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, nocFileName, nocBytes);
+        //    if (!nocSaved.Success)
+        //        throw new Exception($"Failed to save NOC PDF: {nocSaved.Error}");
+
+        //    var ackSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, ackFileName, ackBytes);
+        //    if (!ackSaved.Success)
+        //        throw new Exception($"Failed to save ACK PDF: {ackSaved.Error}");
 
         //    return await _repository.UploadNOCAndAckPdfAsync(
         //        dto.TransactionId,
-        //        nocBase64,
-        //        ackBase64,
+        //        nocFileName,
+        //        ackFileName,
         //        dto.UpdatedBy
         //    );
         //}
 
-        public async Task<bool> UploadNOCandAckAsync(FetchNocAckDto dto)
+        public async Task<(bool Success, string Message)> UploadNOCandAckAsync(FetchNocAckDto dto)
         {
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("authorization", "dXNlcjpBRE1JTjp0ZXN0");
-            _httpClient.DefaultRequestHeaders.Add("entityid", "Auxilo");
-            _httpClient.DefaultRequestHeaders.Add("language", "ENG");
-            _httpClient.DefaultRequestHeaders.Add("messageid", Guid.NewGuid().ToString());
-            _httpClient.DefaultRequestHeaders.Add("requesttime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"));
-            _httpClient.DefaultRequestHeaders.Add("servicename", "getAgreements");
-            _httpClient.DefaultRequestHeaders.Add("serviceversion", "2");
+            try
+            {
+                var request = new AgreementRequest
+                {
+                    finReference = dto.LanNumber,
+                    agreementType = "NOC"
+                };
 
-            var request = new { finReference = dto.LanNumber, agreementType = "NOC" };
+                var response = await _plfService.GetAgreements(request);
 
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://uatlms.vistaarfinance.net.in/pff-api/services/createFinanceRest/finance/getAgreements",
-                request
-            );
+                if (response?.returnStatus?.returnCode != "0000")
+                    return (
+                        false,
+                        response?.returnStatus?.returnText ?? "Unable to fetch NOC."
+                    );
 
-            response.EnsureSuccessStatusCode();
+                var agreement = response.agreementsList?.FirstOrDefault();
 
-            var agreementResponse = await response.Content.ReadFromJsonAsync<AgreementResponse>();
+                if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
+                    return (false, "Document content not found.");
 
-            if (agreementResponse == null || agreementResponse.returnStatus?.returnCode != "0000")
-                throw new Exception(agreementResponse?.returnStatus?.returnText ?? "Unable to fetch agreement document.");
+                byte[] uploadedPdf = Convert.FromBase64String(
+                    agreement.docContent.Replace("\r", "").Replace("\n", "")
+                );
 
-            var agreement = agreementResponse.agreementsList?.FirstOrDefault();
+                using var reader = new PdfReader(uploadedPdf);
 
-            if (agreement == null || string.IsNullOrWhiteSpace(agreement.docContent))
-                throw new Exception("Document content not found.");
+                if (reader.NumberOfPages < 2)
+                    return (false, "PDF must contain at least 2 pages.");
 
-            byte[] uploadedPdf = Convert.FromBase64String(
-                agreement.docContent.Replace("\r", "").Replace("\n", "")
-            );
+                byte[] nocBytes = ExtractPage(reader, 1);
+                byte[] ackBytes = ExtractPage(reader, 2);
 
-            using var reader = new PdfReader(uploadedPdf);
+                string nocFileName = $"{dto.TransactionId}_noc.pdf";
+                string ackFileName = $"{dto.TransactionId}_ack.pdf";
 
-            if (reader.NumberOfPages < 2)
-                throw new Exception("Agreement PDF must contain at least 2 pages.");
+                var nocSaved = await FileHelper.SaveBytesAsync(
+                    _filePaths.NOCFilePath,
+                    nocFileName,
+                    nocBytes
+                );
 
-            byte[] nocBytes = ExtractPage(reader, 1);
-            byte[] ackBytes = ExtractPage(reader, 2);
+                if (!nocSaved.Success)
+                    return (false, $"Failed to save NOC PDF: {nocSaved.Error}");
 
-            string nocFileName = $"{dto.TransactionId}_noc.pdf";
-            string ackFileName = $"{dto.TransactionId}_ack.pdf";
+                var ackSaved = await FileHelper.SaveBytesAsync(
+                    _filePaths.NOCFilePath,
+                    ackFileName,
+                    ackBytes
+                );
 
-            var nocSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, nocFileName, nocBytes);
-            if (!nocSaved.Success)
-                throw new Exception($"Failed to save NOC PDF: {nocSaved.Error}");
+                if (!ackSaved.Success)
+                    return (false, $"Failed to save ACK PDF: {ackSaved.Error}");
 
-            var ackSaved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, ackFileName, ackBytes);
-            if (!ackSaved.Success)
-                throw new Exception($"Failed to save ACK PDF: {ackSaved.Error}");
+                var result = await _repository.UploadNOCAndAckPdfAsync(
+                    dto.TransactionId,
+                    nocFileName,
+                    ackFileName,
+                    dto.UpdatedBy
+                );
 
-            return await _repository.UploadNOCAndAckPdfAsync(
-                dto.TransactionId,
-                nocFileName,
-                ackFileName,
-                dto.UpdatedBy
-            );
+                return result
+                    ? (true, "NOC uploaded successfully.")
+                    : (false, "Failed to save NOC details.");
+            }
+            catch (FormatException)
+            {
+                return (false, "Invalid document content.");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
         }
         private byte[] ExtractPage(PdfReader reader, int pageNumber)
         {
@@ -888,55 +919,6 @@ namespace ProductivityApi.Services
 
             return ms.ToArray();
         }
-
-        //public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
-        //{
-        //    var data = await _repository.GetNocPdfForSigningAsync(
-        //        dto.TransactionId,
-        //        dto.SignUserId
-        //    );
-
-        //    if (string.IsNullOrWhiteSpace(data.Pdf))
-        //        throw new Exception("NOC PDF not found.");
-
-        //    if (data.SignImage == null || data.SignImage.Length == 0)
-        //        throw new Exception("Signature image not found.");
-
-        //    byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
-        //    byte[] signBytes = data.SignImage;
-
-        //    using var output = new MemoryStream();
-
-        //    using (var reader = new PdfReader(pdfBytes))
-        //    {
-        //        using (var stamper = new PdfStamper(reader, output))
-        //        {
-        //            var image = Image.GetInstance(signBytes);
-
-        //            image.ScaleToFit(120f, 60f);
-
-        //            int pageNumber = reader.NumberOfPages;
-
-        //            var pageSize = reader.GetPageSize(pageNumber);
-
-        //            float x = pageSize.Right - 140;
-        //            float y = 40;
-
-        //            image.SetAbsolutePosition(x, y);
-
-        //            stamper.GetOverContent(pageNumber).AddImage(image);
-        //        }
-        //    }
-
-        //    string signedBase64 = Convert.ToBase64String(output.ToArray());
-
-        //    return await _repository.SaveSignedNocAsync(
-        //        dto.TransactionId,
-        //        dto.SignUserId,
-        //        signedBase64,
-        //        dto.UpdatedBy
-        //    );
-        //}
 
         public async Task<bool> SignNocPdfAsync(SignNocPdfDto dto)
         {
@@ -990,51 +972,6 @@ namespace ProductivityApi.Services
                 dto.UpdatedBy
             );
         }
-        //public async Task<bool> SignAckPdfAsync(SignAckPdfDto dto)
-        //{
-        //    var data = await _repository.GetAckPdfForSigningAsync(dto.TransactionId);
-
-        //    byte[] pdfBytes = Convert.FromBase64String(data.Pdf);
-
-        //    using var output = new MemoryStream();
-
-        //    PdfReader reader = new PdfReader(pdfBytes);
-
-        //    PdfStamper stamper = new PdfStamper(reader, output);
-
-        //    var page = reader.NumberOfPages;
-
-        //    var content = stamper.GetOverContent(page);
-
-        //    ColumnText.ShowTextAligned(
-        //        content,
-        //        Element.ALIGN_LEFT,
-        //        new Phrase("Property Owner:", FontFactory.GetFont(FontFactory.HELVETICA, 10)),
-        //        420,
-        //        255,
-        //        0
-        //    );
-
-        //    ColumnText.ShowTextAligned(
-        //        content,
-        //        Element.ALIGN_LEFT,
-        //        new Phrase(data.PropertyOwnerName, FontFactory.GetFont(FontFactory.HELVETICA, 10)),
-        //        420,
-        //        240,
-        //        0
-        //    );
-
-        //    stamper.Close();
-
-        //    string signedBase64 = Convert.ToBase64String(output.ToArray());
-
-        //    return await _repository.SaveSignedAckAsync(
-        //        dto.TransactionId,
-        //        signedBase64,
-        //        dto.UpdatedBy
-        //    );
-        //}
-
         public async Task<bool> SignAckPdfAsync(SignAckPdfDto dto)
         {
             var data = await _repository.GetAckPdfForSigningAsync(dto.TransactionId);
@@ -1079,17 +1016,6 @@ namespace ProductivityApi.Services
                 dto.UpdatedBy
             );
         }
-
-        //public async Task<byte[]> DownloadSignedNocPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetSignedNocPdfAsync(transactionId);
-
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        throw new Exception("Signed NOC PDF not found.");
-
-        //    return Convert.FromBase64String(base64);
-        //}
-
         public async Task<byte[]> DownloadSignedNocPdfAsync(int transactionId)
         {
             var fileName = await _repository.GetSignedNocPdfAsync(transactionId);
@@ -1103,16 +1029,6 @@ namespace ProductivityApi.Services
 
             return bytes;
         }
-
-        //public async Task<byte[]> DownloadSignedAckPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetSignedAckPdfAsync(transactionId);
-
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        throw new Exception("Signed ACK PDF not found.");
-
-        //    return Convert.FromBase64String(base64);
-        //}
 
         public async Task<byte[]> DownloadSignedAckPdfAsync(int transactionId)
         {
@@ -1150,7 +1066,7 @@ namespace ProductivityApi.Services
                 {
                     Id = dto.Id,
                     Status = "Owner Mobile Update Pending",
-                    Remarks = "Property owner mobile number updated by customer",
+                    Remarks = "Property owner mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
                 }
@@ -1186,7 +1102,7 @@ namespace ProductivityApi.Services
                 {
                     Id = dto.Id,
                     Status = "Customer Mobile Update Pending",
-                    Remarks = "Customer mobile number updated by branch",
+                    Remarks = "Customer mobile number updated",
                     CreatedBy = dto.UpdatedBy,
                     Role = dto.Role,
                 }
@@ -1203,41 +1119,25 @@ namespace ProductivityApi.Services
         //public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
         //{
         //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
-        //    {
         //        return (false, "PDF file is required.");
-        //    }
 
-        //    //--------------------------------------------------
-        //    // Convert PDF to Base64
-        //    //--------------------------------------------------
+        //    using var ms = new MemoryStream();
+        //    await dto.PdfFile.CopyToAsync(ms);
+        //    byte[] pdfBytes = ms.ToArray();
 
-        //    string pdfBase64;
+        //    string fileName = $"{dto.TransactionId}_kyc.pdf";
+        //    var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+        //    if (!saved.Success)
+        //        return (false, $"Failed to save KYC PDF: {saved.Error}");
 
-        //    using (var ms = new MemoryStream())
-        //    {
-        //        await dto.PdfFile.CopyToAsync(ms);
-
-        //        pdfBase64 = Convert.ToBase64String(ms.ToArray());
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Save PDF
-        //    //--------------------------------------------------
-
-        //    var saved = await _repository.UpdateKycPdfAsync(
+        //    var dbSaved = await _repository.UpdateKycPdfAsync(
         //        dto.TransactionId,
-        //        pdfBase64,
+        //        fileName,
         //        dto.UpdatedBy
         //    );
 
-        //    if (!saved)
-        //    {
-        //        return (false, "Failed to save KYC PDF.");
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Update workflow status
-        //    //--------------------------------------------------
+        //    if (!dbSaved)
+        //        return (false, "Failed to save KYC PDF record.");
 
         //    var statusResult = await _repository.UpdateTransactionStatusAsync(
         //        new UpdateNocStatusDto
@@ -1251,9 +1151,8 @@ namespace ProductivityApi.Services
         //    );
 
         //    if (statusResult != 1)
-        //    {
         //        return (false, "KYC uploaded but status update failed.");
-        //    }
+
         //    try
         //    {
         //        var txn = await _repository.GetById(dto.TransactionId);
@@ -1263,37 +1162,27 @@ namespace ProductivityApi.Services
         //            var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
 
         //            var placeholders = new Dictionary<string, string>
-        //            {
-        //                { "BranchName", txn.BranchName ?? "" },
-        //                { "LAN", txn.Lan ?? "" },
-        //                { "UploadedBy", dto.UpdatedBy ?? "" },
-        //                { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
-        //            };
+        //    {
+        //        { "BranchName", txn.BranchName ?? "" },
+        //        { "LAN",        txn.Lan        ?? "" },
+        //        { "UploadedBy", dto.UpdatedBy  ?? "" },
+        //        { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
+        //    };
 
         //            var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-
-        //            // Send to central NOC email + branch recipients
         //            var to = new List<string>();
 
         //            var nocEmail = _configuration["NocSettings:NocEmail"];
         //            if (!string.IsNullOrWhiteSpace(nocEmail))
         //                to.Add(nocEmail);
 
-        //            var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+        //            //var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
+        //            //to.AddRange(branchRecipients);
 
-        //            to.AddRange(branchRecipients);
-
-        //            to = to.Distinct().ToList();
+        //            //to = to.Distinct().ToList();
 
         //            if (to.Any())
-        //            {
-        //                await _emailService.SendEmail(
-        //                    template.Subject,
-        //                    body,
-        //                    to,
-        //                    new List<string>()
-        //                );
-        //            }
+        //                await _emailService.SendEmail(template.Subject, body, to, new List<string>());
         //        }
         //    }
         //    catch (Exception ex)
@@ -1302,6 +1191,33 @@ namespace ProductivityApi.Services
         //    }
 
         //    return (true, "KYC uploaded successfully.");
+        //}
+
+
+        //public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
+        //{
+        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
+        //        return (false, "PDF file is required.");
+
+        //    using var ms = new MemoryStream();
+        //    await dto.PdfFile.CopyToAsync(ms);
+        //    byte[] pdfBytes = ms.ToArray();
+
+        //    string fileName = $"{dto.TransactionId}_ack_signed.pdf";
+        //    var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+        //    if (!saved.Success)
+        //        return (false, $"Failed to save ACK PDF: {saved.Error}");
+
+        //    var dbSaved = await _repository.UpdateAckPdfAsync(
+        //        dto.TransactionId,
+        //        fileName,
+        //        dto.UpdatedBy
+        //    );
+
+        //    if (!dbSaved)
+        //        return (false, "Failed to save Acknowledgement PDF.");
+
+        //    return (true, "Acknowledgement uploaded successfully.");
         //}
 
         public async Task<(bool Success, string Message)> UploadKycPdfAsync(UploadKycPdfDto dto)
@@ -1314,109 +1230,25 @@ namespace ProductivityApi.Services
             byte[] pdfBytes = ms.ToArray();
 
             string fileName = $"{dto.TransactionId}_kyc.pdf";
-            var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+
+            var saved = await FileHelper.SaveBytesAsync(
+                _filePaths.NOCFilePath,
+                fileName,
+                pdfBytes);
+
             if (!saved.Success)
                 return (false, $"Failed to save KYC PDF: {saved.Error}");
 
             var dbSaved = await _repository.UpdateKycPdfAsync(
                 dto.TransactionId,
                 fileName,
-                dto.UpdatedBy
-            );
+                dto.UpdatedBy);
 
             if (!dbSaved)
                 return (false, "Failed to save KYC PDF record.");
 
-            var statusResult = await _repository.UpdateTransactionStatusAsync(
-                new UpdateNocStatusDto
-                {
-                    Id = dto.TransactionId,
-                    Status = "KYC Verification Pending",
-                    Remarks = "KYC document uploaded",
-                    CreatedBy = dto.UpdatedBy,
-                    Role = dto.Role,
-                }
-            );
-
-            if (statusResult != 1)
-                return (false, "KYC uploaded but status update failed.");
-
-            try
-            {
-                var txn = await _repository.GetById(dto.TransactionId);
-
-                if (txn != null)
-                {
-                    var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
-
-                    var placeholders = new Dictionary<string, string>
-            {
-                { "BranchName", txn.BranchName ?? "" },
-                { "LAN",        txn.Lan        ?? "" },
-                { "UploadedBy", dto.UpdatedBy  ?? "" },
-                { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") },
-            };
-
-                    var body = _templateService.ReplacePlaceholders(template.Body, placeholders);
-                    var to = new List<string>();
-
-                    var nocEmail = _configuration["NocSettings:NocEmail"];
-                    if (!string.IsNullOrWhiteSpace(nocEmail))
-                        to.Add(nocEmail);
-
-                    var branchRecipients = await GetNotificationRecipientsAsync(txn.BranchCode);
-                    to.AddRange(branchRecipients);
-                    to = to.Distinct().ToList();
-
-                    if (to.Any())
-                        await _emailService.SendEmail(template.Subject, body, to, new List<string>());
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
-            }
-
             return (true, "KYC uploaded successfully.");
         }
-
-        //public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
-        //{
-        //    if (dto.PdfFile == null || dto.PdfFile.Length == 0)
-        //    {
-        //        return (false, "PDF file is required.");
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Convert PDF to Base64
-        //    //--------------------------------------------------
-
-        //    string pdfBase64;
-
-        //    using (var ms = new MemoryStream())
-        //    {
-        //        await dto.PdfFile.CopyToAsync(ms);
-
-        //        pdfBase64 = Convert.ToBase64String(ms.ToArray());
-        //    }
-
-        //    //--------------------------------------------------
-        //    // Save PDF
-        //    //--------------------------------------------------
-
-        //    var saved = await _repository.UpdateAckPdfAsync(
-        //        dto.TransactionId,
-        //        pdfBase64,
-        //        dto.UpdatedBy
-        //    );
-
-        //    if (!saved)
-        //    {
-        //        return (false, "Failed to save Acknowledgement PDF.");
-        //    }
-
-        //    return (true, "Acknowledgement uploaded successfully.");
-        //}
 
         public async Task<(bool Success, string Message)> UploadAckPdfAsync(UploadAckPdfDto dto)
         {
@@ -1428,15 +1260,19 @@ namespace ProductivityApi.Services
             byte[] pdfBytes = ms.ToArray();
 
             string fileName = $"{dto.TransactionId}_ack_signed.pdf";
-            var saved = await FileHelper.SaveBytesAsync(_filePaths.NOCFilePath, fileName, pdfBytes);
+
+            var saved = await FileHelper.SaveBytesAsync(
+                _filePaths.NOCFilePath,
+                fileName,
+                pdfBytes);
+
             if (!saved.Success)
                 return (false, $"Failed to save ACK PDF: {saved.Error}");
 
             var dbSaved = await _repository.UpdateAckPdfAsync(
                 dto.TransactionId,
                 fileName,
-                dto.UpdatedBy
-            );
+                dto.UpdatedBy);
 
             if (!dbSaved)
                 return (false, "Failed to save Acknowledgement PDF.");
@@ -1444,22 +1280,72 @@ namespace ProductivityApi.Services
             return (true, "Acknowledgement uploaded successfully.");
         }
 
-        //public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
-        //{
-        //    var base64 = await _repository.GetKycPdfAsync(transactionId);
+        public async Task<(bool Success, string Message)> SubmitAckWithKycAsync(
+            SubmitAckWithKyc dto)
+        {
+            var txn = await _repository.GetById(dto.TransactionId);
 
-        //    if (string.IsNullOrWhiteSpace(base64))
-        //        return null;
+            if (txn == null)
+                return (false, "Transaction not found.");
 
-        //    try
-        //    {
-        //        return Convert.FromBase64String(base64);
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+            if (string.IsNullOrWhiteSpace(txn.KYC_PDF))
+                return (false, "Please upload KYC.");
+
+            if (string.IsNullOrWhiteSpace(txn.Ack_PDF_Signed))
+                return (false, "Please upload signed Acknowledgement.");
+
+            var statusResult = await _repository.UpdateTransactionStatusAsync(
+                new UpdateNocStatusDto
+                {
+                    Id = dto.TransactionId,
+                    Status = "KYC Verification Pending",
+                    Remarks = "KYC and Acknowledgement documents submitted",
+                    CreatedBy = dto.CreatedBy,
+                    Role = dto.Role
+                });
+
+            if (statusResult != 1)
+                return (false, "Failed to update status.");
+
+            try
+            {
+                var template = _templateService.GetEmailTemplate("NocKycVerificationEmail");
+
+                var placeholders = new Dictionary<string, string>
+        {
+            { "BranchName", txn.BranchName ?? "" },
+            { "LAN", txn.Lan ?? "" },
+            { "UploadedBy", dto.CreatedBy ?? "" },
+            { "UploadDate", DateTime.Now.ToString("dd-MMM-yyyy HH:mm:ss") }
+        };
+
+                var body = _templateService.ReplacePlaceholders(
+                    template.Body,
+                    placeholders);
+
+                var to = new List<string>();
+
+                var nocEmail = _configuration["NocSettings:NocEmail"];
+
+                if (!string.IsNullOrWhiteSpace(nocEmail))
+                    to.Add(nocEmail);
+
+                if (to.Any())
+                {
+                    await _emailService.SendEmail(
+                        template.Subject,
+                        body,
+                        to,
+                        new List<string>());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending KYC verification email: {ex.Message}");
+            }
+
+            return (true, "Documents submitted successfully.");
+        }
 
         public async Task<byte[]?> DownloadKycPdfAsync(int transactionId)
         {
@@ -1529,6 +1415,78 @@ namespace ProductivityApi.Services
             return (true, "Status updated successfully.");
         }
 
+        //public async Task SendCustomerOtpAsync(int transactionId)
+        //{
+        //    var transaction = await _repository.GetById(transactionId);
+
+        //    if (transaction == null)
+        //        throw new Exception("Transaction not found");
+
+        //    string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedCustMobile)
+        //        ? transaction.UpdatedCustMobile
+        //        : transaction.CustMobile;
+
+        //    if (string.IsNullOrWhiteSpace(mobile))
+        //        throw new Exception("Customer mobile number not available");
+
+        //    string referenceId = $"NOC_{transactionId}_CUSTOMER";
+
+        //    await _otpService.SendOtpToMobile(referenceId, mobile);
+
+        //    await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
+        //}
+
+        //public async Task SendOwnerOtpAsync(int transactionId)
+        //{
+        //    var transaction = await _repository.GetById(transactionId);
+
+        //    if (transaction == null)
+        //        throw new Exception("Transaction not found");
+
+        //    string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedOwnerMobile)
+        //        ? transaction.UpdatedOwnerMobile
+        //        : transaction.PropertyOwnerMobile;
+
+        //    if (string.IsNullOrWhiteSpace(mobile))
+        //        throw new Exception("Property owner mobile number not available");
+
+        //    string referenceId = $"NOC_{transactionId}_OWNER";
+
+        //    await _otpService.SendOtpToMobile(referenceId, mobile);
+
+        //    await _repository.UpdateOtpStatus(transactionId, "KYC", "Sent");
+        //}
+
+        //public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
+        //{
+
+        //    string referenceId = $"NOC_{transactionId}_CUSTOMER";
+
+        //    var result = await _otpService.VerifyOtp(referenceId, otp);
+
+        //    if (result.Success)
+        //    {
+        //        await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
+        //    }
+
+        //    return result.Success;
+        //}
+
+        //public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
+        //{
+
+        //    string referenceId = $"NOC_{transactionId}_OWNER";
+
+        //    var result = await _otpService.VerifyOtp(referenceId, otp);
+
+        //    if (result.Success)
+        //    {
+        //        await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
+        //    }
+
+        //    return result.Success;
+        //}
+
         public async Task SendCustomerOtpAsync(int transactionId)
         {
             var transaction = await _repository.GetById(transactionId);
@@ -1543,11 +1501,22 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Customer mobile number not available");
 
-            string referenceId = $"NOC_{transactionId}_CUSTOMER";
+            var template = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
-            await _otpService.SendOtpToMobile(referenceId, mobile);
+            var smsContent = _templateService.ReplacePlaceholders(
+                template.Content,
+                BuildPlaceholders(transaction));
 
-            await _repository.UpdateOtpStatus(transactionId, "NOC", "Sent");
+            await _otpService.SendOtpToMobile(
+                mobile,
+                "NOC_CUSTOMER",
+                smsContent,
+                template.DltContentId);
+
+            await _repository.UpdateOtpStatus(
+                transactionId,
+                "NOC",
+                "Sent");
         }
 
         public async Task SendOwnerOtpAsync(int transactionId)
@@ -1564,45 +1533,82 @@ namespace ProductivityApi.Services
             if (string.IsNullOrWhiteSpace(mobile))
                 throw new Exception("Property owner mobile number not available");
 
-            string referenceId = $"NOC_{transactionId}_OWNER";
+            var template = _templateService.GetSmsTemplate("NocOtpConfirmationSms");
 
-            await _otpService.SendOtpToMobile(referenceId, mobile);
+            var smsContent = _templateService.ReplacePlaceholders(
+                template.Content,
+                BuildPlaceholders(transaction));
 
-            await _repository.UpdateOtpStatus(transactionId, "KYC", "Sent");
+            await _otpService.SendOtpToMobile(
+                mobile,
+                "NOC_OWNER",
+                smsContent,
+                template.DltContentId);
+
+            await _repository.UpdateOtpStatus(
+                transactionId,
+                "KYC",
+                "Sent");
         }
 
         public async Task<bool> VerifyCustomerOtpAsync(int transactionId, string otp)
         {
-            // #if DEBUG
-            //             bool result = otp == "123456";
-            // #else
-            string referenceId = $"NOC_{transactionId}_CUSTOMER";
-            bool result = await _otpService.VerifyOtp(referenceId, otp);
-            // #endif
+            var transaction = await _repository.GetById(transactionId);
 
-            if (result)
+            if (transaction == null)
+                throw new Exception("Transaction not found");
+
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedCustMobile)
+                ? transaction.UpdatedCustMobile
+                : transaction.CustMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
+                throw new Exception("Customer mobile number not available");
+
+            var result = await _otpService.VerifyOtp(
+                mobile,
+                otp,
+                "NOC_CUSTOMER");
+
+            if (result.Success)
             {
-                await _repository.UpdateOtpStatus(transactionId, "NOC", "Verified");
+                await _repository.UpdateOtpStatus(
+                    transactionId,
+                    "NOC",
+                    "Verified");
             }
 
-            return result;
+            return result.Success;
         }
 
         public async Task<bool> VerifyOwnerOtpAsync(int transactionId, string otp)
         {
-            // #if DEBUG
-            //             bool result = otp == "123456";
-            // #else
-            string referenceId = $"NOC_{transactionId}_OWNER";
-            bool result = await _otpService.VerifyOtp(referenceId, otp);
-            // #endif
+            var transaction = await _repository.GetById(transactionId);
 
-            if (result)
+            if (transaction == null)
+                throw new Exception("Transaction not found");
+
+            string? mobile = !string.IsNullOrWhiteSpace(transaction.UpdatedOwnerMobile)
+                ? transaction.UpdatedOwnerMobile
+                : transaction.PropertyOwnerMobile;
+
+            if (string.IsNullOrWhiteSpace(mobile))
+                throw new Exception("Property owner mobile number not available");
+
+            var result = await _otpService.VerifyOtp(
+                mobile,
+                otp,
+                "NOC_OWNER");
+
+            if (result.Success)
             {
-                await _repository.UpdateOtpStatus(transactionId, "KYC", "Verified");
+                await _repository.UpdateOtpStatus(
+                    transactionId,
+                    "KYC",
+                    "Verified");
             }
 
-            return result;
+            return result.Success;
         }
 
         public async Task<(bool Success, string Message)> SentForDispatchAsync(
@@ -1641,6 +1647,27 @@ namespace ProductivityApi.Services
             return statusResult;
         }
 
+        public async Task<(bool Success, string Message)> BulkDispatchAsync(
+            BulkDispatchDto dto)
+        {
+            var successCount = 0;
+            var failureCount = 0;
+
+            foreach (var item in dto.Items)
+            {
+                var result = await SentForDispatchAsync(item);
+
+                if (result.Success)
+                    successCount++;
+                else
+                    failureCount++;
+            }
+
+            return (
+                true,
+                $"Processed {dto.Items.Count}. Success: {successCount}, Failed: {failureCount}"
+            );
+        }
         public async Task<(bool Success, string Message)> ReturnToHoAsync(ReturnToHoDto dto)
         {
             //--------------------------------------------------
@@ -1678,6 +1705,59 @@ namespace ProductivityApi.Services
         internal async Task<byte[]> GetCibilReportExcelAsync(DateTime? fromDate, DateTime? toDate, string? type)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<(bool Success, byte[]? Data, string Message)> GetTransactionReportAsync(
+            NocReportRequest request)
+        {
+            if (request.FromDate.HasValue &&
+                request.ToDate.HasValue &&
+                request.FromDate > request.ToDate)
+            {
+                return (false, null, "From date cannot be greater than To date.");
+            }
+
+            var data = await _repository.GetTransactionReportAsync(
+                request.FromDate,
+                request.ToDate);
+
+            var excel = ExcelHelper.GenerateExcel(data, "NOC Report");
+
+            if (excel == null)
+                return (false, null, "No records found.");
+
+            using var stream = new MemoryStream(excel);
+            using var workbook = new XLWorkbook(stream);
+
+            var ws = workbook.Worksheet("NOC Report");
+
+            var tatColumn = ws.Row(1)
+                .CellsUsed()
+                .FirstOrDefault(x => x.Value.ToString()
+                    .Equals("TAT", StringComparison.OrdinalIgnoreCase));
+
+            if (tatColumn != null)
+            {
+                for (int row = 2; row <= ws.LastRowUsed().RowNumber(); row++)
+                {
+                    var cell = ws.Cell(row, tatColumn.Address.ColumnNumber);
+
+                    if (!cell.IsEmpty() && int.TryParse(cell.Value.ToString(), out int tat))
+                    {
+                        if (tat <= 10)
+                            cell.Style.Fill.BackgroundColor = XLColor.LightGreen;
+                        else if (tat <= 16)
+                            cell.Style.Fill.BackgroundColor = XLColor.LightGoldenrodYellow;
+                        else
+                            cell.Style.Fill.BackgroundColor = XLColor.LightPink;
+                    }
+                }
+            }
+
+            using var output = new MemoryStream();
+            workbook.SaveAs(output);
+
+            return (true, output.ToArray(), "Report generated successfully.");
         }
     }
 }

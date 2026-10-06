@@ -19,18 +19,28 @@ namespace ProductivityApi.Services
             _conStr = configuration.GetConnectionString("DBConn");
 
         }
-        public async Task<string> SendEmail(string subject, string body, List<string> to, List<string> cc, List<Attachment>? attachments = null, string source = "ProductivityApi")
+        public async Task<string> SendEmail(
+            string subject,
+            string body,
+            List<string> to,
+            List<string> cc,
+            List<Attachment>? attachments = null,
+            string source = "ProductivityApi",
+            List<string>? bcc = null)
         {
             string result = string.Empty;
+            bcc ??= new List<string>();
 
             if (_emailSettings.IsTestMode && _emailSettings.TestEmails.Any())
             {
                 // Log original recipients in email body
-                body = $"[ORIGINAL RECIPIENTS: {string.Join(", ", to)} | CC: {string.Join(", ", cc)}]\n\n{body}";
+                body = $"[ORIGINAL RECIPIENTS: {string.Join(", ", to)} | CC: {string.Join(", ", cc)} | BCC: {string.Join(", ", bcc)}]\n\n{body}";
 
                 // Override recipients
-                to = _emailSettings.TestEmails;
+                 to = _emailSettings.TestEmails;
+                
                 cc = new List<string>();
+                bcc = new List<string>();
             }
 
             using var msg = new MailMessage
@@ -44,6 +54,7 @@ namespace ProductivityApi.Services
 
             to.ForEach(email => msg.To.Add(email));
             cc.ForEach(email => msg.CC.Add(email));
+            bcc.ForEach(email => msg.Bcc.Add(email));
 
             if (attachments != null && attachments.Any())
             {

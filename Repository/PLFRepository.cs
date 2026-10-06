@@ -48,6 +48,133 @@ namespace ProductivityApi.Repository
             _plfConStr = configuration.GetConnectionString("PlfDBConn");
             _logger = logger;
         }
+
+        public async Task<List<ClosureCamLmsValues>> GetClosureCamLmsAsync(string lan)
+        {
+            const string sql = @"
+WITH PRI_PFT_Receipts AS
+(
+    SELECT DISTINCT receiptid
+    FROM plf.receiptallocationdetail
+    WHERE allocationtype IN ('PRI', 'PFT')
+),
+LatestAdjustedReceipt AS
+(
+    SELECT
+        fm.finreference,
+        frh.receiptid,
+        frh.valuedate,
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY fm.finreference
+            ORDER BY frh.valuedate DESC, frh.receiptid DESC
+        ) AS rn
+    FROM plf.financemain fm
+    JOIN plf.finreceiptheader frh
+        ON fm.finreference = frh.reference
+    JOIN PRI_PFT_Receipts ppr
+        ON frh.receiptid = ppr.receiptid
+    WHERE fm.finisactive IN (0, 1)
+)
+SELECT
+    cu.custsector,
+    bmts.sectordesc AS custsector_desc,
+    ROUND(cid.income / 100, 2) AS income,
+    ROUND(fp.tdclosureamt / 100, 2) AS current_pos,
+    (fp.totaltenor - fp.futureinst) AS current_mob,
+    ROUND((fm.finassetvalue - fm.fincurrassetvalue) / 100, 2) AS undisbursed_amt,
+    ROUND(fm.fincurrassetvalue / 100, 2) AS disbursed_amt,
+    fm.promotioncode AS product,
+    rmtf.fintypedesc AS product_desc,
+    rmtp.description AS promotion_desc,
+    cre.cibilscore AS cibil_score,
+    fm.numberofterms AS tenure,
+    ROUND(fsd.repayamount / 100, 2) AS current_emi,
+    fsd.duedate AS due_date,
+    cpe.LTVREQUESTEDPOVO AS current_ltv_per,
+    ROUND(cpe.unitprice / 100, 2) AS current_ltv_amt,
+    ca.collateralref,
+    ROUND(fm.finassetvalue / 100, 2) AS sanction_amt,
+    ROUND(cpe.fairmrktvalpovo / 100, 2) AS valuation,
+    fp.finpurpose AS end_use,
+    lp.loanpurposedesc AS end_use_desc,
+    cpe.COLLATERALTYPE AS type_of_property,
+    ROUND(fp.curreducingrate, 2) AS current_roi,
+    lr.valuedate AS last_emi_paid_date
+FROM plf.customers cu
+LEFT JOIN plf.bmtsectors bmts
+    ON cu.custsector = bmts.sectorcode
+LEFT JOIN plf.customer_income_details_aview cid
+    ON cu.custid = cid.custid
+LEFT JOIN plf.financemain fm
+    ON fm.custid = cu.custid
+LEFT JOIN plf.rmtpromotions rmtp
+    ON fm.promotioncode = rmtp.code
+LEFT JOIN plf.rmtfinancetypes rmtf
+    ON fm.promotioncode = rmtf.fintype
+    OR rmtf.fintype = fm.promotioncode || '_' || fm.fintype
+LEFT JOIN plf.finpftdetails fp
+    ON fm.finreference = fp.finreference
+LEFT JOIN plf.loanpurposes lp
+    ON fp.finpurpose = lp.loanpurposecode
+LEFT JOIN plf.collateralassignment ca
+    ON ca.reference = fm.finreference
+LEFT JOIN plf.collateral_property_ed cpe
+    ON cpe.reference = ca.collateralref
+LEFT JOIN plf.customer_retail_ed cre
+    ON cu.custcif = cre.reference
+LEFT JOIN LatestAdjustedReceipt lr
+    ON fm.finreference = lr.finreference
+    AND lr.rn = 1
+LEFT JOIN plf.receiptallocationdetail rad
+    ON lr.receiptid = rad.receiptid
+    AND rad.allocationtype IN ('PRI', 'PFT')
+LEFT JOIN plf.finscheduledetails fsd
+    ON fm.finreference = fsd.finreference
+    AND fsd.duedate =
+    (
+        SELECT MIN(fsd1.duedate)
+        FROM plf.finscheduledetails fsd1
+        WHERE fsd1.finreference = fm.finreference
+          AND fsd1.duedate > CURRENT_DATE
+    )
+WHERE fm.finreference = @lan
+GROUP BY
+    cu.custsector,
+    cid.income,
+    bmts.sectordesc,
+    fp.tdclosureamt,
+    fp.totaltenor,
+    fp.futureinst,
+    fsd.repayamount,
+    fsd.duedate,
+    fm.finassetvalue,
+    fm.fincurrassetvalue,
+    fm.promotioncode,
+    rmtf.fintypedesc,
+    rmtp.description,
+    ca.reference,
+    cpe.reference,
+    cre.cibilscore,
+    fm.numberofterms,
+    cpe.LTVREQUESTEDPOVO,
+    cpe.unitprice,
+    ca.collateralref,
+    cpe.fairmrktvalpovo,
+    fp.finpurpose,
+    lp.loanpurposedesc,
+    cpe.COLLATERALTYPE,
+    lr.receiptid,
+    fp.curreducingrate,
+    lr.valuedate;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            await connection.OpenAsync();
+
+            var rows = await connection.QueryAsync<ClosureCamLmsValues>(sql, new { lan });
+            return rows.ToList();
+        }
+
         public async Task<List<PLFPayment>> GetPaymentsByLan(string lan)
         {
             try
@@ -77,17 +204,19 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetClosedLansAsync()
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //    WHERE loan_status <> 'Active Loan'
-            //        AND loanclosure_date >= CURRENT_DATE - 1
-            //        AND loanclosure_date <  CURRENT_DATE;";
-
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
                 WHERE loan_status <> 'Active Loan'
                   AND loanclosure_date >= CURRENT_DATE - 1
                   AND loanclosure_date < CURRENT_DATE
                 {DistinctLoanOrderBy}";
+
+            //var sql = $@"
+            //    {NeolotexDisbDistinctColumns}
+            //    WHERE loan_status <> 'Active Loan'
+            //      AND loanclosure_date >= DATE '2026-07-15'
+            //      AND loanclosure_date < DATE '2026-07-16'
+            //    {DistinctLoanOrderBy}";
 
             await using var connection = new NpgsqlConnection(_plfConStr);
             await connection.OpenAsync();
@@ -96,8 +225,6 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetLoansByCollIdAsync(string collId)
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //        WHERE sz_collateral_id = @collId;";
 
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
@@ -111,8 +238,6 @@ namespace ProductivityApi.Repository
         }
         public async Task<List<NeolotexDisb>> GetLoansByCustIdAsync(string custId)
         {
-            //var sql = $@"{NeolotexDisbDistinctColumns}
-            //        WHERE customerid = @custId;";
 
             var sql = $@"
                 {NeolotexDisbDistinctColumns}
@@ -128,12 +253,6 @@ namespace ProductivityApi.Repository
         {
             try
             {
-                //var sql = $@"{NeolotexDisbDistinctColumns}
-                //WHERE customerid IN (
-                //    SELECT customerid
-                //    FROM plf.neolotex_disb
-                //    WHERE sz_loan_account_no = @lan
-                //);";
 
                 var sql = $@"
                     {NeolotexDisbDistinctColumns}
@@ -142,6 +261,14 @@ namespace ProductivityApi.Repository
                         SELECT customerid
                         FROM plf.neolotex_disb
                         WHERE sz_loan_account_no = @lan
+                          AND customerid IS NOT NULL
+                    )
+                    OR sz_collateral_id IN
+                    (
+                        SELECT sz_collateral_id
+                        FROM plf.neolotex_disb
+                        WHERE sz_loan_account_no = @lan
+                          AND sz_collateral_id IS NOT NULL
                     )
                     {DistinctLoanOrderBy}";
 
@@ -318,6 +445,66 @@ namespace ProductivityApi.Repository
             }
         }
 
+        public async Task<ZeroBalanceDayCashBalanceDto?> GetZeroBalanceDayCashBalanceByBranchAsync(string branchCode)
+        {
+            try
+            {
+                const string sql = @"
+                    WITH latest_recon AS (
+                        SELECT
+                            cr.branchcode,
+                            cr.processdate,
+                            cr.cashposition,
+                            cr.lastmnton
+                        FROM plf.branch_cashier_recon cr
+                        WHERE cr.branchcode = @BranchCode
+                        ORDER BY cr.processid DESC
+                        LIMIT 1
+                    ),
+                    balance_details AS (
+                        SELECT
+                            lr.branchcode  AS BranchCode,
+                            CAST(lr.processdate AS date) AS LastCobDate,
+                            ROUND((COALESCE(lr.cashposition, 0)::numeric / 100), 2) AS LastCobClosingBalance,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(frh.receiptamount), 0)::numeric / 100, 2)
+                                FROM plf.finreceiptheader frh
+                                WHERE frh.cashierbranch = lr.branchcode
+                                  AND frh.lastmnton > lr.lastmnton
+                                  AND frh.lastmnton < CURRENT_DATE
+                                  AND frh.receiptmode = 'CASH'
+                                  AND frh.receiptmodestatus = 'R'
+                            ), 0.00) AS VeCollectReceipts,
+                            COALESCE((
+                                SELECT ROUND(COALESCE(SUM(br.requestamount), 0)::numeric / 100, 2)
+                                FROM plf.branchcash_to_bankrequest br
+                                WHERE br.branchcode = lr.branchcode
+                                  AND br.lastmnton > lr.lastmnton
+                                  AND br.lastmnton < CURRENT_DATE
+                            ), 0.00) AS CashToBank
+                        FROM latest_recon lr
+                    )
+                    SELECT
+                        BranchCode,
+                        LastCobDate,
+                        LastCobClosingBalance,
+                        VeCollectReceipts,
+                        CashToBank,
+                        ROUND(LastCobClosingBalance + VeCollectReceipts - CashToBank, 2) AS OpeningBalance
+                    FROM balance_details;";
+
+                await using var connection = new NpgsqlConnection(_plfConStr);
+                await connection.OpenAsync();
+
+                return await connection.QueryFirstOrDefaultAsync<ZeroBalanceDayCashBalanceDto>(sql, new { BranchCode = branchCode });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Zero Balance Day cash balance for branch: {BranchCode}", branchCode);
+                return null;
+            }
+        }
+
         public async Task<List<DisbLansResponseDto>> GetDisbursementsAsync(DisbLansRequestDto request)
         {
             try
@@ -357,6 +544,41 @@ namespace ProductivityApi.Repository
 
                 return new List<DisbLansResponseDto>();
             }
+        }
+
+        public async Task<IEnumerable<CountryProvinceModel>> GetApprovedCountryProvincesAsync()
+        {
+            const string sql = @"
+                SELECT cpcountry, cpprovince, cpprovincename, recordstatus
+                FROM plf.rmtcountryvsprovince
+                WHERE recordstatus = @RecordStatus;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<CountryProvinceModel>(
+                sql, new { RecordStatus = "Approved" });
+        }
+
+        public async Task<IEnumerable<ProvinceCityModel>> GetCitiesByProvinceAsync(string pcProvince)
+        {
+            const string sql = @"
+        SELECT r.pcprovince, r.pccity, r.pccityname
+        FROM plf.rmtprovincevscity r
+        WHERE r.pcprovince = @PcProvince;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<ProvinceCityModel>(
+                sql, new { PcProvince = pcProvince });
+        }
+        public async Task<IEnumerable<PincodeModel>> GetPincodesByCityAsync(string city)
+        {
+            const string sql = @"
+        SELECT p.pincodeid, p.pincode, p.city
+        FROM plf.pincodes p
+        WHERE p.city = @City;";
+
+            await using var connection = new NpgsqlConnection(_plfConStr);
+            return await connection.QueryAsync<PincodeModel>(
+                sql, new { City = city });
         }
     }
 }

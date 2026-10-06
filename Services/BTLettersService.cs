@@ -124,7 +124,7 @@ namespace ProductivityApi.Services
                 if ((DateTime.Today - disbDate.Date).TotalDays <= 7) continue;
                 if (!EqualsIgnoreSpaces(documentCategory, "Red")) continue;
                 if (!EqualsIgnoreSpaces(balanceTakeOver, "BT/Take Over Case")) continue;
-                if (!EqualsIgnoreSpaces(dpd, "#N/A")) continue;
+                if (!EqualsIgnoreSpaces(dpd, "#N/A") && !string.IsNullOrWhiteSpace(dpd))continue;
 
                 list.Add(new BTUploadFormatRowDto
                 {
