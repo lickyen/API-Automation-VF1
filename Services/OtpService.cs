@@ -182,7 +182,7 @@ namespace ProductivityApi.Services
                         UserId = userId,
                         Source = source,
                         Action = "OTP_VERIFICATION",
-                        Response = isValid ? "Success" : "Failure",
+                        Response = isValid ? "SUCCESS" : "FAILURE",
                         Message = message
                     });
 
