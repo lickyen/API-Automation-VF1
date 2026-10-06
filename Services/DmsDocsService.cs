@@ -56,7 +56,7 @@ namespace ProductivityApi.Services
                     CreatedBy = request.CreatedBy
                 });
 
-            var hasActiveBatch = batches.Any(x => x.ActiveCount > 0);
+            var hasActiveBatch = batches.Any(x => x.Status == "Active");
 
             if (hasActiveBatch)
             {
