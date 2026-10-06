@@ -355,7 +355,8 @@ namespace ProductivityApi.Repository
                 new
                 {
                     dto.CaseId,
-                    dto.RequiresAdditionalDocuments, // Adjust property name here if it differs in your DTO
+                    dto.RequiresAdditionalDocuments,
+                    dto.Comments,
                     UpdatedBy = dto.UpdatedBy.Trim()
                 },
                 commandType: CommandType.StoredProcedure);
