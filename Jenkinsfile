@@ -33,14 +33,25 @@ pipeline {
                 sh 'dotnet publish --configuration Release -o publish'
             }
         }
+
+        stage('Archive DLL') {
+            steps {
+                archiveArtifacts artifacts: 'publish/**/*.dll', fingerprint: true
+            }
+        }
     }
 
     post {
         success {
             echo 'Build Successful'
         }
+
         failure {
             echo 'Build Failed'
+        }
+
+        always {
+            echo 'Pipeline Completed'
         }
     }
 }
