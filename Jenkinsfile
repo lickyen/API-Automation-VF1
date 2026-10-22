@@ -12,26 +12,35 @@ pipeline {
 
         stage('Verify Dotnet') {
             steps {
-                bat 'dotnet --version'
+                sh 'dotnet --version'
             }
         }
 
         stage('Restore') {
             steps {
-                bat 'dotnet restore'
+                sh 'dotnet restore'
             }
         }
 
         stage('Build') {
             steps {
-                bat 'dotnet build --configuration Release'
+                sh 'dotnet build --configuration Release'
             }
         }
 
         stage('Publish') {
             steps {
-                bat 'dotnet publish --configuration Release -o publish'
+                sh 'dotnet publish --configuration Release -o publish'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build Successful'
+        }
+        failure {
+            echo 'Build Failed'
         }
     }
 }
