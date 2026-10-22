@@ -1,16 +1,18 @@
 pipeline {
     agent any
 
-    tools {
-        dotnetsdk 'DotNet-8'
-    }
-
     stages {
 
         stage('Checkout') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/lickyen/API-Automation-VF1.git'
+            }
+        }
+
+        stage('Verify Dotnet') {
+            steps {
+                bat 'dotnet --version'
             }
         }
 
@@ -26,15 +28,10 @@ pipeline {
             }
         }
 
-    }
-
-    post {
-        success {
-            echo 'Build Successful'
-        }
-
-        failure {
-            echo 'Build Failed'
+        stage('Publish') {
+            steps {
+                bat 'dotnet publish --configuration Release -o publish'
+            }
         }
     }
 }
