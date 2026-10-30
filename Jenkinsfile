@@ -34,7 +34,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('SonarQube-Server') {
                     sh """
                     export PATH=\$PATH:${DOTNET_TOOLS}
 
