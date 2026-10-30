@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        DOTNET_TOOLS = "$HOME/.dotnet/tools"
-    }
-
     stages {
 
         stage('Checkout') {
@@ -16,39 +12,55 @@ pipeline {
 
         stage('Verify Dotnet') {
             steps {
-                sh 'dotnet --version'
+                sh '''
+                export DOTNET_ROOT=/usr/lib64/dotnet
+                export PATH=$PATH:/usr/lib64/dotnet
+
+                dotnet --version
+                '''
             }
         }
 
         stage('Restore') {
             steps {
-                sh 'dotnet restore'
+                sh '''
+                export DOTNET_ROOT=/usr/lib64/dotnet
+                export PATH=$PATH:/usr/lib64/dotnet
+
+                dotnet restore
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                sh 'dotnet build --configuration Release'
+                sh '''
+                export DOTNET_ROOT=/usr/lib64/dotnet
+                export PATH=$PATH:/usr/lib64/dotnet
+
+                dotnet build --configuration Release
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh """
-                    export PATH=\$PATH:${DOTNET_TOOLS}
+                    sh '''
+                    export DOTNET_ROOT=/usr/lib64/dotnet
+                    export PATH=$PATH:/usr/lib64/dotnet:/opt/dotnet-tools
 
                     dotnet-sonarscanner begin \
-                    /k:"API-Automation-VF1" \
-                    /n:"API-Automation-VF1" \
-                    /d:sonar.host.url=\$SONAR_HOST_URL \
-                    /d:sonar.token=\$SONAR_AUTH_TOKEN
+                      /k:"API-Automation-VF1" \
+                      /n:"API-Automation-VF1" \
+                      /d:sonar.host.url="$SONAR_HOST_URL" \
+                      /d:sonar.token="$SONAR_AUTH_TOKEN"
 
                     dotnet build --configuration Release
 
                     dotnet-sonarscanner end \
-                    /d:sonar.token=\$SONAR_AUTH_TOKEN
-                    """
+                      /d:sonar.token="$SONAR_AUTH_TOKEN"
+                    '''
                 }
             }
         }
@@ -63,7 +75,12 @@ pipeline {
 
         stage('Publish') {
             steps {
-                sh 'dotnet publish --configuration Release -o publish'
+                sh '''
+                export DOTNET_ROOT=/usr/lib64/dotnet
+                export PATH=$PATH:/usr/lib64/dotnet
+
+                dotnet publish --configuration Release -o publish
+                '''
             }
         }
 
