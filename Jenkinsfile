@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        DOTNET_TOOLS = "$HOME/.dotnet/tools"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -25,6 +29,35 @@ pipeline {
         stage('Build') {
             steps {
                 sh 'dotnet build --configuration Release'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                    export PATH=\$PATH:${DOTNET_TOOLS}
+
+                    dotnet-sonarscanner begin \
+                    /k:"API-Automation-VF1" \
+                    /n:"API-Automation-VF1" \
+                    /d:sonar.host.url=\$SONAR_HOST_URL \
+                    /d:sonar.token=\$SONAR_AUTH_TOKEN
+
+                    dotnet build --configuration Release
+
+                    dotnet-sonarscanner end \
+                    /d:sonar.token=\$SONAR_AUTH_TOKEN
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
