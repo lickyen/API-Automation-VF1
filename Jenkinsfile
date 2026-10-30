@@ -51,8 +51,8 @@ pipeline {
                     export PATH=$PATH:/usr/lib64/dotnet:/opt/dotnet-tools
 
                     dotnet-sonarscanner begin \
-                      /k:"API-Automation-VF1" \
-                      /n:"API-Automation-VF1" \
+                      /k:"Jenkins-VF-Pipeline-JOB" \
+                      /n:"Jenkins-VF-Pipeline-JOB" \
                       /d:sonar.host.url="$SONAR_HOST_URL" \
                       /d:sonar.token="$SONAR_AUTH_TOKEN"
 
