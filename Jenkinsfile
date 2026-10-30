@@ -41,7 +41,7 @@ pipeline {
                     dotnet-sonarscanner begin \
                     /k:"API-Automation-VF1" \
                     /n:"API-Automation-VF1" \
-                    /d:sonar.host.url=\$SONAR_HOST_URL \
+                    /d:sonar.host.url=\http://172.16.1.105:9000 \
                     /d:sonar.token=\$SONAR_AUTH_TOKEN
 
                     dotnet build --configuration Release
